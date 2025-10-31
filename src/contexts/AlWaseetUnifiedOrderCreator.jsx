@@ -4,6 +4,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { createAlWaseetOrder } from '@/lib/alwaseet-api';
 import { toast } from '@/components/ui/use-toast';
 import { CheckCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const UnifiedOrderCreatorContext = createContext();
 
@@ -36,30 +37,51 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
       const subtotal = cart.reduce((sum, item) => sum + (item.total || 0), 0);
       const finalAmount = Math.max(0, subtotal - discount);
 
-      // إذا كان الوسيط نشطاً ومتصل، إنشاء طلب خارجي مع التوحيد الكامل
-      if (activePartner === 'alwaseet' && isWaseetLoggedIn && waseetToken) {
-        console.log('🔗 إنشاء طلب خارجي مع التوحيد الكامل...');
+      // إذا كان شريك التوصيل نشطاً ومتصل، إنشاء طلب خارجي
+      if ((activePartner === 'alwaseet' || activePartner === 'modon') && isWaseetLoggedIn && waseetToken) {
+        console.log(`🔗 إنشاء طلب خارجي مع ${activePartner}...`);
         
-        // ✅ استخدام alwaseet_city_id و alwaseet_region_id مباشرة
-        const finalCityId = customerInfo.alwaseet_city_id || customerInfo.customer_city_id;
-        const finalRegionId = customerInfo.alwaseet_region_id || customerInfo.customer_region_id;
+        // ✅ جلب المعرفات الخارجية من الـ mappings
+        const unifiedCityId = customerInfo.city_id || customerInfo.customer_city_id;
+        const unifiedRegionId = customerInfo.region_id || customerInfo.customer_region_id;
+        
+        // ترجمة المعرفات الموحدة إلى معرفات خارجية
+        const { data: cityMapping } = await supabase
+          .from('city_delivery_mappings')
+          .select('external_id, external_name')
+          .eq('city_id', unifiedCityId)
+          .eq('delivery_partner', activePartner)
+          .maybeSingle();
+        
+        const { data: regionMapping } = await supabase
+          .from('region_delivery_mappings')
+          .select('external_id, external_name')
+          .eq('region_id', unifiedRegionId)
+          .eq('delivery_partner', activePartner)
+          .maybeSingle();
+        
+        if (!cityMapping || !regionMapping) {
+          throw new Error(`لم يتم العثور على تطابق المدينة/المنطقة لشريك ${activePartner}`);
+        }
+        
+        const finalCityId = cityMapping.external_id;
+        const finalRegionId = regionMapping.external_id;
 
-        console.log('🔍 [AlWaseetUnifiedOrderCreator] معرفات المدينة والمنطقة النهائية:', {
-          alwaseet_city_id: customerInfo.alwaseet_city_id,
-          customer_city_id: customerInfo.customer_city_id,
+        console.log(`🔍 [UnifiedOrderCreator] معرفات ${activePartner}:`, {
+          unifiedCityId,
+          unifiedRegionId,
           finalCityId,
-          alwaseet_region_id: customerInfo.alwaseet_region_id,
-          customer_region_id: customerInfo.customer_region_id,
-          finalRegionId
+          finalRegionId,
+          cityName: cityMapping.external_name,
+          regionName: regionMapping.external_name
         });
 
         try {
-          const alWaseetPayload = {
+          const partnerPayload = {
             name: customerInfo.customer_name || customerInfo.name,
             phone: customerInfo.customer_phone || customerInfo.phone,
             customer_phone2: customerInfo.customer_phone2 || customerInfo.second_phone || '',
             address: customerInfo.customer_address || customerInfo.address,
-            // ✅ إضافة المدينة والمنطقة لتنظيف العنوان في alwaseet-api
             customer_city: customerInfo.customer_city,
             customer_province: customerInfo.customer_province,
             notes: customerInfo.notes || '',
@@ -70,22 +92,11 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             type: 'new',
             promocode: customerInfo.promo_code || '',
             city_id: finalCityId,
-            region_id: finalRegionId,
-            // 🎯 إضافة المعرفات الصريحة للوسيط
-            alwaseet_city_id: finalCityId,
-            alwaseet_region_id: finalRegionId
+            region_id: finalRegionId
           };
 
-          console.log('🔍 [AlWaseetUnifiedOrderCreator] alWaseetPayload بعد البناء:', {
-            phone: alWaseetPayload.phone,
-            customer_phone2: alWaseetPayload.customer_phone2,
-            hasPhone2: !!alWaseetPayload.customer_phone2,
-            customerInfo_phone2: customerInfo.customer_phone2,
-            customerInfo_second_phone: customerInfo.second_phone
-          });
-
-          console.log('📦 [AlWaseetUnifiedOrderCreator] إرسال للوسيط:', {
-            ...alWaseetPayload,
+          console.log(`📦 [UnifiedOrderCreator] إرسال ل${activePartner}:`, {
+            ...partnerPayload,
             city_id: finalCityId,
             region_id: finalRegionId
           });
@@ -98,10 +109,19 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             selectedAccount: aiOrderData?.selectedAccount 
           });
           
-          const alWaseetResult = await createAlWaseetOrder(alWaseetPayload, useToken);
+          // ✅ استدعاء API المناسب حسب الشريك
+          let partnerResult;
+          if (activePartner === 'modon') {
+            // TODO: سيتم إضافة createModonOrder لاحقاً
+            throw new Error('إنشاء طلبات مدن قيد التطوير');
+          } else {
+            partnerResult = await createAlWaseetOrder(partnerPayload, useToken);
+          }
+          
+          const alWaseetResult = partnerResult; // للتوافق مع الكود الحالي
           
           if (alWaseetResult?.id) {
-            console.log('✅ تم إنشاء طلب الوسيط:', alWaseetResult);
+            console.log(`✅ تم إنشاء طلب ${activePartner}:`, alWaseetResult);
             
             // Focus on qr_id as primary identifier - this is what customers track
             const qrId = String(alWaseetResult.qr_id || '').trim();
@@ -153,11 +173,13 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             
             console.log('🔄 تم إنشاء الطلب المحلي مع الأرقام الموحدة:', localResult);
             
+            const partnerName = activePartner === 'modon' ? 'مدن' : 'الوسيط';
+            
             toast({
               title: (
                 <div className="flex items-center gap-2">
                   <CheckCircle className="h-4 w-4 text-green-500" />
-                  تم إنشاء الطلب وربطه مع الوسيط بنجاح
+                  تم إنشاء الطلب وربطه مع {partnerName} بنجاح
                 </div>
               ),
               description: (
@@ -165,7 +187,7 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
                   <p><strong>رقم التتبع:</strong> {qrId || '—'}</p>
                   <p><strong>العميل:</strong> {customerInfo.name}</p>
                   <p><strong>المبلغ:</strong> {finalAmount.toLocaleString()} د.ع</p>
-                  <p><strong>نوع الطلب:</strong> خارجي (مربوط مع الوسيط)</p>
+                  <p><strong>نوع الطلب:</strong> خارجي (مربوط مع {partnerName})</p>
                 </div>
               ),
               variant: "success",
@@ -184,10 +206,11 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           } else {
             throw new Error('لم يتم إرجاع معرف من الوسيط');
           }
-        } catch (alWaseetError) {
-          console.error('⚠️ فشل إنشاء طلب الوسيط:', alWaseetError);
+        } catch (partnerError) {
+          const partnerName = activePartner === 'modon' ? 'مدن' : 'الوسيط';
+          console.error(`⚠️ فشل إنشاء طلب ${partnerName}:`, partnerError);
           
-          // في حالة فشل الوسيط، إنشاء طلب محلي عادي
+          // في حالة فشل الشريك، إنشاء طلب محلي عادي
           console.log('🏠 التراجع لإنشاء طلب محلي...');
           const localFallbackResult = await createOrder(customerInfo, cart, null, discount, null, finalAmount);
           
@@ -197,7 +220,7 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
 
           toast({
             title: 'تم إنشاء الطلب محلياً فقط',
-            description: `رقم الطلب: ${localFallbackResult.trackingNumber}. فشل الربط مع الوسيط: ${alWaseetError.message}`,
+            description: `رقم الطلب: ${localFallbackResult.trackingNumber}. فشل الربط مع ${partnerName}: ${partnerError.message}`,
             variant: 'warning',
             duration: 6000
           });
@@ -208,7 +231,7 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             trackingNumber: localFallbackResult.trackingNumber,
             finalAmount,
             linked: false,
-            linkError: alWaseetError.message
+            linkError: partnerError.message
           };
         }
       } else {
@@ -265,7 +288,7 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
 
   const value = {
     createUnifiedOrder,
-    isWaseetAvailable: activePartner === 'alwaseet' && isWaseetLoggedIn,
+    isWaseetAvailable: (activePartner === 'alwaseet' || activePartner === 'modon') && isWaseetLoggedIn,
     activePartner
   };
 

@@ -74,4 +74,72 @@ async function handleModonApiCall(endpoint, method, token, payload = null, query
   }
 }
 
-// المزيد من الدوال سيتم إضافتها لاحقاً (getCities, createOrder, etc.)
+/**
+ * Get all cities from MODON
+ * @param {string} token - Authentication token
+ * @returns {Promise<Array>} List of cities
+ */
+export async function getCities(token) {
+  try {
+    console.log('🌆 جلب المدن من مدن...');
+    const data = await handleModonApiCall('citys', 'GET', token);
+    
+    if (data.status === true && data.errNum === 'S000') {
+      console.log(`✅ تم جلب ${data.data.length} مدينة من مدن`);
+      return data.data; // [{id: "1", city_name: "بغداد"}]
+    }
+    throw new Error(data.msg || 'فشل جلب المدن');
+  } catch (error) {
+    console.error('❌ خطأ في جلب المدن من مدن:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get regions by city ID from MODON
+ * @param {string} token - Authentication token
+ * @param {string|number} cityId - City ID
+ * @returns {Promise<Array>} List of regions
+ */
+export async function getRegionsByCity(token, cityId) {
+  try {
+    console.log(`🏘️ جلب مناطق المدينة ${cityId} من مدن...`);
+    const data = await handleModonApiCall(
+      'regions',
+      'GET',
+      token,
+      null,
+      { city_id: cityId }
+    );
+    
+    if (data.status === true && data.errNum === 'S000') {
+      console.log(`✅ تم جلب ${data.data.length} منطقة من مدن`);
+      return data.data; // [{id: "1", region_name: "الكرادة"}]
+    }
+    throw new Error(data.msg || 'فشل جلب المناطق');
+  } catch (error) {
+    console.error('❌ خطأ في جلب المناطق من مدن:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get package sizes from MODON
+ * @param {string} token - Authentication token
+ * @returns {Promise<Array>} List of package sizes
+ */
+export async function getPackageSizes(token) {
+  try {
+    console.log('📦 جلب أحجام الطرود من مدن...');
+    const data = await handleModonApiCall('package-sizes', 'GET', token);
+    
+    if (data.status === true && data.errNum === 'S000') {
+      console.log(`✅ تم جلب ${data.data.length} حجم من مدن`);
+      return data.data; // [{id: "1", size: "صغير"}]
+    }
+    throw new Error(data.msg || 'فشل جلب أحجام الطرود');
+  } catch (error) {
+    console.error('❌ خطأ في جلب أحجام الطرود من مدن:', error);
+    throw error;
+  }
+}

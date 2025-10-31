@@ -39,6 +39,12 @@ const CitiesCacheManager = () => {
         account: waseetUser?.label || waseetUser?.username || 'حساب غير محدد',
         color: 'from-blue-500 to-blue-600'
       };
+    } else if (activePartner === 'modon') {
+      return {
+        name: 'مدن',
+        account: waseetUser?.label || waseetUser?.username || 'حساب غير محدد',
+        color: 'from-purple-500 to-purple-600'
+      };
     }
     return {
       name: 'محلي',
@@ -80,7 +86,8 @@ const CitiesCacheManager = () => {
     try {
       setUpdateProgress({ current: 0, total: 100, message: 'بدء تحديث المدن والمناطق...' });
       
-      const result = await updateCache();
+      // ✅ تمرير اسم الشريك النشط لتحديد Edge Function المناسب
+      const result = await updateCache(activePartner);
       
       if (result?.success) {
         setUpdateProgress({ current: 100, total: 100, message: 'اكتمل التحديث بنجاح' });

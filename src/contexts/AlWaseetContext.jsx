@@ -2756,7 +2756,22 @@ export const AlWaseetProvider = ({ children }) => {
   const fetchCities = useCallback(async () => {
     if (token) {
       try {
-        const data = await AlWaseetAPI.getCities(token);
+        let data;
+        
+        // ✅ استدعاء API المناسب حسب الشريك النشط
+        if (activePartner === 'modon') {
+          data = await ModonAPI.getCities(token);
+          // تحويل صيغة مدن إلى صيغة موحدة
+          data = data.map(city => ({
+            id: city.id,
+            name: city.city_name
+          }));
+        } else if (activePartner === 'alwaseet') {
+          data = await AlWaseetAPI.getCities(token);
+        } else {
+          data = [];
+        }
+        
         if (Array.isArray(data)) {
           setCities(data);
         } else if (typeof data === 'object' && data !== null) {
@@ -2769,12 +2784,27 @@ export const AlWaseetProvider = ({ children }) => {
         setCities([]);
       }
     }
-  }, [token]);
+  }, [token, activePartner]);
 
   const fetchRegions = useCallback(async (cityId) => {
     if (token && cityId) {
       try {
-        const data = await AlWaseetAPI.getRegionsByCity(token, cityId);
+        let data;
+        
+        // ✅ استدعاء API المناسب حسب الشريك النشط
+        if (activePartner === 'modon') {
+          data = await ModonAPI.getRegionsByCity(token, cityId);
+          // تحويل صيغة مدن إلى صيغة موحدة
+          data = data.map(region => ({
+            id: region.id,
+            name: region.region_name
+          }));
+        } else if (activePartner === 'alwaseet') {
+          data = await AlWaseetAPI.getRegionsByCity(token, cityId);
+        } else {
+          data = [];
+        }
+        
         if (Array.isArray(data)) {
           setRegions(data);
         } else if (typeof data === 'object' && data !== null) {
@@ -2787,12 +2817,23 @@ export const AlWaseetProvider = ({ children }) => {
         setRegions([]);
       }
     }
-  }, [token]);
+  }, [token, activePartner]);
 
   const fetchPackageSizes = useCallback(async () => {
     if (token) {
       try {
-        const data = await AlWaseetAPI.getPackageSizes(token);
+        let data;
+        
+        // ✅ استدعاء API المناسب حسب الشريك النشط
+        if (activePartner === 'modon') {
+          data = await ModonAPI.getPackageSizes(token);
+          // صيغة مدن مطابقة للوسيط، لا حاجة للتحويل
+        } else if (activePartner === 'alwaseet') {
+          data = await AlWaseetAPI.getPackageSizes(token);
+        } else {
+          data = [];
+        }
+        
         if (Array.isArray(data)) {
           setPackageSizes(data);
         } else if (typeof data === 'object' && data !== null) {

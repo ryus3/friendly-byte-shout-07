@@ -170,10 +170,54 @@ export const useCitiesCache = () => {
     }
   };
 
-  // تحديث cache من شركة التوصيل (الطريقة التقليدية)
-  const updateCache = async () => {
-    // استخدام المزامنة الذكية بدلاً من الطريقة التقليدية
-    return await updateCacheBackground();
+  // تحديث cache من شركة التوصيل (دعم متعدد الشركاء)
+  const updateCache = async (partnerName = 'alwaseet') => {
+    if (!token) {
+      toast({
+        title: "تنبيه",
+        description: "يجب تسجيل الدخول لشركة التوصيل أولاً",
+        variant: "destructive"
+      });
+      return false;
+    }
+
+    setLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // تحديد Edge Function المناسب حسب الشريك
+      const functionName = partnerName === 'modon' ? 'update-modon-cache' : 'update-cities-cache';
+      
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: { 
+          token,
+          user_id: session?.user?.id 
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast({
+          title: "بدأت المزامنة الذكية",
+          description: `جاري تحديث المدن والمناطق من ${partnerName === 'modon' ? 'مدن' : 'الوسيط'} في الخلفية`,
+          variant: "default"
+        });
+        
+        return { success: true, progress_id: data.progress_id };
+      }
+      return { success: false };
+    } catch (error) {
+      console.error('❌ خطأ في بدء المزامنة:', error);
+      toast({
+        title: "فشل بدء المزامنة", 
+        description: error.message,
+        variant: "destructive"
+      });
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
   };
 
   // فحص إذا كان cache فارغ أو قديم
