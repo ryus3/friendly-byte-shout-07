@@ -103,37 +103,41 @@ const OrdersPage = () => {
         return;
       }
       
-      // جلب الطلبات المعلقة فقط (pending, shipped, delivery)
-      const pendingOrders = orders.filter(o => 
-        ['pending', 'shipped', 'delivery'].includes(o.status)
+      // جلب الطلبات المعلقة من delivery partners فقط
+      const pendingExternalOrders = orders.filter(o => 
+        ['pending', 'shipped', 'delivery'].includes(o.status) &&
+        o.delivery_partner && 
+        ['alwaseet', 'modon'].includes(o.delivery_partner)
       );
       
-      if (pendingOrders.length === 0) {
-        devLog.log('ℹ️ لا توجد طلبات معلقة للمزامنة');
+      if (pendingExternalOrders.length === 0) {
+        devLog.log('ℹ️ لا توجد طلبات خارجية معلقة للمزامنة');
         return;
       }
       
-      devLog.log(`🔄 مزامنة تلقائية لـ ${pendingOrders.length} طلب معلق في OrdersPage...`);
+      devLog.log(`🔄 [OrdersPage] مزامنة تلقائية لـ ${pendingExternalOrders.length} طلب معلق...`);
       
       try {
-        const result = await syncAndApplyOrders(pendingOrders);
+        const result = await syncVisibleOrdersBatch(pendingExternalOrders);  // ✅ الدالة الصحيحة
         
-        if (result.success && result.updatedCount > 0) {
-          devLog.log(`✅ تم تحديث ${result.updatedCount} طلب تلقائياً`);
+        if (result && result.updatedCount > 0) {
+          devLog.log(`✅ [OrdersPage] تم تحديث ${result.updatedCount} طلب تلقائياً`);
           await refreshOrders(); // تحديث الواجهة
+        } else {
+          devLog.log(`ℹ️ [OrdersPage] لا توجد تحديثات - المزامنة كاملة`);
         }
       } catch (error) {
-        console.error('❌ خطأ في المزامنة التلقائية:', error);
+        console.error('❌ [OrdersPage] خطأ في المزامنة التلقائية:', error);
       }
     };
 
-    // تأخير 2 ثانية قبل المزامنة (لتحميل الطلبات)
+    // تأخير 3 ثواني قبل المزامنة (لضمان تحميل الطلبات)
     const timer = setTimeout(() => {
       performInitialSync();
-    }, 2000);
+    }, 3000);
 
     return () => clearTimeout(timer);
-  }, [orders, inventoryLoading]); // ✅ تشغيل عند تحميل الطلبات
+  }, [orders, inventoryLoading, syncVisibleOrdersBatch, refreshOrders]); // ✅ إضافة dependencies
 
   // ❌ تعطيل Fast Sync مؤقتاً للاختبار - الاعتماد فقط على Smart Sync
   /*

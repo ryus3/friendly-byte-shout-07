@@ -430,10 +430,23 @@ export const AlWaseetProvider = ({ children }) => {
           // استدعاء API المناسب حسب partner_name
           let merchantOrders;
           try {
+            console.log(`🚀 [${employeeTokenData.partner_name}] سيتم الآن استدعاء getMerchantOrders...`);
+            console.log(`🔑 Token preview: ${employeeTokenData.token.substring(0, 20)}...`);
+            
             if (employeeTokenData.partner_name === 'modon') {
+              console.log('📞 استدعاء ModonAPI.getMerchantOrders...');
               merchantOrders = await ModonAPI.getMerchantOrders(employeeTokenData.token);
+              console.log('✅ تم استلام رد من MODON:', {
+                ordersCount: merchantOrders?.length || 0,
+                isArray: Array.isArray(merchantOrders)
+              });
             } else {
+              console.log('📞 استدعاء AlWaseetAPI.getMerchantOrders...');
               merchantOrders = await AlWaseetAPI.getMerchantOrders(employeeTokenData.token);
+              console.log('✅ تم استلام رد من AlWaseet:', {
+                ordersCount: merchantOrders?.length || 0,
+                isArray: Array.isArray(merchantOrders)
+              });
             }
             
           if (!merchantOrders || !Array.isArray(merchantOrders) || merchantOrders.length === 0) {

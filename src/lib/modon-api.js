@@ -97,6 +97,13 @@ async function handleModonApiCall(endpoint, method, token, payload = null, query
       isFormData: isFormData || false
     };
     
+    console.log('📤 ===== MODON API Request =====');
+    console.log('🔗 Endpoint:', endpoint);
+    console.log('📍 Method:', method);
+    console.log('🔑 Has Token:', !!token);
+    console.log('📦 Has Payload:', !!payload);
+    console.log('🔍 Query Params:', queryParams);
+    
     devLog.log('📤 MODON API Request:', { endpoint, method, hasToken: !!token, hasPayload: !!payload });
     
     const response = await fetch(
@@ -111,11 +118,25 @@ async function handleModonApiCall(endpoint, method, token, payload = null, query
       }
     );
     
+    console.log('📡 HTTP Response Status:', response.status, response.statusText);
+    
     if (!response.ok) {
+      console.error('❌ HTTP Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url
+      });
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
     const data = await response.json();
+    
+    console.log('📥 ===== MODON API Response =====');
+    console.log('✅ Status:', data.status);
+    console.log('📊 Error Code:', data.errNum);
+    console.log('💬 Message:', data.msg);
+    console.log('📦 Has Data:', !!data.data);
+    
     devLog.log('📥 MODON API Response:', { status: data.status, hasData: !!data.data });
     
     return data;
@@ -526,6 +547,10 @@ export async function getOrdersByIdsBatch(ids, token) {
  */
 export async function getMerchantInvoices(token) {
   try {
+    console.log('🚀 ===== بدء جلب فواتير مدن =====');
+    console.log('📋 Token length:', token?.length || 0);
+    console.log('📋 Token preview:', token?.substring(0, 20) + '...');
+    
     devLog.log('📄 جلب الفواتير من مدن...');
     
     const data = await handleModonApiCall(
@@ -537,14 +562,38 @@ export async function getMerchantInvoices(token) {
       false
     );
     
+    console.log('📥 MODON Invoices Response:', {
+      status: data.status,
+      errNum: data.errNum,
+      hasData: !!data.data,
+      invoiceCount: data.data?.length || 0
+    });
+    
     if (data.status === true && data.errNum === 'S000') {
       devLog.log(`✅ تم جلب ${data.data?.length || 0} فاتورة من مدن`);
+      
+      // عرض تفاصيل الفواتير
+      if (data.data && data.data.length > 0) {
+        console.log('📋 تفاصيل الفواتير:', data.data.map(inv => ({
+          id: inv.id,
+          status: inv.status,
+          orders_count: inv.delivered_orders_count,
+          price: inv.merchant_price
+        })));
+      }
+      
       return data.data || [];
     }
     
+    console.error('❌ فشل جلب الفواتير:', data.msg);
     throw new Error(data.msg || 'فشل جلب الفواتير من مدن');
   } catch (error) {
     console.error('❌ خطأ في جلب الفواتير من مدن:', error);
+    console.error('❌ تفاصيل الخطأ:', {
+      message: error.message,
+      name: error.name,
+      stack: error.stack?.split('\n')[0]
+    });
     throw error;
   }
 }
