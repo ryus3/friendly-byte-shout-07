@@ -786,6 +786,7 @@ export const AlWaseetProvider = ({ children }) => {
   const deliveryPartners = {
     local: { name: "توصيل محلي", api: null },
     alwaseet: { name: "الوسيط", api: "https://api.alwaseet-iq.net/v1/merchant" },
+    modon: { name: "مدن", api: "https://mcht.modon-express.net/v1/merchant" },
   };
 
 

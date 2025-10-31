@@ -20,6 +20,10 @@ verify_jwt = true
 [functions.sync-cities-regions-background]
 verify_jwt = true
 
+# Delivery partners proxy
+[functions.modon-proxy]
+verify_jwt = true
+
 # Product cache management
 [functions.refresh-product-cache]
 verify_jwt = false
