@@ -1,5 +1,9 @@
 project_id = "tkheostkubborwkwzugl"
 
+# Smart invoice sync - requires JWT authentication
+[functions.smart-invoice-sync]
+verify_jwt = true
+
 # Telegram webhooks - public but with signature validation
 [functions.telegram-bot]
 verify_jwt = false
