@@ -23,7 +23,7 @@ Deno.serve(async (req) => {
       .from('orders')
       .select('id, tracking_number, delivery_partner_order_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes')
       .eq('delivery_partner', 'alwaseet')
-      .not('delivery_status', 'in', ('4', '17', '31', '32'))
+      .not('delivery_status', 'in', '(4,17,31,32)')
       .order('created_at', { ascending: false })
       .limit(100);
 
