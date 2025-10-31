@@ -64,6 +64,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       // التحقق من صلاحية التوكن
       if (new Date(data.expires_at) <= new Date()) {
+        devLog.log(`⚠️ التوكن منتهي الصلاحية للحساب: ${data.account_username}`);
         return null;
       }
       
@@ -255,7 +256,7 @@ export const AlWaseetProvider = ({ children }) => {
 
     // ✅ فلترة - استبعاد الطلبات المرجعة فقط (النهائية الوحيدة)
     const syncableOrders = visibleOrders.filter(order => {
-      if (!order.created_by || order.delivery_partner !== 'alwaseet') return false;
+      if (!order.created_by || !order.delivery_partner || order.delivery_partner === 'local') return false;
       
       // استبعاد delivery_status = '17' فقط (تم الإرجاع للتاجر) - نهائية تماماً
       // الحالة 4 (تم التسليم) ليست نهائية - قد يحدث إرجاع أو تسليم جزئي بعدها
@@ -291,17 +292,22 @@ export const AlWaseetProvider = ({ children }) => {
       // معالجة كل موظف على حدة باستخدام توكن منشئ الطلب
       for (const [employeeId, employeeOrders] of ordersByEmployee) {
         try {
-          // الحصول على توكن منشئ الطلب (وليس المدير الحالي)
-          const employeeTokenData = await getTokenForUser(employeeId);
+          // الحصول على توكن منشئ الطلب مع تحديد delivery_partner
+          const employeeTokenData = await getTokenForUser(employeeId, null, employeeOrders[0]?.delivery_partner);
           if (!employeeTokenData) {
             devLog.log(`⚠️ لا يوجد توكن صالح للموظف منشئ الطلب: ${employeeId}`);
             continue;
           }
 
-          devLog.log(`🔄 مزامنة ${employeeOrders.length} طلب للموظف: ${employeeId} باستخدام توكنه الشخصي`);
+          devLog.log(`🔄 مزامنة ${employeeOrders.length} طلب للموظف: ${employeeId} باستخدام توكنه الشخصي (${employeeTokenData.partner_name})`);
           
-          // جلب جميع طلبات الموظف من الوسيط باستخدام توكنه الشخصي
-          const merchantOrders = await AlWaseetAPI.getMerchantOrders(employeeTokenData.token);
+          // استدعاء API المناسب حسب partner_name
+          let merchantOrders;
+          if (employeeTokenData.partner_name === 'modon') {
+            merchantOrders = await ModonAPI.getMerchantOrders(employeeTokenData.token);
+          } else {
+            merchantOrders = await AlWaseetAPI.getMerchantOrders(employeeTokenData.token);
+          }
           
           if (!merchantOrders || !Array.isArray(merchantOrders)) {
             devLog.log(`⚠️ لم يتم الحصول على طلبات صالحة للموظف: ${employeeId}`);
@@ -969,24 +975,41 @@ export const AlWaseetProvider = ({ children }) => {
   const logout = useCallback(async (deleteAccount = false) => {
     const partnerName = deliveryPartners[activePartner]?.name || 'شركة التوصيل';
     
-    // إذا طُلب حذف الحساب فقط احذفه من قاعدة البيانات
+    // في حالة deleteAccount = true نعطل الحساب بدلاً من الحذف
     if (deleteAccount && user && activePartner !== 'local') {
-      await supabase
+      const { error } = await supabase
         .from('delivery_partner_tokens')
-        .delete()
+        .update({ is_active: false })
         .eq('user_id', user.id)
         .eq('partner_name', activePartner);
+        
+      if (!error) {
+        toast({ 
+          title: "تم تعطيل الحساب", 
+          description: `تم تعطيل الحساب من ${partnerName}. يمكنك إعادة تفعيله بتسجيل الدخول مجدداً.`,
+          variant: "default"
+        });
+      }
+    } else {
+      // تسجيل خروج عادي بدون حذف
+      toast({ 
+        title: "تم تسجيل الخروج", 
+        description: `تم تسجيل الخروج من ${partnerName}.` 
+      });
     }
 
-    // تنظيف الحالة المحلية فقط
+    // تنظيف الحالة المحلية
     setIsLoggedIn(false);
     setToken(null);
     setWaseetUser(null);
     setCities([]);
     setRegions([]);
     setPackageSizes([]);
-    setActivePartner('local');
-    toast({ title: "تم تسجيل الخروج", description: `تم تسجيل الخروج من ${partnerName}.` });
+    
+    // عدم تغيير activePartner إلا إذا طُلب حذف الحساب
+    if (deleteAccount) {
+      setActivePartner('local');
+    }
   }, [activePartner, deliveryPartners, user, setActivePartner]);
   
   // تحميل حالات الطلبات وإنشاء خريطة التطابق الجديدة

@@ -79,6 +79,7 @@ const TelegramBotDeliveryPartnerSelector = () => {
   const getPartnerName = (partner) => {
     const partners = {
       'alwaseet': 'الوسيط',
+      'modon': 'مدن',
       'local': 'محلي'
     };
     return partners[partner] || partner;
@@ -87,6 +88,7 @@ const TelegramBotDeliveryPartnerSelector = () => {
   const getPartnerColor = (partner) => {
     const colors = {
       'alwaseet': 'from-blue-500 to-blue-600',
+      'modon': 'from-purple-500 to-purple-600',
       'local': 'from-green-500 to-green-600'
     };
     return colors[partner] || 'from-gray-500 to-gray-600';
@@ -132,6 +134,12 @@ const TelegramBotDeliveryPartnerSelector = () => {
                 <div className="flex items-center gap-2">
                   <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${getPartnerColor('alwaseet')}`} />
                   <span>الوسيط</span>
+                </div>
+              </SelectItem>
+              <SelectItem value="modon">
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full bg-gradient-to-r ${getPartnerColor('modon')}`} />
+                  <span>مدن</span>
                 </div>
               </SelectItem>
               <SelectItem value="local" disabled>

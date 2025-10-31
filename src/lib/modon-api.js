@@ -143,3 +143,24 @@ export async function getPackageSizes(token) {
     throw error;
   }
 }
+
+/**
+ * Get all merchant orders from MODON
+ * @param {string} token - Authentication token
+ * @returns {Promise<Array>} List of merchant orders
+ */
+export async function getMerchantOrders(token) {
+  try {
+    console.log('📦 جلب طلبات التاجر من مدن...');
+    const data = await handleModonApiCall('orders', 'GET', token);
+    
+    if (data.status === true && data.errNum === 'S000') {
+      console.log(`✅ تم جلب ${data.data?.length || 0} طلب`);
+      return data.data || [];
+    }
+    throw new Error(data.msg || 'فشل جلب الطلبات');
+  } catch (error) {
+    console.error('❌ خطأ في جلب الطلبات من مدن:', error);
+    throw error;
+  }
+}
