@@ -54,7 +54,7 @@ const AiOrderDestinationSelector = ({ value, onChange, className, hideLocal = fa
         // جلب التفضيلات من الملف الشخصي
         const { data: profile } = await supabase
           .from('profiles')
-          .select('default_ai_order_destination, selected_delivery_account')
+          .select('default_ai_order_destination, selected_delivery_account, selected_delivery_partner')
           .eq('user_id', user.user_id)
           .single();
 
@@ -70,7 +70,7 @@ const AiOrderDestinationSelector = ({ value, onChange, className, hideLocal = fa
             onChange?.({
               destination,
               account,
-              partnerName: destination === 'local' ? 'local' : activePartner
+              partnerName: destination
             });
           }
         }
@@ -124,7 +124,8 @@ const AiOrderDestinationSelector = ({ value, onChange, className, hideLocal = fa
         .from('profiles')
         .update({
           default_ai_order_destination: destination,
-          selected_delivery_account: account
+          selected_delivery_account: account,
+          selected_delivery_partner: destination
         })
         .eq('user_id', user.user_id);
 
@@ -134,7 +135,7 @@ const AiOrderDestinationSelector = ({ value, onChange, className, hideLocal = fa
       onChange?.({
         destination,
         account,
-        partnerName: destination === 'local' ? 'local' : activePartner
+        partnerName: destination
       });
     } catch (error) {
       console.error('خطأ في حفظ التفضيلات:', error);
