@@ -884,16 +884,35 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   useEffect(() => {
     const fetchInitialData = async () => {
-      if (activePartner === 'alwaseet' && waseetToken) {
+      if ((activePartner === 'alwaseet' || activePartner === 'modon') && waseetToken) {
         setLoadingCities(true);
         setLoadingPackageSizes(true);
         setInitialDataLoaded(false);
         setDataFetchError(false);
         try {
-          const [citiesData, packageSizesData] = await Promise.all([
-            getCities(waseetToken),
-            getPackageSizes(waseetToken)
-          ]);
+          let citiesData, packageSizesData;
+          
+          if (activePartner === 'modon') {
+            const ModonAPI = await import('@/lib/modon-api');
+            [citiesData, packageSizesData] = await Promise.all([
+              ModonAPI.getCities(waseetToken),
+              ModonAPI.getPackageSizes(waseetToken)
+            ]);
+            
+            citiesData = citiesData.map(city => ({
+              id: city.id,
+              name: city.city_name
+            }));
+            packageSizesData = packageSizesData.map(size => ({
+              id: size.id,
+              size: size.size
+            }));
+          } else {
+            [citiesData, packageSizesData] = await Promise.all([
+              getCities(waseetToken),
+              getPackageSizes(waseetToken)
+            ]);
+          }
           
           const safeCities = Array.isArray(citiesData) ? citiesData : Object.values(citiesData || {});
           const safePackageSizes = Array.isArray(packageSizesData) ? packageSizesData : Object.values(packageSizesData || {});
@@ -901,7 +920,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setCities(safeCities);
           setPackageSizes(safePackageSizes);
 
-  // تعيين بغداد كمدينة افتراضية للوسيط إذا لم تكن محددة
           if ((!formData.city_id || formData.city_id === '') && safeCities.length > 0) {
             const baghdadCity = safeCities.find(city => 
               city.name?.toLowerCase().includes('بغداد') || 
@@ -912,18 +930,25 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               ...prev,
               city_id: String(defaultCity.id)
             }));
+            setSelectedCityId(String(defaultCity.id));
           }
 
-          // تعيين حجم "عادي" افتراضياً
           const normalSize = safePackageSizes.find(s => s.size && (s.size.toLowerCase().includes('normal') || s.size.includes('عادي')));
           if (normalSize) {
              setFormData(prev => ({ ...prev, size: String(normalSize.id) }));
+             setSelectedPackageSize(String(normalSize.id));
           } else if (safePackageSizes.length > 0) {
             setFormData(prev => ({ ...prev, size: String(safePackageSizes[0].id) }));
+            setSelectedPackageSize(String(safePackageSizes[0].id));
           }
         } catch (error) {
+          console.error('❌ خطأ في جلب بيانات شركة التوصيل:', error);
           setDataFetchError(true);
-          toast({ title: "خطأ", description: "فشل تحميل بيانات شركة التوصيل. قد يكون التوكن غير صالح أو منتهي الصلاحية.", variant: "destructive" }); 
+          toast({ 
+            title: "خطأ", 
+            description: `فشل تحميل بيانات ${activePartner === 'modon' ? 'مدن' : 'الوسيط'}. ${error.message}`, 
+            variant: "destructive" 
+          }); 
         } finally { 
           setLoadingCities(false); 
           setLoadingPackageSizes(false);
@@ -937,7 +962,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     };
     
     if(isDeliveryPartnerSelected) {
-        if(activePartner === 'alwaseet' && !isWaseetLoggedIn) {
+        const isPartnerLoggedIn = (activePartner === 'alwaseet' || activePartner === 'modon') && isWaseetLoggedIn;
+        
+        if ((activePartner === 'alwaseet' || activePartner === 'modon') && !isPartnerLoggedIn) {
             setInitialDataLoaded(false);
         } else {
             fetchInitialData();
@@ -950,25 +977,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // إصلاح شامل لجلب المناطق - الاعتماد على selectedCityId في وضع التعديل
   useEffect(() => {
-    // في وضع التعديل، استخدم selectedCityId؛ في وضع الإنشاء، استخدم formData.city_id
     const cityIdForRegions = isEditMode ? selectedCityId : formData.city_id;
     
-    if (cityIdForRegions && activePartner === 'alwaseet' && waseetToken) {
+    if (cityIdForRegions && (activePartner === 'alwaseet' || activePartner === 'modon') && waseetToken) {
       const fetchRegionsData = async () => {
         setLoadingRegions(true);
         setRegions([]);
         
-        // في وضع التعديل، احتفظ بـ region_id الأصلي
         const preservedRegionId = isEditMode ? (selectedRegionId || formData.region_id || '') : '';
-        console.log('🗺️ جلب المناطق - التحكم الجديد:', { 
-          cityIdForRegions, 
-          isEditMode, 
-          selectedCityId,
-          formDataCityId: formData.city_id,
-          preservedRegionId 
-        });
         
-         // مسح region_id فقط عند تغيير المدينة في وضع الإنشاء
          if (!isEditMode && prevCityIdRef.current !== formData.city_id) {
            setFormData(prev => ({ ...prev, region_id: '' }));
            setSelectedRegionId('');
@@ -976,48 +993,47 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
          }
         
         try {
-            console.log('🔍 إصلاح - جلب المناطق للمدينة:', cityIdForRegions);
+            console.log('🔍 جلب المناطق للمدينة:', cityIdForRegions, 'من', activePartner);
             
-            // التحقق من صحة city_id
             if (!cityIdForRegions || cityIdForRegions === '') {
               console.warn('⚠️ city_id فارغ، لا يمكن جلب المناطق');
               return;
             }
             
-            // تحقق من الذاكرة التخزينية أولاً
-            const cacheKey = `regions_${cityIdForRegions}`;
+            const cacheKey = `regions_${activePartner}_${cityIdForRegions}`;
             const cachedRegions = regionCache.current.get(cacheKey);
             
             if (cachedRegions) {
-              console.log('📦 استخدام المناطق المخزنة مؤقتاً للمدينة:', cityIdForRegions);
+              console.log('📦 استخدام المناطق المخزنة');
               setRegions(cachedRegions);
               
-              // تطبيق region_id المحفوظ في وضع التعديل
               if (isEditMode && preservedRegionId) {
                 setTimeout(() => {
                   setSelectedRegionId(preservedRegionId);
                   setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
-                  console.log('✅ تم تطبيق region_id المحفوظ من cache:', preservedRegionId);
                 }, 150);
               }
             } else {
-              console.log('🌐 جلب المناطق من API للمدينة:', cityIdForRegions);
-              const regionsData = await getRegionsByCity(waseetToken, cityIdForRegions);
+              let regionsData;
               
-              console.log('📡 استجابة API المناطق:', {
-                requestedCityId: cityIdForRegions,
-                regionsCount: Array.isArray(regionsData) ? regionsData.length : Object.keys(regionsData || {}).length,
-                firstRegion: Array.isArray(regionsData) ? regionsData[0] : Object.values(regionsData || {})[0]
-              });
+              if (activePartner === 'modon') {
+                const ModonAPI = await import('@/lib/modon-api');
+                regionsData = await ModonAPI.getRegionsByCity(waseetToken, cityIdForRegions);
+                
+                regionsData = regionsData.map(region => ({
+                  id: region.id,
+                  name: region.region_name,
+                  city_id: region.city_id
+                }));
+              } else {
+                regionsData = await getRegionsByCity(waseetToken, cityIdForRegions);
+              }
               
-              // التحقق من أن المناطق تنتمي للمدينة الصحيحة
-              if (Array.isArray(regionsData) && regionsData.length > 0) {
-                const firstRegion = regionsData[0];
-                if (firstRegion.city_id && String(firstRegion.city_id) !== String(cityIdForRegions)) {
-                  console.error('❌ خطأ: المناطق المُستلمة تنتمي لمدينة مختلفة!', {
-                    requestedCityId: cityIdForRegions,
-                    receivedCityId: firstRegion.city_id
-                  });
+              const safeRegions = Array.isArray(regionsData) ? regionsData : Object.values(regionsData || {});
+              
+              if (Array.isArray(safeRegions) && safeRegions.length > 0 && safeRegions[0].city_id) {
+                if (String(safeRegions[0].city_id) !== String(cityIdForRegions)) {
+                  console.error('❌ خطأ: المناطق المُستلمة تنتمي لمدينة مختلفة!');
                   toast({
                     title: "خطأ في البيانات",
                     description: "تم استلام مناطق لمدينة خاطئة من الخادم",
@@ -1027,27 +1043,25 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 }
               }
               
-              const safeRegions = Array.isArray(regionsData) ? regionsData : Object.values(regionsData || {});
-              
-              // حفظ في الذاكرة التخزينية
               regionCache.current.set(cacheKey, safeRegions);
               setRegions(safeRegions);
               
-               // في وضع التعديل، تأكد من أن المنطقة المحددة تظهر في dropdown
                if (isEditMode && preservedRegionId) {
-                 // تأخير أطول لضمان أن البيانات محملة في dropdown
                  setTimeout(() => {
                    setSelectedRegionId(preservedRegionId);
                    setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
-                   console.log('✅ تم استعادة المنطقة في وضع التعديل من API:', preservedRegionId);
                  }, 300);
                }
                
-               console.log('✅ تم جلب المناطق من API:', safeRegions.length, 'منطقة');
+               console.log('✅ تم جلب', safeRegions.length, 'منطقة من', activePartner);
             }
         } catch (error) { 
           console.error('❌ خطأ في جلب المناطق:', error);
-          toast({ title: "خطأ", description: "فشل تحميل المناطق.", variant: "destructive" }); 
+          toast({ 
+            title: "خطأ", 
+            description: `فشل تحميل المناطق من ${activePartner === 'modon' ? 'مدن' : 'الوسيط'}`, 
+            variant: "destructive" 
+          }); 
         }
         finally { setLoadingRegions(false); }
       };

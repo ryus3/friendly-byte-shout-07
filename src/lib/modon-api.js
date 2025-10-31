@@ -146,7 +146,7 @@ export async function getCities(token) {
 export async function getRegionsByCity(token, cityId) {
   try {
     const data = await handleModonApiCall(
-      'city-regions',
+      'regions',
       'GET',
       token,
       null,
@@ -154,7 +154,7 @@ export async function getRegionsByCity(token, cityId) {
     );
     
     if (data.status === true && data.errNum === 'S000') {
-      devLog.log(`✅ تم جلب ${data.data?.length || 0} منطقة من مدن`);
+      devLog.log(`✅ تم جلب ${data.data?.length || 0} منطقة من مدن للمدينة ${cityId}`);
       return data.data || [];
     }
     
