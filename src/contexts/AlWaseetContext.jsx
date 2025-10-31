@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './UnifiedAuthContext';
 import { useNotificationsSystem } from './NotificationsSystemContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
+import * as ModonAPI from '@/lib/modon-api';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { verifyOrderOwnership, createSecureOrderFilter, logSecurityWarning } from '@/utils/alwaseetSecurityUtils';
@@ -34,15 +35,18 @@ export const AlWaseetProvider = ({ children }) => {
   }, []);
   
   // دالة للحصول على توكن المستخدم من النظام الأصلي - دعم متعدد الحسابات
-  const getTokenForUser = useCallback(async (userId, accountUsername = null) => {
+  const getTokenForUser = useCallback(async (userId, accountUsername = null, partnerName = null) => {
     if (!userId) return null;
+    
+    // استخدام activePartner إذا لم يتم تحديد partnerName
+    const partner = partnerName || activePartner;
     
     try {
       let query = supabase
         .from('delivery_partner_tokens')
-        .select('token, expires_at, account_username, merchant_id, account_label, is_default')
+        .select('token, expires_at, account_username, merchant_id, account_label, is_default, partner_name')
         .eq('user_id', userId)
-        .eq('partner_name', 'alwaseet');
+        .eq('partner_name', partner);
       
       if (accountUsername) {
         // البحث عن حساب محدد مع المقارنة المطبعة
@@ -70,16 +74,19 @@ export const AlWaseetProvider = ({ children }) => {
   }, []);
 
   // دالة لتفعيل حساب محدد وتسجيل الدخول الفعلي
-  const activateAccount = useCallback(async (accountUsername) => {
+  const activateAccount = useCallback(async (accountUsername, partnerName = null) => {
     if (!user?.id || !accountUsername) {
       return false;
     }
+    
+    // استخدام activePartner إذا لم يتم تحديد partnerName
+    const partner = partnerName || activePartner;
     
     try {
       setLoading(true);
       
       // جلب بيانات الحساب المحدد
-      const accountData = await getTokenForUser(user.id, accountUsername);
+      const accountData = await getTokenForUser(user.id, accountUsername, partner);
       
       if (!accountData) {
         toast({
@@ -98,20 +105,20 @@ export const AlWaseetProvider = ({ children }) => {
         label: accountData.account_label
       });
       setIsLoggedIn(true);
-      setActivePartner('alwaseet');
+      setActivePartner(partner);
       
       // تحديث last_used_at في قاعدة البيانات
       await supabase
         .from('delivery_partner_tokens')
         .update({ last_used_at: new Date().toISOString() })
         .eq('user_id', user.id)
-        .eq('partner_name', 'alwaseet')
+        .eq('partner_name', partner)
         .ilike('account_username', accountUsername.trim().toLowerCase());
       
-      
+      const partnerDisplayName = deliveryPartners[partner]?.name || partner;
       toast({
         title: "✅ تم تسجيل الدخول بنجاح",
-        description: `تم تسجيل الدخول للحساب: ${accountData.account_label || accountData.account_username}`,
+        description: `تم تسجيل الدخول للحساب: ${accountData.account_label || accountData.account_username} في ${partnerDisplayName}`,
         variant: "default"
       });
       
@@ -592,11 +599,14 @@ export const AlWaseetProvider = ({ children }) => {
 
   
   // دالة للتحقق من وجود توكن صالح بدون تغيير activePartner
-  const hasValidToken = useCallback(async (partnerName = 'alwaseet') => {
+  const hasValidToken = useCallback(async (partnerName = null) => {
     if (!user?.id) return false;
     
+    // استخدام activePartner إذا لم يتم تحديد partnerName
+    const partner = partnerName || activePartner;
+    
     try {
-      const tokenData = await getTokenForUser(user.id);
+      const tokenData = await getTokenForUser(user.id, null, partner);
       return tokenData && tokenData.token && new Date(tokenData.expires_at) > new Date();
     } catch (error) {
       console.error('خطأ في التحقق من التوكن:', error);
@@ -809,29 +819,43 @@ export const AlWaseetProvider = ({ children }) => {
 
     setLoading(true);
     try {
-      const { data, error: proxyError } = await supabase.functions.invoke('alwaseet-proxy', {
-        body: {
-          endpoint: 'login',
-          method: 'POST',
-          payload: { username, password }
-        }
-      });
-
-      if (proxyError) {
-        const errorBody = await proxyError.context.json();
-        throw new Error(errorBody.msg || 'فشل الاتصال بالخادم الوكيل.');
-      }
-      
-      if (data.errNum !== "S000" || !data.status) {
-        throw new Error(data.msg || 'فشل تسجيل الدخول. تحقق من اسم المستخدم وكلمة المرور.');
-      }
-
-      const tokenData = data.data;
+      let tokenData, partnerData;
       const expires_at = new Date();
-      // Token validity: 7 days (604800 seconds) as requested
-      expires_at.setSeconds(expires_at.getSeconds() + 604800);
+      expires_at.setSeconds(expires_at.getSeconds() + 604800); // 7 days validity
 
-      const partnerData = { username };
+      // استخدام الـ API المناسب حسب الشريك
+      if (partner === 'modon') {
+        // استخدام loginToModon مباشرةً (لأنها تستخدم multipart/form-data)
+        const result = await ModonAPI.loginToModon(username, password);
+        
+        if (!result.success) {
+          throw new Error(result.error || 'فشل تسجيل الدخول في مدن');
+        }
+        
+        tokenData = { token: result.token };
+        partnerData = { username };
+      } else {
+        // الوسيط - استخدام alwaseet-proxy
+        const { data, error: proxyError } = await supabase.functions.invoke('alwaseet-proxy', {
+          body: {
+            endpoint: 'login',
+            method: 'POST',
+            payload: { username, password }
+          }
+        });
+
+        if (proxyError) {
+          const errorBody = await proxyError.context.json();
+          throw new Error(errorBody.msg || 'فشل الاتصال بالخادم الوكيل.');
+        }
+        
+        if (data.errNum !== "S000" || !data.status) {
+          throw new Error(data.msg || 'فشل تسجيل الدخول. تحقق من اسم المستخدم وكلمة المرور.');
+        }
+
+        tokenData = data.data;
+        partnerData = { username };
+      }
 
       // حفظ التوكن في قاعدة البيانات مع دعم تعدد الحسابات
       const normalizedUsername = normalizeUsername(username);
@@ -916,7 +940,12 @@ export const AlWaseetProvider = ({ children }) => {
       setWaseetUser(partnerData);
       setIsLoggedIn(true);
       setActivePartner(partner);
-      toast({ title: "نجاح", description: `تم تسجيل الدخول بنجاح في ${deliveryPartners[partner].name}.` });
+      
+      const partnerName = deliveryPartners[partner]?.name || partner;
+      toast({ 
+        title: "نجاح", 
+        description: `تم تسجيل الدخول بنجاح في ${partnerName}.` 
+      });
       
       // تشغيل مزامنة سريعة بعد 5 ثواني من تجديد التوكن
       setTimeout(() => {
