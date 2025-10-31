@@ -280,8 +280,10 @@ export async function createModonOrder(orderData, token) {
     // ✅ لوج تشخيصي
     original_city_id: orderData.city_id,
     original_region_id: orderData.region_id,
+    original_phone: orderData.phone,
     mapped_city_id: formattedData.city_id,
-    mapped_region_id: formattedData.region_id
+    mapped_region_id: formattedData.region_id,
+    mapped_phone: formattedData.client_mobile
   });
   
   const data = await handleModonApiCall(

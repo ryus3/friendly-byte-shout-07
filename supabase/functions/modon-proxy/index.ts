@@ -26,9 +26,10 @@ serve(async (req) => {
 
     const headers: Record<string, string> = {};
 
-    // Login endpoint uses FormData, others use JSON
-    if (isFormData && endpoint === 'login') {
+    // Login, create-order, edit-order, and delete_orders endpoints use FormData
+    if (isFormData && (endpoint === 'login' || endpoint === 'create-order' || endpoint === 'edit-order' || endpoint === 'delete_orders')) {
       // Don't set Content-Type for FormData - browser will set it automatically with boundary
+      console.log('📝 Using FormData for endpoint:', endpoint);
     } else {
       headers['Content-Type'] = 'application/json';
     }
@@ -51,6 +52,10 @@ serve(async (req) => {
           formData.append(key, payload[key]);
         });
         options.body = formData;
+        
+        // ✅ Logging تشخيصي
+        console.log('📝 FormData fields:', Object.keys(payload));
+        console.log('📞 Phone field in payload:', payload.client_mobile);
       } else {
         options.body = JSON.stringify(payload);
       }
