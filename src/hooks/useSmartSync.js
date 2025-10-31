@@ -9,215 +9,50 @@ export const useSmartSync = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncingEmployee, setSyncingEmployee] = useState(null);
 
-  // مزامنة ذكية سريعة - فواتير جديدة فقط
+  // مزامنة ذكية سريعة - الفواتير فقط (مُعطلة - سيتم استخدام المزامنة المباشرة)
   const smartSync = useCallback(async () => {
-    setSyncing(true);
-    const startTime = Date.now();
-    
-    try {
-      console.log('🚀 بدء المزامنة الذكية...');
-      
-      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: 'smart',
-          sync_invoices: true,
-          sync_orders: false, // فقط الفواتير للسرعة
-          force_refresh: false
-        }
-      });
-
-      if (error) throw error;
-
-      const duration = Math.round((Date.now() - startTime) / 1000);
-      
-      toast({
-        title: "✅ مزامنة ذكية مكتملة",
-        description: data.invoices_synced > 0 
-          ? `تم جلب ${data.invoices_synced} فاتورة جديدة في ${duration} ثانية فقط${data.needs_login?.length > 0 ? ` | ${data.needs_login.length} موظف يحتاج إعادة تسجيل دخول` : ''}`
-          : `لا توجد فواتير جديدة - آخر تحديث في ${duration} ثانية${data.needs_login?.length > 0 ? ` | ${data.needs_login.length} موظف يحتاج إعادة تسجيل دخول` : ''}`,
-        variant: data.invoices_synced > 0 ? "default" : "secondary",
-        duration: 6000
-      });
-
-      return { success: true, data };
-
-    } catch (error) {
-      console.error('خطأ في المزامنة الذكية:', error);
-      toast({
-        title: "خطأ في المزامنة الذكية",
-        description: error.message,
-        variant: "destructive"
-      });
-      return { success: false, error };
-    } finally {
-      setSyncing(false);
-    }
+    console.log('⚠️ smartSync مُعطلة - استخدم المزامنة المباشرة من useAlWaseetInvoices');
+    return { success: false, error: 'Use direct sync instead' };
   }, []);
 
-  // مزامنة موظف محدد ذكية (بدون force refresh)
+  // مزامنة موظف محدد ذكية (مُعطلة)
   const syncSpecificEmployeeSmart = useCallback(async (employeeId, employeeName) => {
-    setSyncingEmployee(employeeId);
-    const startTime = Date.now();
-    
-    try {
-      console.log(`🔄 مزامنة ذكية للموظف: ${employeeName}`);
-      
-      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: 'specific_employee',
-          employee_id: employeeId,
-          sync_invoices: true,
-          sync_orders: true,
-          force_refresh: false // مزامنة ذكية فقط للجديد
-        }
-      });
-
-      if (error) throw error;
-
-      const duration = Math.round((Date.now() - startTime) / 1000);
-      
-      if (data.needs_login?.includes(employeeName)) {
-        toast({
-          title: "يحتاج تسجيل دخول",
-          description: `${employeeName} يحتاج تسجيل دخول في الوسيط`,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "✅ مزامنة ذكية للموظف مكتملة",
-          description: `${employeeName}: ${data.invoices_synced} فاتورة جديدة | ${data.orders_updated} طلب محدث في ${duration} ثانية`,
-          variant: "default",
-          duration: 7000
-        });
-      }
-
-      return { success: true, data };
-
-    } catch (error) {
-      console.error(`خطأ في المزامنة الذكية للموظف ${employeeName}:`, error);
-      toast({
-        title: "خطأ في المزامنة الذكية للموظف",
-        description: `${employeeName}: ${error.message}`,
-        variant: "destructive"
-      });
-      return { success: false, error };
-    } finally {
-      setSyncingEmployee(null);
-    }
+    console.log('⚠️ syncSpecificEmployeeSmart مُعطلة - استخدم المزامنة المباشرة');
+    return { success: false, error: 'Use direct sync instead' };
   }, []);
 
-  // مزامنة موظف محدد شاملة (مع force refresh)
+  // مزامنة موظف محدد شاملة (مُعطلة)
   const syncSpecificEmployee = useCallback(async (employeeId, employeeName) => {
-    setSyncingEmployee(employeeId);
-    const startTime = Date.now();
-    
-    try {
-      console.log(`🔄 مزامنة شاملة للموظف: ${employeeName}`);
-      
-      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: 'specific_employee',
-          employee_id: employeeId,
-          sync_invoices: true,
-          sync_orders: true,
-          force_refresh: true // مزامنة شاملة لكل البيانات
-        }
-      });
-
-      if (error) throw error;
-
-      const duration = Math.round((Date.now() - startTime) / 1000);
-      
-      if (data.needs_login?.includes(employeeName)) {
-        toast({
-          title: "يحتاج تسجيل دخول",
-          description: `${employeeName} يحتاج تسجيل دخول في الوسيط`,
-          variant: "destructive"
-        });
-      } else {
-        toast({
-          title: "✅ مزامنة شاملة للموظف مكتملة",
-          description: `${employeeName}: ${data.invoices_synced} فاتورة | ${data.orders_updated} طلب محدث في ${duration} ثانية`,
-          variant: "default",
-          duration: 7000
-        });
-      }
-
-      return { success: true, data };
-
-    } catch (error) {
-      console.error(`خطأ في المزامنة الشاملة للموظف ${employeeName}:`, error);
-      toast({
-        title: "خطأ في المزامنة الشاملة للموظف",
-        description: `${employeeName}: ${error.message}`,
-        variant: "destructive"
-      });
-      return { success: false, error };
-    } finally {
-      setSyncingEmployee(null);
-    }
+    console.log('⚠️ syncSpecificEmployee مُعطلة - استخدم المزامنة المباشرة');
+    return { success: false, error: 'Use direct sync instead' };
   }, []);
 
-  // مزامنة شاملة ذكية - الطلبات الظاهرة أولاً ثم الفواتير الجديدة
+  // مزامنة شاملة ذكية - استخدام المزامنة المباشرة فقط
   const comprehensiveSync = useCallback(async (visibleOrders = null, syncVisibleOrdersBatch = null) => {
     setSyncing(true);
     const startTime = Date.now();
     
     try {
-      console.log('🚀 بدء المزامنة الشاملة الذكية...');
+      console.log('🚀 بدء المزامنة الشاملة المباشرة...');
       
-      // استخدام الطلبات الظاهرة كحالة افتراضية مع fallback للمزامنة التقليدية
+      // استخدام المزامنة المباشرة للطلبات الظاهرة
       const shouldUseSmart = visibleOrders && Array.isArray(visibleOrders) && visibleOrders.length > 0 && syncVisibleOrdersBatch;
       
       if (shouldUseSmart) {
-        console.log(`📋 استخدام المزامنة الذكية للطلبات الظاهرة: ${visibleOrders.length} طلب`);
+        console.log(`📋 مزامنة الطلبات الظاهرة: ${visibleOrders.length} طلب`);
         
         // مزامنة الطلبات الظاهرة فقط
         const ordersResult = await syncVisibleOrdersBatch(visibleOrders);
         
         if (!ordersResult.success) {
-          console.warn('فشل في مزامنة الطلبات الظاهرة، التبديل للوضع التقليدي');
-          // التراجع للمزامنة التقليدية
-          const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-            body: { 
-              mode: 'comprehensive',
-              sync_invoices: true,
-              sync_orders: true,
-              force_refresh: true
-            }
-          });
-          
-          if (error) throw error;
-          
-          const duration = Math.round((Date.now() - startTime) / 1000);
-          
-          toast({
-            title: "🎉 مزامنة شاملة مكتملة (تقليدية)",
-            description: `${data.invoices_synced} فاتورة | ${data.orders_updated} طلب في ${duration} ثانية`,
-            variant: "default",
-            duration: 8000
-          });
-
-          return { success: true, data };
+          throw new Error('فشل في مزامنة الطلبات الظاهرة');
         }
-        
-        // مزامنة الفواتير الجديدة فقط
-        const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('smart-invoice-sync', {
-          body: { 
-            mode: 'smart',
-            sync_invoices: true,
-            sync_orders: false,
-            force_refresh: false
-          }
-        });
-
-        if (invoiceError) throw invoiceError;
 
         const duration = Math.round((Date.now() - startTime) / 1000);
         
         toast({
           title: "🎉 مزامنة شاملة مكتملة",
-          description: `${invoiceData.invoices_synced || 0} فاتورة جديدة | ${ordersResult.updatedCount || 0} طلب محدث في ${duration} ثانية`,
+          description: `تم تحديث ${ordersResult.updatedCount || 0} طلب في ${duration} ثانية`,
           variant: "default",
           duration: 8000
         });
@@ -225,35 +60,19 @@ export const useSmartSync = () => {
         return { 
           success: true, 
           data: {
-            invoices_synced: invoiceData.invoices_synced || 0,
+            invoices_synced: 0,
             orders_updated: ordersResult.updatedCount || 0,
             smart_mode: true
           } 
         };
+      } else {
+        toast({
+          title: "تنبيه",
+          description: "يرجى تمرير الطلبات الظاهرة للمزامنة",
+          variant: "secondary"
+        });
+        return { success: false, error: 'No visible orders provided' };
       }
-      
-      // المزامنة الشاملة التقليدية (للاستخدام في حالات خاصة)
-      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: 'comprehensive',
-          sync_invoices: true,
-          sync_orders: true,
-          force_refresh: true
-        }
-      });
-
-      if (error) throw error;
-
-      const duration = Math.round((Date.now() - startTime) / 1000);
-      
-      toast({
-        title: "🎉 مزامنة شاملة مكتملة",
-        description: `تمت معالجة ${data.employees_processed} موظف | ${data.invoices_synced} فاتورة جديدة | ${data.orders_updated} طلب محدث في ${duration} ثانية${data.needs_login?.length > 0 ? ` | ${data.needs_login.length} موظف يحتاج إعادة تسجيل دخول` : ''}`,
-        variant: "default",
-        duration: 10000
-      });
-
-      return { success: true, data };
 
     } catch (error) {
       console.error('خطأ في المزامنة الشاملة:', error);
@@ -268,45 +87,10 @@ export const useSmartSync = () => {
     }
   }, []);
 
-  // مزامنة سريعة للطلبات فقط
+  // مزامنة سريعة للطلبات (مُعطلة)
   const syncOrdersOnly = useCallback(async (employeeId = null) => {
-    const isSingleEmployee = !!employeeId;
-    if (isSingleEmployee) setSyncingEmployee(employeeId);
-    else setSyncing(true);
-    
-    try {
-      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: isSingleEmployee ? 'specific_employee' : 'smart',
-          employee_id: employeeId,
-          sync_invoices: false,
-          sync_orders: true,
-          force_refresh: false
-        }
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "تحديث حالات الطلبات",
-        description: `تم تحديث ${data.orders_updated} طلب`,
-        variant: "default"
-      });
-
-      return { success: true, data };
-
-    } catch (error) {
-      console.error('خطأ في مزامنة الطلبات:', error);
-      toast({
-        title: "خطأ في تحديث الطلبات",
-        description: error.message,
-        variant: "destructive"
-      });
-      return { success: false, error };
-    } finally {
-      if (isSingleEmployee) setSyncingEmployee(null);
-      else setSyncing(false);
-    }
+    console.log('⚠️ syncOrdersOnly مُعطلة - استخدم المزامنة المباشرة');
+    return { success: false, error: 'Use direct sync instead' };
   }, []);
 
   return {

@@ -33,76 +33,30 @@ export const useAppStartSync = () => {
       console.log('🚀 بدء المزامنة الشاملة الذكية عند تشغيل التطبيق');
 
       // المرحلة 1: مزامنة الطلبات المرئية بالأولوية القصوى
-      setSyncProgress({ current: 1, total: 4, status: 'مزامنة الطلبات المرئية (ذكية)...' });
+      setSyncProgress({ current: 1, total: 3, status: 'مزامنة الطلبات المرئية...' });
       let ordersUpdated = 0;
       
       if (visibleOrders && Array.isArray(visibleOrders) && visibleOrders.length > 0 && syncVisibleOrdersBatch) {
-        console.log(`📋 استخدام المزامنة الذكية للطلبات المرئية: ${visibleOrders.length} طلب`);
+        console.log(`📋 مزامنة الطلبات المرئية: ${visibleOrders.length} طلب`);
         
-        try {
-          const ordersResult = await syncVisibleOrdersBatch(visibleOrders, (progress) => {
-            console.log(`📊 تقدم المزامنة: ${progress.processed}/${progress.total} موظفين، ${progress.updated} طلب محدث`);
-          });
-          
-          if (ordersResult.success) {
-            ordersUpdated = ordersResult.updatedCount || 0;
-            console.log(`✅ مزامنة ذكية للطلبات المرئية: ${ordersUpdated} طلب محدث`);
-          } else {
-            console.warn('فشل في المزامنة الذكية، التبديل للوضع التقليدي');
-            throw new Error('فشل المزامنة الذكية');
-          }
-        } catch (error) {
-          console.warn('التراجع للمزامنة التقليدية للطلبات:', error.message);
-          // التراجع للمزامنة التقليدية
-          const { data: ordersData, error: ordersError } = await supabase.functions.invoke('smart-invoice-sync', {
-            body: { 
-              mode: 'smart',
-              sync_invoices: false,
-              sync_orders: true,
-              force_refresh: false
-            }
-          });
-
-          if (ordersError) throw ordersError;
-          ordersUpdated = ordersData?.orders_updated || 0;
-        }
-      } else {
-        // استخدام المزامنة التقليدية في حالة عدم توفر الطلبات المرئية
-        console.log('📋 استخدام المزامنة التقليدية للطلبات (لا توجد طلبات مرئية)');
-        const { data: ordersData, error: ordersError } = await supabase.functions.invoke('smart-invoice-sync', {
-          body: { 
-            mode: 'smart',
-            sync_invoices: false,
-            sync_orders: true,
-            force_refresh: false
-          }
+        const ordersResult = await syncVisibleOrdersBatch(visibleOrders, (progress) => {
+          console.log(`📊 تقدم المزامنة: ${progress.processed}/${progress.total} موظفين، ${progress.updated} طلب محدث`);
         });
-
-        if (ordersError) throw ordersError;
-        ordersUpdated = ordersData?.orders_updated || 0;
+        
+        if (ordersResult.success) {
+          ordersUpdated = ordersResult.updatedCount || 0;
+          console.log(`✅ مزامنة الطلبات المرئية: ${ordersUpdated} طلب محدث`);
+        }
       }
 
-      // المرحلة 2: مزامنة الفواتير الجديدة (بأولوية منخفضة)
-      setSyncProgress({ current: 2, total: 4, status: 'جلب الفواتير الجديدة...' });
-      const { data: invoiceData, error: invoiceError } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: 'smart',
-          sync_invoices: true,
-          sync_orders: false,
-          force_refresh: false
-        }
-      });
-
-      if (invoiceError) throw invoiceError;
-
-      // المرحلة 3: تنظيف البيانات القديمة
-      setSyncProgress({ current: 3, total: 4, status: 'تنظيف البيانات القديمة...' });
+      // المرحلة 2: تنظيف البيانات القديمة
+      setSyncProgress({ current: 2, total: 3, status: 'تنظيف البيانات القديمة...' });
       await supabase.rpc('cleanup_old_delivery_invoices');
 
-      // المرحلة 4: إرسال إشعار النجاح
-      setSyncProgress({ current: 4, total: 4, status: 'اكتمال المزامنة...' });
+      // المرحلة 3: إرسال إشعار النجاح
+      setSyncProgress({ current: 3, total: 3, status: 'اكتمال المزامنة...' });
       
-      const totalInvoices = invoiceData?.invoices_synced || 0;
+      const totalInvoices = 0; // لا يتم جلب الفواتير في المزامنة الشاملة
       
       console.log(`✅ مزامنة شاملة ذكية مكتملة: ${totalInvoices} فاتورة، ${ordersUpdated} طلب`);
       

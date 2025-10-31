@@ -82,48 +82,11 @@ export const useUnifiedAutoSync = () => {
     }
   }, []);
 
-  // مزامنة تلقائية للفواتير فقط (خفيفة وسريعة)
+  // مزامنة تلقائية للفواتير (مُعطلة - استخدم المزامنة المباشرة)
   const autoSyncInvoices = useCallback(async () => {
-    if (isSyncing || !syncSettings?.invoice_auto_sync) return;
-
-    try {
-      setIsSyncing(true);
-      devLog.log('🔄 مزامنة تلقائية للفواتير...');
-
-      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: 'smart',
-          sync_invoices: true,
-          sync_orders: false,
-          force_refresh: false
-        }
-      });
-
-      if (error) throw error;
-
-      if (data?.invoices_synced > 0) {
-        devLog.log(`✅ مزامنة تلقائية: ${data.invoices_synced} فاتورة جديدة`);
-        
-        // إشعار خفيف (بدون toast مزعج)
-        window.dispatchEvent(new CustomEvent('autoSyncCompleted', { 
-          detail: { 
-            type: 'invoices', 
-            count: data.invoices_synced,
-            timestamp: new Date()
-          } 
-        }));
-      }
-
-      setLastAutoSync(new Date());
-      return { success: true, data };
-
-    } catch (error) {
-      console.error('خطأ في المزامنة التلقائية للفواتير:', error);
-      return { success: false, error };
-    } finally {
-      setIsSyncing(false);
-    }
-  }, [isSyncing, syncSettings]);
+    console.log('⚠️ autoSyncInvoices مُعطلة - استخدم المزامنة المباشرة من useAlWaseetInvoices');
+    return { success: false, error: 'Use direct sync instead' };
+  }, []);
 
   // مزامنة تلقائية للطلبات الظاهرة فقط
   const autoSyncVisibleOrders = useCallback(async (visibleOrders = []) => {
