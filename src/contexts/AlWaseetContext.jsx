@@ -410,14 +410,35 @@ export const AlWaseetProvider = ({ children }) => {
           
           // استدعاء API المناسب حسب partner_name
           let merchantOrders;
-          if (employeeTokenData.partner_name === 'modon') {
-            merchantOrders = await ModonAPI.getMerchantOrders(employeeTokenData.token);
-          } else {
-            merchantOrders = await AlWaseetAPI.getMerchantOrders(employeeTokenData.token);
-          }
-          
-          if (!merchantOrders || !Array.isArray(merchantOrders)) {
-            devLog.log(`⚠️ لم يتم الحصول على طلبات صالحة للموظف: ${employeeId}`);
+          try {
+            if (employeeTokenData.partner_name === 'modon') {
+              merchantOrders = await ModonAPI.getMerchantOrders(employeeTokenData.token);
+            } else {
+              merchantOrders = await AlWaseetAPI.getMerchantOrders(employeeTokenData.token);
+            }
+            
+            if (!merchantOrders || !Array.isArray(merchantOrders)) {
+              const partnerName = employeeTokenData.partner_name === 'modon' ? 'مدن' : 'الوسيط';
+              devLog.log(`⚠️ لم يتم الحصول على طلبات صالحة من ${partnerName} للموظف: ${employeeId}`);
+              
+              toast({
+                title: `تحذير: فشل مزامنة ${partnerName}`,
+                description: `تعذر الحصول على طلبات الموظف من ${partnerName}. تحقق من تسجيل الدخول.`,
+                variant: 'destructive',
+                duration: 5000
+              });
+              continue;
+            }
+          } catch (apiError) {
+            const partnerName = employeeTokenData.partner_name === 'modon' ? 'مدن' : 'الوسيط';
+            console.error(`❌ خطأ في جلب طلبات ${partnerName}:`, apiError);
+            
+            toast({
+              title: `خطأ في ${partnerName}`,
+              description: apiError.message || `فشل الاتصال بـ ${partnerName}`,
+              variant: 'destructive',
+              duration: 6000
+            });
             continue;
           }
 

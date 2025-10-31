@@ -286,23 +286,41 @@ export async function createModonOrder(orderData, token) {
     mapped_phone: formattedData.client_mobile
   });
   
-  const data = await handleModonApiCall(
-    'create-order', 
-    'POST', 
-    token, 
-    formattedData, 
-    { token },
-    true
-  );
-  
-  if (data.status === true && data.errNum === 'S000') {
-    // ✅ MODON ترجع object مباشر، ليس array
-    const orderData = Array.isArray(data.data) ? data.data[0] : data.data;
-    devLog.log('✅ تم إنشاء الطلب في مدن:', orderData);
-    return orderData;
+  try {
+    const data = await handleModonApiCall(
+      'create-order', 
+      'POST', 
+      token, 
+      formattedData, 
+      { token },
+      true
+    );
+    
+    if (data.status === true && data.errNum === 'S000') {
+      // ✅ MODON ترجع object مباشر، ليس array
+      const orderData = Array.isArray(data.data) ? data.data[0] : data.data;
+      devLog.log('✅ تم إنشاء الطلب في مدن:', orderData);
+      return orderData;
+    }
+    
+    throw new Error(data.msg || 'فشل إنشاء الطلب في مدن');
+  } catch (error) {
+    console.error('❌ MODON Create Order Failed:', {
+      error: error.message,
+      endpoint: 'create-order',
+      hasToken: !!token,
+      cityId: formattedData.city_id,
+      regionId: formattedData.region_id,
+      phone: formattedData.client_mobile
+    });
+    
+    // تحليل نوع الخطأ وإرجاع رسالة واضحة
+    if (error.message?.includes('Unauthorized') || error.message?.includes('401')) {
+      throw new Error('ليس لديك صلاحية الوصول. يرجى تسجيل الدخول مجدداً إلى مدن');
+    }
+    
+    throw error;
   }
-  
-  throw new Error(data.msg || 'فشل إنشاء الطلب في مدن');
 }
 
 /**

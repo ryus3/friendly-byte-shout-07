@@ -90,11 +90,17 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             region_id: finalRegionId
           };
 
-          // استخدام توكن الحساب المحدد إذا تم تمريره
-          const useToken = aiOrderData?.accountData?.token || waseetToken;
-          
-          // ✅ استدعاء API المناسب حسب الشريك
-          let partnerResult;
+        // استخدام توكن الحساب المحدد إذا تم تمريره
+        const useToken = aiOrderData?.accountData?.token || waseetToken;
+        
+        // ✅ التحقق من صحة التوكن قبل المتابعة
+        if (!useToken) {
+          const partnerName = activePartner === 'modon' ? 'مدن' : 'الوسيط';
+          throw new Error(`يجب تسجيل الدخول إلى ${partnerName} أولاً`);
+        }
+        
+        // ✅ استدعاء API المناسب حسب الشريك
+        let partnerResult;
           if (activePartner === 'modon') {
             partnerResult = await ModonAPI.createModonOrder(partnerPayload, useToken);
           } else {
@@ -167,12 +173,35 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
         } catch (partnerError) {
           const partnerName = activePartner === 'modon' ? 'مدن' : 'الوسيط';
           
-          // ❌ عدم التراجع بصمت - إظهار الخطأ للمستخدم
+          // تحليل نوع الخطأ وإعطاء رسالة واضحة
+          let errorTitle = `❌ فشل إنشاء طلب ${partnerName}`;
+          let errorDescription = partnerError.message;
+          
+          if (partnerError.message?.includes('صلاحية') || partnerError.message?.includes('Unauthorized')) {
+            errorTitle = `🔒 مشكلة في صلاحية ${partnerName}`;
+            errorDescription = `يرجى تسجيل الدخول مجدداً إلى ${partnerName}. التوكن قد يكون منتهي الصلاحية.`;
+          } else if (partnerError.message?.includes('city_id') || partnerError.message?.includes('region_id')) {
+            errorTitle = `📍 خطأ في بيانات المدينة/المنطقة`;
+            errorDescription = `بيانات المدينة أو المنطقة غير صحيحة. تأكد من ربط المدن والمناطق في الإعدادات.`;
+          } else if (partnerError.message?.includes('phone') || partnerError.message?.includes('mobile')) {
+            errorTitle = `📱 خطأ في رقم الهاتف`;
+            errorDescription = `رقم الهاتف غير صحيح. يجب أن يكون بصيغة +9647XXXXXXXXX`;
+          }
+          
           toast({
-            title: `❌ فشل إنشاء طلب ${partnerName}`,
-            description: partnerError.message || 'حدث خطأ غير متوقع. تحقق من تسجيل الدخول',
+            title: errorTitle,
+            description: errorDescription,
             variant: 'destructive',
-            duration: 6000
+            duration: 8000
+          });
+          
+          console.error(`❌ ${partnerName} Order Creation Failed:`, {
+            error: partnerError,
+            customerInfo,
+            cart,
+            activePartner,
+            hasToken: !!waseetToken,
+            accountData: aiOrderData?.accountData
           });
           
           throw partnerError;

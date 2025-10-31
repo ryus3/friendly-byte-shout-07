@@ -11,6 +11,26 @@ export const useDeliveryOrderHandler = () => {
     try {
       console.log('📦 معالجة طلب شركة التوصيل:', { destination, selectedAccount });
 
+      // ✅ جلب التوكن الفعلي من قاعدة البيانات
+      const { data: tokenData, error: tokenError } = await supabase
+        .from('delivery_partner_tokens')
+        .select('token, merchant_id, account_username')
+        .eq('account_label', selectedAccount)
+        .eq('partner_name', destination)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      if (tokenError || !tokenData) {
+        console.error('❌ فشل في جلب التوكن:', tokenError);
+        throw new Error(`لم يتم العثور على توكن صالح للحساب ${selectedAccount}`);
+      }
+
+      console.log('✅ تم جلب التوكن بنجاح:', {
+        account: selectedAccount,
+        partner: destination,
+        hasToken: !!tokenData.token
+      });
+
       // ✅ ai_orders يحتوي بالفعل على external IDs من البوت - لا حاجة للتحويل
       console.log('🔍 [DeliveryOrderHandler] المعرفات من ai_orders:', {
         city_id: aiOrder.city_id,           // external ID مباشرة
@@ -56,12 +76,17 @@ export const useDeliveryOrderHandler = () => {
         total: Number(item.quantity || 1) * Number(item.unit_price || item.price || 0)
       }));
 
-      // إنشاء طلب موحد عبر شركة التوصيل مع بيانات الحساب المحدد
+      // إنشاء طلب موحد عبر شركة التوصيل مع بيانات الحساب المحدد والتوكن
       const result = await createUnifiedOrder(customerInfo, cart, 0, {
         id: aiOrder.id,
         source: aiOrder.source || 'ai',
         selectedAccount: selectedAccount,
-        accountData: accountData  // تمرير بيانات الحساب مع التوكن
+        accountData: {
+          ...accountData,
+          token: tokenData.token,
+          merchant_id: tokenData.merchant_id,
+          account_username: tokenData.account_username
+        }
       });
 
       if (result.success) {
