@@ -13,9 +13,9 @@ serve(async (req) => {
   }
 
   try {
-    const { endpoint, method, token, payload, queryParams } = await req.json();
+    const { endpoint, method, token, payload, queryParams, isFormData } = await req.json();
     
-    console.log('📦 MODON Proxy Request:', { endpoint, method });
+    console.log('📦 MODON Proxy Request:', { endpoint, method, isFormData });
 
     let url = `${MODON_BASE_URL}/${endpoint}`;
     
@@ -24,9 +24,14 @@ serve(async (req) => {
       url += `?${params.toString()}`;
     }
 
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const headers: Record<string, string> = {};
+
+    // Login endpoint uses FormData, others use JSON
+    if (isFormData && endpoint === 'login') {
+      // Don't set Content-Type for FormData - browser will set it automatically with boundary
+    } else {
+      headers['Content-Type'] = 'application/json';
+    }
 
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
@@ -37,8 +42,17 @@ serve(async (req) => {
       headers,
     };
 
+    // Handle body based on content type
     if (payload && (method === 'POST' || method === 'PUT')) {
-      options.body = JSON.stringify(payload);
+      if (isFormData && endpoint === 'login') {
+        // Create FormData for login
+        const formData = new FormData();
+        formData.append('username', payload.username);
+        formData.append('password', payload.password);
+        options.body = formData;
+      } else {
+        options.body = JSON.stringify(payload);
+      }
     }
 
     console.log('🔄 Calling MODON API:', url);

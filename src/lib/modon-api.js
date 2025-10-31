@@ -15,17 +15,14 @@ export async function loginToModon(username, password) {
   try {
     console.log('🔐 تسجيل الدخول إلى مدن...');
 
-    // MODON uses multipart/form-data for login
-    const formData = new FormData();
-    formData.append('username', username);
-    formData.append('password', password);
-
-    const response = await fetch('https://mcht.modon-express.net/v1/merchant/login', {
-      method: 'POST',
-      body: formData,
-    });
-
-    const data = await response.json();
+    const data = await handleModonApiCall(
+      'login',
+      'POST',
+      null, // No token needed for login
+      { username, password },
+      null,
+      true // isFormData flag
+    );
 
     console.log('📦 استجابة مدن:', data);
 
@@ -52,7 +49,7 @@ export async function loginToModon(username, password) {
 /**
  * Generic API call handler for MODON
  */
-async function handleModonApiCall(endpoint, method, token, payload = null, queryParams = null) {
+async function handleModonApiCall(endpoint, method, token, payload = null, queryParams = null, isFormData = false) {
   try {
     const { data, error } = await supabase.functions.invoke('modon-proxy', {
       body: {
@@ -61,6 +58,7 @@ async function handleModonApiCall(endpoint, method, token, payload = null, query
         token,
         payload,
         queryParams,
+        isFormData,
       },
     });
 
