@@ -289,7 +289,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                 </div>
                 {order.delivery_partner !== 'محلي' && order.delivery_status && order.delivery_status !== statusInfo.text && (
                   <div className="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded border">
-                    <span>الوسيط:</span> {order.delivery_status}
+                    <span>{order.delivery_partner === 'modon' ? 'مدن:' : order.delivery_partner === 'alwaseet' ? 'الوسيط:' : 'الشريك:'}</span> {order.delivery_status}
                   </div>
                 )}
                 {order.updated_at && (

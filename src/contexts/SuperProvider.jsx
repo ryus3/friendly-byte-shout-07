@@ -2273,8 +2273,15 @@ export const SuperProvider = ({ children }) => {
               console.log(`🔄 محاولة ${attempt}/${maxRetries} للحصول على qr_id...`);
               await new Promise(resolve => setTimeout(resolve, delayBetweenRetries));
               
-              const { getMerchantOrders } = await import('../lib/alwaseet-api.js');
-              const recentOrders = await getMerchantOrders(accountData.token);
+              // استخدام API الصحيح حسب شركة التوصيل
+              let recentOrders;
+              if (destination === 'modon') {
+                const ModonAPI = await import('../lib/modon-api.js');
+                recentOrders = await ModonAPI.getMerchantOrders(accountData.token);
+              } else {
+                const { getMerchantOrders } = await import('../lib/alwaseet-api.js');
+                recentOrders = await getMerchantOrders(accountData.token);
+              }
               
               // Advanced matching: by phone (last 10 digits), price, and recent creation
               const customerPhoneLast10 = (normalizedPhone || '').replace(/\D/g, '').slice(-10);

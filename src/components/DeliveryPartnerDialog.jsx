@@ -51,12 +51,22 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     useEffect(() => {
         const loadUserAccounts = async () => {
             if (open && user?.id && selectedPartner && selectedPartner !== 'local') {
+                // جلب الحساب المحفوظ في profiles أولاً
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('selected_delivery_account')
+                    .eq('user_id', user.id)
+                    .single();
+                
                 const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
                 // فلترة الحسابات لإظهار فقط الحسابات الصالحة التي لديها توكن
                 const validAccounts = accounts.filter(account => account.token && account.token.trim() !== '');
                 setUserAccounts(validAccounts);
-                const defaultAccount = validAccounts.find(acc => acc.is_default);
-                setSelectedAccount(defaultAccount || validAccounts[0] || null);
+                
+                // تحديد الحساب الافتراضي من profiles أو is_default
+                const savedAccount = validAccounts.find(acc => acc.account_username === profile?.selected_delivery_account);
+                const defaultAccount = savedAccount || validAccounts.find(acc => acc.is_default) || validAccounts[0];
+                setSelectedAccount(defaultAccount || null);
             } else {
                 setUserAccounts([]);
                 setSelectedAccount(null);
@@ -131,6 +141,12 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         
         const success = await setDefaultDeliveryAccount(user.id, selectedPartner, selectedAccount.account_username);
         if (success) {
+            // حفظ الحساب الافتراضي في profiles أيضاً
+            await supabase
+                .from('profiles')
+                .update({ selected_delivery_account: selectedAccount.account_username })
+                .eq('user_id', user.id);
+            
             toast({ 
                 title: "تم التحديث", 
                 description: "تم تعيين الحساب كافتراضي بنجاح", 
@@ -246,12 +262,28 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                         
                         {selectedAccount && (
                             <div className="bg-blue-50 dark:bg-blue-950/30 p-3 rounded-lg border border-blue-200 dark:border-blue-800">
-                                <p className="text-sm text-gray-800 dark:text-gray-200">
-                                    <span className="font-medium">الحساب المختار:</span> {selectedAccount.account_label || selectedAccount.partner_data?.username || selectedAccount.account_username}
-                                </p>
-                                {selectedAccount.is_default && (
-                                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">🌟 الحساب الافتراضي</p>
-                                )}
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <p className="text-sm text-gray-800 dark:text-gray-200">
+                                            <span className="font-medium">الحساب المختار:</span> {selectedAccount.account_label || selectedAccount.partner_data?.username || selectedAccount.account_username}
+                                        </p>
+                                        {selectedAccount.is_default && (
+                                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">🌟 الحساب الافتراضي</p>
+                                        )}
+                                    </div>
+                                    {selectedAccount.expires_at && (
+                                        <span className="text-xs text-muted-foreground">
+                                            ينتهي: {(() => {
+                                                try {
+                                                    const date = new Date(selectedAccount.expires_at);
+                                                    return date.toLocaleDateString('ar-EG', { day: 'numeric', month: 'numeric', year: 'numeric' });
+                                                } catch {
+                                                    return 'غير محدد';
+                                                }
+                                            })()}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         )}
                         
