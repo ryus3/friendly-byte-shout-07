@@ -577,7 +577,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // استخدام قيم فعالة للمدينة والمنطقة - إصلاح شامل للتحكم في القيم
   const effectiveCityId = useMemo(() => {
-    if (activePartner === 'alwaseet') {
+    if (activePartner === 'alwaseet' || activePartner === 'modon') {
       // في وضع التعديل، أولوية مطلقة للقيم المحفوظة
       if (isEditMode) {
         const editCityId = selectedCityId || formData.city_id;
@@ -594,7 +594,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   }, [selectedCityId, formData.city_id, activePartner, isEditMode]);
 
   const effectiveRegionId = useMemo(() => {
-    if (activePartner === 'alwaseet') {
+    if (activePartner === 'alwaseet' || activePartner === 'modon') {
       // في وضع التعديل، أولوية مطلقة للقيم المحفوظة
       if (isEditMode) {
         const editRegionId = selectedRegionId || formData.region_id;

@@ -18,8 +18,8 @@ const SyncStatusIndicator = ({ className }) => {
   
   const { theme } = useTheme();
 
-  // Only show when logged into AlWaseet
-  if (!isLoggedIn || activePartner !== 'alwaseet') {
+  // Show when logged into AlWaseet or MODON
+  if (!isLoggedIn || (activePartner !== 'alwaseet' && activePartner !== 'modon')) {
     return null;
   }
 
