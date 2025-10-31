@@ -2382,7 +2382,7 @@ export const SuperProvider = ({ children }) => {
         console.error('❌ فشل في إنشاء طلب شركة التوصيل:', err);
         return { success: false, error: `فشل في إنشاء طلب شركة التوصيل: ${err.message}` };
       }
-      }
+    } else {
 
       // 2) إنشاء طلب محلي - مطابقة عناصر الطلب الذكي مع المنتجات والمتغيرات الفعلية
       const products = Array.isArray(allData.products) ? allData.products : [];
@@ -2447,6 +2447,7 @@ export const SuperProvider = ({ children }) => {
       if (!normalizedItems.length) return { success: false, error: 'لا توجد عناصر قابلة للتحويل بعد المطابقة' };
 
       return await createLocalOrder(aiOrder, normalizedItems, aiOrder.id);
+    }
     } catch (err) {
       console.error('❌ فشل تحويل الطلب الذكي:', err);
       return { success: false, error: err.message };
