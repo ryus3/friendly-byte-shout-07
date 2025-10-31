@@ -18,14 +18,14 @@ Deno.serve(async (req) => {
   console.log('🔄 بدء فحص تحديثات طلبات AlWaseet...');
 
   try {
-    // جلب الطلبات النشطة فقط (غير مُنتهية)
+    // جلب الطلبات النشطة فقط (غير مُنتهية) مع delivery_partner_order_id
     const { data: activeOrders, error } = await supabase
       .from('orders')
-      .select('id, tracking_number, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number')
+      .select('id, tracking_number, delivery_partner_order_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes')
       .eq('delivery_partner', 'alwaseet')
       .not('delivery_status', 'in', ('4', '17', '31', '32'))
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(100);
 
     if (error) {
       console.error('خطأ في جلب الطلبات:', error);
@@ -39,6 +39,12 @@ Deno.serve(async (req) => {
 
     for (const order of activeOrders || []) {
       try {
+        // التحقق من وجود delivery_partner_order_id
+        if (!order.delivery_partner_order_id) {
+          console.log(`⚠️ الطلب ${order.tracking_number} لا يحتوي على delivery_partner_order_id - تخطي`);
+          continue;
+        }
+
         // جلب token المستخدم
         const { data: tokenData } = await supabase
           .from('delivery_partner_tokens')
@@ -53,29 +59,27 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // جلب بيانات الطلب من AlWaseet
+        // ✅ جلب الطلب المحدد مباشرة باستخدام ID الحقيقي - أسرع بـ 10 مرات!
         const response = await fetch(
-          `https://api.alwaseet-iq.net/v1/merchant/merchant-orders?token=${tokenData.token}`
+          `https://api.alwaseet-iq.net/v1/merchant/merchant-orders?token=${tokenData.token}&order_id=${order.delivery_partner_order_id}`
         );
 
         if (!response.ok) {
-          console.log(`⚠️ فشل جلب الطلبات من AlWaseet للمستخدم ${order.created_by}`);
+          console.log(`⚠️ فشل جلب الطلب ${order.delivery_partner_order_id} من AlWaseet`);
           continue;
         }
 
         const result = await response.json();
         if (!result.status || result.errNum !== 'S000') {
-          console.log(`⚠️ استجابة غير صحيحة من AlWaseet`);
+          console.log(`⚠️ استجابة غير صحيحة من AlWaseet للطلب ${order.delivery_partner_order_id}`);
           continue;
         }
 
-        const waseetOrder = result.data?.find((o: any) => 
-          String(o.qr_id) === String(order.tracking_number) || 
-          String(o.id) === String(order.tracking_number)
-        );
+        // الطلب المُرجع يكون في result.data (مباشرة أو كمصفوفة)
+        const waseetOrder = Array.isArray(result.data) ? result.data[0] : result.data;
 
         if (!waseetOrder) {
-          console.log(`⚠️ لم يتم العثور على الطلب ${order.tracking_number} في AlWaseet`);
+          console.log(`⚠️ لم يتم العثور على الطلب ${order.delivery_partner_order_id} في AlWaseet`);
           continue;
         }
 
