@@ -1872,10 +1872,17 @@ export const SuperProvider = ({ children }) => {
         try {
           console.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
           
+          console.log('🔍 [DEBUG] approveAiOrder parameters:', {
+            orderId,
+            destination,
+            selectedAccount,
+            actualAccountNormalized: actualAccount
+          });
+          
           // الحصول على توكن الحساب مباشرة بدلاً من الاعتماد على تحديث السياق
           const accountData = await getTokenForUser(createdBy, actualAccount, destination);
           
-          console.log('🔍 [DEBUG approveAiOrder] نتيجة getTokenForUser:', {
+          console.log('🔍 [DEBUG] getTokenForUser result:', {
             requestedAccount: actualAccount,
             requestedPartner: destination,
             foundToken: !!accountData?.token,
