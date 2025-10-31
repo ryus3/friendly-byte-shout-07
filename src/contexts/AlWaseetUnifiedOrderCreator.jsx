@@ -23,8 +23,6 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
 
   // دالة موحدة لإنشاء الطلبات مع ضمان الربط الصحيح والتوحيد الكامل للأرقام
   const createUnifiedOrder = useCallback(async (customerInfo, cart, discount = 0, aiOrderData = null) => {
-    console.log('🚀 بدء إنشاء طلب موحد:', { customerInfo, cart, discount, activePartner });
-    
     try {
       // ✅ validation: التحقق من وجود معرفات المدينة والمنطقة للوسيط
       if (activePartner === 'alwaseet' && (!customerInfo.alwaseet_city_id && !customerInfo.customer_city_id)) {
@@ -40,7 +38,12 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
 
       // إذا كان شريك التوصيل نشطاً ومتصل، إنشاء طلب خارجي
       if ((activePartner === 'alwaseet' || activePartner === 'modon') && isWaseetLoggedIn && waseetToken) {
-        console.log(`🔗 إنشاء طلب خارجي مع ${activePartner}...`);
+        const partnerName = activePartner === 'modon' ? 'مدن' : 'الوسيط';
+        
+        // ✅ التحقق من صحة التوكن قبل المتابعة
+        if (!waseetToken) {
+          throw new Error(`يجب تسجيل الدخول إلى ${partnerName} أولاً`);
+        }
         
         // ✅ جلب المعرفات الخارجية من الـ mappings
         const unifiedCityId = customerInfo.city_id || customerInfo.customer_city_id;
@@ -68,15 +71,6 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
         const finalCityId = cityMapping.external_id;
         const finalRegionId = regionMapping.external_id;
 
-        console.log(`🔍 [UnifiedOrderCreator] معرفات ${activePartner}:`, {
-          unifiedCityId,
-          unifiedRegionId,
-          finalCityId,
-          finalRegionId,
-          cityName: cityMapping.external_name,
-          regionName: regionMapping.external_name
-        });
-
         try {
           const partnerPayload = {
             name: customerInfo.customer_name || customerInfo.name,
@@ -96,19 +90,8 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             region_id: finalRegionId
           };
 
-          console.log(`📦 [UnifiedOrderCreator] إرسال ل${activePartner}:`, {
-            ...partnerPayload,
-            city_id: finalCityId,
-            region_id: finalRegionId
-          });
-          
           // استخدام توكن الحساب المحدد إذا تم تمريره
           const useToken = aiOrderData?.accountData?.token || waseetToken;
-          console.log('🔍 التوكن المستخدم:', { 
-            hasAccountToken: !!aiOrderData?.accountData?.token, 
-            hasContextToken: !!waseetToken,
-            selectedAccount: aiOrderData?.selectedAccount 
-          });
           
           // ✅ استدعاء API المناسب حسب الشريك
           let partnerResult;
@@ -121,33 +104,11 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           const alWaseetResult = partnerResult; // للتوافق مع الكود الحالي
           
           if (alWaseetResult?.id) {
-            console.log(`✅ تم إنشاء طلب ${activePartner}:`, alWaseetResult);
             
             // Focus on qr_id as primary identifier - this is what customers track
             const qrId = String(alWaseetResult.qr_id || '').trim();
             const waseetInternalId = String(alWaseetResult.id || '');
             
-            // Validate qr_id exists
-            if (!qrId) {
-              console.warn('⚠️ No qr_id received from Al-Waseet, will set tracking_number to null');
-            }
-            
-            // ✅ الإصلاح الجذري: استخدام نفس القيم المرسلة للشريك
-            console.log('🔍 [UnifiedOrderCreator] customerInfo قبل إنشاء الطلب المحلي:', {
-              customerInfo_alwaseet_city_id: customerInfo.alwaseet_city_id,
-              customerInfo_alwaseet_region_id: customerInfo.alwaseet_region_id,
-              customerInfo_customer_city_id: customerInfo.customer_city_id,
-              customerInfo_customer_region_id: customerInfo.customer_region_id,
-              finalCityId,
-              finalRegionId
-            });
-
-            console.log('🔍 [AlWaseetUnifiedOrderCreator] customerInfo قبل استدعاء createOrder:', {
-              customer_name: customerInfo.customer_name,
-              customer_phone: customerInfo.customer_phone,
-              customer_phone2: customerInfo.customer_phone2,
-              hasPhone2: !!customerInfo.customer_phone2
-            });
 
             // Create local order with qr_id as tracking_number (primary identifier)
             const localResult = await createOrder(
@@ -167,11 +128,8 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
             );
 
             if (!localResult.success) {
-              console.error('❌ فشل في إنشاء الطلب المحلي بعد إنشاء طلب الوسيط');
               throw new Error(localResult.error || 'فشل في إنشاء الطلب المحلي');
             }
-            
-            console.log('🔄 تم إنشاء الطلب المحلي مع الأرقام الموحدة:', localResult);
             
             const partnerName = activePartner === 'modon' ? 'مدن' : 'الوسيط';
             
@@ -208,35 +166,19 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           }
         } catch (partnerError) {
           const partnerName = activePartner === 'modon' ? 'مدن' : 'الوسيط';
-          console.error(`⚠️ فشل إنشاء طلب ${partnerName}:`, partnerError);
           
-          // في حالة فشل الشريك، إنشاء طلب محلي عادي
-          console.log('🏠 التراجع لإنشاء طلب محلي...');
-          const localFallbackResult = await createOrder(customerInfo, cart, null, discount, null, finalAmount);
-          
-          if (!localFallbackResult.success) {
-            throw new Error(localFallbackResult.error || 'فشل في إنشاء الطلب المحلي');
-          }
-
+          // ❌ عدم التراجع بصمت - إظهار الخطأ للمستخدم
           toast({
-            title: 'تم إنشاء الطلب محلياً فقط',
-            description: `رقم الطلب: ${localFallbackResult.trackingNumber}. فشل الربط مع ${partnerName}: ${partnerError.message}`,
-            variant: 'warning',
+            title: `❌ فشل إنشاء طلب ${partnerName}`,
+            description: partnerError.message || 'حدث خطأ غير متوقع. تحقق من تسجيل الدخول',
+            variant: 'destructive',
             duration: 6000
           });
-
-          return {
-            success: true,
-            orderId: localFallbackResult.orderId,
-            trackingNumber: localFallbackResult.trackingNumber,
-            finalAmount,
-            linked: false,
-            linkError: partnerError.message
-          };
+          
+          throw partnerError;
         }
       } else {
         // طلب محلي فقط مع رقم موحد محلي
-        console.log('🏠 إنشاء طلب محلي بدون ربط...');
         
         // إنشاء رقم محلي موحد
         const localUnifiedNumber = `RYUS-${Date.now().toString().slice(-6)}`;
@@ -281,7 +223,6 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
         };
       }
     } catch (error) {
-      console.error('❌ خطأ في إنشاء الطلب الموحد:', error);
       throw error;
     }
   }, [createOrder, updateOrder, activePartner, isWaseetLoggedIn, waseetToken, settings]);

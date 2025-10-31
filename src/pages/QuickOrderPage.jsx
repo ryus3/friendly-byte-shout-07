@@ -7,7 +7,7 @@ const QuickOrderPage = () => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     
     const handleOrderCreated = useCallback(() => {
-        console.log('✅ تم إنشاء الطلب بنجاح - الصفحة جاهزة لطلب جديد');
+        // Order created successfully
     }, []);
     
     return (

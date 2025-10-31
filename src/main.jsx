@@ -10,7 +10,6 @@ import { disableReactDevTools } from '@fvilers/disable-react-devtools';
 import { setupRealtime } from '@/utils/realtime-setup.js';
 import { improvedSystemMonitor } from '@/utils/improvedSystemMonitor.js';
 import { enforceEmployeeCodeSystem } from '@/utils/employeeCodeEnforcer.js';
-// import '@/utils/cleanConsole.js'; // معطل مؤقتاً للتشخيص - Temporarily disabled for debugging
 
 if (import.meta.env.PROD) {
   disableReactDevTools();

@@ -95,16 +95,32 @@ export const AlWaseetProvider = ({ children }) => {
         .single();
       
       if (error || !accountRecord) {
+        devLog.error('❌ خطأ في جلب بيانات الحساب:', error);
         throw new Error('لم يتم العثور على بيانات الحساب');
       }
       
+      devLog.log('🔍 بيانات الحساب المحفوظة:', {
+        username: accountRecord.account_username,
+        hasPassword: !!accountRecord.partner_data?.password,
+        partner
+      });
+      
       // محاولة إعادة تسجيل الدخول باستخدام بيانات محفوظة
       let newToken = null;
+      const savedPassword = accountRecord.partner_data?.password;
+      
+      if (!savedPassword) {
+        throw new Error('كلمة المرور غير محفوظة. يرجى تسجيل الدخول يدوياً');
+      }
+      
       if (partner === 'alwaseet') {
-        const loginResult = await AlWaseetAPI.loginToWaseet(accountUsername, accountRecord.partner_data?.password);
+        const loginResult = await AlWaseetAPI.loginToWaseet(accountUsername, savedPassword);
         newToken = loginResult.token;
       } else if (partner === 'modon') {
-        const loginResult = await ModonAPI.loginToModon(accountUsername, accountRecord.partner_data?.password);
+        const loginResult = await ModonAPI.loginToModon(accountUsername, savedPassword);
+        if (!loginResult.success || !loginResult.token) {
+          throw new Error('فشل تسجيل الدخول إلى مدن. تحقق من بيانات الدخول');
+        }
         newToken = loginResult.token;
       }
       
