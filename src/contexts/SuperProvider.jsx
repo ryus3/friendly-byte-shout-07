@@ -1853,7 +1853,7 @@ export const SuperProvider = ({ children }) => {
           console.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
           
           // الحصول على توكن الحساب مباشرة بدلاً من الاعتماد على تحديث السياق
-          const accountData = await getTokenForUser(createdBy, actualAccount);
+          const accountData = await getTokenForUser(createdBy, actualAccount, destination);
           if (!accountData?.token) {
             console.error('❌ فشل في الحصول على توكن صالح للحساب:', actualAccount);
             throw new Error('فشل في الحصول على توكن صالح للحساب المحدد');
@@ -1866,7 +1866,16 @@ export const SuperProvider = ({ children }) => {
             expiresAt: accountData.expires_at
           });
           
-          setActivePartner('alwaseet');
+          // تعيين الشريك النشط حسب الوجهة المختارة
+          setActivePartner(destination === 'modon' ? 'modon' : 'alwaseet');
+          
+          console.log('🔍 [approveAiOrder] تفاصيل الطلب:', {
+            destination,
+            actualAccount,
+            activePartner: destination === 'modon' ? 'modon' : 'alwaseet',
+            hasToken: !!accountData?.token,
+            tokenPartner: accountData?.partner_name
+          });
           
           // مطابقة العناصر مع المنتجات الموجودة
           const products = Array.isArray(allData.products) ? allData.products : [];
@@ -2233,12 +2242,19 @@ export const SuperProvider = ({ children }) => {
           replacement: 0
         };
 
-        console.log('📋 بيانات الطلب النهائية المرسلة للوسيط:', updatedPayload);
-        console.log('💰 السعر المرسل للوسيط:', aiOrder.total_amount || finalPrice, '(AI Order total_amount:', aiOrder.total_amount, ', Calculated finalPrice:', finalPrice, ')');
+        const partnerName = destination === 'modon' ? 'مدن' : 'الوسيط';
+        console.log(`📋 بيانات الطلب النهائية المرسلة لـ ${partnerName}:`, updatedPayload);
+        console.log(`💰 السعر المرسل لـ ${partnerName}:`, aiOrder.total_amount || finalPrice, '(AI Order total_amount:', aiOrder.total_amount, ', Calculated finalPrice:', finalPrice, ')');
 
-        // إنشاء الطلب في الوسيط - استخدام نفس منطق QuickOrderContent مع retry محسن
-        const { createAlWaseetOrder: createAlWaseetOrderApi } = await import('../lib/alwaseet-api.js');
-        const alwaseetResult = await createAlWaseetOrderApi(updatedPayload, accountData.token);
+        // إنشاء الطلب في شركة التوصيل - اختيار API حسب الوجهة
+        let alwaseetResult;
+        if (destination === 'modon') {
+          const ModonAPI = await import('../lib/modon-api.js');
+          alwaseetResult = await ModonAPI.createModonOrder(updatedPayload, accountData.token);
+        } else {
+          const { createAlWaseetOrder: createAlWaseetOrderApi } = await import('../lib/alwaseet-api.js');
+          alwaseetResult = await createAlWaseetOrderApi(updatedPayload, accountData.token);
+        }
         
         console.log('📦 استجابة الوسيط الكاملة:', alwaseetResult);
         
@@ -2300,9 +2316,9 @@ export const SuperProvider = ({ children }) => {
         console.log('🔍 qr_id المستخرج:', qrId);
         console.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId: alwaseetResult.id });
 
-        // إنشاء الطلب المحلي مع ربطه بالوسيط - استخدام orderId بدلاً من qrId
+        // إنشاء الطلب المحلي مع ربطه بشركة التوصيل - استخدام orderId بدلاً من qrId
         return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, aiOrder.id, {
-          delivery_partner: 'alwaseet',
+          delivery_partner: destination === 'modon' ? 'modon' : 'alwaseet',
           delivery_partner_order_id: String(orderId || qrId),
           qr_id: qrId,
           tracking_number: qrId,
