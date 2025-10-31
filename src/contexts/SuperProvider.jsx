@@ -1805,13 +1805,6 @@ export const SuperProvider = ({ children }) => {
       if (aiErr) throw aiErr;
       if (!aiOrder) return { success: false, error: 'الطلب الذكي غير موجود' };
 
-      // 🚨 إذا كان الطلب من التليغرام، فرض التوصيل عبر الوسيط
-      const isFromTelegram = aiOrder.source === 'telegram' || aiOrder.order_data?.source === 'telegram';
-      if (isFromTelegram) {
-        console.log('📱 طلب من التليغرام - فرض التوصيل عبر الوسيط');
-        destination = 'alwaseet';
-      }
-
       const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];
       if (!itemsInput.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };
 
