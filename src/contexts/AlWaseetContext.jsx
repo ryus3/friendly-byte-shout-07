@@ -71,7 +71,7 @@ export const AlWaseetProvider = ({ children }) => {
     } catch (error) {
       return null;
     }
-  }, []);
+  }, [activePartner]);
 
   // دالة لتفعيل حساب محدد وتسجيل الدخول الفعلي
   const activateAccount = useCallback(async (accountUsername, partnerName = null) => {
