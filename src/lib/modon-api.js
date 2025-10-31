@@ -58,13 +58,13 @@ export async function loginToModon(username, password) {
       true
     );
     
-    if (data.status === true && data.errNum === 'S000' && data.data?.[0]?.token) {
+    if (data.status === true && data.errNum === 'S000' && data.data?.token) {
       devLog.log('✅ تم تسجيل الدخول بنجاح إلى مدن');
       return {
         success: true,
-        token: data.data[0].token,
-        merchantId: data.data[0].merchant_id,
-        username: data.data[0].username
+        token: data.data.token,
+        merchantId: data.data.merchant_id || null,
+        username: username
       };
     }
     
