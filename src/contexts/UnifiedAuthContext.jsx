@@ -373,6 +373,25 @@ export const UnifiedAuthProvider = ({ children }) => {
       }
       
       setUser(profile);
+
+      // ✅ جلب وحفظ الحساب الافتراضي تلقائياً
+      try {
+        const { data: defaultAccount } = await supabase
+          .from('delivery_partner_tokens')
+          .select('partner_name')
+          .eq('user_id', profile.user_id)
+          .eq('is_default', true)
+          .gt('expires_at', new Date().toISOString())
+          .maybeSingle();
+
+        if (defaultAccount?.partner_name) {
+          localStorage.setItem('active_delivery_partner', defaultAccount.partner_name);
+          console.log('✅ تم حفظ الحساب الافتراضي:', defaultAccount.partner_name);
+        }
+      } catch (error) {
+        console.warn('⚠️ لم يتم العثور على حساب افتراضي:', error);
+      }
+
       return { success: true };
 
     } catch (error) {

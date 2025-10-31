@@ -61,27 +61,67 @@ serve(async (req) => {
       }
     }
 
-    console.log('🔄 Calling MODON API:', url);
+    console.log('📤 ===== MODON Proxy Request =====');
+    console.log('🔗 Endpoint:', endpoint);
+    console.log('📍 Method:', method);
+    console.log('🔑 Has Token:', !!token);
+    console.log('🌐 Full URL:', url);
+    console.log('🔄 Calling MODON API...');
     
     const response = await fetch(url, options);
     
-    // MODON API often returns JSON without proper Content-Type header
-    // Try to parse as JSON first, fallback to text if it fails
-    let data;
-    const responseText = await response.text();
+    console.log('📡 ===== MODON HTTP Response =====');
+    console.log('✅ Status:', response.status, response.statusText);
+    console.log('✅ OK:', response.ok);
     
+    // قراءة الـ response كـ text أولاً لتجنب أخطاء JSON parsing
+    const responseText = await response.text();
+    console.log('📄 Raw Response (first 500 chars):', responseText.substring(0, 500));
+    
+    // محاولة parse كـ JSON
+    let data;
     try {
       data = JSON.parse(responseText);
-      console.log('✅ MODON Response:', { status: response.status, hasData: !!data });
+      console.log('📥 Parsed Data:', {
+        status: data.status,
+        errNum: data.errNum,
+        hasData: !!data.data
+      });
     } catch (parseError) {
-      // If JSON parsing fails, it's likely an HTML error page
-      console.error('❌ MODON returned non-JSON response:', responseText.substring(0, 200));
-      
-      data = {
-        status: false,
-        errNum: '999',
-        msg: `خطأ في الاتصال بـ MODON API. الرد غير صحيح (${response.status}). تحقق من بيانات الدخول أو الـ endpoint.`
+      console.error('❌ فشل parse JSON:', parseError.message);
+      data = { 
+        status: false, 
+        errNum: 'E_PARSE', 
+        msg: 'Response is not valid JSON', 
+        raw: responseText.substring(0, 200)
       };
+    }
+    
+    // معالجة أخطاء HTTP الشائعة
+    if (response.status === 400) {
+      console.error('❌ HTTP 400: Bad Request');
+      return new Response(JSON.stringify({
+        status: false,
+        errNum: 'E400',
+        msg: 'طلب غير صالح - تحقق من البيانات المُرسلة أو صلاحية Token',
+        httpStatus: 400
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
+    }
+
+    if (response.status === 401) {
+      console.error('❌ HTTP 401: Unauthorized');
+      return new Response(JSON.stringify({
+        status: false,
+        errNum: 'E401',
+        msg: 'ليس لديك صلاحية - قد تحتاج لتسجيل دخول جديد إلى MODON',
+        httpStatus: 401
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      });
     }
 
     return new Response(JSON.stringify(data), {

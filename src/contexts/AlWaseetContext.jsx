@@ -1034,13 +1034,42 @@ export const AlWaseetProvider = ({ children }) => {
       try {
         devLog.log('🔍 محاولة استعادة جلسة شركة التوصيل...');
         
-        // البحث عن التوكن الافتراضي أو الأحدث للشريك النشط
-        const tokenData = await getTokenForUser(user.id, null, activePartner);
+        // ✅ البحث عن Token الافتراضي أولاً
+        let tokenData = await supabase
+          .from('delivery_partner_tokens')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('partner_name', activePartner)
+          .eq('is_default', true)
+          .gt('expires_at', new Date().toISOString())
+          .maybeSingle()
+          .then(res => res.data);
+
+        // إذا لم يوجد افتراضي، استخدم الأحدث استخداماً
+        if (!tokenData) {
+          console.log('ℹ️ لم يتم العثور على token افتراضي، استخدام الأحدث...');
+          
+          tokenData = await supabase
+            .from('delivery_partner_tokens')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('partner_name', activePartner)
+            .gt('expires_at', new Date().toISOString())
+            .order('last_used_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+            .then(res => res.data);
+        }
         
         if (!tokenData) {
           devLog.log('⚠️ لم يتم العثور على توكن صالح للشريك:', activePartner);
           return;
         }
+        
+        console.log(`✅ تم استعادة Token ${activePartner}:`, {
+          is_default: tokenData.is_default,
+          last_used: tokenData.last_used_at
+        });
         
         // التحقق من صلاحية التوكن
         const expiresAt = new Date(tokenData.expires_at);
