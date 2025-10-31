@@ -21,7 +21,7 @@ Deno.serve(async (req) => {
     // جلب الطلبات النشطة فقط (غير مُنتهية) مع delivery_partner_order_id
     const { data: activeOrders, error } = await supabase
       .from('orders')
-      .select('id, tracking_number, delivery_partner_order_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes')
+      .select('id, tracking_number, delivery_partner_order_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used')
       .eq('delivery_partner', 'alwaseet')
       .not('delivery_status', 'in', '(4,17,31,32)')
       .order('created_at', { ascending: false })
@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
 
     for (const order of activeOrders || []) {
       try {
-        console.log(`🔍 معالجة الطلب ${order.order_number} (${order.tracking_number})`);
+        console.log(`🔍 معالجة الطلب ${order.order_number} (${order.tracking_number}) - الحساب: ${order.delivery_account_used || 'غير محدد'}`);
         
         // التحقق من وجود delivery_partner_order_id
         if (!order.delivery_partner_order_id) {
@@ -47,19 +47,43 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        // جلب token المستخدم
-        const { data: tokenData } = await supabase
-          .from('delivery_partner_tokens')
-          .select('token')
-          .eq('user_id', order.created_by)
-          .eq('partner_name', 'alwaseet')
-          .eq('is_active', true)
-          .single();
+        // 1️⃣ البحث عن التوكن المرتبط بالحساب المستخدم في الطلب
+        let tokenData = null;
 
+        if (order.delivery_account_used) {
+          const { data: accountToken } = await supabase
+            .from('delivery_partner_tokens')
+            .select('token')
+            .eq('user_id', order.created_by)
+            .eq('partner_name', 'alwaseet')
+            .eq('account_username', order.delivery_account_used)
+            .eq('is_active', true)
+            .maybeSingle();
+          
+          tokenData = accountToken;
+        }
+
+        // 2️⃣ إذا لم يُعثر على التوكن للحساب المحدد، استخدم الحساب الافتراضي
         if (!tokenData) {
-          console.log(`❌ لا يوجد token للطلب ${order.tracking_number}`);
+          const { data: defaultToken } = await supabase
+            .from('delivery_partner_tokens')
+            .select('token')
+            .eq('user_id', order.created_by)
+            .eq('partner_name', 'alwaseet')
+            .eq('is_default', true)
+            .eq('is_active', true)
+            .maybeSingle();
+          
+          tokenData = defaultToken;
+        }
+
+        // 3️⃣ إذا لم يُعثر على أي توكن، تخطي الطلب
+        if (!tokenData) {
+          console.log(`❌ لا يوجد token للمستخدم ${order.created_by} - الطلب ${order.tracking_number}`);
           continue;
         }
+
+        console.log(`✅ استخدام token الحساب: ${order.delivery_account_used || 'الافتراضي'}`);
 
         // ✅ جلب الطلب المحدد مباشرة باستخدام ID الحقيقي - أسرع بـ 10 مرات!
         const response = await fetch(
