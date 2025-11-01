@@ -325,6 +325,55 @@ export const UnifiedAuthProvider = ({ children }) => {
     }
   }, [user, fetchAdminData]);
 
+  // ✅ دالة استعادة الجلسة الافتراضية من قاعدة البيانات
+  const restoreDefaultSession = useCallback(async () => {
+    if (!user?.id) return;
+    
+    try {
+      console.log('🔄 استعادة الجلسة الافتراضية من قاعدة البيانات...');
+      
+      const { data: defaultAccount, error } = await supabase
+        .from('delivery_partner_tokens')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_default', true)
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
+
+      if (error) {
+        console.error('❌ خطأ في استعادة الجلسة:', error);
+        return;
+      }
+
+      if (defaultAccount) {
+        // ✅ حفظ في localStorage
+        localStorage.setItem('active_delivery_partner', defaultAccount.partner_name);
+        localStorage.setItem('delivery_partner_default_token', JSON.stringify({
+          token: defaultAccount.token,
+          partner_name: defaultAccount.partner_name,
+          username: defaultAccount.account_username,
+          merchant_id: defaultAccount.merchant_id,
+          label: defaultAccount.account_label
+        }));
+        
+        console.log('✅ تم استعادة جلسة', defaultAccount.partner_name);
+        console.log('🔑 Token preview:', defaultAccount.token.substring(0, 20) + '...');
+      } else {
+        console.warn('⚠️ لا يوجد حساب افتراضي');
+        localStorage.removeItem('delivery_partner_default_token');
+      }
+    } catch (error) {
+      console.error('❌ خطأ في restoreDefaultSession:', error);
+    }
+  }, [user]);
+
+  // ✅ استدعاء استعادة الجلسة عند تحميل المستخدم
+  useEffect(() => {
+    if (user?.id) {
+      restoreDefaultSession();
+    }
+  }, [user?.id, restoreDefaultSession]);
+
   const login = async (loginIdentifier, password) => {
     if (!supabase) {
       return { success: false, error: 'Supabase not connected.' };

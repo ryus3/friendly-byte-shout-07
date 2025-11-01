@@ -1066,7 +1066,7 @@ export const AlWaseetProvider = ({ children }) => {
       try {
         devLog.log('🔍 محاولة استعادة جلسة شركة التوصيل...');
         
-        // ✅ NEW: محاولة استخدام البيانات المحفوظة من UnifiedAuthContext
+        // ✅ الطريقة الأولى: localStorage
         const savedDefaultToken = localStorage.getItem('delivery_partner_default_token');
         if (savedDefaultToken) {
           try {
@@ -1074,22 +1074,24 @@ export const AlWaseetProvider = ({ children }) => {
             
             console.log('🔄 استخدام الجلسة المحفوظة:', {
               partner: defaultData.partner_name,
-              username: defaultData.username
+              username: defaultData.username,
+              tokenLength: defaultData.token?.length || 0
             });
             
-            // تفعيل الجلسة مباشرة
+            // ✅ تفعيل الجلسة مباشرة
             setToken(defaultData.token);
+            setActivePartner(defaultData.partner_name);
+            setIsLoggedIn(true);
+            setCurrentMerchantId(defaultData.merchant_id);
             setWaseetUser({
               username: defaultData.username,
               merchantId: defaultData.merchant_id,
               label: defaultData.label
             });
-            setIsLoggedIn(true);
-            setActivePartner(defaultData.partner_name);
             
-            console.log(`✅ تم تفعيل الجلسة التلقائية لـ ${defaultData.partner_name}`);
+            console.log('✅ تم تفعيل الجلسة من localStorage');
             
-            // ✅ تحديث last_used_at في القاعدة
+            // ✅ تحديث last_used_at
             await supabase
               .from('delivery_partner_tokens')
               .update({ last_used_at: new Date().toISOString() })
@@ -1097,55 +1099,51 @@ export const AlWaseetProvider = ({ children }) => {
               .eq('partner_name', defaultData.partner_name)
               .eq('is_default', true);
             
-            return; // ✅ انتهى - لا حاجة للبحث في القاعدة
+            return; // ✅ انتهى
           } catch (err) {
             console.error('❌ خطأ في استخدام الجلسة المحفوظة:', err);
             localStorage.removeItem('delivery_partner_default_token');
           }
         }
         
-        // ✅ إذا لم تنجح الطريقة السابقة، استخدم الطريقة القديمة
-        // البحث عن Token الافتراضي أولاً
+        // ✅ الطريقة الثانية: قاعدة البيانات
+        console.log('🔍 البحث في قاعدة البيانات...');
+        
         let tokenData = await supabase
           .from('delivery_partner_tokens')
           .select('*')
           .eq('user_id', user.id)
-          .eq('partner_name', activePartner)
           .eq('is_default', true)
           .gt('expires_at', new Date().toISOString())
-          .maybeSingle()
-          .then(res => res.data);
-
-        // إذا لم يوجد افتراضي، استخدم الأحدث استخداماً
-        if (!tokenData) {
-          console.log('ℹ️ لم يتم العثور على token افتراضي، استخدام الأحدث...');
+          .maybeSingle();
+        
+        if (tokenData.data) {
+          console.log('✅ وُجد token افتراضي في القاعدة:', tokenData.data.partner_name);
           
-          tokenData = await supabase
-            .from('delivery_partner_tokens')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('partner_name', activePartner)
-            .gt('expires_at', new Date().toISOString())
-            .order('last_used_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
-            .then(res => res.data);
+          // ✅ حفظ في localStorage للمرات القادمة
+          localStorage.setItem('delivery_partner_default_token', JSON.stringify({
+            token: tokenData.data.token,
+            partner_name: tokenData.data.partner_name,
+            username: tokenData.data.account_username,
+            merchant_id: tokenData.data.merchant_id,
+            label: tokenData.data.account_label
+          }));
+          
+          // ✅ تفعيل الجلسة
+          setToken(tokenData.data.token);
+          setActivePartner(tokenData.data.partner_name);
+          setIsLoggedIn(true);
+          setCurrentMerchantId(tokenData.data.merchant_id);
+          setWaseetUser({
+            username: tokenData.data.account_username,
+            merchantId: tokenData.data.merchant_id,
+            label: tokenData.data.account_label
+          });
+          
+          console.log('✅ تم تفعيل الجلسة من قاعدة البيانات');
+        } else {
+          console.warn('⚠️ لا يوجد token افتراضي');
         }
-        
-        if (!tokenData) {
-          devLog.log('⚠️ لم يتم العثور على توكن صالح للشريك:', activePartner);
-          return;
-        }
-        
-        console.log(`✅ تم استعادة Token ${activePartner}:`, {
-          is_default: tokenData.is_default,
-          last_used: tokenData.last_used_at
-        });
-        
-        // التحقق من صلاحية التوكن
-        const expiresAt = new Date(tokenData.expires_at);
-        const now = new Date();
-        const hoursUntilExpiry = (expiresAt - now) / (1000 * 60 * 60);
         
         if (expiresAt <= now) {
           devLog.log('⚠️ التوكن منتهي الصلاحية. محاولة تجديد...');
