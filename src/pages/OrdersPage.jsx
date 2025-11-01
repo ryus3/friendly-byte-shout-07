@@ -131,19 +131,39 @@ const OrdersPage = () => {
           status: o.status,
           delivery_partner: o.delivery_partner
         })));
+        
+        // ✅ التحقق من وجود Token لـ MODON
+        const modonToken = localStorage.getItem('delivery_partner_default_token');
+        if (modonToken) {
+          try {
+            const tokenData = JSON.parse(modonToken);
+            console.log('🔑 MODON Token found:', {
+              partner: tokenData.partner_name,
+              username: tokenData.username,
+              tokenLength: tokenData.token?.length || 0
+            });
+          } catch (e) {
+            console.error('❌ خطأ في قراءة MODON Token:', e);
+          }
+        } else {
+          console.warn('⚠️ لا يوجد MODON Token في localStorage');
+        }
       }
       
       try {
-        const result = await syncVisibleOrdersBatch(pendingExternalOrders);  // ✅ الدالة الصحيحة
+        const result = await syncVisibleOrdersBatch(pendingExternalOrders);
         
         if (result && result.updatedCount > 0) {
           devLog.log(`✅ [OrdersPage] تم تحديث ${result.updatedCount} طلب تلقائياً`);
-          await refreshOrders(); // تحديث الواجهة
+          console.log(`🔄 آخر وقت مزامنة: ${new Date().toLocaleString('ar-SA')}`);
+          await refreshOrders();
         } else {
           devLog.log(`ℹ️ [OrdersPage] لا توجد تحديثات - المزامنة كاملة`);
+          console.log(`✅ آخر وقت مزامنة: ${new Date().toLocaleString('ar-SA')}`);
         }
       } catch (error) {
         console.error('❌ [OrdersPage] خطأ في المزامنة التلقائية:', error);
+        console.error('❌ وقت الخطأ:', new Date().toLocaleString('ar-SA'));
       }
     };
 
@@ -153,7 +173,7 @@ const OrdersPage = () => {
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [orders, inventoryLoading, syncVisibleOrdersBatch, refreshOrders]); // ✅ إضافة dependencies
+  }, [orders, inventoryLoading, syncVisibleOrdersBatch, refreshOrders]);
 
   // ❌ تعطيل Fast Sync مؤقتاً للاختبار - الاعتماد فقط على Smart Sync
   /*

@@ -1089,6 +1089,9 @@ export const AlWaseetProvider = ({ children }) => {
               label: defaultData.label
             });
             
+            // ✅ حفظ اسم الشريك في localStorage
+            localStorage.setItem('active_delivery_partner', defaultData.partner_name);
+            
             console.log('✅ تم تفعيل الجلسة من localStorage');
             
             // ✅ تحديث last_used_at
@@ -1129,6 +1132,9 @@ export const AlWaseetProvider = ({ children }) => {
             label: tokenData.data.account_label
           }));
           
+          // ✅ حفظ اسم الشريك في localStorage لاستخدامه في الواجهة
+          localStorage.setItem('active_delivery_partner', tokenData.data.partner_name);
+          
           // ✅ تفعيل الجلسة
           setToken(tokenData.data.token);
           setActivePartner(tokenData.data.partner_name);
@@ -1144,8 +1150,6 @@ export const AlWaseetProvider = ({ children }) => {
         } else {
           console.warn('⚠️ لا يوجد token افتراضي');
         }
-        
-        if (expiresAt <= now) {
           devLog.log('⚠️ التوكن منتهي الصلاحية. محاولة تجديد...');
           // محاولة إعادة التفعيل
           const reactivated = await reactivateExpiredAccount(tokenData.account_username, activePartner);

@@ -34,7 +34,21 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         ? Object.fromEntries(Object.entries(deliveryPartners).filter(([key]) => key !== 'local'))
         : deliveryPartners;
 
-    const [selectedPartner, setSelectedPartner] = useState(activePartner || Object.keys(availablePartners)[0]);
+    const [selectedPartner, setSelectedPartner] = useState(() => {
+        // ✅ استعادة الشريك من localStorage أولاً
+        const savedTokenData = localStorage.getItem('delivery_partner_default_token');
+        if (savedTokenData) {
+            try {
+                const tokenData = JSON.parse(savedTokenData);
+                if (tokenData.partner_name && Object.keys(availablePartners).includes(tokenData.partner_name)) {
+                    return tokenData.partner_name;
+                }
+            } catch (e) {
+                console.error('خطأ في استعادة الشريك:', e);
+            }
+        }
+        return activePartner || Object.keys(availablePartners)[0];
+    });
 
     // حالة اتصال الشركاء (محسوبة مسبقاً عند فتح النافذة)
     const [partnerConnectedMap, setPartnerConnectedMap] = useState({});
