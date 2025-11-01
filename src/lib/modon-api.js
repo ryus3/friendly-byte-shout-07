@@ -87,7 +87,23 @@ export async function loginToModon(username, password) {
  * Generic function to handle MODON API calls through proxy
  */
 async function handleModonApiCall(endpoint, method, token, payload = null, queryParams = null, isFormData = false) {
+  console.log('🟢 ===== handleModonApiCall STARTED =====');
+  console.log('📍 Endpoint:', endpoint);
+  console.log('🔑 Token exists:', !!token);
+  console.log('🔑 Token type:', typeof token);
+  console.log('🔑 Token length:', token?.length || 0);
+  console.log('🔑 Token preview:', token ? token.substring(0, 30) + '...' : 'NULL');
+  
   try {
+    // ✅ التحقق من صحة المعاملات
+    if (!endpoint) {
+      throw new Error('❌ Endpoint is required');
+    }
+    
+    if (!token || typeof token !== 'string' || token.length === 0) {
+      throw new Error('❌ Invalid token: ' + (typeof token) + ' - ' + token);
+    }
+    
     const requestBody = {
       endpoint,
       method,
@@ -97,51 +113,91 @@ async function handleModonApiCall(endpoint, method, token, payload = null, query
       isFormData: isFormData || false
     };
     
-    console.log('📤 ===== MODON API Request =====');
-    console.log('🔗 Endpoint:', endpoint);
-    console.log('📍 Method:', method);
-    console.log('🔑 Has Token:', !!token);
-    console.log('📦 Has Payload:', !!payload);
-    console.log('🔍 Query Params:', queryParams);
+    console.log('📤 Request Body:', JSON.stringify(requestBody, null, 2));
     
-    devLog.log('📤 MODON API Request:', { endpoint, method, hasToken: !!token, hasPayload: !!payload });
+    const edgeFunctionUrl = 'https://tkheostkubborwkwzugl.supabase.co/functions/v1/modon-proxy';
+    const authToken = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGVvc3RrdWJib3J3a3d6dWdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNTE4NTEsImV4cCI6MjA2NzkyNzg1MX0.ar867zsTy9JCTaLs9_Hjf5YhKJ9s0rQfUNq7dKpzYfA';
     
-    const response = await fetch(
-      'https://tkheostkubborwkwzugl.supabase.co/functions/v1/modon-proxy',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGVvc3RrdWJib3J3a3d6dWdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNTE4NTEsImV4cCI6MjA2NzkyNzg1MX0.ar867zsTy9JCTaLs9_Hjf5YhKJ9s0rQfUNq7dKpzYfA`
-        },
-        body: JSON.stringify(requestBody)
-      }
-    );
+    console.log('🌐 Edge Function URL:', edgeFunctionUrl);
+    console.log('🔑 Authorization Token (first 50 chars):', authToken.substring(0, 50) + '...');
     
-    console.log('📡 HTTP Response Status:', response.status, response.statusText);
+    console.log('🔵 ===== Attempting fetch... =====');
+    console.log('⏰ Timestamp:', new Date().toISOString());
+    
+    const response = await fetch(edgeFunctionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authToken
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    console.log('🟢 ===== Fetch completed! =====');
+    console.log('⏰ Response Timestamp:', new Date().toISOString());
+    console.log('📡 HTTP Status:', response.status, response.statusText);
+    console.log('📡 Response OK:', response.ok);
+    console.log('📡 Response Type:', response.type);
+    console.log('📡 Response URL:', response.url);
+    
+    // ✅ طباعة جميع headers
+    const headers = {};
+    response.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    console.log('📡 Response Headers:', headers);
     
     if (!response.ok) {
-      console.error('❌ HTTP Error:', {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url
-      });
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      console.error('❌ HTTP Error Response');
+      
+      let errorBody = '';
+      try {
+        errorBody = await response.text();
+        console.error('❌ Error Body:', errorBody);
+      } catch (e) {
+        console.error('❌ Could not read error body:', e);
+      }
+      
+      throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorBody}`);
     }
     
-    const data = await response.json();
+    const responseText = await response.text();
+    console.log('📄 Raw Response (first 500 chars):', responseText.substring(0, 500));
+    
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('❌ JSON Parse Error:', parseError);
+      console.error('❌ Response was:', responseText);
+      throw new Error('Invalid JSON response from modon-proxy');
+    }
     
     console.log('📥 ===== MODON API Response =====');
     console.log('✅ Status:', data.status);
     console.log('📊 Error Code:', data.errNum);
     console.log('💬 Message:', data.msg);
     console.log('📦 Has Data:', !!data.data);
+    console.log('📦 Data type:', Array.isArray(data.data) ? 'Array' : typeof data.data);
+    console.log('📦 Data length:', data.data?.length || 0);
     
     devLog.log('📥 MODON API Response:', { status: data.status, hasData: !!data.data });
     
+    console.log('🟢 ===== handleModonApiCall COMPLETED SUCCESSFULLY =====');
+    
     return data;
+    
   } catch (error) {
-    console.error('❌ MODON API Call Failed:', error);
+    console.error('🔴 ===== handleModonApiCall FAILED =====');
+    console.error('❌ Error occurred at:', new Date().toISOString());
+    console.error('❌ Error Name:', error.name);
+    console.error('❌ Error Message:', error.message);
+    console.error('❌ Error Stack:', error.stack);
+    console.error('❌ Endpoint was:', endpoint);
+    console.error('❌ Method was:', method);
+    console.error('❌ Token preview was:', token ? token.substring(0, 20) + '...' : 'NULL');
+    
+    // ⚠️ إعادة رمي الخطأ ليتم التعامل معه في المستوى الأعلى
     throw error;
   }
 }
@@ -216,29 +272,41 @@ export async function getPackageSizes(token) {
  * 📦 جلب جميع طلبات التاجر مباشرة (بدون فواتير)
  */
 export async function getAllMerchantOrders(token) {
+  console.log('🟢 ===== getAllMerchantOrders STARTED =====');
+  console.log('🔑 Token received:', !!token);
+  console.log('🔑 Token type:', typeof token);
+  console.log('🔑 Token length:', token?.length || 0);
+  console.log('🔑 Token preview:', token ? token.substring(0, 30) + '...' : 'NULL');
+  
+  if (!token || typeof token !== 'string' || token.trim().length === 0) {
+    console.error('❌ Invalid token provided to getAllMerchantOrders');
+    return [];
+  }
+  
   try {
-    console.log('🚀 ===== [MODON] جلب جميع الطلبات مباشرة =====');
-    console.log('🔑 Token length:', token?.length);
-    console.log('📍 Endpoint: merchant-orders');
-    console.log('🌐 Full URL: https://mcht.modon-express.net/v1/merchant/merchant-orders');
+    console.log('🔵 Calling handleModonApiCall...');
+    console.log('⏰ Call started at:', new Date().toISOString());
     
     const data = await handleModonApiCall(
       'merchant-orders',
       'GET',
       token,
       null,
-      { token },  // ✅ token في query params
+      { token },
       false
     );
     
-    console.log('📥 ===== [MODON] استلام رد الطلبات =====');
-    console.log('✅ Status:', data.status);
-    console.log('✅ errNum:', data.errNum);
-    console.log('✅ Data length:', data.data?.length || 0);
-    console.log('✅ Data type:', Array.isArray(data.data) ? 'Array' : typeof data.data);
+    console.log('🟢 handleModonApiCall returned successfully');
+    console.log('⏰ Call completed at:', new Date().toISOString());
+    console.log('📥 Data received:', {
+      status: data.status,
+      errNum: data.errNum,
+      hasData: !!data.data,
+      dataLength: data.data?.length || 0
+    });
     
     if (data.status === true && data.errNum === 'S000') {
-      console.log(`✅ ===== [MODON] نجح! تم جلب ${data.data?.length || 0} طلب مباشر =====`);
+      console.log(`✅ Success! ${data.data?.length || 0} orders fetched`);
       
       if (data.data && data.data.length > 0) {
         console.log('📦 عينة من الطلبات (أول 3):', data.data.slice(0, 3).map(order => ({
@@ -255,31 +323,21 @@ export async function getAllMerchantOrders(token) {
       return data.data || [];
     }
     
-    // ⚠️ حالة: الـ API نجح لكن لا توجد بيانات
-    if (data.status === true && !data.data) {
-      console.log('ℹ️ لا توجد طلبات في MODON حالياً');
-      return [];
-    }
-    
-    // ❌ حالة: خطأ من MODON API
-    console.warn('⚠️ MODON API returned error:', {
-      status: data.status,
-      errNum: data.errNum,
-      msg: data.msg
-    });
-    
-    // ⚠️ لا نرمي خطأ! نرجع array فارغ للسماح بـ fallback
+    console.warn('⚠️ API returned non-success status:', data);
     return [];
     
   } catch (error) {
-    // ❌ خطأ في الشبكة أو الاتصال
-    console.error('❌ Network/Connection Error:', {
-      message: error.message,
-      name: error.name
-    });
+    console.error('🔴 ===== getAllMerchantOrders FAILED =====');
+    console.error('❌ Error at:', new Date().toISOString());
+    console.error('❌ Error type:', error.constructor.name);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
     
-    // ⚠️ لا نرمي خطأ! نرجع array فارغ للسماح بـ fallback
+    // ⚠️ رجوع array فارغ بدلاً من throw
     return [];
+  } finally {
+    console.log('🏁 getAllMerchantOrders FINISHED');
+  }
   }
 }
 

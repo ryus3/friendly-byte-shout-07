@@ -31,6 +31,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
 import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
+import * as ModonAPI from '@/lib/modon-api';
+import { Activity } from 'lucide-react';
 
 
 
@@ -734,6 +736,85 @@ const OrdersPage = () => {
     setDialogs(d => ({ ...d, returnReceipt: true }));
   }, []);
 
+  // 🧪 دالة اختبار اتصال MODON - للتشخيص
+  const testModonConnection = async () => {
+    console.log('🔵 ===== بدء اختبار اتصال MODON (من الواجهة) =====');
+    console.log('⏰ Started at:', new Date().toISOString());
+    
+    const deliveryPartnerToken = localStorage.getItem('delivery_partner_default_token');
+    console.log('🔍 Checking localStorage for token...');
+    console.log('📦 Token exists:', !!deliveryPartnerToken);
+    
+    if (!deliveryPartnerToken) {
+      toast({
+        title: "❌ لا يوجد Token",
+        description: "يجب تسجيل الدخول إلى MODON أولاً",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    let tokenData;
+    try {
+      tokenData = JSON.parse(deliveryPartnerToken);
+      console.log('✅ Token parsed successfully:', {
+        partner_name: tokenData.partner_name,
+        username: tokenData.username,
+        tokenLength: tokenData.token?.length || 0
+      });
+    } catch (e) {
+      console.error('❌ Failed to parse token from localStorage:', e);
+      toast({
+        title: "❌ خطأ",
+        description: "بيانات Token تالفة",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (tokenData.partner_name !== 'modon') {
+      toast({
+        title: "ℹ️ تنبيه",
+        description: "أنت متصل بـ " + tokenData.partner_name + " وليس MODON",
+        variant: "default"
+      });
+      return;
+    }
+    
+    console.log('🔵 Calling ModonAPI.getMerchantOrders...');
+    console.log('🔑 Using token:', tokenData.token.substring(0, 30) + '...');
+    
+    try {
+      const orders = await ModonAPI.getMerchantOrders(tokenData.token);
+      
+      console.log('✅ ===== اختبار ناجح! =====');
+      console.log('📊 Orders count:', orders?.length || 0);
+      console.log('⏰ Completed at:', new Date().toISOString());
+      
+      if (orders && orders.length > 0) {
+        console.log('📦 Sample order:', orders[0]);
+      }
+      
+      toast({
+        title: "✅ نجح الاتصال",
+        description: `تم جلب ${orders?.length || 0} طلب من MODON\n\nتحقق من Console للتفاصيل`,
+        variant: "default",
+        duration: 8000
+      });
+    } catch (error) {
+      console.error('❌ ===== اختبار فاشل! =====');
+      console.error('❌ Error:', error);
+      console.error('⏰ Failed at:', new Date().toISOString());
+      
+      toast({
+        title: "❌ فشل الاتصال",
+        description: `خطأ: ${error.message}\n\nتحقق من Console للتفاصيل الكاملة`,
+        variant: "destructive",
+        duration: 10000
+      });
+    }
+  };
+
   const profitsPagePath = '/profits-summary';
 
   return (
@@ -752,6 +833,17 @@ const OrdersPage = () => {
                 </Button>
                 <OrdersHeader title={pageConfig.title} description={pageConfig.description} icon={pageConfig.icon} />
             </div>
+            
+            {/* 🧪 زر اختبار اتصال MODON - للتشخيص */}
+            <Button
+              onClick={testModonConnection}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <Activity className="w-4 h-4" />
+              اختبار اتصال MODON
+            </Button>
         </div>
         
          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
