@@ -338,7 +338,6 @@ export async function getAllMerchantOrders(token) {
   } finally {
     console.log('🏁 getAllMerchantOrders FINISHED');
   }
-  }
 }
 
 /**
