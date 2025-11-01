@@ -378,18 +378,33 @@ export const UnifiedAuthProvider = ({ children }) => {
       try {
         const { data: defaultAccount } = await supabase
           .from('delivery_partner_tokens')
-          .select('partner_name')
+          .select('*')  // ✅ جلب كل البيانات (ليس فقط partner_name)
           .eq('user_id', profile.user_id)
           .eq('is_default', true)
           .gt('expires_at', new Date().toISOString())
           .maybeSingle();
 
-        if (defaultAccount?.partner_name) {
+        if (defaultAccount) {
           localStorage.setItem('active_delivery_partner', defaultAccount.partner_name);
           console.log('✅ تم حفظ الحساب الافتراضي:', defaultAccount.partner_name);
+          
+          // ✅ NEW: حفظ Token أيضاً لاستخدامه في AlWaseetContext
+          localStorage.setItem('delivery_partner_default_token', JSON.stringify({
+            token: defaultAccount.token,
+            partner_name: defaultAccount.partner_name,
+            username: defaultAccount.account_username,
+            merchant_id: defaultAccount.merchant_id,
+            label: defaultAccount.account_label
+          }));
+          
+          console.log('✅ تم حفظ بيانات الجلسة الافتراضية للاستخدام التلقائي');
+        } else {
+          console.warn('⚠️ لم يتم العثور على حساب افتراضي');
+          // مسح البيانات القديمة
+          localStorage.removeItem('delivery_partner_default_token');
         }
       } catch (error) {
-        console.warn('⚠️ لم يتم العثور على حساب افتراضي:', error);
+        console.warn('⚠️ خطأ في جلب الحساب الافتراضي:', error);
       }
 
       return { success: true };

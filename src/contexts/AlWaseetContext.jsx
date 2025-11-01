@@ -438,19 +438,35 @@ export const AlWaseetProvider = ({ children }) => {
               console.log('🔑 Token preview:', employeeTokenData.token.substring(0, 20) + '...');
               console.log('🔑 Token length:', employeeTokenData.token.length);
               
-              merchantOrders = await ModonAPI.getMerchantOrders(employeeTokenData.token);
-              
-              console.log('✅ ===== [MODON] تم استلام الرد =====');
-              console.log('📊 عدد الطلبات:', merchantOrders?.length || 0);
-              console.log('📦 نوع البيانات:', Array.isArray(merchantOrders) ? 'Array' : typeof merchantOrders);
-              
-              if (merchantOrders && merchantOrders.length > 0) {
-                console.log('📝 عينة من الطلب الأول:', {
-                  id: merchantOrders[0].id,
-                  qr_id: merchantOrders[0].qr_id,
-                  status_id: merchantOrders[0].status_id,
-                  client_name: merchantOrders[0].client_name
+              try {
+                merchantOrders = await ModonAPI.getMerchantOrders(employeeTokenData.token);
+                
+                console.log('✅ ===== [MODON] تم استلام الرد =====');
+                console.log('📊 عدد الطلبات:', merchantOrders?.length || 0);
+                console.log('📦 نوع البيانات:', Array.isArray(merchantOrders) ? 'Array' : typeof merchantOrders);
+                
+                if (merchantOrders && merchantOrders.length > 0) {
+                  console.log('📝 عينة من الطلب الأول:', {
+                    id: merchantOrders[0].id,
+                    qr_id: merchantOrders[0].qr_id,
+                    status_id: merchantOrders[0].status_id,
+                    client_name: merchantOrders[0].client_name
+                  });
+                }
+              } catch (modonError) {
+                console.error('❌ ===== [MODON] خطأ في getMerchantOrders =====');
+                console.error('الخطأ:', modonError.message);
+                console.error('Stack:', modonError.stack);
+                
+                toast({
+                  title: "❌ خطأ في مزامنة مدن",
+                  description: `فشل جلب الطلبات: ${modonError.message}\n\nتحقق من:\n• صلاحية Token\n• الاتصال بـ MODON\n• السجلات في Console`,
+                  variant: 'destructive',
+                  duration: 10000
                 });
+                
+                // ❌ إيقاف المعالجة لهذا الموظف
+                continue;
               }
             } else {
               console.log('📞 استدعاء AlWaseetAPI.getMerchantOrders...');
@@ -1050,7 +1066,46 @@ export const AlWaseetProvider = ({ children }) => {
       try {
         devLog.log('🔍 محاولة استعادة جلسة شركة التوصيل...');
         
-        // ✅ البحث عن Token الافتراضي أولاً
+        // ✅ NEW: محاولة استخدام البيانات المحفوظة من UnifiedAuthContext
+        const savedDefaultToken = localStorage.getItem('delivery_partner_default_token');
+        if (savedDefaultToken) {
+          try {
+            const defaultData = JSON.parse(savedDefaultToken);
+            
+            console.log('🔄 استخدام الجلسة المحفوظة:', {
+              partner: defaultData.partner_name,
+              username: defaultData.username
+            });
+            
+            // تفعيل الجلسة مباشرة
+            setToken(defaultData.token);
+            setWaseetUser({
+              username: defaultData.username,
+              merchantId: defaultData.merchant_id,
+              label: defaultData.label
+            });
+            setIsLoggedIn(true);
+            setActivePartner(defaultData.partner_name);
+            
+            console.log(`✅ تم تفعيل الجلسة التلقائية لـ ${defaultData.partner_name}`);
+            
+            // ✅ تحديث last_used_at في القاعدة
+            await supabase
+              .from('delivery_partner_tokens')
+              .update({ last_used_at: new Date().toISOString() })
+              .eq('user_id', user.id)
+              .eq('partner_name', defaultData.partner_name)
+              .eq('is_default', true);
+            
+            return; // ✅ انتهى - لا حاجة للبحث في القاعدة
+          } catch (err) {
+            console.error('❌ خطأ في استخدام الجلسة المحفوظة:', err);
+            localStorage.removeItem('delivery_partner_default_token');
+          }
+        }
+        
+        // ✅ إذا لم تنجح الطريقة السابقة، استخدم الطريقة القديمة
+        // البحث عن Token الافتراضي أولاً
         let tokenData = await supabase
           .from('delivery_partner_tokens')
           .select('*')
