@@ -25,7 +25,7 @@ export const AlWaseetProvider = ({ children }) => {
   const [token, setToken] = useState(null);
   const [waseetUser, setWaseetUser] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', 'local');
+  const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', null);
   
   // نظام البيانات الموحد للتأكد من الأمان وفصل الحسابات
   const { userUUID, getOrdersQuery, canViewData } = useUnifiedUserData();
@@ -1149,6 +1149,28 @@ export const AlWaseetProvider = ({ children }) => {
           console.log('✅ تم تفعيل الجلسة من قاعدة البيانات');
         } else {
           console.warn('⚠️ لا يوجد token افتراضي');
+          
+          // ✅ Fallback: تحديد الشريك الافتراضي بناءً على order_creation_mode
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('order_creation_mode')
+            .eq('user_id', user.id)
+            .single();
+          
+          const creationMode = profile?.order_creation_mode || 'choice';
+          
+          if (creationMode === 'partner_only') {
+            // استخدام أول شريك متاح (غير local)
+            const firstPartner = Object.keys(deliveryPartners).find(k => k !== 'local') || 'alwaseet';
+            setActivePartner(firstPartner);
+            localStorage.setItem('active_delivery_partner', firstPartner);
+            console.log(`✅ تم تعيين ${firstPartner} كشريك افتراضي (partner_only mode)`);
+          } else if (creationMode === 'local_only') {
+            setActivePartner('local');
+            localStorage.setItem('active_delivery_partner', 'local');
+            console.log('✅ تم تعيين local كشريك افتراضي (local_only mode)');
+          }
+          // في وضع 'choice'، لا نفعل شيء ونترك المستخدم يختار
         }
       } catch (error) {
         console.error('❌ خطأ في استعادة الجلسة:', error);
@@ -1156,7 +1178,7 @@ export const AlWaseetProvider = ({ children }) => {
     };
     
     restoreSession();
-  }, [user?.id, activePartner, isLoggedIn, getTokenForUser, reactivateExpiredAccount]);
+  }, [user?.id, isLoggedIn]);
 
   // 🔔 فحص دوري لصلاحية التوكن والإشعار قبل 24 ساعة
   useEffect(() => {

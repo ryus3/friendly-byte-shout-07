@@ -35,7 +35,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         : deliveryPartners;
 
     const [selectedPartner, setSelectedPartner] = useState(() => {
-        // ✅ استعادة الشريك من localStorage أولاً
+        // ✅ الأولوية 1: localStorage (token data)
         const savedTokenData = localStorage.getItem('delivery_partner_default_token');
         if (savedTokenData) {
             try {
@@ -47,7 +47,17 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                 console.error('خطأ في استعادة الشريك:', e);
             }
         }
-        return activePartner || Object.keys(availablePartners)[0];
+        
+        // ✅ الأولوية 2: activePartner من Context (إذا لم يكن 'local')
+        if (activePartner && activePartner !== 'local' && Object.keys(availablePartners).includes(activePartner)) {
+            return activePartner;
+        }
+        
+        // ✅ الأولوية 3: أول شريك متاح (ليس local إذا كان هناك خيارات أخرى)
+        const partnerKeys = Object.keys(availablePartners);
+        const nonLocalPartners = partnerKeys.filter(k => k !== 'local');
+        
+        return nonLocalPartners.length > 0 ? nonLocalPartners[0] : partnerKeys[0];
     });
 
     // حالة اتصال الشركاء (محسوبة مسبقاً عند فتح النافذة)
