@@ -656,6 +656,12 @@ export async function getMerchantInvoices(token) {
       return data.data || [];
     }
     
+    // ✅ معالجة errNum: 21 (لا توجد فواتير) - ليس خطأ!
+    if (data.errNum === 21 || data.errNum === '21') {
+      devLog.log('ℹ️ لا توجد فواتير حالياً في حساب مدن');
+      return []; // إرجاع array فارغ بدلاً من throw error
+    }
+    
     console.error('❌ فشل جلب الفواتير:', data.msg);
     throw new Error(data.msg || 'فشل جلب الفواتير من مدن');
   } catch (error) {

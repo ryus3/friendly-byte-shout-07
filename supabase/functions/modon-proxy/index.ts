@@ -100,10 +100,26 @@ serve(async (req) => {
     // معالجة أخطاء HTTP الشائعة
     if (response.status === 400) {
       console.error('❌ HTTP 400: Bad Request');
+      
+      // ✅ فحص errNum: 21 (لا توجد فواتير) - ليس خطأ حقيقي!
+      if (data.errNum === 21 || data.errNum === '21') {
+        console.log('ℹ️ HTTP 400 مع errNum:21 = لا توجد فواتير (حالة طبيعية)');
+        return new Response(JSON.stringify({
+          status: true, // ✅ تغيير إلى true
+          errNum: '21',
+          msg: data.msg || 'لا توجد فواتير',
+          data: []
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        });
+      }
+      
+      // ❌ أخطاء HTTP 400 الأخرى
       return new Response(JSON.stringify({
         status: false,
-        errNum: 'E400',
-        msg: 'طلب غير صالح - تحقق من البيانات المُرسلة أو صلاحية Token',
+        errNum: data.errNum || 'E400',
+        msg: data.msg || 'طلب غير صالح - تحقق من البيانات المُرسلة أو صلاحية Token',
         httpStatus: 400
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

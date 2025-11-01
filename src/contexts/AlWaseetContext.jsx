@@ -1408,6 +1408,12 @@ export const AlWaseetProvider = ({ children }) => {
     if (!token) return;
     
     try {
+      // ✅ فقط AlWaseet تستخدم statuses endpoint
+      if (activePartner !== 'alwaseet') {
+        devLog.log('ℹ️ تخطي جلب حالات الطلبات - MODON تستخدم نظام حالات مختلف');
+        return;
+      }
+      
       devLog.log('🔄 تحميل حالات الطلبات من الوسيط...');
       const statuses = await AlWaseetAPI.getOrderStatuses(token);
       
@@ -3158,6 +3164,12 @@ export const AlWaseetProvider = ({ children }) => {
   const getOrderStatuses = useCallback(async () => {
     if (token) {
       try {
+        // ✅ فقط AlWaseet تستخدم statuses endpoint
+        if (activePartner !== 'alwaseet') {
+          devLog.log('ℹ️ MODON لا يحتاج statuses endpoint');
+          return { success: true, data: [] };
+        }
+        
         const statuses = await AlWaseetAPI.getOrderStatuses(token);
         return { success: true, data: statuses };
       } catch (error) {
@@ -3165,7 +3177,7 @@ export const AlWaseetProvider = ({ children }) => {
       }
     }
     return { success: false, message: "لم يتم تسجيل الدخول لشركة التوصيل." };
-  }, [token]);
+  }, [token, activePartner]);
 
   const fetchCities = useCallback(async () => {
     if (token) {
