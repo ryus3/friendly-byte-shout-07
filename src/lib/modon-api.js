@@ -100,8 +100,11 @@ async function handleModonApiCall(endpoint, method, token, payload = null, query
       throw new Error('❌ Endpoint is required');
     }
     
-    if (!token || typeof token !== 'string' || token.length === 0) {
-      throw new Error('❌ Invalid token: ' + (typeof token) + ' - ' + token);
+    // ✅ استثناء: endpoint "login" لا يحتاج token
+    if (endpoint !== 'login') {
+      if (!token || typeof token !== 'string' || token.length === 0) {
+        throw new Error('❌ Invalid token: ' + (typeof token) + ' - ' + token);
+      }
     }
     
     const requestBody = {
