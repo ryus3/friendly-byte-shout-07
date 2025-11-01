@@ -118,6 +118,19 @@ const OrdersPage = () => {
       
       devLog.log(`🔄 [OrdersPage] مزامنة تلقائية لـ ${pendingExternalOrders.length} طلب معلق...`);
       
+      // 🔍 MODON Diagnostic Logging
+      const modonOrders = pendingExternalOrders.filter(o => o.delivery_partner === 'modon');
+      if (modonOrders.length > 0) {
+        console.log('🔍 ===== [DIAGNOSTIC] MODON Orders in OrdersPage =====');
+        console.log('📊 Total MODON orders:', modonOrders.length);
+        console.log('📦 Sample orders:', modonOrders.slice(0, 3).map(o => ({
+          id: o.id,
+          tracking_number: o.tracking_number,
+          status: o.status,
+          delivery_partner: o.delivery_partner
+        })));
+      }
+      
       try {
         const result = await syncVisibleOrdersBatch(pendingExternalOrders);  // ✅ الدالة الصحيحة
         

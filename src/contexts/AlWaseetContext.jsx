@@ -433,13 +433,25 @@ export const AlWaseetProvider = ({ children }) => {
             console.log(`🚀 [${employeeTokenData.partner_name}] سيتم الآن استدعاء getMerchantOrders...`);
             console.log(`🔑 Token preview: ${employeeTokenData.token.substring(0, 20)}...`);
             
-            if (employeeTokenData.partner_name === 'modon') {
-              console.log('📞 استدعاء ModonAPI.getMerchantOrders...');
+          if (employeeTokenData.partner_name === 'modon') {
+              console.log('📞 ===== [MODON] استدعاء getMerchantOrders =====');
+              console.log('🔑 Token preview:', employeeTokenData.token.substring(0, 20) + '...');
+              console.log('🔑 Token length:', employeeTokenData.token.length);
+              
               merchantOrders = await ModonAPI.getMerchantOrders(employeeTokenData.token);
-              console.log('✅ تم استلام رد من MODON:', {
-                ordersCount: merchantOrders?.length || 0,
-                isArray: Array.isArray(merchantOrders)
-              });
+              
+              console.log('✅ ===== [MODON] تم استلام الرد =====');
+              console.log('📊 عدد الطلبات:', merchantOrders?.length || 0);
+              console.log('📦 نوع البيانات:', Array.isArray(merchantOrders) ? 'Array' : typeof merchantOrders);
+              
+              if (merchantOrders && merchantOrders.length > 0) {
+                console.log('📝 عينة من الطلب الأول:', {
+                  id: merchantOrders[0].id,
+                  qr_id: merchantOrders[0].qr_id,
+                  status_id: merchantOrders[0].status_id,
+                  client_name: merchantOrders[0].client_name
+                });
+              }
             } else {
               console.log('📞 استدعاء AlWaseetAPI.getMerchantOrders...');
               merchantOrders = await AlWaseetAPI.getMerchantOrders(employeeTokenData.token);
@@ -484,14 +496,18 @@ export const AlWaseetProvider = ({ children }) => {
             }
           } catch (apiError) {
             const partnerName = employeeTokenData.partner_name === 'modon' ? 'مدن' : 'الوسيط';
-            console.error(`❌ خطأ في جلب طلبات ${partnerName}:`, apiError);
+            console.error(`❌ ===== [${partnerName}] خطأ في getMerchantOrders =====`);
+            console.error('الخطأ:', apiError.message);
+            console.error('Stack:', apiError.stack);
             
             toast({
-              title: `خطأ في ${partnerName}`,
-              description: apiError.message || `فشل الاتصال بـ ${partnerName}`,
+              title: `❌ خطأ في مزامنة ${partnerName}`,
+              description: `فشل جلب الطلبات: ${apiError.message}\n\nتحقق من:\n• صلاحية Token\n• الاتصال بـ ${partnerName}\n• السجلات في Console`,
               variant: 'destructive',
-              duration: 6000
+              duration: 10000
             });
+            
+            // ❌ إيقاف المعالجة لهذا الموظف
             continue;
           }
 

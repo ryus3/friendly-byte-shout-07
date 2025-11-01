@@ -217,43 +217,55 @@ export async function getPackageSizes(token) {
  */
 export async function getAllMerchantOrders(token) {
   try {
-    console.log('🚀 جلب جميع طلبات التاجر من MODON مباشرة...');
+    console.log('🚀 ===== [MODON] جلب جميع الطلبات مباشرة =====');
+    console.log('🔑 Token length:', token?.length);
+    console.log('📍 Endpoint: merchant-orders');
+    console.log('🌐 Full URL: https://mcht.modon-express.net/v1/merchant/merchant-orders');
     
     const data = await handleModonApiCall(
       'merchant-orders',
       'GET',
       token,
       null,
-      { token },
+      { token },  // ✅ token في query params
       false
     );
     
-    console.log('📥 MODON merchant-orders Response:', {
-      status: data.status,
-      errNum: data.errNum,
-      hasData: !!data.data,
-      ordersCount: data.data?.length || 0
-    });
+    console.log('📥 ===== [MODON] استلام رد الطلبات =====');
+    console.log('✅ Status:', data.status);
+    console.log('✅ errNum:', data.errNum);
+    console.log('✅ Data length:', data.data?.length || 0);
+    console.log('✅ Data type:', Array.isArray(data.data) ? 'Array' : typeof data.data);
     
     if (data.status === true && data.errNum === 'S000') {
-      devLog.log(`✅ تم جلب ${data.data?.length || 0} طلب من MODON مباشرة`);
+      console.log(`✅ ===== [MODON] نجح! تم جلب ${data.data?.length || 0} طلب مباشر =====`);
       
       if (data.data && data.data.length > 0) {
-        console.log('📦 عينة من الطلبات:', data.data.slice(0, 3).map(order => ({
+        console.log('📦 عينة من الطلبات (أول 3):', data.data.slice(0, 3).map(order => ({
           id: order.id,
           qr_id: order.qr_id,
           status_id: order.status_id,
-          recipient_name: order.recipient_name
+          client_name: order.client_name,
+          price: order.price
         })));
+      } else {
+        console.log('⚠️ البيانات فارغة رغم نجاح الطلب');
       }
       
       return data.data || [];
     }
     
-    console.error('❌ فشل جلب الطلبات:', data.msg);
+    // ❌ معالجة الأخطاء
+    console.error('❌ ===== [MODON] فشل جلب الطلبات =====');
+    console.error('Status:', data.status);
+    console.error('errNum:', data.errNum);
+    console.error('msg:', data.msg);
+    
     throw new Error(data.msg || 'فشل جلب الطلبات من MODON');
   } catch (error) {
-    console.error('❌ خطأ في جلب طلبات MODON:', error);
+    console.error('❌ ===== [MODON] خطأ في جلب الطلبات =====');
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
     throw error;
   }
 }
@@ -264,31 +276,32 @@ export async function getAllMerchantOrders(token) {
  */
 export async function getMerchantOrders(token) {
   try {
-    devLog.log('📦 جلب طلبات مدن (طريقة مزدوجة: طلبات مباشرة + فواتير)...');
+    console.log('📦 ===== [MODON] بدء جلب الطلبات =====');
     
     let allOrders = [];
     let ordersFromDirect = [];
     let ordersFromInvoices = [];
+    let directFetchError = null;
     
     // ============ الطريقة 1: جلب الطلبات مباشرة ============
     try {
-      console.log('🔄 [1/2] جلب الطلبات المباشرة...');
+      console.log('🔄 [1/2] محاولة جلب الطلبات المباشرة...');
       ordersFromDirect = await getAllMerchantOrders(token);
-      devLog.log(`✅ [1/2] تم جلب ${ordersFromDirect.length} طلب مباشر من MODON`);
+      console.log(`✅ [1/2] نجح! تم جلب ${ordersFromDirect.length} طلب مباشر`);
     } catch (error) {
-      console.warn('⚠️ [1/2] فشل جلب الطلبات المباشرة:', error.message);
-      // الاستمرار في المحاولة الثانية
+      directFetchError = error;
+      console.error('❌ [1/2] فشل جلب الطلبات المباشرة:', error.message);
+      console.error('   → سنحاول جلبها من الفواتير...');
     }
     
     // ============ الطريقة 2: جلب الطلبات من الفواتير ============
     try {
-      console.log('🔄 [2/2] جلب الطلبات من الفواتير...');
+      console.log('🔄 [2/2] محاولة جلب الطلبات من الفواتير...');
       
       const invoices = await getMerchantInvoices(token);
+      console.log(`📋 تم جلب ${invoices?.length || 0} فاتورة`);
       
       if (invoices && invoices.length > 0) {
-        devLog.log(`📋 تم جلب ${invoices.length} فاتورة`);
-        
         for (const invoice of invoices) {
           try {
             const invoiceData = await getInvoiceOrders(token, invoice.id);
@@ -296,32 +309,43 @@ export async function getMerchantOrders(token) {
             
             if (orders && orders.length > 0) {
               ordersFromInvoices = ordersFromInvoices.concat(orders);
-              devLog.log(`  ✅ فاتورة ${invoice.id}: ${orders.length} طلب`);
+              console.log(`  ✅ فاتورة ${invoice.id}: ${orders.length} طلب`);
             }
           } catch (error) {
             console.error(`  ❌ خطأ في فاتورة ${invoice.id}:`, error.message);
           }
         }
         
-        devLog.log(`✅ [2/2] تم جلب ${ordersFromInvoices.length} طلب من الفواتير`);
+        console.log(`✅ [2/2] نجح! تم جلب ${ordersFromInvoices.length} طلب من الفواتير`);
       } else {
-        devLog.log('ℹ️ [2/2] لا توجد فواتير');
+        console.log('ℹ️ [2/2] لا توجد فواتير');
       }
     } catch (error) {
-      console.warn('⚠️ [2/2] فشل جلب الطلبات من الفواتير:', error.message);
+      console.error('❌ [2/2] فشل جلب الطلبات من الفواتير:', error.message);
     }
     
-    // ============ دمج النتائج وإزالة التكرار ============
+    // ============ النتيجة النهائية ============
+    // إذا فشلت كلا الطريقتين، ارمي خطأ واضح
+    if (ordersFromDirect.length === 0 && ordersFromInvoices.length === 0) {
+      const errorMsg = directFetchError 
+        ? `فشل جلب الطلبات: ${directFetchError.message}`
+        : 'لا توجد طلبات في MODON (لا طلبات مباشرة ولا فواتير)';
+      
+      console.error('❌ ===== [MODON] فشل تام في جلب الطلبات =====');
+      console.error(errorMsg);
+      
+      throw new Error(errorMsg);
+    }
+    
+    // دمج وإزالة التكرار
     const ordersMap = new Map();
     
-    // إضافة الطلبات المباشرة أولاً (أحدث بيانات)
     ordersFromDirect.forEach(order => {
       if (order.qr_id) {
         ordersMap.set(order.qr_id, order);
       }
     });
     
-    // إضافة طلبات الفواتير (قد تكون محدثة أيضاً)
     ordersFromInvoices.forEach(order => {
       if (order.qr_id && !ordersMap.has(order.qr_id)) {
         ordersMap.set(order.qr_id, order);
@@ -330,28 +354,18 @@ export async function getMerchantOrders(token) {
     
     allOrders = Array.from(ordersMap.values());
     
-    console.log('🎯 ===== النتيجة النهائية =====');
-    console.log(`📊 إجمالي الطلبات بعد الدمج: ${allOrders.length}`);
-    console.log(`  • من API المباشر: ${ordersFromDirect.length}`);
-    console.log(`  • من الفواتير: ${ordersFromInvoices.length}`);
-    console.log(`  • بعد إزالة التكرار: ${allOrders.length}`);
+    console.log('🎯 ===== [MODON] النتيجة النهائية =====');
+    console.log(`📊 إجمالي: ${allOrders.length} طلب`);
+    console.log(`  • مباشر: ${ordersFromDirect.length}`);
+    console.log(`  • فواتير: ${ordersFromInvoices.length}`);
     
     if (allOrders.length > 0) {
-      devLog.log('📦 عينة من الطلبات المدمجة:', {
-        firstOrder: {
-          id: allOrders[0].id,
-          qr_id: allOrders[0].qr_id,
-          status_id: allOrders[0].status_id,
-          recipient_name: allOrders[0].recipient_name
-        },
-        totalCount: allOrders.length
+      console.log('📦 عينة من أول طلب:', {
+        id: allOrders[0].id,
+        qr_id: allOrders[0].qr_id,
+        status_id: allOrders[0].status_id,
+        client_name: allOrders[0].client_name
       });
-    } else {
-      devLog.log('⚠️ لم يتم الحصول على أي طلبات من MODON');
-      devLog.log('💡 تأكد من:');
-      devLog.log('   1. وجود طلبات في حساب مدن');
-      devLog.log('   2. صلاحية Token المستخدم');
-      devLog.log('   3. تحقق من لوحة التحكم في MODON');
     }
     
     return allOrders;
