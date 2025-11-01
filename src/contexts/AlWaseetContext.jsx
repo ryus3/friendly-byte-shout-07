@@ -1150,51 +1150,6 @@ export const AlWaseetProvider = ({ children }) => {
         } else {
           console.warn('⚠️ لا يوجد token افتراضي');
         }
-          devLog.log('⚠️ التوكن منتهي الصلاحية. محاولة تجديد...');
-          // محاولة إعادة التفعيل
-          const reactivated = await reactivateExpiredAccount(tokenData.account_username, activePartner);
-          if (!reactivated) {
-            toast({
-              title: "انتهت صلاحية تسجيل الدخول",
-              description: `يرجى تسجيل الدخول مرة أخرى إلى ${deliveryPartners[activePartner]?.name || activePartner}`,
-              variant: "destructive"
-            });
-          }
-          return;
-        }
-        
-        // تسجيل دخول تلقائي
-        setToken(tokenData.token);
-        setWaseetUser({
-          username: tokenData.account_username,
-          merchantId: tokenData.merchant_id,
-          label: tokenData.account_label
-        });
-        setIsLoggedIn(true);
-        setActivePartner(activePartner);
-        
-        // تحديث last_used_at
-        await supabase
-          .from('delivery_partner_tokens')
-          .update({ last_used_at: new Date().toISOString() })
-          .eq('user_id', user.id)
-          .eq('partner_name', activePartner)
-          .ilike('account_username', tokenData.account_username.trim().toLowerCase());
-        
-        const partnerDisplayName = deliveryPartners[activePartner]?.name || activePartner;
-        devLog.log(`✅ تم استعادة الجلسة بنجاح: ${tokenData.account_label || tokenData.account_username} في ${partnerDisplayName}`);
-        
-        // 🔔 إشعار قبل انتهاء الصلاحية (24 ساعة)
-        if (hoursUntilExpiry > 0 && hoursUntilExpiry <= 24) {
-          const hoursRemaining = Math.floor(hoursUntilExpiry);
-          toast({
-            title: "⚠️ تنبيه: قرب انتهاء صلاحية التوكن",
-            description: `ستنتهي صلاحية تسجيل الدخول خلال ${hoursRemaining} ساعة. يرجى تسجيل الدخول مجدداً قريباً.`,
-            variant: "default",
-            duration: 8000
-          });
-        }
-        
       } catch (error) {
         console.error('❌ خطأ في استعادة الجلسة:', error);
       }
