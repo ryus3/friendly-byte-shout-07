@@ -427,10 +427,13 @@ export const AlWaseetProvider = ({ children }) => {
 
           devLog.log(`🔄 مزامنة ${employeeOrders.length} طلب للموظف: ${employeeId} باستخدام توكنه الشخصي (${employeeTokenData.partner_name})`);
           
+          // ✅ تعريف partnerName في البداية ليكون متاحاً في كل مكان
+          const partnerName = employeeTokenData.partner_name === 'modon' ? 'مدن' : 'الوسيط';
+          
           // استدعاء API المناسب حسب partner_name
           let merchantOrders;
           try {
-            console.log(`🚀 [${employeeTokenData.partner_name}] سيتم الآن استدعاء getMerchantOrders...`);
+            console.log(`🚀 [${partnerName}] سيتم الآن استدعاء getMerchantOrders...`);
             console.log(`🔑 Token preview: ${employeeTokenData.token.substring(0, 20)}...`);
             
           if (employeeTokenData.partner_name === 'modon') {
@@ -478,7 +481,6 @@ export const AlWaseetProvider = ({ children }) => {
             }
             
           if (!merchantOrders || !Array.isArray(merchantOrders) || merchantOrders.length === 0) {
-            const partnerName = employeeTokenData.partner_name === 'modon' ? 'مدن' : 'الوسيط';
             
             // ⚠️ إذا كانت MODON ولا توجد طلبات، قد يكون لا توجد فواتير
             if (employeeTokenData.partner_name === 'modon' && (!merchantOrders || merchantOrders.length === 0)) {
@@ -511,7 +513,6 @@ export const AlWaseetProvider = ({ children }) => {
               continue;
             }
           } catch (apiError) {
-            const partnerName = employeeTokenData.partner_name === 'modon' ? 'مدن' : 'الوسيط';
             console.error(`❌ ===== [${partnerName}] خطأ في getMerchantOrders =====`);
             console.error('الخطأ:', apiError.message);
             console.error('Stack:', apiError.stack);
