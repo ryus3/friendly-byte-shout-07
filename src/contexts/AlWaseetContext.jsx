@@ -3482,21 +3482,22 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [isLoggedIn, activePartner, syncMode, lastSyncAt, autoSyncEnabled, performSyncWithCountdown]);
 
-  // Periodic sync every 10 minutes - respects autoSyncEnabled setting
-  useEffect(() => {
-    let intervalId;
-    if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && autoSyncEnabled) {
-      intervalId = setInterval(() => {
-        if (!isSyncing) {
-          console.log('⏰ مزامنة دورية تلقائية (كل 10 دقائق)...');
-          performSyncWithCountdown();
-        }
-      }, syncInterval);
-    }
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-    };
-  }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, autoSyncEnabled, performSyncWithCountdown]);
+  // ❌ تم تعطيل المزامنة الدورية العامة - الصفحات تتولى المزامنة الخاصة بها
+  // Periodic sync disabled - pages handle their own sync
+  // useEffect(() => {
+  //   let intervalId;
+  //   if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && autoSyncEnabled) {
+  //     intervalId = setInterval(() => {
+  //       if (!isSyncing) {
+  //         console.log('⏰ مزامنة دورية تلقائية (كل 10 دقائق)...');
+  //         performSyncWithCountdown();
+  //       }
+  //     }, syncInterval);
+  //   }
+  //   return () => {
+  //     if (intervalId) clearInterval(intervalId);
+  //   };
+  // }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, autoSyncEnabled, performSyncWithCountdown]);
 
   // Silent repair function for problematic orders
   const silentOrderRepair = useCallback(async () => {
