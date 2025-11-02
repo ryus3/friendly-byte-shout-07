@@ -2106,8 +2106,26 @@ export const AlWaseetProvider = ({ children }) => {
         const needsCorrection = localOrder.price_increase > 0 && 
           ((parseInt(String(localOrder.final_amount)) || 0) - currentTotalAmount - currentDeliveryFee) === 0;
 
-        // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة + التصحيح)
-        if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !waseetOrder.delivery_price && !needsReceiptUpdate && !needsPriceUpdate && !needsCorrection) {
+        // 🔍 فحص إذا كان هناك تغيير في delivery_fee
+        const waseetDeliveryFee = parseInt(String(waseetOrder.delivery_price || 0)) || 0;
+        const needsDeliveryFeeUpdate = waseetDeliveryFee !== currentDeliveryFee && waseetDeliveryFee > 0;
+
+        // 📊 LOGGING مفصّل لتشخيص المزامنة
+        console.log(`🔍 فحص تحديث الطلب ${localOrder.order_number}:`, {
+          needsStatusUpdate,
+          needsDeliveryStatusUpdate,
+          needsDeliveryFeeUpdate,
+          needsReceiptUpdate,
+          needsPriceUpdate,
+          needsCorrection,
+          waseetDeliveryPrice: waseetOrder.delivery_price,
+          localDeliveryFee: localOrder.delivery_fee,
+          waseetStatusId: waseetOrder.state_id || waseetOrder.status_id,
+          localDeliveryStatus: localOrder.delivery_status
+        });
+
+        // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة + التصحيح + delivery_fee)
+        if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !needsDeliveryFeeUpdate && !needsReceiptUpdate && !needsPriceUpdate && !needsCorrection) {
           // ✅ حتى لو لم تتغير البيانات، نحدث وقت المزامنة
           await supabase
             .from('orders')
