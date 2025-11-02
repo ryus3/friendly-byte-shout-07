@@ -589,34 +589,29 @@ const OrdersPage = () => {
     });
   }, [filteredOrders]);
 
-  // ✅ مزامنة دورية مستمرة - بعد تعريف syncableOrders
+  // ✅ مزامنة مرة واحدة فقط عند فتح الصفحة - للطلبات الظاهرة فقط
   useEffect(() => {
-    if (!syncableOrders || syncableOrders.length === 0) return;
-    
-    const performSmartSync = async () => {
+    const performInitialSync = async () => {
+      if (!syncableOrders || syncableOrders.length === 0) {
+        devLog.log('⏭️ [OrdersPage] لا توجد طلبات ظاهرة نشطة للمزامنة');
+        return;
+      }
+      
       try {
-        devLog.log(`🔄 [OrdersPage] مزامنة ذكية: ${syncableOrders.length} طلب نشط`);
+        devLog.log(`🔄 [OrdersPage] مزامنة أولية: ${syncableOrders.length} طلب ظاهر نشط`);
         
         if (syncAndApplyOrders) {
           await syncAndApplyOrders(syncableOrders);
-          devLog.log('✅ [OrdersPage] اكتملت المزامنة الذكية');
+          devLog.log('✅ [OrdersPage] اكتملت المزامنة الأولية للطلبات الظاهرة');
         }
       } catch (err) {
         devLog.warn('⚠️ [OrdersPage] تعذرت المزامنة:', err);
       }
     };
     
-    // مزامنة فورية بعد 5 ثواني
-    const initialTimer = setTimeout(performSmartSync, 5000);
-    
-    // مزامنة دورية كل 5 دقائق
-    const interval = setInterval(performSmartSync, 5 * 60 * 1000);
-    
-    return () => {
-      clearTimeout(initialTimer);
-      clearInterval(interval);
-    };
-  }, [syncableOrders, syncAndApplyOrders]); // ✅ تحديث عند تغيير الطلبات
+    // مزامنة مرة واحدة فقط عند تحميل الصفحة
+    performInitialSync();
+  }, []); // ✅ dependencies فارغة = مرة واحدة فقط عند فتح الصفحة
 
   const myProfits = useMemo(() => {
     if (hasPermission('view_all_data')) {

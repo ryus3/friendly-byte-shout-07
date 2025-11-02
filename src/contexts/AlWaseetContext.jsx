@@ -362,15 +362,22 @@ export const AlWaseetProvider = ({ children }) => {
       return { success: true, updatedCount: 0 };
     }
 
-    // ✅ فلترة - استبعاد الطلبات المرجعة فقط (النهائية الوحيدة)
+    // ✅ فلترة ذكية - استبعاد الحالات النهائية فقط
     const syncableOrders = visibleOrders.filter(order => {
       if (!order.created_by || !order.delivery_partner || order.delivery_partner === 'local') return false;
       
-      // استبعاد delivery_status = '17' فقط (تم الإرجاع للتاجر) - نهائية تماماً
-      // الحالة 4 (تم التسليم) ليست نهائية - قد يحدث إرجاع أو تسليم جزئي بعدها
-      if (order.delivery_status === '17') return false;
+      // ✅ استبعاد الحالات النهائية تماماً فقط:
+      // 1. delivery_status = '17' (راجع للتاجر) - نهائية
+      // 2. status = 'completed' (مكتمل) - نهائية
+      // 3. status = 'returned_in_stock' (راجع للمخزن) - نهائية
       
-      // السماح بمزامنة جميع الحالات الأخرى بما فيها الحالة 4
+      if (order.delivery_status === '17') return false;
+      if (order.status === 'completed') return false;
+      if (order.status === 'returned_in_stock') return false;
+      
+      // ✅ السماح بمزامنة جميع الحالات الأخرى بما فيها:
+      // - delivery_status = '4' (مسلّم) ← ليست نهائية، قد يحدث تحديثات
+      // - delivery_status = '1','2','3' (معلق، جاري التوصيل، في المستودع)
       return true;
     });
 

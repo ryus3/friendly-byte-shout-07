@@ -190,27 +190,38 @@ const EmployeeFollowUpPage = () => {
     localStorage.getItem('last-comprehensive-sync')
   );
   
-  // مزامنة شاملة فورية عند دخول الصفحة
+  // ✅ مزامنة الطلبات الظاهرة النشطة فقط - مرة واحدة عند الدخول
   useEffect(() => {
     const performInitialSync = async () => {
       // انتظار تحميل الطلبات أولاً
-      if (loading || !orders || orders.length === 0) {
-        console.log('⏳ انتظار تحميل الطلبات...');
+      if (loading || !filteredOrders || filteredOrders.length === 0) {
+        console.log('⏳ [EmployeeFollowUp] انتظار تحميل الطلبات المفلترة...');
         return;
       }
       
-      console.log('🔄 بدء المزامنة الشاملة الفورية لصفحة متابعة الموظفين');
+      // ✅ فلترة الطلبات النشطة فقط (ليست نهائية)
+      const activeOrders = filteredOrders.filter(order => {
+        return order.status !== 'completed' && 
+               order.status !== 'returned_in_stock' && 
+               order.delivery_status !== '17';
+      });
+      
+      if (activeOrders.length === 0) {
+        console.log('⏭️ [EmployeeFollowUp] لا توجد طلبات نشطة ظاهرة للمزامنة');
+        return;
+      }
+      
+      console.log(`🔄 [EmployeeFollowUp] مزامنة أولية: ${activeOrders.length} طلب ظاهر نشط`);
       try {
-        // ✅ تمرير جميع الطلبات للمزامنة
-        await comprehensiveSync(orders, syncVisibleOrdersBatch);
-        console.log('✅ تمت المزامنة الشاملة بنجاح');
+        await comprehensiveSync(activeOrders, syncVisibleOrdersBatch);
+        console.log('✅ [EmployeeFollowUp] تمت المزامنة الأولية للطلبات الظاهرة النشطة');
       } catch (error) {
-        console.error('❌ خطأ في المزامنة الشاملة:', error);
+        console.error('❌ [EmployeeFollowUp] خطأ في المزامنة:', error);
       }
     };
 
     performInitialSync();
-  }, [orders, loading]); // ✅ إعادة المحاولة عند تحميل الطلبات
+  }, []); // ✅ dependencies فارغة = مرة واحدة فقط عند الدخول للصفحة
   
   
   console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
