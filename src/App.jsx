@@ -3,6 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/hooks/use-toast';
+import { AnimatePresence } from 'framer-motion';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
@@ -13,6 +14,7 @@ import SuperAiChatDialog from './components/ai/SuperAiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 import { useAppStartSync } from '@/hooks/useAppStartSync';
+import AppSplashScreen from '@/components/AppSplashScreen.jsx';
 
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
@@ -97,9 +99,23 @@ function ScrollToTop() {
 function AppContent() {
   const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
+  const [showSplash, setShowSplash] = useState(true);
   
   // Enable app start synchronization
   useAppStartSync();
+
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (showSplash) {
+    return (
+      <AnimatePresence>
+        <AppSplashScreen />
+      </AnimatePresence>
+    );
+  }
 
   if (loading) {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
