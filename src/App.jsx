@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect } from 'react';
+import React, { lazy, Suspense, useEffect, useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
@@ -13,6 +13,7 @@ import SuperAiChatDialog from './components/ai/SuperAiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 import { useAppStartSync } from '@/hooks/useAppStartSync';
+import SplashScreen from '@/components/SplashScreen.jsx';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 
@@ -96,9 +97,21 @@ function ScrollToTop() {
 function AppContent() {
   const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
+  const [showSplash, setShowSplash] = useState(true);
   
   // Enable app start synchronization
   useAppStartSync();
+
+  // Auto-dismiss splash screen after 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => setShowSplash(false), 3000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Show splash screen on first load
+  if (showSplash) {
+    return <SplashScreen />;
+  }
 
   if (loading) {
     return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;

@@ -2573,9 +2573,29 @@ export const AlWaseetProvider = ({ children }) => {
             
             // تأكيد الاستلام المالي مع تطبيع المقارنة
             const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1;
-            // ملاحظة: receipt_received يُحدّث فقط من واجهة الفواتير
-            if (finConfirmed && (localStatus === 'delivered' || existingOrder.status === 'delivered')) {
+            const receiptReceived = existingOrder?.receipt_received === true;
+            const isEmployeeOrder = existingOrder?.employee_order === true;
+            const employeeDebtPaid = !isEmployeeOrder || existingOrder?.employee_debt_paid === true;
+            
+            // الشروط الكاملة للتحويل إلى completed:
+            // 1. deliver_confirmed_fin = 1 (تأكيد من الوسيط)
+            // 2. receipt_received = true (استلام الفاتورة)
+            // 3. إذا كان طلب موظف: employee_debt_paid = true
+            if (finConfirmed && receiptReceived && employeeDebtPaid && (localStatus === 'delivered' || existingOrder.status === 'delivered')) {
               updates.status = 'completed';
+              console.log(`🎯 [Auto Complete] تحويل الطلب إلى completed - شروط مستوفاة:`, {
+                finConfirmed,
+                receiptReceived,
+                employeeDebtPaid,
+                orderNumber: existingOrder?.order_number
+              });
+            } else if (finConfirmed && (localStatus === 'delivered' || existingOrder.status === 'delivered')) {
+              // إذا كان deliver_confirmed_fin = 1 لكن بدون فاتورة، لا تحول إلى completed
+              console.log(`⚠️ [Pending Receipt] الطلب ${existingOrder?.order_number} - delivered لكن بانتظار الفاتورة:`, {
+                finConfirmed,
+                receiptReceived,
+                employeeDebtPaid
+              });
             }
             
             const needUpdate = (
@@ -2921,10 +2941,26 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      // ترقية إلى completed فقط عند التأكيد المالي من الوسيط
-      // ملاحظة: receipt_received يُحدّث فقط من واجهة الفواتير
-      if (waseetOrder.deliver_confirmed_fin === 1 && correctLocalStatus === 'delivered') {
+      // ترقية إلى completed فقط عند استيفاء جميع الشروط
+      const finConfirmed = waseetOrder.deliver_confirmed_fin === 1;
+      const receiptReceived = localOrder?.receipt_received === true;
+      const isEmployeeOrder = localOrder?.employee_order === true;
+      const employeeDebtPaid = !isEmployeeOrder || localOrder?.employee_debt_paid === true;
+      
+      if (finConfirmed && receiptReceived && employeeDebtPaid && correctLocalStatus === 'delivered') {
         updates.status = 'completed';
+        console.log(`🎯 [QR Complete] تحويل الطلب إلى completed:`, {
+          finConfirmed,
+          receiptReceived,
+          employeeDebtPaid,
+          orderNumber: localOrder?.order_number
+        });
+      } else if (finConfirmed && correctLocalStatus === 'delivered') {
+        console.log(`⚠️ [QR Pending] الطلب ${localOrder?.order_number} - delivered لكن بانتظار الفاتورة:`, {
+          finConfirmed,
+          receiptReceived,
+          employeeDebtPaid
+        });
       }
 
       // تطبيق التحديثات
@@ -3188,11 +3224,26 @@ export const AlWaseetProvider = ({ children }) => {
       if (dp >= 0 && dp !== (existingOrder?.delivery_fee || 0)) {
         updates.delivery_fee = dp;
       }
-      // ترقية للحالة المكتملة فقط عند التأكيد المالي من الوسيط
-      // ملاحظة: receipt_received يُحدّث فقط من واجهة الفواتير
+      // ترقية للحالة المكتملة فقط عند استيفاء جميع الشروط
       const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1;
-      if (finConfirmed && (localStatus === 'delivered' || existingOrder?.status === 'delivered')) {
+      const receiptReceived = existingOrder?.receipt_received === true;
+      const isEmployeeOrder = existingOrder?.employee_order === true;
+      const employeeDebtPaid = !isEmployeeOrder || existingOrder?.employee_debt_paid === true;
+      
+      if (finConfirmed && receiptReceived && employeeDebtPaid && (localStatus === 'delivered' || existingOrder?.status === 'delivered')) {
         updates.status = 'completed';
+        console.log(`🎯 [Single Complete] تحويل الطلب إلى completed:`, {
+          finConfirmed,
+          receiptReceived,
+          employeeDebtPaid,
+          orderNumber: existingOrder?.order_number
+        });
+      } else if (finConfirmed && (localStatus === 'delivered' || existingOrder?.status === 'delivered')) {
+        console.log(`⚠️ [Single Pending] الطلب ${existingOrder?.order_number} - delivered لكن بانتظار الفاتورة:`, {
+          finConfirmed,
+          receiptReceived,
+          employeeDebtPaid
+        });
       }
 
       const needs_update = existingOrder ? (
@@ -3561,11 +3612,26 @@ export const AlWaseetProvider = ({ children }) => {
           updates.delivery_partner_order_id = String(waseetOrder.id);
         }
         
-        // إصلاح الحالة بناءً على deliver_confirmed_fin
-        // ملاحظة: receipt_received يُحدّث فقط من واجهة الفواتير
+        // إصلاح الحالة بناءً على جميع الشروط
         const finConfirmed = Number(waseetOrder.deliver_confirmed_fin) === 1;
-        if (finConfirmed && localOrder.status === 'delivered') {
+        const receiptReceived = localOrder?.receipt_received === true;
+        const isEmployeeOrder = localOrder?.employee_order === true;
+        const employeeDebtPaid = !isEmployeeOrder || localOrder?.employee_debt_paid === true;
+        
+        if (finConfirmed && receiptReceived && employeeDebtPaid && localOrder.status === 'delivered') {
           updates.status = 'completed';
+          console.log(`🎯 [Repair Complete] تحويل الطلب إلى completed:`, {
+            finConfirmed,
+            receiptReceived,
+            employeeDebtPaid,
+            orderNumber: localOrder?.order_number
+          });
+        } else if (finConfirmed && localOrder.status === 'delivered') {
+          console.log(`⚠️ [Repair Pending] الطلب ${localOrder?.order_number} - delivered لكن بانتظار الفاتورة:`, {
+            finConfirmed,
+            receiptReceived,
+            employeeDebtPaid
+          });
         }
         
         // تطبيق الإصلاحات إذا لزم الأمر
