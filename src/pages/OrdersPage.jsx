@@ -751,120 +751,6 @@ const OrdersPage = () => {
     setDialogs(d => ({ ...d, returnReceipt: true }));
   }, []);
 
-  // 🧪 دالة اختبار اتصال MODON - للتشخيص
-  const testModonConnection = async () => {
-    console.log('🔵 ===== بدء اختبار اتصال MODON (من الواجهة) =====');
-    console.log('⏰ Started at:', new Date().toISOString());
-    
-    // ✅ التحقق من localStorage أولاً
-    let deliveryPartnerToken = localStorage.getItem('delivery_partner_default_token');
-    console.log('🔍 Checking localStorage for token...');
-    console.log('📦 Token exists:', !!deliveryPartnerToken);
-    
-    // ✅ إذا لم يوجد في localStorage، محاولة استعادته من قاعدة البيانات
-    if (!deliveryPartnerToken) {
-      console.log('⚠️ Token not in localStorage, attempting to restore from DB...');
-      
-      try {
-        const { data: defaultAccount } = await supabase
-          .from('delivery_partner_tokens')
-          .select('*')
-          .eq('user_id', user?.id)
-          .eq('partner_name', 'modon')
-          .eq('is_default', true)
-          .gt('expires_at', new Date().toISOString())
-          .maybeSingle();
-        
-        if (defaultAccount) {
-          console.log('✅ Found token in DB, saving to localStorage...');
-          
-          const tokenData = {
-            token: defaultAccount.token,
-            partner_name: defaultAccount.partner_name,
-            username: defaultAccount.account_username,
-            merchant_id: defaultAccount.merchant_id,
-            label: defaultAccount.account_label
-          };
-          
-          localStorage.setItem('delivery_partner_default_token', JSON.stringify(tokenData));
-          deliveryPartnerToken = JSON.stringify(tokenData);
-          
-          console.log('✅ Token restored successfully');
-        } else {
-          toast({
-            title: "❌ لا يوجد Token",
-            description: "يجب تسجيل الدخول إلى MODON أولاً",
-            variant: "destructive"
-          });
-          return;
-        }
-      } catch (dbError) {
-        console.error('❌ خطأ في استعادة Token من DB:', dbError);
-        toast({
-          title: "❌ خطأ",
-          description: "فشل استعادة بيانات الجلسة",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-    
-    // ✅ الآن Token متوفر - متابعة الاختبار
-    let tokenData;
-    try {
-      tokenData = JSON.parse(deliveryPartnerToken);
-      console.log('✅ Token parsed successfully:', {
-        partner_name: tokenData.partner_name,
-        username: tokenData.username,
-        tokenLength: tokenData.token?.length || 0
-      });
-    } catch (e) {
-      console.error('❌ Failed to parse token:', e);
-      toast({
-        title: "❌ خطأ",
-        description: "بيانات Token تالفة",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (tokenData.partner_name !== 'modon') {
-      toast({
-        title: "ℹ️ تنبيه",
-        description: `أنت متصل بـ ${tokenData.partner_name} وليس MODON`,
-        variant: "default"
-      });
-      return;
-    }
-    
-    console.log('🔵 Calling ModonAPI.getMerchantOrders...');
-    console.log('🔑 Using token:', tokenData.token.substring(0, 30) + '...');
-    
-    try {
-      const orders = await ModonAPI.getMerchantOrders(tokenData.token);
-      
-      console.log('✅ ===== اختبار ناجح! =====');
-      console.log('📊 Orders count:', orders?.length || 0);
-      console.log('⏰ Completed at:', new Date().toISOString());
-      
-      toast({
-        title: "✅ نجح الاتصال",
-        description: `تم جلب ${orders?.length || 0} طلب من MODON`,
-        variant: "default",
-        duration: 8000
-      });
-    } catch (error) {
-      console.error('❌ ===== اختبار فاشل! =====');
-      console.error('❌ Error:', error);
-      
-      toast({
-        title: "❌ فشل الاتصال",
-        description: `خطأ: ${error.message}`,
-        variant: "destructive",
-        duration: 10000
-      });
-    }
-  };
 
   const profitsPagePath = '/profits-summary';
 
@@ -885,16 +771,6 @@ const OrdersPage = () => {
                 <OrdersHeader title={pageConfig.title} description={pageConfig.description} icon={pageConfig.icon} />
             </div>
             
-            {/* 🧪 زر اختبار اتصال MODON - للتشخيص */}
-            <Button
-              onClick={testModonConnection}
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Activity className="w-4 h-4" />
-              اختبار اتصال MODON
-            </Button>
         </div>
         
          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 lg:gap-6">
