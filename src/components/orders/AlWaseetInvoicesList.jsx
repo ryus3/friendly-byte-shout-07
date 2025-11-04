@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Package, DollarSign, Calendar, Database, Wifi, WifiOff, User } from 'lucide-react';
+import { Eye, Package, DollarSign, Calendar, Database, Wifi, WifiOff, User, Building } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
@@ -145,6 +145,16 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
               </Badge>
             </div>
           </div>
+
+          {/* ✅ المرحلة 3: عرض اسم الحساب وشركة التوصيل */}
+          {(invoice.account_username || invoice.partner_name_ar) && (
+            <div className="flex items-center justify-start gap-2 pb-2 border-b">
+              <Building className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">
+                {invoice.partner_name_ar || 'الوسيط'} - {invoice.account_username || 'حساب رئيسي'}
+              </span>
+            </div>
+          )}
 
           {/* Amount */}
           <div className="flex items-center justify-start gap-2">

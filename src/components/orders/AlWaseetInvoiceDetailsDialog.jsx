@@ -120,11 +120,22 @@ const AlWaseetInvoiceDetailsDialog = ({
             {/* Invoice Summary */}
             <Card>
               <CardHeader dir="rtl">
-                <CardTitle className="flex items-center justify-between">
-                  <Badge variant={isReceived ? 'success' : 'secondary'}>
-                    {isReceived ? 'مُستلمة' : 'معلقة'}
-                  </Badge>
-                  <span className="text-right">معلومات الفاتورة</span>
+                <CardTitle className="flex flex-col items-end gap-2">
+                  <div className="flex items-center justify-between w-full">
+                    <Badge variant={isReceived ? 'success' : 'secondary'}>
+                      {isReceived ? 'مُستلمة' : 'معلقة'}
+                    </Badge>
+                    <span className="text-right">معلومات الفاتورة</span>
+                  </div>
+                  {/* ✅ المرحلة 3: عرض اسم الحساب */}
+                  {(invoice.account_username || invoice.partner_name_ar) && (
+                    <div className="flex items-center gap-2 w-full justify-end">
+                      <span className="text-sm font-medium text-primary">
+                        {invoice.partner_name_ar || 'الوسيط'} - {invoice.account_username || 'حساب رئيسي'}
+                      </span>
+                      <Building className="h-4 w-4 text-primary" />
+                    </div>
+                  )}
                 </CardTitle>
               </CardHeader>
               <CardContent dir="rtl">
@@ -282,6 +293,15 @@ const LocalOrderCard = ({ order }) => {
               <span>{order.customer_phone}</span>
               <span>الحالة: {order.status}</span>
             </div>
+            {/* ✅ المرحلة 3: عرض اسم الحساب على الطلبات المرتبطة */}
+            {(order.account_username || order.partner_name_ar) && (
+              <div className="flex items-center gap-1 text-sm">
+                <Building className="h-3 w-3 text-primary" />
+                <span className="font-medium text-primary">
+                  {order.account_username || 'حساب رئيسي'}
+                </span>
+              </div>
+            )}
           </div>
           <div className="text-right">
             <p className="font-semibold">{(order.final_amount || 0).toLocaleString()} د.ع</p>

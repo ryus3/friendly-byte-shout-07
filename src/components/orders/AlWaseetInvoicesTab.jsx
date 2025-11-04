@@ -26,7 +26,7 @@ import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 
 const AlWaseetInvoicesTab = () => {
-  const { isLoggedIn, activePartner } = useAlWaseet();
+  const { isLoggedIn, activePartner, syncAllAvailableTokens } = useAlWaseet();
   const { 
     invoices, 
     loading, 
@@ -70,6 +70,26 @@ const AlWaseetInvoicesTab = () => {
       return matchesSearch && matchesStatus;
     });
   }, [invoices, searchTerm, statusFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
+
+  // ✅ المرحلة 4: تفعيل syncAllAvailableTokens تلقائياً عند فتح تبويب الفواتير
+  useEffect(() => {
+    if (isLoggedIn && (activePartner === 'alwaseet' || activePartner === 'modon')) {
+      console.log('🔄 تبويب الفواتير نشط - جلب الفواتير تلقائياً');
+      fetchInvoices(timeFilter, false); // جلب الفواتير بدون loading indicator
+      
+      // استدعاء syncAllAvailableTokens في الخلفية
+      if (syncAllAvailableTokens) {
+        console.log('🔄 تفعيل مزامنة كل الحسابات تلقائياً');
+        syncAllAvailableTokens().then(result => {
+          if (result.success) {
+            console.log(`✅ مزامنة ${result.tokensSynced} حساب، تحديث ${result.totalOrdersUpdated} طلب`);
+          }
+        }).catch(err => {
+          console.warn('⚠️ فشل في مزامنة كل الحسابات:', err);
+        });
+      }
+    }
+  }, [isLoggedIn, activePartner, timeFilter, fetchInvoices, syncAllAvailableTokens]);
 
   const stats = getInvoiceStats();
 

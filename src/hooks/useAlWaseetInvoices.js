@@ -37,11 +37,37 @@ export const useAlWaseetInvoices = () => {
       
       // استدعاء API المناسب حسب activePartner
       let invoicesData;
+      let merchantIdFromApi = null;
+      
       if (activePartner === 'modon') {
         const ModonAPI = await import('@/lib/modon-api');
         invoicesData = await ModonAPI.getMerchantInvoices(token);
+        // استخراج merchant_id من أول فاتورة
+        if (invoicesData?.length > 0 && invoicesData[0].merchant_id) {
+          merchantIdFromApi = invoicesData[0].merchant_id;
+        }
       } else {
         invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
+        // استخراج merchant_id من أول فاتورة
+        if (invoicesData?.length > 0 && invoicesData[0].merchant_id) {
+          merchantIdFromApi = invoicesData[0].merchant_id;
+        }
+      }
+      
+      // ✅ المرحلة 2: تحديث merchant_id تلقائياً في التوكنات
+      if (merchantIdFromApi && user?.id) {
+        try {
+          await supabase
+            .from('delivery_partner_tokens')
+            .update({ merchant_id: merchantIdFromApi })
+            .eq('user_id', user.id)
+            .eq('partner_name', activePartner)
+            .is('merchant_id', null);
+          
+          console.log(`✅ تم تحديث merchant_id: ${merchantIdFromApi} للتوكن`);
+        } catch (err) {
+          console.warn('⚠️ فشل تحديث merchant_id:', err);
+        }
       }
       
       // Persist invoices to DB (bulk upsert via RPC) - in background
@@ -169,11 +195,14 @@ export const useAlWaseetInvoices = () => {
     if (!isLoggedIn || (activePartner !== 'alwaseet' && activePartner !== 'modon')) return;
 
     const loadInvoicesInstantly = async () => {
-      // 1. Load cached invoices from database FIRST (instant)
+      // 1. Load cached invoices from database FIRST (instant) - مع account_username
       try {
         const { data: cachedInvoices, error } = await supabase
           .from('delivery_invoices')
-          .select('*')
+          .select(`
+            *,
+            delivery_partner_tokens!inner(account_username, partner_name)
+          `)
           .eq('partner', activePartner)
           .eq('owner_user_id', user?.id)
           .order('issued_at', { ascending: false })
@@ -189,7 +218,10 @@ export const useAlWaseetInvoices = () => {
             merchant_id: inv.merchant_id,
             updated_at: inv.issued_at,
             created_at: inv.created_at,
-            raw: inv.raw
+            raw: inv.raw,
+            // ✅ المرحلة 3: إضافة معلومات الحساب
+            account_username: inv.delivery_partner_tokens?.account_username,
+            partner_name_ar: inv.delivery_partner_tokens?.partner_name === 'modon' ? 'مدن' : 'الوسيط'
           }));
           
           setInvoices(transformedInvoices);
