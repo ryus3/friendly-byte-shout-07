@@ -597,6 +597,39 @@ const OrdersPage = () => {
     performInitialSync();
   }, []); // ✅ dependencies فارغة = مرة واحدة فقط عند فتح الصفحة
 
+  // ✅ المرحلة 4: الاستماع لطلبات المزامنة من الزر الدائري وتمرير الطلبات الظاهرة
+  useEffect(() => {
+    const handleSyncRequest = async (event) => {
+      if (activeTab !== 'orders') return; // فقط في تبويب الطلبات
+      
+      devLog.log('🔄 [OrdersPage] استلام طلب مزامنة من الزر الدائري، تمرير الطلبات الظاهرة...');
+      
+      // تمرير الطلبات الظاهرة إلى performSyncWithCountdown
+      if (syncableOrders && syncableOrders.length > 0) {
+        devLog.log(`📤 [OrdersPage] تمرير ${syncableOrders.length} طلب ظاهر للمزامنة`);
+        // استدعاء الدالة مباشرة مع الطلبات الظاهرة
+        const { performSyncWithCountdown, onSyncTriggered } = event.detail || {};
+        if (performSyncWithCountdown && typeof performSyncWithCountdown === 'function') {
+          // إبلاغ الزر بأننا شغلنا المزامنة
+          if (onSyncTriggered && typeof onSyncTriggered === 'function') {
+            onSyncTriggered();
+          }
+          await performSyncWithCountdown(syncableOrders);
+        }
+      } else {
+        devLog.log('⚠️ [OrdersPage] لا توجد طلبات ظاهرة للتمرير - سيتم استخدام السلوك الافتراضي');
+      }
+    };
+    
+    // الاستماع للحدث المخصص
+    window.addEventListener('requestVisibleOrdersForSync', handleSyncRequest);
+    
+    return () => {
+      window.removeEventListener('requestVisibleOrdersForSync', handleSyncRequest);
+    };
+  }, [syncableOrders, activeTab]);
+
+
   const myProfits = useMemo(() => {
     if (hasPermission('view_all_data')) {
       // للمديرين: إظهار صافي الربح للنظام من الطلبات المكتملة

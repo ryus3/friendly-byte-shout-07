@@ -6287,6 +6287,14 @@ export type Database = {
         Args: { p_chat_id: number; p_employee_code: string }
         Returns: Json
       }
+      link_invoice_orders_to_orders: {
+        Args: never
+        Returns: {
+          linked_count: number
+          processing_time_ms: number
+          updated_orders_count: number
+        }[]
+      }
       link_telegram_user: {
         Args: { p_chat_id: number; p_employee_code: string }
         Returns: Json

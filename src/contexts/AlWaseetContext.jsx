@@ -3535,8 +3535,124 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, cities.length, packageSizes.length, fetchCities, fetchPackageSizes]);
 
+  // ✅ المرحلة 1: دالة ربط الفواتير بالطلبات (استدعاء الدالة الجديدة)
+  const linkInvoiceOrdersToOrders = useCallback(async () => {
+    try {
+      console.log('🔗 ربط طلبات الفواتير بالطلبات...');
+      const { data, error } = await supabase.rpc('link_invoice_orders_to_orders');
+      
+      if (error) {
+        console.warn('⚠️ فشل في ربط الفواتير:', error.message);
+        return { success: false, error: error.message };
+      }
+      
+      if (data && data.length > 0) {
+        const result = data[0];
+        console.log(`✅ تم ربط ${result.linked_count} طلب فاتورة، تحديث ${result.updated_orders_count} طلب (${result.processing_time_ms}ms)`);
+        return { 
+          success: true, 
+          linkedCount: result.linked_count,
+          updatedOrdersCount: result.updated_orders_count,
+          processingTimeMs: result.processing_time_ms
+        };
+      }
+      
+      return { success: true, linkedCount: 0, updatedOrdersCount: 0 };
+    } catch (error) {
+      console.warn('⚠️ خطأ في ربط الفواتير:', error.message || error);
+      return { success: false, error: error.message };
+    }
+  }, []);
+
+  // ✅ المرحلة 3: مزامنة كل التوكنات المتاحة
+  const syncAllAvailableTokens = useCallback(async (onProgress = null) => {
+    try {
+      console.log('🔄 بدء مزامنة كل التوكنات المتاحة...');
+      
+      if (!user?.id) {
+        console.warn('⚠️ لا يوجد مستخدم مسجل دخول');
+        return { success: false, error: 'No user logged in' };
+      }
+
+      // جلب جميع التوكنات النشطة للمستخدم
+      const { data: userTokens, error: tokensError } = await supabase
+        .from('delivery_partner_tokens')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString());
+
+      if (tokensError) {
+        console.error('❌ خطأ في جلب التوكنات:', tokensError);
+        return { success: false, error: tokensError.message };
+      }
+
+      if (!userTokens || userTokens.length === 0) {
+        console.log('ℹ️ لا توجد توكنات نشطة للمزامنة');
+        return { success: true, tokensSynced: 0 };
+      }
+
+      console.log(`📋 وُجد ${userTokens.length} توكن نشط للمزامنة`);
+      
+      let totalInvoicesSynced = 0;
+      let totalOrdersUpdated = 0;
+      let tokensProcessed = 0;
+
+      for (const tokenData of userTokens) {
+        try {
+          const accountName = tokenData.account_username || 'غير معروف';
+          const partnerName = tokenData.partner_name || 'alwaseet';
+          
+          console.log(`🔄 [${tokensProcessed + 1}/${userTokens.length}] مزامنة حساب: ${accountName} (${partnerName})`);
+          
+          if (onProgress) {
+            onProgress({
+              current: tokensProcessed + 1,
+              total: userTokens.length,
+              accountName,
+              partnerName
+            });
+          }
+
+          // ربط الفواتير بالطلبات أولاً
+          const linkResult = await linkInvoiceOrdersToOrders();
+          if (linkResult.success && linkResult.linkedCount > 0) {
+            console.log(`  ✅ ربط ${linkResult.linkedCount} طلب فاتورة`);
+          }
+
+          // مزامنة الفواتير المستلمة
+          const { data: syncRes, error: syncErr } = await supabase.rpc('sync_recent_received_invoices');
+          
+          if (!syncErr && syncRes) {
+            totalOrdersUpdated += syncRes.updated_orders_count || 0;
+            console.log(`  ✅ حساب ${accountName}: ${syncRes.updated_orders_count || 0} طلب مُحدَّث`);
+          } else if (syncErr) {
+            console.warn(`  ⚠️ فشل في مزامنة ${accountName}:`, syncErr.message);
+          }
+
+          tokensProcessed++;
+        } catch (err) {
+          console.error(`❌ خطأ في معالجة توكن ${tokenData.account_username}:`, err);
+        }
+      }
+
+      console.log(`✅ اكتملت مزامنة ${tokensProcessed} حساب، تحديث ${totalOrdersUpdated} طلب`);
+      
+      return {
+        success: true,
+        tokensSynced: tokensProcessed,
+        totalOrdersUpdated,
+        totalInvoicesSynced
+      };
+    } catch (error) {
+      console.error('❌ خطأ في مزامنة كل التوكنات:', error);
+      return { success: false, error: error.message };
+    }
+  }, [user, linkInvoiceOrdersToOrders]);
+
+  // ✅ المرحلة 4: تحسين الزر الدائري - يقبل الطلبات الظاهرة
   // Perform sync with countdown - can be triggered manually even if autoSync is disabled
-  const performSyncWithCountdown = useCallback(async () => {
+  const performSyncWithCountdown = useCallback(async (visibleOrders = null) => {
     if (activePartner === 'local' || !isLoggedIn || isSyncing) return;
 
     // Start countdown mode WITHOUT setting isSyncing to true yet
@@ -3562,27 +3678,36 @@ export const AlWaseetProvider = ({ children }) => {
         setIsSyncing(true);
         setSyncMode('syncing');
 
-        // ✅ جلب الطلبات النشطة فقط (بدلاً من كل الطلبات)
-        const { data: activeOrders, error } = await scopeOrdersQuery(
-          supabase
-            .from('orders')
-            .select('*')
-            .eq('delivery_partner', activePartner)
-            .in('status', ['pending', 'shipped', 'delivery', 'delivered']) // ✅ إضافة delivered
-            .neq('delivery_status', '17') // ✅ استثناء الحالة 17
-        ).limit(200);
+        let ordersToSync = visibleOrders;
 
-        if (error) throw error;
+        // ✅ إذا لم يتم تمرير الطلبات الظاهرة، جلب الطلبات النشطة (السلوك الافتراضي)
+        if (!ordersToSync || ordersToSync.length === 0) {
+          const { data: activeOrders, error } = await scopeOrdersQuery(
+            supabase
+              .from('orders')
+              .select('*')
+              .eq('delivery_partner', activePartner)
+              .in('status', ['pending', 'shipped', 'delivery', 'delivered']) // ✅ إضافة delivered
+              .neq('delivery_status', '17') // ✅ استثناء الحالة 17
+          ).limit(200);
 
-        if (activeOrders && activeOrders.length > 0) {
-          console.log(`🔄 مزامنة ${activeOrders.length} طلب نشط...`);
+          if (error) throw error;
+          ordersToSync = activeOrders || [];
+        }
+
+        if (ordersToSync && ordersToSync.length > 0) {
+          console.log(`🔄 مزامنة ${ordersToSync.length} طلب${visibleOrders ? ' (ظاهر)' : ' (نشط)'}...`);
           // ✅ مزامنة باستخدام syncVisibleOrdersBatch
-          await syncVisibleOrdersBatch(activeOrders);
+          await syncVisibleOrdersBatch(ordersToSync);
         }
 
         // ✅ الحذف التلقائي الآمن
         console.log('🧹 تمرير الحذف التلقائي الآمن...');
         await performDeletionPassAfterStatusSync();
+        
+        // ✅ ربط الفواتير بالطلبات أولاً (المرحلة 1)
+        console.log('🔗 ربط الفواتير بالطلبات...');
+        await linkInvoiceOrdersToOrders();
         
         // ✅ مزامنة الفواتير المستلمة تلقائياً
         console.log('📧 مزامنة الفواتير المستلمة تلقائياً...');
@@ -3609,7 +3734,7 @@ export const AlWaseetProvider = ({ children }) => {
       }
     }, 5000); // ✅ تقليل من 10000 إلى 5000
 
-  }, [activePartner, isLoggedIn, isSyncing]); // ✅ إزالة الدوال من dependencies لأنها useCallback مستقرة
+  }, [activePartner, isLoggedIn, isSyncing, scopeOrdersQuery, syncVisibleOrdersBatch, performDeletionPassAfterStatusSync, linkInvoiceOrdersToOrders]); // ✅ إضافة الدوال الجديدة
 
   // Initial sync on login - respects autoSyncEnabled setting  
   useEffect(() => {
@@ -4074,12 +4199,16 @@ export const AlWaseetProvider = ({ children }) => {
     comprehensiveOrderCorrection,
     performDeletionPassAfterStatusSync,
     
+    // ✅ المراحل الجديدة - الحل الشامل
+    linkInvoiceOrdersToOrders,      // المرحلة 1: ربط الفواتير بالطلبات
+    syncAllAvailableTokens,          // المرحلة 3: مزامنة كل التوكنات
+    
     // Sync status exports
     isSyncing,
     syncCountdown,
     syncMode,
     lastSyncAt,
-    performSyncWithCountdown,
+    performSyncWithCountdown,        // المرحلة 4: محسّن - يقبل الطلبات الظاهرة
     autoSyncEnabled,
     setAutoSyncEnabled,
     correctionComplete,
