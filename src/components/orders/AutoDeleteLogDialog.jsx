@@ -64,12 +64,24 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
     }
 
     try {
-      // 1️⃣ استعادة الطلب الرئيسي
-      const orderData = { ...log.order_data };
+      // 1️⃣ استعادة الطلب الرئيسي مع بيانات شركة التوصيل
+      const orderData = {
+        ...log.order_data,
+        // ✅ استعادة بيانات شركة التوصيل الأصلية
+        delivery_partner: log.order_data.delivery_partner || 'local',
+        delivery_partner_order_id: log.order_data.delivery_partner_order_id || null,
+        delivery_account_code: log.order_data.delivery_account_code || null,
+        tracking_number: log.order_data.tracking_number || null,
+        qr_id: log.order_data.qr_id || null,
+        // ✅ إعادة الحالة إلى الحالة الأصلية قبل الحذف
+        status: log.order_status || 'pending',
+        delivery_status: log.delivery_status || null,
+        updated_at: new Date().toISOString()
+      };
+      
       const savedItems = orderData.order_items || [];
       delete orderData.id;
       delete orderData.created_at;
-      delete orderData.updated_at;
       delete orderData.order_items;
 
       const { data: restoredOrder, error: orderError } = await supabase
@@ -80,15 +92,17 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
 
       if (orderError) throw orderError;
 
-      // 2️⃣ استعادة order_items إذا وُجدت
+      // 2️⃣ استعادة order_items إذا وُجدت مع إصلاح Schema
       if (savedItems.length > 0) {
         const items = savedItems.map(item => ({
           order_id: restoredOrder.id,
           product_id: item.product_id,
           variant_id: item.variant_id,
           quantity: item.quantity,
-          price: item.price,
-          total: item.total
+          unit_price: item.unit_price || 0,
+          total_price: item.total_price || 0,
+          item_status: 'pending',
+          item_direction: item.item_direction || null
         }));
         
         const { error: itemsError } = await supabase

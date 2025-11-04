@@ -22,8 +22,9 @@ export const AlWaseetProvider = ({ children }) => {
   
   // Declare core state early to avoid TDZ in callbacks
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [token, setToken] = useState(null);
-  const [waseetUser, setWaseetUser] = useState(null);
+  const [token, setToken] = useLocalStorage('alwaseet_token', null);
+  const [tokenExpiry, setTokenExpiry] = useLocalStorage('alwaseet_token_expiry', null);
+  const [waseetUser, setWaseetUser] = useLocalStorage('alwaseet_user', null);
   const [loading, setLoading] = useState(false);
   const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', null);
   
@@ -74,6 +75,40 @@ export const AlWaseetProvider = ({ children }) => {
       return null;
     }
   }, [activePartner]);
+
+  // التحقق من صلاحية التوكن المحفوظ عند تحميل الصفحة
+  useEffect(() => {
+    if (!token || !tokenExpiry) return;
+    
+    const now = new Date();
+    const expiry = new Date(tokenExpiry);
+    
+    if (expiry <= now) {
+      // التوكن منتهي الصلاحية
+      devLog.log('⏰ التوكن منتهي الصلاحية - تسجيل خروج تلقائي');
+      setToken(null);
+      setTokenExpiry(null);
+      setIsLoggedIn(false);
+      setWaseetUser(null);
+    } else {
+      // التوكن صالح - تفعيل الحساب تلقائياً
+      devLog.log('✅ التوكن صالح - تسجيل دخول تلقائي:', {
+        user: waseetUser?.username,
+        partner: activePartner,
+        expiresAt: tokenExpiry
+      });
+      setIsLoggedIn(true);
+      
+      // استرجاع بيانات المستخدم من قاعدة البيانات
+      if (user?.id && activePartner) {
+        getTokenForUser(user.id, null, activePartner).then(accountData => {
+          if (accountData && accountData.token === token) {
+            devLog.log('✅ تم استرجاع بيانات الحساب من قاعدة البيانات');
+          }
+        });
+      }
+    }
+  }, [token, tokenExpiry, user?.id, activePartner]);
 
   // دالة لإعادة تفعيل حساب منتهي الصلاحية
   const reactivateExpiredAccount = useCallback(async (accountUsername, partnerName = null) => {
@@ -139,6 +174,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       // تحديث حالة السياق
       setToken(newToken);
+      setTokenExpiry(expiresAt.toISOString());
       setWaseetUser({
         username: accountRecord.account_username,
         merchantId: accountRecord.merchant_id,
@@ -199,6 +235,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       // تحديث حالة السياق
       setToken(accountData.token);
+      setTokenExpiry(accountData.expires_at);
       setWaseetUser({
         username: accountData.account_username,
         merchantId: accountData.merchant_id,
@@ -395,7 +432,29 @@ export const AlWaseetProvider = ({ children }) => {
       for (const [employeeId, employeeOrders] of ordersByEmployee) {
         try {
           // الحصول على توكن منشئ الطلب مع تحديد delivery_partner
-          const employeeTokenData = await getTokenForUser(employeeId, null, employeeOrders[0]?.delivery_partner);
+          let employeeTokenData = await getTokenForUser(employeeId, null, employeeOrders[0]?.delivery_partner);
+          
+          // ✅ FALLBACK: استخدام توكن المستخدم الحالي إذا لم يكن هناك توكن للموظف
+          if (!employeeTokenData && user?.id) {
+            devLog.log(`⚠️ لا يوجد توكن للموظف ${employeeId} - محاولة استخدام توكن المستخدم الحالي...`);
+            
+            employeeTokenData = await getTokenForUser(user.id, null, employeeOrders[0]?.delivery_partner);
+            
+            if (employeeTokenData) {
+              devLog.log(`✅ تم استخدام توكن المستخدم الحالي لمزامنة طلبات الموظف ${employeeId}`);
+            } else {
+              devLog.log(`❌ لا يوجد توكن صالح - تجاهل ${employeeOrders.length} طلب للموظف ${employeeId}`);
+              
+              toast({
+                title: "⚠️ تحذير: فشل المزامنة",
+                description: `${employeeOrders.length} طلب للموظف لم تتم مزامنتها (لا يوجد توكن)`,
+                variant: "destructive"
+              });
+              
+              continue;
+            }
+          }
+          
           if (!employeeTokenData) {
             devLog.log(`⚠️ لا يوجد توكن صالح للموظف منشئ الطلب: ${employeeId}`);
             continue;
