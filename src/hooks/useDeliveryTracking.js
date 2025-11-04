@@ -26,12 +26,12 @@ export const useDeliveryTracking = (orderId) => {
           .maybeSingle();
 
         if (error) {
-          console.error('خطأ في جلب بيانات التتبع:', error);
+          // Error silently
         } else if (data) {
           setTrackingData(data);
         }
       } catch (err) {
-        console.error('خطأ في useDeliveryTracking:', err);
+        // Error silently
       } finally {
         setLoading(false);
       }

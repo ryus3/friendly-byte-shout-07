@@ -66,7 +66,6 @@ export const AlWaseetProvider = ({ children }) => {
       
       // التحقق من صلاحية التوكن
       if (new Date(data.expires_at) <= new Date()) {
-        devLog.log(`⚠️ التوكن منتهي الصلاحية للحساب: ${data.account_username}`);
         return null;
       }
       
@@ -97,15 +96,8 @@ export const AlWaseetProvider = ({ children }) => {
         .single();
       
       if (error || !accountRecord) {
-        devLog.error('❌ خطأ في جلب بيانات الحساب:', error);
         throw new Error('لم يتم العثور على بيانات الحساب');
       }
-      
-      devLog.log('🔍 بيانات الحساب المحفوظة:', {
-        username: accountRecord.account_username,
-        hasPassword: !!accountRecord.partner_data?.password,
-        partner
-      });
       
       // محاولة إعادة تسجيل الدخول باستخدام بيانات محفوظة
       let newToken = null;
@@ -254,14 +246,13 @@ export const AlWaseetProvider = ({ children }) => {
         .select('account_username, merchant_id, account_label, is_default, last_used_at, created_at, partner_data, token, expires_at')
         .eq('user_id', userId)
         .eq('partner_name', partnerName)
-        .eq('is_active', true)  // فقط التوكنات النشطة
-        .not('token', 'is', null)  // فقط الحسابات التي لديها توكن صالح
-        .neq('token', '')  // تجنب التوكنات الفارغة
+        .eq('is_active', true)
+        .not('token', 'is', null)
+        .neq('token', '')
         .order('is_default', { ascending: false })
         .order('last_used_at', { ascending: false });
       
       if (error) {
-        console.error('خطأ في جلب حسابات المستخدم:', error);
         return [];
       }
 
@@ -284,10 +275,8 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
       
-      devLog.log(`🔍 تم العثور على ${accounts.length} حساب نشط، بعد إزالة التكرار والمنتهية: ${uniqueAccounts.length}`);
       return uniqueAccounts;
     } catch (error) {
-      console.error('خطأ في جلب حسابات المستخدم:', error);
       return [];
     }
   }, []);
@@ -320,7 +309,6 @@ export const AlWaseetProvider = ({ children }) => {
       if (error) throw error;
       return true;
     } catch (error) {
-      console.error('خطأ في تعيين الحساب الافتراضي:', error);
       return false;
     }
   }, [normalizeUsername]);
@@ -346,7 +334,6 @@ export const AlWaseetProvider = ({ children }) => {
 
       return result;
     } catch (error) {
-      console.error('❌ خطأ في إصلاح المخزون:', error);
       toast({
         title: "❌ خطأ في إصلاح المخزون",
         description: error.message,

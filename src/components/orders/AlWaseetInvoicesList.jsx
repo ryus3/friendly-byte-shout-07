@@ -93,7 +93,6 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
             .maybeSingle();
 
           if (error) {
-            console.warn('Error checking invoice status:', error);
             setDbStatus('not_saved');
           } else if (dbInvoice) {
             setDbStatus('saved');
@@ -102,7 +101,6 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
             setDbStatus('not_saved');
           }
         } catch (e) {
-          console.warn('Error checking invoice DB status:', e);
           setDbStatus('not_saved');
         }
       };

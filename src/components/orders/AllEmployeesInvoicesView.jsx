@@ -39,7 +39,6 @@ const AllEmployeesInvoicesView = () => {
         .neq('user_id', '91484496-b887-44f7-9e5d-be9db5567604'); // استبعاد المدير
 
       if (empError) {
-        console.error('خطأ في جلب الموظفين:', empError);
         return;
       }
 
@@ -48,8 +47,6 @@ const AllEmployeesInvoicesView = () => {
       // مزامنة شاملة باستخدام Edge Function (لا نستخدم توكن المدير)
       if (forceSync) {
         try {
-          console.log('🔄 مزامنة شاملة للفواتير عبر Edge Function...');
-          
           // استدعاء المزامنة الذكية الجديدة
           const { error: syncError } = await supabase.functions.invoke('smart-invoice-sync', {
             body: { 
@@ -61,12 +58,10 @@ const AllEmployeesInvoicesView = () => {
           });
           
           if (syncError) {
-            console.warn('تحذير أثناء المزامنة الموحدة:', syncError.message);
-            } else {
-              console.log('✅ مزامنة ذكية مكتملة - فواتير حديثة فقط');
-            }
+            // Sync warning silently
+          }
         } catch (apiError) {
-          console.warn('تحذير أثناء المزامنة:', apiError.message);
+          // API error silently
         }
       }
 
@@ -80,7 +75,6 @@ const AllEmployeesInvoicesView = () => {
         .limit(200); // زيادة الحد لضمان عدم فقدان الفواتير
 
       if (invError) {
-        console.error('خطأ في جلب الفواتير:', invError);
         return;
       }
 
@@ -99,22 +93,11 @@ const AllEmployeesInvoicesView = () => {
           return invoice.owner_user_id !== '91484496-b887-44f7-9e5d-be9db5567604';
         });
 
-      console.log('📊 معلومات الفواتير المحملة:', {
-        totalFromDB: invoicesData?.length || 0,
-        afterEmployeeFilter: invoicesWithEmployees.length,
-        sampleInvoices: invoicesWithEmployees.slice(0, 3).map(inv => ({
-          id: inv.external_id,
-          employee: inv.employee_name,
-          amount: inv.amount,
-          issued_at: inv.issued_at
-        }))
-      });
-
       setAllInvoices(invoicesWithEmployees);
       setLastSync(new Date().toISOString());
       
     } catch (error) {
-      console.error('خطأ في جلب فواتير جميع الموظفين:', error);
+      // Error silently
     } finally {
       setLoading(false);
     }
@@ -126,7 +109,6 @@ const AllEmployeesInvoicesView = () => {
     
     // مزامنة تلقائية كل 30 دقيقة للحصول على أحدث الفواتير
     const syncInterval = setInterval(() => {
-      console.log('🔄 مزامنة دورية تلقائية...');
       fetchAllEmployeesInvoices(true);
     }, 30 * 60 * 1000); // 30 دقيقة
     

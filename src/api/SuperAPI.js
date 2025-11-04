@@ -114,7 +114,6 @@ class SuperAPI {
       return data;
       
     } catch (error) {
-      console.error(`❌ خطأ في ${key}:`, error);
       throw error;
     } finally {
       this.loading.delete(key);
@@ -258,11 +257,6 @@ return this.fetch('all_data', async () => {
   
   // السجلات غير الحرجة: نسجل تحذيراً ونكمل بجداول فارغة لضمان تحميل الواجهة
   const nonCritical = { customers, purchases, expenses, profits, cashSources, settings, aiOrders, profitRules, profiles, orderDiscounts, colors, sizes, categories, departments, productTypes, seasons };
-  Object.entries(nonCritical).forEach(([key, resp]) => {
-    if (resp.error) {
-      
-    }
-  });
 
   const allData = {
     // البيانات الأساسية
@@ -496,7 +490,7 @@ superAPI.calculateProfitsForOrders = async (orderIds = []) => {
     try {
       await supabase.rpc('calculate_order_profit', { order_id_input: orderId });
     } catch (e) {
-      console.error('RPC calculate_order_profit failed for', orderId, e);
+      // RPC failed silently
     }
   }
   superAPI.invalidate('all_data');

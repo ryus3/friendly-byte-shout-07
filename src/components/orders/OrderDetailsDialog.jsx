@@ -94,8 +94,6 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
 
     setSyncing(true);
     try {
-      console.log(`🔄 مزامنة الطلب ${order.tracking_number}...`);
-      
       // استخدام الدالة الجديدة للمزامنة المباشرة
       const syncResult = await syncOrderByQR(order.tracking_number);
       
@@ -133,12 +131,8 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
           description: "الطلب محدث بالفعل ولا يحتاج لمزامنة",
           variant: "default"
         });
-      } else {
-        // لا نعرض رسالة خطأ هنا لأن syncOrderByQR تتعامل مع الحذف التلقائي
-        console.log("⚠️ لم يتم العثور على الطلب في الوسيط أو لا يحتاج تحديث");
       }
     } catch (error) {
-      console.error('❌ خطأ في مزامنة الطلب:', error);
       toast({
         title: "خطأ في المزامنة",
         description: "حدث خطأ أثناء المزامنة مع شركة التوصيل",
@@ -161,29 +155,19 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
 
     setCheckingInvoice(true);
     try {
-      console.log("🔍 Checking invoice status for order:", order.tracking_number);
-      
       // Call the retroactive linking function first
       const { data: linkResult, error: linkError } = await supabase.rpc('retroactive_link_orders_by_qr');
-      
-      if (linkError) {
-        console.error("Error linking orders:", linkError);
-      } else {
-        console.log("✅ Link result:", linkResult);
-      }
       
       // ✅ Call the sync recent invoices function
       const { data: syncResult, error: syncError } = await supabase.rpc('sync_recent_received_invoices');
       
       if (syncError) {
-        console.error("❌ Error syncing invoices:", syncError.message);
         toast({
           title: "خطأ في المزامنة",
           description: `فشلت المزامنة: ${syncError.message}`,
           variant: "destructive",
         });
       } else {
-        console.log("✅ Sync result:", syncResult);
         toast({
           title: "تم فحص الفواتير",
           description: `تم تحديث ${syncResult.updated_orders_count || 0} طلب`,
@@ -196,7 +180,6 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
       }
       
     } catch (error) {
-      console.error("Error checking invoice status:", error);
       toast({
         title: "خطأ",
         description: "حدث خطأ أثناء فحص حالة الفاتورة",
