@@ -194,6 +194,37 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
     }
   };
 
+  // إلغاء الربط
+  const unlinkEmployeeCode = async (codeId) => {
+    try {
+      const { error } = await supabase
+        .from('employee_telegram_codes')
+        .update({ 
+          telegram_chat_id: null,
+          linked_at: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', codeId);
+
+      if (error) throw error;
+
+      toast({
+        title: "تم إلغاء الربط",
+        description: "تم إلغاء ربط البوت بنجاح - يمكن إعادة الربط لاحقاً",
+        variant: "success"
+      });
+
+      fetchEmployeeCodes();
+    } catch (error) {
+      console.error('Error unlinking code:', error);
+      toast({
+        title: "خطأ في إلغاء الربط",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
   // حذف رمز
   const deleteEmployeeCode = async (codeId) => {
     try {
@@ -215,6 +246,42 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
       console.error('Error deleting code:', error);
       toast({
         title: "خطأ في حذف الرمز",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+
+  // إرسال تذكير للموظف غير المتصل
+  const sendReminderToEmployee = async (employeeCode) => {
+    toast({
+      title: "تذكير للموظف",
+      description: `يرجى إبلاغ ${employeeCode.profiles?.full_name} بربط حسابه عبر البوت @Ryusiq_bot باستخدام الرمز: ${employeeCode.telegram_code}`,
+      variant: "default"
+    });
+  };
+
+  // تغيير الرمز (توليد رمز جديد بنفس النمط)
+  const changeEmployeeCode = async (userId, oldCodeId) => {
+    try {
+      // حذف الرمز القديم
+      await supabase
+        .from('employee_telegram_codes')
+        .delete()
+        .eq('id', oldCodeId);
+
+      // توليد رمز جديد
+      await generateNewCode(userId);
+
+      toast({
+        title: "تم تغيير الرمز",
+        description: "تم حذف الرمز القديم وإنشاء رمز جديد بنجاح",
+        variant: "success"
+      });
+    } catch (error) {
+      console.error('Error changing code:', error);
+      toast({
+        title: "خطأ في تغيير الرمز",
         description: error.message,
         variant: "destructive"
       });
@@ -466,30 +533,50 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                   </Badge>
                                   <p className="text-xs text-indigo-200 mt-1">الرمز</p>
                                 </div>
-                                <div className="flex gap-2 justify-center sm:justify-start">
+                                <div className="flex gap-2 justify-center sm:justify-start flex-wrap">
                                   <Button
                                     size="sm"
                                     className="bg-slate-700/60 border-slate-600/50 text-white hover:bg-slate-600/70"
                                     onClick={() => copyToClipboard(employeeCode.telegram_code)}
+                                    title="نسخ الرمز"
                                   >
                                     <Copy className="w-4 h-4" />
                                   </Button>
                                   {canViewAllData && (
                                     <>
+                                      {!isLinked && (
+                                        <Button
+                                          size="sm"
+                                          className="bg-blue-600/60 border-blue-500/50 text-white hover:bg-blue-600/80"
+                                          onClick={() => sendReminderToEmployee(employeeCode)}
+                                          title="إرسال تذكير"
+                                        >
+                                          <MessageCircle className="w-4 h-4" />
+                                        </Button>
+                                      )}
+                                      {isLinked && (
+                                        <Button
+                                          size="sm"
+                                          className="bg-orange-600/60 border-orange-500/50 text-white hover:bg-orange-600/80"
+                                          onClick={() => unlinkEmployeeCode(employeeCode.id)}
+                                          title="إلغاء الربط"
+                                        >
+                                          <Unlink className="w-4 h-4" />
+                                        </Button>
+                                      )}
                                       <Button
                                         size="sm"
-                                        className="bg-slate-700/60 border-slate-600/50 text-white hover:bg-slate-600/70"
-                                        onClick={() => {
-                                          setEditingCode(employeeCode.id);
-                                          setNewCodeValue(employeeCode.telegram_code);
-                                        }}
+                                        className="bg-purple-600/60 border-purple-500/50 text-white hover:bg-purple-600/80"
+                                        onClick={() => changeEmployeeCode(employeeCode.user_id, employeeCode.id)}
+                                        title="تغيير الرمز (إنشاء رمز جديد)"
                                       >
-                                        <Edit className="w-4 h-4" />
+                                        <RefreshCw className="w-4 h-4" />
                                       </Button>
                                       <Button
                                         size="sm"
                                         onClick={() => deleteEmployeeCode(employeeCode.id)}
                                         className="bg-red-600/60 border-red-500/50 text-white hover:bg-red-600/80"
+                                        title="حذف الرمز نهائياً"
                                       >
                                         <Trash2 className="w-4 h-4" />
                                       </Button>
