@@ -1362,7 +1362,6 @@ export const SuperProvider = ({ children }) => {
             if (relatedAiOrders && relatedAiOrders.length > 0) {
               const aiOrderIds = relatedAiOrders.map(ai => ai.id);
               await supabase.from('ai_orders').delete().in('id', aiOrderIds);
-            }
               
               // تحديث الحالة المحلية أيضاً
               aiOrderIds.forEach(id => permanentlyDeletedAiOrders.add(id));
@@ -1372,7 +1371,7 @@ export const SuperProvider = ({ children }) => {
               }));
             }
           } catch (aiCleanupError) {
-            console.warn(`⚠️ فشل تنظيف ai_orders للطلب ${orderId}:`, aiCleanupError);
+            console.error('فشل تنظيف ai_orders:', aiCleanupError);
           }
         }
         
