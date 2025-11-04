@@ -132,7 +132,7 @@ export const AlWaseetProvider = ({ children }) => {
         });
       }
     }
-  }, [user?.id, activePartner]);
+  }, [user?.id, activePartner, getTokenForUser]); // ✅ إضافة getTokenForUser للـ dependencies
 
   // دالة لإعادة تفعيل حساب منتهي الصلاحية
   const reactivateExpiredAccount = useCallback(async (accountUsername, partnerName = null) => {
@@ -3606,7 +3606,7 @@ export const AlWaseetProvider = ({ children }) => {
       }
     }, 5000); // ✅ تقليل من 10000 إلى 5000
 
-  }, [activePartner, isLoggedIn, isSyncing, syncVisibleOrdersBatch, performDeletionPassAfterStatusSync, scopeOrdersQuery]);
+  }, [activePartner, isLoggedIn, isSyncing]); // ✅ إزالة الدوال من dependencies لأنها useCallback مستقرة
 
   // Initial sync on login - respects autoSyncEnabled setting  
   useEffect(() => {
