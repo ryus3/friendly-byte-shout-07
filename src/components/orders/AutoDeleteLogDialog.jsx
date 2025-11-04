@@ -64,20 +64,58 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
     }
 
     try {
+      // 1️⃣ استعادة الطلب الرئيسي
       const orderData = { ...log.order_data };
+      const savedItems = orderData.order_items || [];
       delete orderData.id;
       delete orderData.created_at;
       delete orderData.updated_at;
+      delete orderData.order_items;
 
-      const { error } = await supabase
+      const { data: restoredOrder, error: orderError } = await supabase
         .from('orders')
-        .insert(orderData);
+        .insert(orderData)
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (orderError) throw orderError;
+
+      // 2️⃣ استعادة order_items إذا وُجدت
+      if (savedItems.length > 0) {
+        const items = savedItems.map(item => ({
+          order_id: restoredOrder.id,
+          product_id: item.product_id,
+          variant_id: item.variant_id,
+          quantity: item.quantity,
+          price: item.price,
+          total: item.total
+        }));
+        
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(items);
+          
+        if (itemsError) throw itemsError;
+        
+        // 3️⃣ إعادة حجز المخزون
+        for (const item of savedItems) {
+          await supabase.rpc('reserve_stock_item', {
+            p_product_id: item.product_id,
+            p_variant_id: item.variant_id,
+            p_quantity: item.quantity
+          });
+        }
+      }
+
+      // 4️⃣ حذف السجل من auto_delete_log
+      await supabase
+        .from('auto_delete_log')
+        .delete()
+        .eq('id', log.id);
 
       toast({
-        title: "تمت الاستعادة",
-        description: `تم استعادة الطلب ${log.order_number || log.tracking_number} بنجاح`,
+        title: "✅ تمت الاستعادة الكاملة",
+        description: `تم استعادة الطلب ${log.order_number || log.tracking_number} مع جميع العناصر والمخزون`,
         variant: "default"
       });
 
@@ -85,7 +123,7 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
     } catch (error) {
       toast({
         title: "خطأ",
-        description: "فشل في استعادة الطلب",
+        description: error.message || "فشل في استعادة الطلب",
         variant: "destructive"
       });
     }
@@ -113,15 +151,11 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
     if (!confirmed) return;
 
     try {
-      console.log('🗑️ حذف السجلات:', selectedLogs);
-
       const { data, error } = await supabase
         .from('auto_delete_log')
         .delete()
         .in('id', selectedLogs)
         .select();
-
-      console.log('✅ نتيجة الحذف:', { data, error });
 
       if (error) throw error;
 
@@ -135,7 +169,6 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
       setSelectAll(false);
       fetchDeletedOrders();
     } catch (error) {
-      console.error('❌ خطأ في الحذف النهائي:', error);
       toast({
         title: "خطأ",
         description: error.message || "فشل في حذف السجلات",

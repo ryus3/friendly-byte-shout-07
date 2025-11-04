@@ -757,53 +757,57 @@ export const AlWaseetProvider = ({ children }) => {
     return order.created_by === currentUser.id;
   }, []);
   
-  // دالة للتحقق من إمكانية حذف الطلب
+  // 🛡️ دالة محسّنة للتحقق من إمكانية حذف الطلب مع حماية ثلاثية
   const canAutoDeleteOrder = useCallback((order, currentUser = user) => {
     if (!order || !currentUser) {
-      devLog.log('❌ canAutoDeleteOrder: فشل - طلب أو مستخدم غير موجود');
       return false;
     }
     
-    // التحقق من أن الطلب من الوسيط
+    // فقط طلبات الوسيط
     if (order.delivery_partner !== 'alwaseet') {
-      devLog.log('❌ canAutoDeleteOrder: فشل - ليس طلب وسيط');
       return false;
     }
     
-    // لا يحذف الطلبات المستلمة الفواتير
+    // عدم حذف الطلبات التي تم استلام فاتورتها
     if (order.receipt_received) {
-      devLog.log('❌ canAutoDeleteOrder: فشل - تم استلام الفاتورة');
       return false;
     }
     
-    // ✅ فقط الطلبات pending تُحذف تلقائياً (لا shipped و لا delivery)
+    // ✅ فقط الطلبات pending تُحذف تلقائياً
     const allowedStatuses = ['pending'];
     if (!allowedStatuses.includes(order.status)) {
-      devLog.log(`❌ canAutoDeleteOrder: فشل - حالة غير مسموحة: ${order.status}`);
       return false;
     }
     
-    // حماية زمنية: عمر الطلب أكبر من دقيقة واحدة
+    // ✅ الحماية 1: عمر الطلب أكبر من دقيقة واحدة (حسب طلب المستخدم)
     const orderAge = Date.now() - new Date(order.created_at).getTime();
-    const minAge = 1 * 60 * 1000; // دقيقة واحدة بالميلي ثانية
+    const minAge = 1 * 60 * 1000; // دقيقة واحدة
     if (orderAge < minAge) {
-      devLog.log(`❌ canAutoDeleteOrder: فشل - الطلب جديد جداً (عمره ${Math.round(orderAge/60000)} دقيقة)`);
+      return false;
+    }
+    
+    // ✅ الحماية 2: التحقق من أن delivery_status ليس '2' أو أعلى (لم يستلمه المندوب)
+    const deliveryStatusNum = parseInt(String(order.delivery_status || '0'));
+    if (deliveryStatusNum >= 2) {
+      return false;
+    }
+    
+    // ✅ الحماية 3: عدم حذف الطلبات ذات القيمة الفعلية
+    const totalAmount = parseFloat(String(order.total_amount || 0));
+    if (totalAmount > 0 && !order.tracking_number && !order.qr_id) {
       return false;
     }
     
     // يجب وجود معرف تتبع
     if (!order.tracking_number && !order.qr_id && !order.delivery_partner_order_id) {
-      devLog.log('❌ canAutoDeleteOrder: فشل - لا يوجد معرف تتبع');
       return false;
     }
     
-  // التحقق من الملكية - حتى المدير لا يحذف طلبات الموظفين
-  if (!isOrderOwner(order, currentUser)) {
-    devLog.log('❌ canAutoDeleteOrder: فشل - المستخدم لا يملك الطلب (الحماية صالحة للجميع بما في ذلك المدير)');
-    return false;
-  }
+    // التحقق من الملكية - حتى المدير لا يحذف طلبات الموظفين
+    if (!isOrderOwner(order, currentUser)) {
+      return false;
+    }
     
-    devLog.log(`✅ canAutoDeleteOrder: مسموح - الطلب ${order.tracking_number || order.qr_id} يمكن حذفه`);
     return true;
   }, [user, isOrderOwner]);
   

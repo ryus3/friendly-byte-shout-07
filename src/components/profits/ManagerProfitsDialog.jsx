@@ -172,7 +172,6 @@ const ManagerProfitsDialog = ({
     const processed = employeeOrdersOnly
       .filter(profit => {
         if (!profit || !profit.id) {
-          console.log('❌ ربح فارغ أو بدون ID تم تجاهله');
           return false;
         }
         
@@ -238,10 +237,6 @@ const ManagerProfitsDialog = ({
           
           // العثور على الطلب المرتبط
           const relatedOrder = orders?.find(order => order.id === profit.order_id);
-          
-          console.log(`✅ نتيجة محاسبية نهائية للربح ${profit.id}:`, {
-            totalRevenue,
-            totalCost,
             totalProfit,
             employeeProfit,
             systemProfit,
@@ -296,11 +291,7 @@ const ManagerProfitsDialog = ({
     return processed;
   }, [profits, employees, orders, dateRange, selectedEmployee, searchTerm, currentUser?.id]);
 
-  // إحصائيات شاملة - مفلترة حسب الفترة المختارة
   const stats = useMemo(() => {
-    console.log('📊 حساب الإحصائيات من detailedProfits المفلترة:', {
-      detailedProfitsCount: detailedProfits?.length || 0,
-      selectedPeriod,
       dateRange
     });
 
@@ -319,7 +310,6 @@ const ManagerProfitsDialog = ({
     };
 
     if (!detailedProfits || !Array.isArray(detailedProfits) || detailedProfits.length === 0) {
-      console.log('❌ stats: لا توجد أرباح مفصلة للفترة المختارة');
       return defaultStats;
     }
 
@@ -372,7 +362,6 @@ const ManagerProfitsDialog = ({
         topEmployees
       };
 
-      console.log('✅ الإحصائيات المحسوبة للفترة:', calculatedStats);
       return calculatedStats;
     } catch (error) {
       console.error('❌ خطأ في حساب الإحصائيات:', error);
@@ -433,10 +422,6 @@ const ManagerProfitsDialog = ({
       p.employee_id === employeeData.employee?.user_id && 
       (p.status === 'settled' || p.settled_at)
     ) || [];
-
-    console.log(`🧾 أرباح الموظف ${employeeData.employee?.full_name}:`, {
-      employeeId: employeeData.employee?.user_id,
-      profitRecordsCount: employeeProfitRecords.length,
       profitRecords: employeeProfitRecords
     });
 
@@ -893,8 +878,6 @@ const ManagerProfitsDialog = ({
                 const employeeList = Object.values(employeeStats)
                   .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0))
                   .slice(0, 10);
-
-                console.log('🧑‍💼 إحصائيات الموظفين المحسوبة:', employeeList);
 
                 return employeeList.length > 0 ? (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

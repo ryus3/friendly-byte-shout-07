@@ -136,16 +136,11 @@ const EnhancedBarcodeScannerDialog = ({
             if (now - lastScanTimeRef.current < 1000) return;
             lastScanTimeRef.current = now;
             
-            console.log("🎯 تم قراءة كود:", decodedText);
             setScanCount(prev => prev + 1);
-            
             await handleScanResult(decodedText);
           },
           (errorMessage) => {
-            // تجاهل أخطاء عدم وجود كود - هذا طبيعي
-            if (diagnosticMode) {
-              console.log("🔍 لا يوجد كود في الإطار:", errorMessage);
-            }
+            // تجاهل أخطاء عدم وجود كود
           }
         );
 
@@ -153,10 +148,7 @@ const EnhancedBarcodeScannerDialog = ({
         setIsScanning(true);
         setIsInitializing(false);
 
-        // إعداد الفلاش بشكل منفصل (لا يؤثر على الوظيفة الأساسية)
-        setupFlash().catch(flashError => {
-          console.log("⚠️ الفلاش غير متاح:", flashError);
-        });
+        setupFlash().catch(() => {});
 
       } catch (startError) {
         console.error("خطأ في بدء قارئ QR:", startError);
@@ -187,10 +179,8 @@ const EnhancedBarcodeScannerDialog = ({
         const capabilities = track.getCapabilities();
         const hasFlashSupport = !!(capabilities && capabilities.torch);
         setHasFlash(hasFlashSupport);
-        console.log("💡 فحص الفلاش:", hasFlashSupport ? "متاح" : "غير متاح");
       }
     } catch (e) {
-      console.log("⚠️ الفلاش غير مدعوم:", e?.message || "خطأ غير محدد");
       setHasFlash(false);
     }
   };
@@ -205,10 +195,6 @@ const EnhancedBarcodeScannerDialog = ({
       
       const track = stream.getVideoTracks()[0];
       const settings = track.getSettings();
-      const capabilities = track.getCapabilities();
-      
-      console.log("📷 إعدادات الكاميرا:", settings);
-      console.log("🔧 قدرات الكاميرا:", capabilities);
       
       toast({
         title: "✅ اختبار الكاميرا نجح",
