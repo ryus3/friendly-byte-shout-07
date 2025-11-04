@@ -237,13 +237,6 @@ const ManagerProfitsDialog = ({
           
           // العثور على الطلب المرتبط
           const relatedOrder = orders?.find(order => order.id === profit.order_id);
-            totalProfit,
-            employeeProfit,
-            systemProfit,
-            employee: employee?.full_name || 'غير معروف',
-            status: profit.status,
-            order_number: relatedOrder?.order_number || 'غير محدد'
-          });
           
           return {
             id: profit.id,
