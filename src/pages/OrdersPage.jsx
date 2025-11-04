@@ -117,22 +117,22 @@ const OrdersPage = () => {
       // تأكيد أن المزامنة تمت
       hasSyncedRef.current = true;
       
-      // جلب الطلبات المعلقة من delivery partners فقط
-      const pendingExternalOrders = orders.filter(o => 
-        ['pending', 'shipped', 'delivery'].includes(o.status) &&
+      // جلب الطلبات النشطة بما فيها delivered (للتسليم الجزئي)
+      const activeExternalOrders = orders.filter(o => 
+        ['pending', 'shipped', 'delivery', 'delivered'].includes(o.status) &&
         o.delivery_partner && 
         ['alwaseet', 'modon'].includes(o.delivery_partner)
       );
       
-      if (pendingExternalOrders.length === 0) {
-        devLog.log('ℹ️ لا توجد طلبات خارجية معلقة للمزامنة');
+      if (activeExternalOrders.length === 0) {
+        devLog.log('ℹ️ لا توجد طلبات خارجية نشطة للمزامنة');
         return;
       }
       
-      devLog.log(`🔄 [OrdersPage] مزامنة تلقائية لـ ${pendingExternalOrders.length} طلب معلق...`);
+      devLog.log(`🔄 [OrdersPage] مزامنة تلقائية لـ ${activeExternalOrders.length} طلب نشط (بما فيها delivered للتسليم الجزئي)...`);
       
       // 🔍 MODON Diagnostic Logging
-      const modonOrders = pendingExternalOrders.filter(o => o.delivery_partner === 'modon');
+      const modonOrders = activeExternalOrders.filter(o => o.delivery_partner === 'modon');
       if (modonOrders.length > 0) {
         console.log('🔍 ===== [DIAGNOSTIC] MODON Orders in OrdersPage =====');
         console.log('📊 Total MODON orders:', modonOrders.length);
@@ -162,7 +162,7 @@ const OrdersPage = () => {
       }
       
       try {
-        const result = await syncVisibleOrdersBatch(pendingExternalOrders);
+        const result = await syncVisibleOrdersBatch(activeExternalOrders);
         
         if (result && result.updatedCount > 0) {
           devLog.log(`✅ [OrdersPage] تم تحديث ${result.updatedCount} طلب تلقائياً`);

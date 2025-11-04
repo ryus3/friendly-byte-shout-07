@@ -5066,6 +5066,33 @@ export type Database = {
         }
         Relationships: []
       }
+      sold_products_log: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          quantity: number
+          sold_at: string
+          variant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          quantity: number
+          sold_at?: string
+          variant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          quantity?: number
+          sold_at?: string
+          variant_id?: string
+        }
+        Relationships: []
+      }
       stock_notification_history: {
         Row: {
           created_at: string

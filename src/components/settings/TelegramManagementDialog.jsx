@@ -462,7 +462,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                         : 'bg-gradient-to-r from-slate-600 to-slate-700 text-white'
                                     }`}
                                   >
-                                    {(employeeCode.employee_code || '').toUpperCase()}
+                                    {(employeeCode.telegram_code || '').toUpperCase()}
                                   </Badge>
                                   <p className="text-xs text-indigo-200 mt-1">الرمز</p>
                                 </div>
@@ -481,7 +481,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                         className="bg-slate-700/60 border-slate-600/50 text-white hover:bg-slate-600/70"
                                         onClick={() => {
                                           setEditingCode(employeeCode.id);
-                                          setNewCodeValue(employeeCode.employee_code);
+                                          setNewCodeValue(employeeCode.telegram_code);
                                         }}
                                       >
                                         <Edit className="w-4 h-4" />
