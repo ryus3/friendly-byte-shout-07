@@ -33,9 +33,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const WELCOME_MESSAGE = `🤖 مرحباً بك في بوت RYUS للطلبات الذكية!
+// Helper function to check if text is an employee code (3 letters + 3 digits)
+function isEmployeeCode(text: string): boolean {
+  return /^[A-Z]{3}\d{3}$/.test(text.trim().toUpperCase());
+}
 
-✨ يمكنني فهم طلباتك بطريقة ذكية وسهلة
+// Welcome message - will be customized based on employee link status
+function getWelcomeMessage(isLinked: boolean, employeeCode?: string): string {
+  const linkStatus = isLinked 
+    ? `✅ حسابك مربوط مسبقاً\n👤 الرمز: ${employeeCode}\n\n`
+    : `⚠️ لم يتم ربط حسابك بعد\n\n🔑 لربط حسابك، أرسل رمز الموظف الخاص بك\n(مثال: ABO123)\n\n`;
+  
+  return `🤖 مرحباً بك في بوت RYUS للطلبات الذكية!
+
+${linkStatus}✨ يمكنني فهم طلباتك بطريقة ذكية وسهلة
 
 مثال:
 
@@ -59,6 +70,7 @@ const WELCOME_MESSAGE = `🤖 مرحباً بك في بوت RYUS للطلبات 
 💡 ملاحظة: لإنشاء طلب، اكتب رسالة عادية بدون أوامر
 
 جرب الآن! 👇`;
+}
 
 // Inline keyboard for inventory menu
 const INVENTORY_KEYBOARD = {
@@ -1233,10 +1245,80 @@ serve(async (req) => {
 
       console.log(`💬 رسالة جديدة من ${userId}: "${text.substring(0, 100)}"`);
 
+      // Get employee data once (needed for all operations)
+      const { data: employeeData, error: employeeError } = await supabase
+        .from('employee_telegram_codes')
+        .select('telegram_code, user_id, telegram_chat_id')
+        .eq('telegram_chat_id', chatId)
+        .eq('is_active', true)
+        .maybeSingle();
+
+      const employeeId = employeeData?.user_id || null;
+      const isLinked = !!employeeData?.telegram_chat_id;
+      const employeeCode = employeeData?.telegram_code || '';
+
       // Handle /start command
       if (text === '/start') {
-        await sendTelegramMessage(chatId, WELCOME_MESSAGE, INVENTORY_KEYBOARD, botToken);
+        const welcomeMessage = getWelcomeMessage(isLinked, employeeCode);
+        await sendTelegramMessage(chatId, welcomeMessage, INVENTORY_KEYBOARD, botToken);
         return new Response(JSON.stringify({ success: true }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+
+      // ==========================================
+      // EMPLOYEE CODE VERIFICATION (MUST BE BEFORE OTHER COMMANDS)
+      // ==========================================
+      if (isEmployeeCode(text)) {
+        console.log(`🔐 محاولة ربط رمز موظف: ${text}`);
+        
+        const code = text.trim().toUpperCase();
+        
+        // Check if already linked
+        if (employeeData?.telegram_chat_id) {
+          await sendTelegramMessage(
+            chatId,
+            `✅ حسابك مربوط مسبقاً!\n\n👤 الرمز: ${employeeData.telegram_code}\n\nيمكنك الآن استخدام البوت لإنشاء الطلبات.`,
+            INVENTORY_KEYBOARD,
+            botToken
+          );
+          return new Response(JSON.stringify({ success: true, already_linked: true }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
+        // Call link function
+        const { data: linkResult, error: linkError } = await supabase
+          .rpc('link_employee_telegram_code', {
+            p_employee_code: code,
+            p_chat_id: chatId
+          });
+        
+        if (linkError || !linkResult?.success) {
+          console.error('❌ فشل ربط الرمز:', linkError || linkResult);
+          await sendTelegramMessage(
+            chatId,
+            `❌ ${linkResult?.error || 'رمز الموظف غير صحيح أو غير نشط'}\n\nيرجى التواصل مع المدير للحصول على رمز صحيح.`,
+            undefined,
+            botToken
+          );
+          return new Response(JSON.stringify({ error: 'invalid_code' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+        }
+        
+        // Successfully linked!
+        await sendTelegramMessage(
+          chatId,
+          `✅ تم ربط حسابك بنجاح!\n\n👤 مرحباً ${linkResult.employee_name}\n🔑 الرمز: ${code}\n\nيمكنك الآن استخدام البوت لإنشاء الطلبات والاستعلام عن المخزون.`,
+          INVENTORY_KEYBOARD,
+          botToken
+        );
+        
+        return new Response(JSON.stringify({ success: true, linked: true }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
@@ -1245,16 +1327,6 @@ serve(async (req) => {
       // ==========================================
       // Handle Inventory Commands
       // ==========================================
-      
-      // Get employee data once for all inventory commands
-      const { data: employeeData, error: employeeError } = await supabase
-        .from('employee_telegram_codes')
-        .select('telegram_code, user_id')
-        .eq('telegram_chat_id', chatId)
-        .eq('is_active', true)
-        .maybeSingle();
-
-      const employeeId = employeeData?.user_id || null;
       
       // Handle /stats command
       if (text === '/stats') {
