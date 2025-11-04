@@ -65,7 +65,7 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
 
     try {
       // 1️⃣ استعادة الطلب الرئيسي مع بيانات شركة التوصيل
-      const orderData = {
+      let orderData = {
         ...log.order_data,
         // ✅ استعادة بيانات شركة التوصيل الأصلية
         delivery_partner: log.order_data.delivery_partner || 'local',
@@ -78,6 +78,65 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
         delivery_status: log.delivery_status || null,
         updated_at: new Date().toISOString()
       };
+
+      // ✅ المرحلة 5: إذا كانت بيانات العميل ناقصة، محاولة جلبها من API الوسيط
+      const isMissingCustomerData = !orderData.customer_phone || !orderData.customer_city || !orderData.customer_province;
+      const hasDeliveryPartnerId = orderData.delivery_partner_order_id && 
+                                    (orderData.delivery_partner === 'alwaseet' || orderData.delivery_partner === 'modon');
+      
+      if (isMissingCustomerData && hasDeliveryPartnerId) {
+        console.log('🔄 محاولة جلب بيانات الطلب من شركة التوصيل...', orderData.delivery_partner_order_id);
+        
+        try {
+          // جلب التوكن النشط لشركة التوصيل
+          const { data: token, error: tokenError } = await supabase
+            .from('delivery_partner_tokens')
+            .select('token, partner_name')
+            .eq('partner_name', orderData.delivery_partner)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          if (token?.token) {
+            // استدعاء API المناسب لجلب بيانات الطلب
+            let orderDetails = null;
+            
+            if (orderData.delivery_partner === 'modon') {
+              const ModonAPI = await import('@/lib/modon-api');
+              orderDetails = await ModonAPI.getOrderDetails(token.token, orderData.delivery_partner_order_id);
+            } else {
+              const AlWaseetAPI = await import('@/lib/alwaseet-api');
+              orderDetails = await AlWaseetAPI.getOrderDetails(token.token, orderData.delivery_partner_order_id);
+            }
+
+            // تحديث البيانات الناقصة من API
+            if (orderDetails) {
+              console.log('✅ تم جلب بيانات الطلب من API:', orderDetails);
+              orderData = {
+                ...orderData,
+                customer_phone: orderData.customer_phone || orderDetails.client_mobile || orderDetails.phone,
+                customer_city: orderData.customer_city || orderDetails.city_name || orderDetails.city,
+                customer_province: orderData.customer_province || orderDetails.state || orderDetails.province || orderDetails.region,
+                customer_name: orderData.customer_name || orderDetails.client_name || orderDetails.name,
+                customer_address: orderData.customer_address || orderDetails.address,
+                notes: orderData.notes || orderDetails.note || orderDetails.notes
+              };
+              
+              toast({
+                title: "✅ تم استكمال البيانات",
+                description: "تم جلب بيانات العميل من شركة التوصيل",
+                variant: "default"
+              });
+            }
+          } else {
+            console.warn('⚠️ لا يوجد توكن نشط لشركة التوصيل');
+          }
+        } catch (apiError) {
+          console.error('❌ فشل في جلب البيانات من API:', apiError);
+          // نواصل الاستعادة بالبيانات المتاحة
+        }
+      }
       
       const savedItems = orderData.order_items || [];
       delete orderData.id;

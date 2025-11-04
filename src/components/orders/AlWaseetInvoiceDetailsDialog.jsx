@@ -23,7 +23,8 @@ import {
   RefreshCw,
   Database,
   Wifi,
-  WifiOff
+  WifiOff,
+  Building
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ar } from 'date-fns/locale';

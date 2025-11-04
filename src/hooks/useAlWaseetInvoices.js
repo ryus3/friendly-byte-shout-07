@@ -201,7 +201,7 @@ export const useAlWaseetInvoices = () => {
           .from('delivery_invoices')
           .select(`
             *,
-            delivery_partner_tokens!inner(account_username, partner_name)
+            delivery_partner_tokens(account_username, partner_name)
           `)
           .eq('partner', activePartner)
           .eq('owner_user_id', user?.id)

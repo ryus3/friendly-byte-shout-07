@@ -3602,6 +3602,7 @@ export const AlWaseetProvider = ({ children }) => {
         try {
           const accountName = tokenData.account_username || 'غير معروف';
           const partnerName = tokenData.partner_name || 'alwaseet';
+          const tokenValue = tokenData.token;
           
           console.log(`🔄 [${tokensProcessed + 1}/${userTokens.length}] مزامنة حساب: ${accountName} (${partnerName})`);
           
@@ -3612,6 +3613,62 @@ export const AlWaseetProvider = ({ children }) => {
               accountName,
               partnerName
             });
+          }
+
+          // ✅ المرحلة 4: جلب فواتير كل حساب من API وحفظها
+          try {
+            let invoicesData = [];
+            
+            if (partnerName === 'modon') {
+              const ModonAPI = await import('@/lib/modon-api');
+              invoicesData = await ModonAPI.getMerchantInvoices(tokenValue);
+            } else {
+              const AlWaseetAPI = await import('@/lib/alwaseet-api');
+              invoicesData = await AlWaseetAPI.getMerchantInvoices(tokenValue);
+            }
+            
+            // حفظ الفواتير في قاعدة البيانات
+            if (invoicesData?.length > 0) {
+              const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
+                p_invoices: invoicesData
+              });
+              
+              if (!upsertErr) {
+                totalInvoicesSynced += invoicesData.length;
+                console.log(`  ✅ حفظ ${invoicesData.length} فاتورة للحساب ${accountName}`);
+                
+                // جلب تفاصيل كل فاتورة وحفظ طلباتها
+                for (const invoice of invoicesData.slice(0, 5)) { // أول 5 فواتير حديثة فقط
+                  try {
+                    let invoiceOrdersData;
+                    
+                    if (partnerName === 'modon') {
+                      const ModonAPI = await import('@/lib/modon-api');
+                      invoiceOrdersData = await ModonAPI.getInvoiceOrders(tokenValue, invoice.id);
+                    } else {
+                      const AlWaseetAPI = await import('@/lib/alwaseet-api');
+                      invoiceOrdersData = await AlWaseetAPI.getInvoiceOrders(tokenValue, invoice.id);
+                    }
+                    
+                    if (invoiceOrdersData?.orders?.length > 0) {
+                      // حفظ طلبات الفاتورة
+                      await supabase.rpc('sync_alwaseet_invoice_data', {
+                        p_invoice_data: invoice,
+                        p_orders_data: invoiceOrdersData.orders
+                      });
+                      
+                      console.log(`    ✅ حفظ ${invoiceOrdersData.orders.length} طلب للفاتورة ${invoice.id}`);
+                    }
+                  } catch (invoiceErr) {
+                    console.warn(`    ⚠️ فشل في جلب تفاصيل الفاتورة ${invoice.id}:`, invoiceErr.message);
+                  }
+                }
+              } else {
+                console.warn(`  ⚠️ فشل في حفظ فواتير ${accountName}:`, upsertErr.message);
+              }
+            }
+          } catch (apiErr) {
+            console.warn(`  ⚠️ فشل في جلب فواتير من API للحساب ${accountName}:`, apiErr.message);
           }
 
           // ربط الفواتير بالطلبات أولاً

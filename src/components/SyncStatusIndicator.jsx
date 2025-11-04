@@ -53,7 +53,7 @@ const SyncStatusIndicator = ({ className }) => {
   // SVG Circle properties  
   const radius = 14;
   const circumference = 2 * Math.PI * radius;
-  const progress = syncCountdown > 0 ? (10 - syncCountdown) / 10 : 0;
+  const progress = syncCountdown > 0 ? (5 - syncCountdown) / 5 : 0;
   const strokeDashoffset = circumference - (progress * circumference);
 
   // Get number color based on theme

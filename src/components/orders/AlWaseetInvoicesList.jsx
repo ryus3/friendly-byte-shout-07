@@ -147,11 +147,11 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
           </div>
 
           {/* ✅ المرحلة 3: عرض اسم الحساب وشركة التوصيل */}
-          {(invoice.account_username || invoice.partner_name_ar) && (
+          {(invoice.account_username || invoice.partner_name_ar || invoice.merchant_id) && (
             <div className="flex items-center justify-start gap-2 pb-2 border-b">
               <Building className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium text-primary">
-                {invoice.partner_name_ar || 'الوسيط'} - {invoice.account_username || 'حساب رئيسي'}
+                {invoice.partner_name_ar || 'الوسيط'} - {invoice.account_username || `حساب ${invoice.merchant_id}`}
               </span>
             </div>
           )}
