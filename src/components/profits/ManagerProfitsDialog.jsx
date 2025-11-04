@@ -412,8 +412,6 @@ const ManagerProfitsDialog = ({
       p.employee_id === employeeData.employee?.user_id && 
       (p.status === 'settled' || p.settled_at)
     ) || [];
-      profitRecords: employeeProfitRecords
-    });
 
     const [showInvoices, setShowInvoices] = useState(false);
 
