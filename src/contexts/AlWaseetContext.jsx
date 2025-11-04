@@ -3682,7 +3682,15 @@ export const AlWaseetProvider = ({ children }) => {
 
         let ordersToSync = visibleOrders;
 
-        // ✅ إذا لم يتم تمرير الطلبات الظاهرة، جلب الطلبات النشطة (السلوك الافتراضي)
+        // ✅ إذا لم يتم تمرير الطلبات الظاهرة، محاولة الحصول عليها من window
+        if (!ordersToSync || ordersToSync.length === 0) {
+          ordersToSync = window.__visibleOrdersForSync || null;
+          if (ordersToSync && ordersToSync.length > 0) {
+            console.log(`✅ استخدام ${ordersToSync.length} طلب ظاهر من الصفحة الحالية`);
+          }
+        }
+
+        // ✅ إذا لم توجد طلبات ظاهرة، جلب الطلبات النشطة (السلوك الافتراضي)
         if (!ordersToSync || ordersToSync.length === 0) {
           const { data: activeOrders, error } = await scopeOrdersQuery(
             supabase
@@ -3698,7 +3706,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
 
         if (ordersToSync && ordersToSync.length > 0) {
-          console.log(`🔄 مزامنة ${ordersToSync.length} طلب${visibleOrders ? ' (ظاهر)' : ' (نشط)'}...`);
+          console.log(`🔄 مزامنة ${ordersToSync.length} طلب...`);
           // ✅ مزامنة باستخدام syncVisibleOrdersBatch
           await syncVisibleOrdersBatch(ordersToSync);
         }

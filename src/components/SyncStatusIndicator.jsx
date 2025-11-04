@@ -24,30 +24,14 @@ const SyncStatusIndicator = ({ className }) => {
   }
 
   const [isSpinning, setIsSpinning] = useState(false);
-  const [syncTriggered, setSyncTriggered] = useState(false);
 
   const handleClick = () => {
     if (!isSyncing && syncMode === 'standby') {
       setIsSpinning(true);
-      setSyncTriggered(false);
-      
-      // ✅ المرحلة 4: محاولة الحصول على الطلبات الظاهرة من الصفحة الحالية
-      // إطلاق حدث مخصص لطلب الطلبات الظاهرة
-      const visibleOrdersEvent = new CustomEvent('requestVisibleOrdersForSync', {
-        detail: { 
-          performSyncWithCountdown,
-          onSyncTriggered: () => setSyncTriggered(true)
-        }
-      });
-      window.dispatchEvent(visibleOrdersEvent);
       
       // Start sync after animation completes
-      // إذا لم تستجب أي صفحة، سيتم استخدام السلوك الافتراضي (جلب 200 طلب نشط)
       setTimeout(() => {
-        // فقط إذا لم يتم تشغيل المزامنة من الصفحة
-        if (!syncTriggered) {
-          performSyncWithCountdown();
-        }
+        performSyncWithCountdown(); // السلوك الافتراضي - performSyncWithCountdown يتعامل مع الطلبات الظاهرة تلقائياً
         setIsSpinning(false);
       }, 1500);
     }

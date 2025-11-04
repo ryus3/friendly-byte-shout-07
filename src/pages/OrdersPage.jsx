@@ -597,35 +597,20 @@ const OrdersPage = () => {
     performInitialSync();
   }, []); // ✅ dependencies فارغة = مرة واحدة فقط عند فتح الصفحة
 
-  // ✅ المرحلة 4: الاستماع لطلبات المزامنة من الزر الدائري وتمرير الطلبات الظاهرة
+  // ✅ المرحلة 4: تخزين الطلبات الظاهرة في window للوصول إليها من performSyncWithCountdown
   useEffect(() => {
-    const handleSyncRequest = async (event) => {
-      if (activeTab !== 'orders') return; // فقط في تبويب الطلبات
-      
-      devLog.log('🔄 [OrdersPage] استلام طلب مزامنة من الزر الدائري، تمرير الطلبات الظاهرة...');
-      
-      // تمرير الطلبات الظاهرة إلى performSyncWithCountdown
-      if (syncableOrders && syncableOrders.length > 0) {
-        devLog.log(`📤 [OrdersPage] تمرير ${syncableOrders.length} طلب ظاهر للمزامنة`);
-        // استدعاء الدالة مباشرة مع الطلبات الظاهرة
-        const { performSyncWithCountdown, onSyncTriggered } = event.detail || {};
-        if (performSyncWithCountdown && typeof performSyncWithCountdown === 'function') {
-          // إبلاغ الزر بأننا شغلنا المزامنة
-          if (onSyncTriggered && typeof onSyncTriggered === 'function') {
-            onSyncTriggered();
-          }
-          await performSyncWithCountdown(syncableOrders);
-        }
-      } else {
-        devLog.log('⚠️ [OrdersPage] لا توجد طلبات ظاهرة للتمرير - سيتم استخدام السلوك الافتراضي');
-      }
-    };
-    
-    // الاستماع للحدث المخصص
-    window.addEventListener('requestVisibleOrdersForSync', handleSyncRequest);
+    if (activeTab === 'orders' && syncableOrders && syncableOrders.length > 0) {
+      // تخزين الطلبات الظاهرة في window لاستخدامها في المزامنة
+      window.__visibleOrdersForSync = syncableOrders;
+      devLog.log(`✅ [OrdersPage] حفظ ${syncableOrders.length} طلب ظاهر للمزامنة`);
+    } else {
+      // مسح الطلبات الظاهرة عند مغادرة تبويب الطلبات
+      window.__visibleOrdersForSync = null;
+    }
     
     return () => {
-      window.removeEventListener('requestVisibleOrdersForSync', handleSyncRequest);
+      // تنظيف عند unmount
+      window.__visibleOrdersForSync = null;
     };
   }, [syncableOrders, activeTab]);
 
