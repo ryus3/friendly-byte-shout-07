@@ -110,6 +110,30 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [token, tokenExpiry, user?.id, activePartner]);
 
+  // ✅ استعادة آخر شركة توصيل غير 'local' عند التحميل
+  useEffect(() => {
+    if (!activePartner || activePartner === 'local') {
+      if (user?.id) {
+        // محاولة استعادة alwaseet أولاً
+        getTokenForUser(user.id, null, 'alwaseet').then(alwaseetData => {
+          if (alwaseetData?.token) {
+            devLog.log('✅ استعادة activePartner: alwaseet');
+            setActivePartner('alwaseet');
+            return;
+          }
+          
+          // إذا لم يوجد، جرب modon
+          getTokenForUser(user.id, null, 'modon').then(modonData => {
+            if (modonData?.token) {
+              devLog.log('✅ استعادة activePartner: modon');
+              setActivePartner('modon');
+            }
+          });
+        });
+      }
+    }
+  }, [user?.id, activePartner]);
+
   // دالة لإعادة تفعيل حساب منتهي الصلاحية
   const reactivateExpiredAccount = useCallback(async (accountUsername, partnerName = null) => {
     if (!user?.id || !accountUsername) {
@@ -1919,13 +1943,14 @@ export const AlWaseetProvider = ({ children }) => {
       }
 
       // 1) اجلب الطلبات المعلقة لدينا مع تأمين فصل الحسابات
-      const targetStatuses = ['pending', 'delivery', 'shipped', 'returned'];
+      const targetStatuses = ['pending', 'delivery', 'shipped', 'delivered', 'returned']; // ✅ إضافة delivered
       const { data: pendingOrders, error: pendingErr } = await scopeOrdersQuery(
         supabase
           .from('orders')
           .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received')
           .eq('delivery_partner', 'alwaseet')
           .in('status', targetStatuses)
+          .neq('delivery_status', '17') // ✅ استثناء الحالة 17 (راجع للتاجر)
       ).limit(200);
 
       if (pendingErr) {
@@ -2034,9 +2059,11 @@ export const AlWaseetProvider = ({ children }) => {
 
         // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام
         if (!waseetOrder && canAutoDeleteOrder(localOrder, user)) {
-          // ✅ حماية إضافية: لا نحذف إذا كانت قائمة الوسيط صغيرة بشكل مريب
-          if (waseetOrders.length < 10) {
-            devLog.warn(`⚠️ تحذير: قائمة الطلبات صغيرة جداً (${waseetOrders.length} طلب)، تجاهل الحذف التلقائي للطلب ${localOrder.tracking_number}`);
+          // ✅ حماية إضافية: لا نحذف إذا كانت قائمة الطلبات النشطة الحقيقية صغيرة
+          // نحسب فقط الطلبات النشطة (غير مستلمة الفاتورة)
+          const activeRealOrders = waseetOrders.filter(wo => !wo.receipt_received).length;
+          if (activeRealOrders < 250) {
+            devLog.warn(`⚠️ تحذير: قائمة الطلبات النشطة الحقيقية صغيرة (${activeRealOrders} طلب نشط حقيقي من ${waseetOrders.length} إجمالي)، تجاهل الحذف التلقائي للطلب ${localOrder.tracking_number}`);
             continue;
           }
           
@@ -3511,7 +3538,7 @@ export const AlWaseetProvider = ({ children }) => {
 
     // Start countdown mode WITHOUT setting isSyncing to true yet
     setSyncMode('countdown');
-    setSyncCountdown(10);
+    setSyncCountdown(5); // ✅ تقليل من 10 إلى 5 ثواني
 
     // Countdown timer
     const countdownInterval = setInterval(() => {
@@ -3527,15 +3554,34 @@ export const AlWaseetProvider = ({ children }) => {
     // Wait for countdown then sync
     setTimeout(async () => {
       try {
-        console.log('🔄 تنفيذ المزامنة...');
+        console.log('🔄 تنفيذ المزامنة الموحدة...');
         // NOW set syncing to true when actual sync starts
         setIsSyncing(true);
         setSyncMode('syncing');
-        await fastSyncPendingOrders();
-        console.log('🧹 تمرير الحذف بعد المزامنة السريعة...');
+
+        // ✅ جلب الطلبات النشطة فقط (بدلاً من كل الطلبات)
+        const { data: activeOrders, error } = await scopeOrdersQuery(
+          supabase
+            .from('orders')
+            .select('*')
+            .eq('delivery_partner', activePartner)
+            .in('status', ['pending', 'shipped', 'delivery', 'delivered']) // ✅ إضافة delivered
+            .neq('delivery_status', '17') // ✅ استثناء الحالة 17
+        ).limit(200);
+
+        if (error) throw error;
+
+        if (activeOrders && activeOrders.length > 0) {
+          console.log(`🔄 مزامنة ${activeOrders.length} طلب نشط...`);
+          // ✅ مزامنة باستخدام syncVisibleOrdersBatch
+          await syncVisibleOrdersBatch(activeOrders);
+        }
+
+        // ✅ الحذف التلقائي الآمن
+        console.log('🧹 تمرير الحذف التلقائي الآمن...');
         await performDeletionPassAfterStatusSync();
         
-        // ✅ مزامنة الفواتير المستلمة تلقائياً بعد مزامنة الطلبات
+        // ✅ مزامنة الفواتير المستلمة تلقائياً
         console.log('📧 مزامنة الفواتير المستلمة تلقائياً...');
         try {
           const { data: syncRes, error: syncErr } = await supabase.rpc('sync_recent_received_invoices');
@@ -3558,9 +3604,9 @@ export const AlWaseetProvider = ({ children }) => {
         setSyncMode('standby');
         setSyncCountdown(0);
       }
-    }, 10000);
+    }, 5000); // ✅ تقليل من 10000 إلى 5000
 
-  }, [activePartner, isLoggedIn, isSyncing, fastSyncPendingOrders]);
+  }, [activePartner, isLoggedIn, isSyncing, syncVisibleOrdersBatch, performDeletionPassAfterStatusSync, scopeOrdersQuery]);
 
   // Initial sync on login - respects autoSyncEnabled setting  
   useEffect(() => {
@@ -3570,22 +3616,23 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [isLoggedIn, activePartner, syncMode, lastSyncAt, autoSyncEnabled, performSyncWithCountdown]);
 
-  // ❌ تم تعطيل المزامنة الدورية العامة - الصفحات تتولى المزامنة الخاصة بها
-  // Periodic sync disabled - pages handle their own sync
-  // useEffect(() => {
-  //   let intervalId;
-  //   if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && autoSyncEnabled) {
-  //     intervalId = setInterval(() => {
-  //       if (!isSyncing) {
-  //         console.log('⏰ مزامنة دورية تلقائية (كل 10 دقائق)...');
-  //         performSyncWithCountdown();
-  //       }
-  //     }, syncInterval);
-  //   }
-  //   return () => {
-  //     if (intervalId) clearInterval(intervalId);
-  //   };
-  // }, [isLoggedIn, activePartner, syncMode, isSyncing, syncInterval, autoSyncEnabled, performSyncWithCountdown]);
+  // ✅ إعادة تفعيل المزامنة الدورية (كل 10 دقائق)
+  useEffect(() => {
+    let intervalId;
+    if (isLoggedIn && 
+        (activePartner === 'alwaseet' || activePartner === 'modon') && 
+        syncMode === 'standby' && 
+        !isSyncing &&
+        autoSyncEnabled) {
+      intervalId = setInterval(() => {
+        console.log('⏰ مزامنة دورية تلقائية (كل 10 دقائق)...');
+        performSyncWithCountdown();
+      }, 10 * 60 * 1000); // 10 دقائق
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isLoggedIn, activePartner, syncMode, isSyncing, autoSyncEnabled, performSyncWithCountdown]);
 
   // Silent repair function for problematic orders
   const silentOrderRepair = useCallback(async () => {

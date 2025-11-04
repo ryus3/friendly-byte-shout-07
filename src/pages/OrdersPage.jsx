@@ -121,7 +121,8 @@ const OrdersPage = () => {
       const activeExternalOrders = orders.filter(o => 
         ['pending', 'shipped', 'delivery', 'delivered'].includes(o.status) &&
         o.delivery_partner && 
-        ['alwaseet', 'modon'].includes(o.delivery_partner)
+        ['alwaseet', 'modon'].includes(o.delivery_partner) &&
+        o.delivery_status !== '17' // ✅ استثناء الحالة 17 (راجع للتاجر)
       );
       
       if (activeExternalOrders.length === 0) {
@@ -138,6 +139,20 @@ const OrdersPage = () => {
         if (result && result.updatedCount > 0) {
           await refreshOrders();
         }
+
+        // ✅ مزامنة الفواتير المستلمة تلقائياً
+        try {
+          const { data: syncRes, error: syncErr } = await supabase.rpc('sync_recent_received_invoices');
+          if (syncRes?.updated_orders_count > 0) {
+            devLog.log(`✅ تم تحديث ${syncRes.updated_orders_count} طلب من الفواتير`);
+          }
+        } catch (e) {
+          console.warn('⚠️ خطأ في مزامنة الفواتير:', e);
+        }
+
+        // ✅ الحذف التلقائي الآمن بعد مزامنة الحالات
+        await performDeletionPassAfterStatusSync();
+
       } catch (error) {
         // Error silently
       }
@@ -573,16 +588,9 @@ const OrdersPage = () => {
         return;
       }
       
-      try {
-        devLog.log(`🔄 [OrdersPage] مزامنة أولية: ${syncableOrders.length} طلب ظاهر نشط`);
-        
-        if (syncAndApplyOrders) {
-          await syncAndApplyOrders(syncableOrders);
-          devLog.log('✅ [OrdersPage] اكتملت المزامنة الأولية للطلبات الظاهرة');
-        }
-      } catch (err) {
-        devLog.warn('⚠️ [OrdersPage] تعذرت المزامنة:', err);
-      }
+      // ✅ تم إزالة syncAndApplyOrders لأنه يسبب حذف خاطئ
+      // المزامنة تتم الآن عبر syncVisibleOrdersBatch فقط في useEffect أعلاه
+      devLog.log(`✅ [OrdersPage] تم تحميل ${syncableOrders.length} طلب ظاهر نشط`);
     };
     
     // مزامنة مرة واحدة فقط عند تحميل الصفحة
