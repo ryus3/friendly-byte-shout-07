@@ -36,7 +36,6 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
     user = authContext?.user;
     createOrder = inventoryContext?.createOrder;
   } catch (error) {
-    console.warn('SuperAiChatDialog: Context not available');
     user = { fullName: 'المستخدم' };
     createOrder = () => Promise.resolve({ success: false });
   }
@@ -85,7 +84,7 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
         }
       }
     } catch (error) {
-      console.warn('Failed to load usage stats:', error);
+      // Silent failure
     }
   };
 
@@ -170,14 +169,12 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
       }
 
     } catch (error) {
-      console.error('Super AI Chat Error:', error);
       setMessages(prev => [...prev, { 
         role: 'model', 
         content: "🔧 **خطأ في المساعد الذكي الخارق**\n\nأعتذر، أواجه مشكلة تقنية مؤقتة. جاري المحاولة تلقائياً...\n\n💡 **نصائح للحصول على أفضل النتائج**:\n• تأكد من اتصال الإنترنت\n• استخدم جمل واضحة ومحددة\n• اذكر التفاصيل المطلوبة كاملة",
         error: true
       }]);
       
-      // محاولة إعادة الاتصال تلقائياً
       setTimeout(() => {
         setSystemStatus('reconnecting');
         setTimeout(() => setSystemStatus('online'), 3000);

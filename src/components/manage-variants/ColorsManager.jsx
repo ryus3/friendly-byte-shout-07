@@ -53,7 +53,6 @@ const ColorsManager = () => {
 
   const handleDragEnd = (event) => {
     // تعطيل drag & drop للألوان مؤقتاً لأن جدول الألوان لا يحتوي على عمود display_order
-    console.log('تم تعطيل ترتيب الألوان مؤقتاً');
   };
 
   const handleAdd = () => {

@@ -27,7 +27,6 @@ const AiChatDialog = ({ open, onOpenChange }) => {
     user = authContext?.user;
     createOrder = inventoryContext?.createOrder;
   } catch (error) {
-    console.warn('AiChatDialog: Context not available');
     user = { fullName: 'المستخدم' };
     createOrder = () => Promise.resolve({ success: false });
   }
@@ -149,7 +148,6 @@ const AiChatDialog = ({ open, onOpenChange }) => {
         }
 
     } catch (error) {
-      console.error('AI Chat Error:', error);
       setMessages(prev => [...prev, { 
         role: 'model', 
         content: "🔧 عذراً، أواجه مشكلة تقنية حالياً. يرجى المحاولة مرة أخرى أو التواصل مع الدعم التقني." 

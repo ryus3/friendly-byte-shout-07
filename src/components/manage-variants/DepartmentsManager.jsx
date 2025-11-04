@@ -85,7 +85,6 @@ const DepartmentsManager = () => {
   }, [ctxDepartments]);
 
   const handleDelete = async (id) => {
-    console.log('🗑️ محاولة حذف القسم:', id);
     try {
       // التحقق من استخدام القسم عبر API الموحد
       const usage = await superAPI.getDepartmentUsageSummary(id);
@@ -101,7 +100,6 @@ const DepartmentsManager = () => {
       toast({ title: 'تم الحذف', description: 'تم حذف القسم بنجاح' });
       fetchDepartments();
     } catch (error) {
-      console.error('💥 خطأ عام في حذف القسم:', error);
       toast({ title: 'خطأ', description: `فشل في حذف القسم: ${error.message}`, variant: 'destructive' });
     }
   };

@@ -48,7 +48,7 @@ import React, { useState, useEffect } from 'react';
               setExpenseCategories(categories);
             }
           } catch (error) {
-            console.warn('تعذر تحميل فئات المصاريف من قاعدة البيانات:', error);
+            // Silent failure
           }
         };
 
@@ -108,7 +108,6 @@ import React, { useState, useEffect } from 'react';
           
           toast({ title: 'نجح', description: 'تم إضافة المصروف بنجاح', variant: 'success' });
         } catch (error) {
-          console.error('خطأ في إضافة المصروف:', error);
           toast({ title: 'خطأ', description: 'فشل في إضافة المصروف', variant: 'destructive' });
         }
       };
@@ -289,7 +288,6 @@ import React, { useState, useEffect } from 'react';
                                         try {
                                           await deleteExpense(expense.id);
                                         } catch (error) {
-                                          console.error('خطأ في حذف المصروف:', error);
                                           toast({
                                             title: 'خطأ',
                                             description: 'فشل في حذف المصروف',

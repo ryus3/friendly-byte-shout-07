@@ -2105,19 +2105,6 @@ export const AlWaseetProvider = ({ children }) => {
         const waseetDeliveryFee = parseInt(String(waseetOrder.delivery_price || 0)) || 0;
         const needsDeliveryFeeUpdate = waseetDeliveryFee !== currentDeliveryFee && waseetDeliveryFee > 0;
 
-        // 📊 LOGGING مفصّل لتشخيص المزامنة
-        console.log(`🔍 فحص تحديث الطلب ${localOrder.order_number}:`, {
-          needsStatusUpdate,
-          needsDeliveryStatusUpdate,
-          needsDeliveryFeeUpdate,
-          needsReceiptUpdate,
-          needsPriceUpdate,
-          needsCorrection,
-          waseetDeliveryPrice: waseetOrder.delivery_price,
-          localDeliveryFee: localOrder.delivery_fee,
-          waseetStatusId: waseetOrder.state_id || waseetOrder.status_id,
-          localDeliveryStatus: localOrder.delivery_status
-        });
 
         // ✅ الآن يفحص جميع الأسباب للتحديث (الحالة + السعر + الفاتورة + التصحيح + delivery_fee)
         if (!needsStatusUpdate && !needsDeliveryStatusUpdate && !needsDeliveryFeeUpdate && !needsReceiptUpdate && !needsPriceUpdate && !needsCorrection) {

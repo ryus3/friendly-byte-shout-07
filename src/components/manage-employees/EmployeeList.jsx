@@ -13,12 +13,6 @@ const EmployeeCard = ({ user, onEdit, index }) => {
 
   // استخدام الأدوار الجديدة من user_roles
   const getUserRoleBadges = () => {
-    console.log('EmployeeCard roles debug:', {
-      user: user.full_name,
-      userRoles: user.roles,
-      userObject: user
-    });
-    
     if (!user.roles || user.roles.length === 0) {
       return <Badge variant='secondary' style={{ backgroundColor: 'hsl(var(--role-pending) / 0.2)', color: 'hsl(var(--role-pending))', borderColor: 'hsl(var(--role-pending) / 0.3)' }}>
         <User className="w-4 h-4 ml-2" />
