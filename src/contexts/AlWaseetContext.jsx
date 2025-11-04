@@ -3648,7 +3648,9 @@ export const AlWaseetProvider = ({ children }) => {
       console.error('❌ خطأ في مزامنة كل التوكنات:', error);
       return { success: false, error: error.message };
     }
-  }, [user, linkInvoiceOrdersToOrders]);
+    // ✅ لا نضيف linkInvoiceOrdersToOrders في dependencies لأنها useCallback مستقرة
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // ✅ المرحلة 4: تحسين الزر الدائري - يقبل الطلبات الظاهرة
   // Perform sync with countdown - can be triggered manually even if autoSync is disabled
@@ -3733,8 +3735,9 @@ export const AlWaseetProvider = ({ children }) => {
         setSyncCountdown(0);
       }
     }, 5000); // ✅ تقليل من 10000 إلى 5000
-
-  }, [activePartner, isLoggedIn, isSyncing, scopeOrdersQuery, syncVisibleOrdersBatch, performDeletionPassAfterStatusSync, linkInvoiceOrdersToOrders]); // ✅ إضافة الدوال الجديدة
+    // ✅ لا نضيف الدوال useCallback في dependencies لأنها مستقرة
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activePartner, isLoggedIn, isSyncing]);
 
   // Initial sync on login - respects autoSyncEnabled setting  
   useEffect(() => {
