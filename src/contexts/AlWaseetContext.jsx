@@ -132,7 +132,10 @@ export const AlWaseetProvider = ({ children }) => {
         });
       }
     }
-  }, [user?.id, activePartner, getTokenForUser]); // ✅ إضافة getTokenForUser للـ dependencies
+    // ✅ لا نضيف getTokenForUser لأنه يعتمد على activePartner ويسبب circular dependency
+    // نحن نمرر partnerName صريحاً ('alwaseet', 'modon') فلا نحتاجه في dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, activePartner]);
 
   // دالة لإعادة تفعيل حساب منتهي الصلاحية
   const reactivateExpiredAccount = useCallback(async (accountUsername, partnerName = null) => {
@@ -3614,7 +3617,9 @@ export const AlWaseetProvider = ({ children }) => {
       console.log('🚀 مزامنة أولية عند تسجيل الدخول...');
       performSyncWithCountdown();
     }
-  }, [isLoggedIn, activePartner, syncMode, lastSyncAt, autoSyncEnabled, performSyncWithCountdown]);
+    // ✅ لا نضيف performSyncWithCountdown لأنها useCallback مستقرة
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, activePartner, syncMode, lastSyncAt, autoSyncEnabled]);
 
   // ✅ إعادة تفعيل المزامنة الدورية (كل 10 دقائق)
   useEffect(() => {
@@ -3632,7 +3637,9 @@ export const AlWaseetProvider = ({ children }) => {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [isLoggedIn, activePartner, syncMode, isSyncing, autoSyncEnabled, performSyncWithCountdown]);
+    // ✅ لا نضيف performSyncWithCountdown لأنها useCallback مستقرة
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, activePartner, syncMode, isSyncing, autoSyncEnabled]);
 
   // Silent repair function for problematic orders
   const silentOrderRepair = useCallback(async () => {
