@@ -43,7 +43,6 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
 
       setDeletedOrders(data || []);
     } catch (error) {
-      console.error('خطأ في جلب سجل الحذف:', error);
       toast({
         title: "خطأ",
         description: "فشل في جلب سجل الحذف التلقائي",
@@ -84,7 +83,6 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
 
       fetchDeletedOrders();
     } catch (error) {
-      console.error('خطأ في استعادة الطلب:', error);
       toast({
         title: "خطأ",
         description: "فشل في استعادة الطلب",

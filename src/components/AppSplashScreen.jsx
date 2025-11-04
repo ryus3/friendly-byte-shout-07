@@ -1,182 +1,359 @@
-import React, { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
-import logoBlue from '@/assets/ryus-logo-blue.png';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Package, Zap, Brain, Users, TrendingUp, ShoppingBag } from 'lucide-react';
+import ryusLogo from '@/assets/ryus-logo.png';
 
-const AppSplashScreen = () => {
+const AppSplashScreen = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
 
   useEffect(() => {
+    // محاكاة التحميل - سريع جداً
     const interval = setInterval(() => {
-      setProgress((prev) => {
+      setProgress(prev => {
         if (prev >= 100) {
           clearInterval(interval);
           return 100;
         }
-        return prev + 4;
+        return prev + 2;
       });
-    }, 50);
+    }, 25); // سريع: 2.5 ثانية
+
     return () => clearInterval(interval);
   }, []);
 
-  const floatingElements = [
-    { type: 'star', x: '10%', y: '15%', delay: 0 },
-    { type: 'star', x: '85%', y: '25%', delay: 0.2 },
-    { type: 'triangle', x: '75%', y: '10%', delay: 0.4 },
-    { type: 'circle', x: '90%', y: '60%', delay: 0.6 },
-    { type: 'star', x: '15%', y: '70%', delay: 0.8 },
-    { type: 'circle', x: '5%', y: '40%', delay: 1 },
-    { type: 'triangle', x: '20%', y: '85%', delay: 1.2 },
-  ];
+  useEffect(() => {
+    if (progress === 100) {
+      // انتظر قليلاً ثم أكمل
+      const timer = setTimeout(() => {
+        onComplete?.();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [progress, onComplete]);
+
+  const iconVariants = {
+    initial: { scale: 0, opacity: 0, rotate: -180 },
+    animate: (i) => ({
+      scale: 1,
+      opacity: 0.15,
+      rotate: 0,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.6,
+        ease: "easeOut"
+      }
+    }),
+    float: {
+      y: [-10, 10, -10],
+      transition: {
+        duration: 3,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }
+    }
+  };
+
+  const gradientVariants = {
+    initial: { opacity: 0, scale: 0.8 },
+    animate: (i) => ({
+      opacity: [0.1, 0.2, 0.1],
+      scale: [0.8, 1.2, 0.8],
+      transition: {
+        delay: i * 0.15,
+        duration: 4,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }
+    })
+  };
 
   return (
-    <motion.div
-      className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden"
-      style={{
-        background: 'linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #6366f1 100%)',
-      }}
-      initial={{ opacity: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ duration: 0.5, ease: 'easeInOut' }}
-    >
-      {/* Animated Wave Circles */}
+    <AnimatePresence>
       <motion.div
-        className="absolute inset-0 flex items-center justify-center"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 1 }}
+        exit={{ opacity: 0, scale: 1.05 }}
+        transition={{ duration: 0.5, ease: "easeInOut" }}
+        className="fixed inset-0 z-[9999] flex items-center justify-center bg-white overflow-hidden"
       >
-        {[1, 2, 3, 4].map((i) => (
+        {/* خلفية متحركة بتدرجات شفافة */}
+        <div className="absolute inset-0">
+          {/* تدرج أزرق - بنفسجي */}
+          <motion.div
+            custom={0}
+            variants={gradientVariants}
+            initial="initial"
+            animate="animate"
+            className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full blur-3xl"
+            style={{
+              background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)'
+            }}
+          />
+          
+          {/* تدرج بنفسجي - وردي */}
+          <motion.div
+            custom={1}
+            variants={gradientVariants}
+            initial="initial"
+            animate="animate"
+            className="absolute bottom-0 left-0 w-[700px] h-[700px] rounded-full blur-3xl"
+            style={{
+              background: 'radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, transparent 70%)'
+            }}
+          />
+          
+          {/* تدرج وردي مركزي */}
+          <motion.div
+            custom={2}
+            variants={gradientVariants}
+            initial="initial"
+            animate="animate"
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] rounded-full blur-3xl"
+            style={{
+              background: 'radial-gradient(circle, rgba(236, 72, 153, 0.1) 0%, transparent 70%)'
+            }}
+          />
+
+          {/* أشكال هندسية متحركة ناعمة */}
+          <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style={{ stopColor: '#3b82f6', stopOpacity: 0.1 }} />
+                <stop offset="100%" style={{ stopColor: '#a855f7', stopOpacity: 0.05 }} />
+              </linearGradient>
+              <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style={{ stopColor: '#a855f7', stopOpacity: 0.1 }} />
+                <stop offset="100%" style={{ stopColor: '#ec4899', stopOpacity: 0.05 }} />
+              </linearGradient>
+            </defs>
+            
+            <motion.path
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 0.2 }}
+              transition={{ duration: 2, ease: "easeInOut" }}
+              d="M 100 200 Q 300 100 500 200 T 900 200"
+              stroke="url(#grad1)"
+              strokeWidth="2"
+              fill="none"
+            />
+            
+            <motion.circle
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 0.15 }}
+              transition={{ delay: 0.3, duration: 1 }}
+              cx="15%"
+              cy="20%"
+              r="100"
+              fill="url(#grad1)"
+            />
+            
+            <motion.circle
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 0.15 }}
+              transition={{ delay: 0.5, duration: 1 }}
+              cx="85%"
+              cy="75%"
+              r="120"
+              fill="url(#grad2)"
+            />
+          </svg>
+        </div>
+
+        {/* العناصر المتحركة - الأيقونات */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* أيقونة الطلبات */}
+          <motion.div
+            custom={0}
+            variants={iconVariants}
+            initial="initial"
+            animate={["animate", "float"]}
+            className="absolute top-[15%] left-[10%]"
+          >
+            <Package className="w-16 h-16 text-blue-500" strokeWidth={1.5} />
+          </motion.div>
+
+          {/* أيقونة السرعة */}
+          <motion.div
+            custom={1}
+            variants={iconVariants}
+            initial="initial"
+            animate={["animate", "float"]}
+            className="absolute top-[20%] right-[15%]"
+          >
+            <Zap className="w-20 h-20 text-purple-500" strokeWidth={1.5} />
+          </motion.div>
+
+          {/* أيقونة الذكاء الاصطناعي */}
+          <motion.div
+            custom={2}
+            variants={iconVariants}
+            initial="initial"
+            animate={["animate", "float"]}
+            className="absolute bottom-[20%] left-[12%]"
+          >
+            <Brain className="w-18 h-18 text-pink-500" strokeWidth={1.5} />
+          </motion.div>
+
+          {/* أيقونة الموظفين */}
+          <motion.div
+            custom={3}
+            variants={iconVariants}
+            initial="initial"
+            animate={["animate", "float"]}
+            className="absolute bottom-[25%] right-[10%]"
+          >
+            <Users className="w-16 h-16 text-indigo-500" strokeWidth={1.5} />
+          </motion.div>
+
+          {/* أيقونة النمو */}
+          <motion.div
+            custom={4}
+            variants={iconVariants}
+            initial="initial"
+            animate={["animate", "float"]}
+            className="absolute top-[45%] left-[8%]"
+          >
+            <TrendingUp className="w-14 h-14 text-blue-400" strokeWidth={1.5} />
+          </motion.div>
+
+          {/* أيقونة المبيعات */}
+          <motion.div
+            custom={5}
+            variants={iconVariants}
+            initial="initial"
+            animate={["animate", "float"]}
+            className="absolute top-[50%] right-[8%]"
+          >
+            <ShoppingBag className="w-14 h-14 text-purple-400" strokeWidth={1.5} />
+          </motion.div>
+        </div>
+
+        {/* المحتوى المركزي */}
+        <div className="relative z-10 flex flex-col items-center justify-center space-y-8">
+          {/* الشعار */}
+          <motion.div
+            initial={{ scale: 0.5, opacity: 0, rotateY: -180 }}
+            animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+            transition={{ 
+              duration: 0.8, 
+              ease: [0.34, 1.56, 0.64, 1],
+              delay: 0.2
+            }}
+            className="relative"
+          >
+            {/* هالة خلف الشعار */}
+            <motion.div
+              animate={{
+                opacity: [0.3, 0.6, 0.3],
+                scale: [1, 1.1, 1]
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut"
+              }}
+              className="absolute inset-0 -z-10 blur-2xl rounded-full"
+              style={{
+                background: 'radial-gradient(circle, rgba(59, 130, 246, 0.4) 0%, rgba(168, 85, 247, 0.2) 50%, transparent 70%)'
+              }}
+            />
+            
+            <img 
+              src={ryusLogo} 
+              alt="RYUS Logo" 
+              className="w-40 h-40 object-contain drop-shadow-2xl"
+              style={{ filter: 'drop-shadow(0 10px 30px rgba(59, 130, 246, 0.3))' }}
+            />
+          </motion.div>
+
+          {/* النص */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.6 }}
+            className="text-center space-y-2"
+          >
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
+              نظام RYUS
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              إدارة ذكية للمبيعات والمخزون
+            </p>
+          </motion.div>
+
+          {/* شريط التقدم */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.8, duration: 0.4 }}
+            className="w-64 space-y-2"
+          >
+            {/* الخلفية */}
+            <div className="h-1 bg-gradient-to-r from-blue-100 via-purple-100 to-pink-100 rounded-full overflow-hidden">
+              {/* الشريط المتحرك */}
+              <motion.div
+                initial={{ width: '0%' }}
+                animate={{ width: `${progress}%` }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 rounded-full relative overflow-hidden"
+              >
+                {/* تأثير اللمعان */}
+                <motion.div
+                  animate={{
+                    x: ['-100%', '200%']
+                  }}
+                  transition={{
+                    duration: 1.5,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="absolute inset-0 w-1/3 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                />
+              </motion.div>
+            </div>
+            
+            {/* نسبة التقدم */}
+            <motion.p
+              animate={{ opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="text-center text-xs text-muted-foreground"
+            >
+              {Math.round(progress)}%
+            </motion.p>
+          </motion.div>
+        </div>
+
+        {/* جزيئات متحركة صغيرة */}
+        {[...Array(12)].map((_, i) => (
           <motion.div
             key={i}
-            className="absolute rounded-full border-2 border-white/20"
-            style={{
-              width: `${i * 250}px`,
-              height: `${i * 250}px`,
+            initial={{ 
+              opacity: 0,
+              x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
+              y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800)
             }}
             animate={{
-              scale: [1, 1.15, 1],
-              opacity: [0.4, 0.1, 0.4],
+              opacity: [0, 0.4, 0],
+              y: [
+                Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
+                Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800) - 100,
+                Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800)
+              ]
             }}
             transition={{
-              duration: 3,
-              delay: i * 0.2,
+              duration: 3 + Math.random() * 2,
               repeat: Infinity,
-              ease: 'easeInOut',
+              delay: i * 0.2,
+              ease: "easeInOut"
+            }}
+            className="absolute w-1 h-1 rounded-full"
+            style={{
+              background: ['#3b82f6', '#a855f7', '#ec4899'][i % 3]
             }}
           />
         ))}
       </motion.div>
-
-      {/* Floating Elements */}
-      {floatingElements.map((element, index) => (
-        <motion.div
-          key={index}
-          className="absolute"
-          style={{ left: element.x, top: element.y }}
-          initial={{ y: 0, opacity: 0 }}
-          animate={{
-            y: [-15, 15, -15],
-            opacity: [0, 1, 1, 0],
-          }}
-          transition={{
-            duration: 2.5,
-            delay: element.delay,
-            times: [0, 0.2, 0.8, 1],
-          }}
-        >
-          {element.type === 'star' && (
-            <div className="text-white text-4xl drop-shadow-lg">⭐</div>
-          )}
-          {element.type === 'triangle' && (
-            <div className="text-green-300 text-3xl drop-shadow-lg">▲</div>
-          )}
-          {element.type === 'circle' && (
-            <div className="w-4 h-4 rounded-full bg-white/60 shadow-lg"></div>
-          )}
-        </motion.div>
-      ))}
-
-      {/* Main Content */}
-      <motion.div
-        className="relative z-10 flex flex-col items-center px-6"
-        initial={{ scale: 0, rotate: -180 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{
-          type: 'spring',
-          stiffness: 200,
-          damping: 15,
-          duration: 1,
-        }}
-      >
-        {/* Logo with Animation */}
-        <motion.div
-          className="w-48 h-48 mb-8 drop-shadow-2xl"
-          animate={{
-            rotate: [0, 5, -5, 0],
-            scale: [1, 1.05, 1],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: 'easeInOut',
-          }}
-        >
-          <img
-            src={logoBlue}
-            alt="RYUS BRAND"
-            className="w-full h-full object-contain drop-shadow-2xl"
-          />
-        </motion.div>
-
-        {/* Title */}
-        <motion.h1
-          className="font-brand text-5xl font-bold text-white mb-3 drop-shadow-lg"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-        >
-          RYUS BRAND
-        </motion.h1>
-
-        {/* Description */}
-        <motion.p
-          className="text-white text-lg font-medium tracking-wide text-center max-w-md mb-10 drop-shadow-md"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.7, duration: 0.5 }}
-        >
-          نظام إدارة الطلبات المدعوم بالذكاء الاصطناعي
-        </motion.p>
-
-        {/* Loading Bar */}
-        <motion.div
-          className="w-72 h-2 bg-white/20 rounded-full overflow-hidden backdrop-blur-sm"
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.9 }}
-        >
-          <motion.div
-            className="h-full rounded-full"
-            style={{
-              background: 'linear-gradient(90deg, #fff 0%, #f0abfc 50%, #fff 100%)',
-              width: `${progress}%`,
-            }}
-            initial={{ width: '0%' }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-          />
-        </motion.div>
-
-        {/* Progress Text */}
-        <motion.p
-          className="text-white/80 text-sm mt-4 font-medium"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.1 }}
-        >
-          جاري التحميل... {progress}%
-        </motion.p>
-      </motion.div>
-    </motion.div>
+    </AnimatePresence>
   );
 };
 

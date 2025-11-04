@@ -71,31 +71,6 @@ const ManagerProfitsDialog = ({
   const [selectedTab, setSelectedTab] = useState('overview');
   const { currentUser } = useAuth();
 
-  console.log('🔍 ManagerProfitsDialog Props DETAILED:', {
-    isOpen,
-    ordersCount: orders?.length || 0,
-    employeesCount: employees?.length || 0,
-    profitsCount: profits?.length || 0,
-    calculateProfitExists: !!calculateProfit,
-    ordersData: orders?.slice(0, 3)?.map(o => ({ 
-      id: o.id, 
-      number: o.order_number,
-      status: o.status, 
-      created_by: o.created_by,
-      total: o.final_amount || o.total_amount,
-      created_at: o.created_at
-    })),
-    employeesData: employees?.slice(0, 3)?.map(e => ({ 
-      id: e.user_id, 
-      name: e.full_name 
-    })),
-    profitsData: profits?.slice(0, 3)?.map(p => ({
-      id: p.id,
-      order_id: p.order_id,
-      status: p.status,
-      settled_at: p.settled_at
-    }))
-  });
 
   // تحقق فوري من البيانات
   if (!orders || !Array.isArray(orders) || orders.length === 0) {

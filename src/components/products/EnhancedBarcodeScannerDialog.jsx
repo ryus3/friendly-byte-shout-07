@@ -55,8 +55,6 @@ const EnhancedBarcodeScannerDialog = ({
       setError(null);
       setIsInitializing(true);
       setCameraStatus('🔍 جاري فحص الكاميرا...');
-      
-      console.log("🚀 بدء تشغيل قارئ QR...");
 
       // التحقق من دعم MediaDevices
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -79,7 +77,6 @@ const EnhancedBarcodeScannerDialog = ({
         // إيقاف الـ stream الذي استخدمناه للاختبار
         stream.getTracks().forEach(track => track.stop());
       } catch (permissionError) {
-        console.error("خطأ في صلاحية الكاميرا:", permissionError);
         const errorMsg = permissionError?.message || "خطأ غير محدد";
         setError(`🚫 فشل في الوصول للكاميرا: ${errorMsg}. يرجى السماح للكاميرا في إعدادات المتصفح.`);
         setCameraStatus('❌ فشل في الوصول للكاميرا');
@@ -91,7 +88,6 @@ const EnhancedBarcodeScannerDialog = ({
       try {
         setCameraStatus('🔎 فحص الكاميرات المتاحة...');
         const cameras = await Html5Qrcode.getCameras();
-        console.log("📷 الكاميرات المتاحة:", cameras);
         
         if (!cameras || cameras.length === 0) {
           throw new Error("لا توجد كاميرا متاحة على هذا الجهاز");

@@ -99,20 +99,30 @@ function ScrollToTop() {
 function AppContent() {
   const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    // التحقق من عرض السبلاش من قبل - مرة واحدة فقط في الجلسة
+    const hasShownSplash = sessionStorage.getItem('hasShownSplash');
+    return !hasShownSplash;
+  });
   
   // Enable app start synchronization
   useAppStartSync();
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowSplash(false), 2500);
-    return () => clearTimeout(timer);
-  }, []);
+    if (showSplash) {
+      // انتظار اكتمال السبلاش وحفظ الحالة
+      const timer = setTimeout(() => {
+        setShowSplash(false);
+        sessionStorage.setItem('hasShownSplash', 'true');
+      }, 2800); // 2.8 ثانية للسماح بإكمال الأنيميشن
+      return () => clearTimeout(timer);
+    }
+  }, [showSplash]);
 
   if (showSplash) {
     return (
-      <AnimatePresence>
-        <AppSplashScreen />
+      <AnimatePresence mode="wait">
+        <AppSplashScreen key="splash" onComplete={() => setShowSplash(false)} />
       </AnimatePresence>
     );
   }

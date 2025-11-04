@@ -162,7 +162,6 @@ export const SuperProvider = ({ children }) => {
   const normalizeOrder = useCallback((o, usersArray = null) => {
     // ✅ حماية قوية من البيانات الفارغة أو غير الصالحة
     if (!o || typeof o !== 'object' || !o.id) {
-      console.warn('⚠️ normalizeOrder: بيانات طلب غير صالحة:', o);
       return null;
     }
     
@@ -330,7 +329,6 @@ export const SuperProvider = ({ children }) => {
       
       // التحقق من البيانات
       if (!data) {
-        console.error('❌ SuperProvider: لم يتم جلب أي بيانات من SuperAPI');
         return;
       }
 
@@ -475,20 +473,6 @@ export const SuperProvider = ({ children }) => {
             : (o.items || [])
         }))
       };
-      
-      console.log('🔗 SuperProvider: معالجة بيانات المخزون:', {
-        processedProductsCount: processedData.products?.length || 0,
-        sampleProcessedProduct: processedData.products?.[0] ? {
-          id: processedData.products[0].id,
-          name: processedData.products[0].name,
-          variantsCount: processedData.products[0].variants?.length || 0,
-          firstProcessedVariant: processedData.products[0].variants?.[0] ? {
-            id: processedData.products[0].variants[0].id,
-            quantity: processedData.products[0].variants[0].quantity,
-            originalInventory: processedData.products[0].variants[0].inventory
-          } : null
-        } : null
-      });
       
       // تصفية الطلبات الذكية قيد الحذف التفاؤلي لمنع الوميض
       processedData.aiOrders = (processedData.aiOrders || []).filter(o => !pendingAiDeletesRef.current.has(o.id));

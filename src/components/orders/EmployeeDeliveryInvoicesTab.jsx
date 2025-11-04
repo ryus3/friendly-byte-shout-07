@@ -101,7 +101,6 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   };
 
   const handleRefresh = async () => {
-    console.log('🔄 تحديث يدوي للفواتير مع مزامنة API');
     await refetch(); // This now includes smart sync
   };
   
@@ -129,12 +128,10 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
       if (now - lastUpdateTime < COOLDOWN_MS) {
         if (cooldownTimer) clearTimeout(cooldownTimer);
         cooldownTimer = setTimeout(() => {
-          console.log('📡 Debounced invoice refetch after cooldown');
           refetch();
           lastUpdateTime = Date.now();
         }, COOLDOWN_MS);
       } else {
-        console.log('📡 Immediate invoice refetch');
         refetch();
         lastUpdateTime = now;
       }
@@ -153,7 +150,6 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
         (payload) => {
           // فقط للفواتير المرتبطة بهذا الموظف
           if (payload.new?.owner_user_id === employeeId || !payload.new?.owner_user_id) {
-            console.log('📡 Invoice UPDATE for employee:', employeeId);
             debouncedRefetch();
           }
         }
