@@ -31,17 +31,17 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
     try {
       setIsLoading(true);
       const { data, error } = await supabase
-        .from('telegram_employee_codes')
+        .from('employee_telegram_codes')
         .select(`
           id,
           user_id,
-          employee_code,
+          telegram_code,
           is_active,
           telegram_chat_id,
           linked_at,
           created_at,
           updated_at,
-          profiles!telegram_employee_codes_user_id_fkey(user_id, full_name, username, is_active)
+          profiles!employee_telegram_codes_user_id_fkey(user_id, full_name, username, is_active)
         `)
         .eq('profiles.is_active', true)
         .order('created_at', { ascending: true });
@@ -50,7 +50,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
         console.error('خطأ في جلب الرموز:', error);
         // جربالاستعلام البديل
         const { data: altData, error: altError } = await supabase
-          .from('telegram_employee_codes')
+          .from('employee_telegram_codes')
           .select('*')
           .order('created_at', { ascending: true });
         
@@ -137,9 +137,9 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
       // تأكيد تخزين الرمز بالحروف الكبيرة وإلغاء أي ربط قديم
       try {
         await supabase
-          .from('telegram_employee_codes')
+          .from('employee_telegram_codes')
           .update({ 
-            employee_code: String(data || '').toUpperCase(),
+            telegram_code: String(data || '').toUpperCase(),
             updated_at: new Date().toISOString(),
             telegram_chat_id: null,
             linked_at: null
@@ -164,9 +164,9 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
   const updateEmployeeCode = async (codeId, newCode) => {
     try {
       const { error } = await supabase
-        .from('telegram_employee_codes')
+        .from('employee_telegram_codes')
         .update({ 
-          employee_code: (newCode || '').toUpperCase(),
+          telegram_code: (newCode || '').toUpperCase(),
           updated_at: new Date().toISOString(),
           telegram_chat_id: null, // إلغاء الربط عند تغيير الرمز
           linked_at: null
@@ -198,7 +198,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
   const deleteEmployeeCode = async (codeId) => {
     try {
       const { error } = await supabase
-        .from('telegram_employee_codes')
+        .from('employee_telegram_codes')
         .delete()
         .eq('id', codeId);
 

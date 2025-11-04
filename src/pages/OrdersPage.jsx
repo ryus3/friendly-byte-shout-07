@@ -97,14 +97,25 @@ const OrdersPage = () => {
     scrollToTopInstant();
   }, []);
 
-  // ✅ مزامنة تلقائية للطلبات المعلقة عند الدخول
+  // ✅ مزامنة تلقائية للطلبات المعلقة عند الدخول - مرة واحدة فقط
+  const hasSyncedRef = useRef(false);
+  
   useEffect(() => {
+    // منع التكرار - المزامنة مرة واحدة فقط
+    if (hasSyncedRef.current) {
+      devLog.log('⏭️ تم تخطي المزامنة - تمت بالفعل');
+      return;
+    }
+    
     const performInitialSync = async () => {
       // انتظار تحميل الطلبات أولاً
       if (inventoryLoading || !orders || orders.length === 0) {
         devLog.log('⏳ انتظار تحميل الطلبات في OrdersPage...');
         return;
       }
+      
+      // تأكيد أن المزامنة تمت
+      hasSyncedRef.current = true;
       
       // جلب الطلبات المعلقة من delivery partners فقط
       const pendingExternalOrders = orders.filter(o => 
@@ -173,7 +184,7 @@ const OrdersPage = () => {
     }, 3000);
 
     return () => clearTimeout(timer);
-  }, [orders, inventoryLoading, syncVisibleOrdersBatch, refreshOrders]);
+  }, []); // ✅ dependencies فارغة = مرة واحدة فقط عند تحميل الصفحة
 
   // ❌ تعطيل Fast Sync مؤقتاً للاختبار - الاعتماد فقط على Smart Sync
   /*
