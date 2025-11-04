@@ -285,9 +285,6 @@ const ManagerProfitsDialog = ({
   }, [profits, employees, orders, dateRange, selectedEmployee, searchTerm, currentUser?.id]);
 
   const stats = useMemo(() => {
-      dateRange
-    });
-
     // إنشاء كائن افتراضي للإحصائيات
     const defaultStats = {
       totalManagerProfit: 0,
