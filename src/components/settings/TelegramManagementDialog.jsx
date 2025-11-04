@@ -470,7 +470,7 @@ const TelegramManagementDialog = ({ open, onOpenChange }) => {
                                   <Button
                                     size="sm"
                                     className="bg-slate-700/60 border-slate-600/50 text-white hover:bg-slate-600/70"
-                                    onClick={() => copyToClipboard(employeeCode.employee_code)}
+                                    onClick={() => copyToClipboard(employeeCode.telegram_code)}
                                   >
                                     <Copy className="w-4 h-4" />
                                   </Button>
