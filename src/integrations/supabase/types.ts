@@ -5689,6 +5689,7 @@ export type Database = {
         Args: { p_city_name: string }
         Returns: Json
       }
+      check_email_exists: { Args: { p_email: string }; Returns: boolean }
       check_monthly_loyalty_discount_eligibility: {
         Args: { p_customer_id: string }
         Returns: Json

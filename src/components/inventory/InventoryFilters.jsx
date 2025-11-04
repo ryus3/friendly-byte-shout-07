@@ -31,12 +31,6 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
   const { products: allProducts = [] } = useInventory();
 
   const allowedData = useMemo(() => {
-    console.log('🔍 InventoryFilters - البيانات المتوفرة:', {
-      hasFullAccess,
-      allCategoriesCount: allCategories?.length || 0,
-      departmentsCount: departments?.length || 0,
-      allCategories: allCategories
-    });
 
     // اشتقاق بدائل من المنتجات عند غياب بيانات التصفية الموحدة
     const fallbackDepartmentsMap = new Map();
@@ -92,8 +86,6 @@ const InventoryFilters = ({ filters, setFilters, onFilterChange, onBarcodeSearch
   }, [hasFullAccess, allCategories, colors, sizes, productTypes, departments, seasonsOccasions, allowedCategories, allowedDepartments, allProducts]);
   
   const handleFilterChange = (key, value) => {
-    console.log('InventoryFilters handleFilterChange called with:', key, value);
-    console.log('onFilterChange exists:', !!onFilterChange);
     if (onFilterChange) {
       onFilterChange(key, value);
     } else {

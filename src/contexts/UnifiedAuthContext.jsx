@@ -474,7 +474,7 @@ export const UnifiedAuthProvider = ({ children }) => {
 
     setLoading(true);
     try {
-      // Check if this is the first user
+      // ✅ 1. التحقق من عدد المستخدمين (هل هذا أول مستخدم؟)
       const { count: userCount, error: countError } = await supabase
         .from('profiles')
         .select('*', { count: 'exact', head: true });
@@ -482,7 +482,7 @@ export const UnifiedAuthProvider = ({ children }) => {
       if (countError) throw countError;
       const isFirstUser = userCount === 0;
 
-      // Check for existing username
+      // ✅ 2. التحقق من وجود username
       const { data: usernameExists, error: usernameCheckError } = await supabase
         .rpc('username_exists', { p_username: username });
       
@@ -493,6 +493,20 @@ export const UnifiedAuthProvider = ({ children }) => {
         throw new Error('اسم المستخدم هذا موجود بالفعل.');
       }
       
+      // ✅ 3. التحقق من وجود البريد الإلكتروني (الجديد!)
+      const { data: emailExists, error: emailCheckError } = await supabase
+        .rpc('check_email_exists', { p_email: email });
+      
+      if (emailCheckError) {
+        console.error('خطأ في التحقق من البريد:', emailCheckError);
+        throw new Error("حدث خطأ أثناء التحقق من البريد الإلكتروني.");
+      }
+      
+      if (emailExists) {
+        throw new Error('هذا البريد الإلكتروني مسجل بالفعل.');
+      }
+      
+      // ✅ 4. التسجيل (بعد التأكد من عدم وجود البريد)
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -506,12 +520,15 @@ export const UnifiedAuthProvider = ({ children }) => {
       });
 
       if (error) {
-        if (error.message.includes('unique constraint')) {
-          throw new Error('هذا البريد الإلكتروني مسجل بالفعل.');
-        }
         throw error;
       }
 
+      // ✅ 5. فحص إضافي: التأكد من أن التسجيل نجح فعلياً
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        throw new Error('هذا البريد الإلكتروني مسجل بالفعل. الرجاء تسجيل الدخول.');
+      }
+
+      // ✅ 6. إظهار رسالة النجاح
       if (isFirstUser) {
         toast({
           title: "أهلاً بك أيها المدير!",

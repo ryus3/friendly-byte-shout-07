@@ -27,18 +27,11 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
   // تحديث القيم عند تغيير employee
   React.useEffect(() => {
     if (employee) {
-      console.log('🔍 تحديث بيانات الموظف:', employee);
       setStatus(employee.status || 'pending');
       setDefaultPage(employee.default_page || '/');
       setOrderCreationMode(employee.order_creation_mode || 'both');
       setCustomerManagementAccess(employee.customer_management_access || false);
       setDeliveryPartnerAccess(employee.delivery_partner_access !== false);
-      
-      console.log('📊 القيم المحدثة:', {
-        orderCreationMode: employee.order_creation_mode || 'both',
-        customerManagementAccess: employee.customer_management_access || false,
-        deliveryPartnerAccess: employee.delivery_partner_access !== false
-      });
     }
   }, [employee]);
 
@@ -95,16 +88,8 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
   };
 
   if (!employee) {
-    console.log('UnifiedEmployeeDialog - No employee data provided');
     return null;
   }
-
-  console.log('UnifiedEmployeeDialog - Current state values:', {
-    status,
-    customerManagementAccess,
-    deliveryPartnerAccess,
-    orderCreationMode
-  });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

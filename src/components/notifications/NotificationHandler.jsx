@@ -10,11 +10,6 @@ export const useNotificationHandler = () => {
   const handleNotificationClick = useCallback((notification) => {
     if (!notification) return;
 
-    console.log('🔔 NotificationHandler: Handling notification click:', {
-      type: notification.type,
-      data: notification.data
-    });
-
     // معالجة إشعارات الطلبات الجديدة - محسنة لعرض رقم التتبع
     if (notification.type === 'order_created') {
       const { employee_id, order_id, tracking_number } = notification.data || {};
@@ -77,15 +72,11 @@ export const useNotificationHandler = () => {
     
     // معالجة إشعارات الطلبات الذكية
     else if (notification.type === 'new_ai_order') {
-      console.log('🚀 Navigating to AI orders page');
-      // التوجه لصفحة طلبات الذكاء الاصطناعي
       navigate('/ai-orders');
     }
     
     // معالجة أنواع إشعارات أخرى...
     else {
-      console.log('نوع إشعار غير معروف:', notification.type);
-      // افتراضي: الذهاب للوحة الرئيسية
       navigate('/dashboard');
     }
   }, [navigate]);

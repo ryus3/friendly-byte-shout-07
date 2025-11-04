@@ -13,9 +13,6 @@ const UnifiedCustomersStats = ({ onStatClick }) => {
   // تصفية العملاء حسب صلاحيات المستخدم - البيانات مفلترة مسبقاً في SuperProvider
   const filteredCustomers = React.useMemo(() => {
     if (!customers) return [];
-    
-    // البيانات مفلترة تلقائياً من SuperProvider حسب المستخدم
-    console.log('📊 UnifiedCustomersStats: العملاء من النظام الموحد:', customers.length);
     return customers;
   }, [customers]);
 

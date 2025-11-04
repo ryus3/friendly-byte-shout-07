@@ -50,7 +50,6 @@ const AlWaseetInvoiceDetailsDialog = ({
   useEffect(() => {
     if (isOpen && invoice) {
       const invoiceId = invoice.external_id || invoice.id;
-      console.log('🔍 فتح تفاصيل الفاتورة:', invoiceId);
       
       if (invoiceId) {
         fetchInvoiceOrders(invoiceId).then(result => {
@@ -94,8 +93,6 @@ const AlWaseetInvoiceDetailsDialog = ({
     try {
       const result = await syncInvoiceById(invoiceId);
       if (result && result.success) {
-        console.log('Invoice synced successfully:', result.data);
-        // Reload linked orders after sync
         loadLinkedOrders();
       } else {
         console.error('Invoice sync failed:', result?.error);
