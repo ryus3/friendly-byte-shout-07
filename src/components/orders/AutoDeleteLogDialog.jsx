@@ -113,21 +113,55 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
             // تحديث البيانات الناقصة من API
             if (orderDetails) {
               console.log('✅ تم جلب بيانات الطلب من API:', orderDetails);
+              console.log('📋 بيانات كاملة:', JSON.stringify(orderDetails, null, 2));
+              
               orderData = {
                 ...orderData,
-                // رقم الهاتف - أولوية للمحفوظ ثم API
-                customer_phone: orderData.customer_phone || orderDetails.client_mobile || orderDetails.phone || orderDetails.customer_phone,
-                // المدينة
-                customer_city: orderData.customer_city || orderDetails.city_name || orderDetails.city,
-                // المنطقة/الحي
-                customer_province: orderData.customer_province || orderDetails.state || orderDetails.province || orderDetails.region || orderDetails.region_name,
+                // رقم الهاتف - جميع الاحتمالات
+                customer_phone: orderData.customer_phone || 
+                                orderDetails.client_mobile || 
+                                orderDetails.phone || 
+                                orderDetails.customer_phone ||
+                                orderDetails.mobile ||
+                                orderDetails.client_phone,
+                // المدينة - جميع الاحتمالات
+                customer_city: orderData.customer_city || 
+                               orderDetails.city_name || 
+                               orderDetails.city ||
+                               orderDetails.customer_city ||
+                               orderDetails.client_city,
+                // المنطقة/الحي - جميع الاحتمالات
+                customer_province: orderData.customer_province || 
+                                   orderDetails.state || 
+                                   orderDetails.province || 
+                                   orderDetails.region || 
+                                   orderDetails.region_name ||
+                                   orderDetails.state_name ||
+                                   orderDetails.customer_province,
                 // الاسم
-                customer_name: orderData.customer_name || orderDetails.client_name || orderDetails.customer_name || orderDetails.name,
+                customer_name: orderData.customer_name || 
+                               orderDetails.client_name || 
+                               orderDetails.customer_name || 
+                               orderDetails.name,
                 // العنوان
-                customer_address: orderData.customer_address || orderDetails.address || orderDetails.full_address,
+                customer_address: orderData.customer_address || 
+                                  orderDetails.address || 
+                                  orderDetails.full_address ||
+                                  orderDetails.location,
                 // الملاحظات
-                notes: orderData.notes || orderDetails.note || orderDetails.notes
+                notes: orderData.notes || 
+                       orderDetails.note || 
+                       orderDetails.notes ||
+                       orderDetails.merchant_notes
               };
+              
+              console.log('✅ البيانات بعد التحديث:', {
+                phone: orderData.customer_phone,
+                city: orderData.customer_city,
+                province: orderData.customer_province,
+                name: orderData.customer_name,
+                address: orderData.customer_address
+              });
               
               toast({
                 title: "✅ تم استكمال البيانات",
