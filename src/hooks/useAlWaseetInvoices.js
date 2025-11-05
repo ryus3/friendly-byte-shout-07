@@ -235,34 +235,22 @@ export const useAlWaseetInvoices = () => {
         if (invoicesError) throw invoicesError;
 
       if (cachedInvoices?.length > 0) {
-          // دمج البيانات في JavaScript مع أولوية لـ account_username من قاعدة البيانات
-          const transformedInvoices = cachedInvoices.map(inv => {
-            // أولوية 1: استخدام account_username المحفوظ مع الفاتورة
-            let accountUsername = inv.account_username;
-            let partnerNameAr = inv.partner_name_ar;
-            
-            // أولوية 2: إذا لم يكن محفوظاً، حاول المطابقة بـ merchant_id
-            if (!accountUsername) {
-              const token = tokensMap[inv.merchant_id] || tokensMap[`user_${inv.owner_user_id}`];
-              accountUsername = token?.account_username;
-              partnerNameAr = token?.partner_name === 'modon' ? 'مدن' : (token?.partner_name === 'alwaseet' ? 'الوسيط' : null);
-            }
-            
-            return {
-              id: inv.external_id,
-              merchant_price: inv.amount,
-              delivered_orders_count: inv.orders_count,
-              status: inv.status,
-              merchant_id: inv.merchant_id,
-              updated_at: inv.issued_at,
-              created_at: inv.created_at,
-              raw: inv.raw,
-              account_username: accountUsername,
-              partner_name_ar: partnerNameAr || (activePartner === 'modon' ? 'مدن' : 'الوسيط')
-            };
-          });
+          // ✅ استخدام البيانات المُخزنة مباشرة (تم تحديثها بواسطة backfill migration)
+          const transformedInvoices = cachedInvoices.map(inv => ({
+            id: inv.external_id,
+            merchant_price: inv.amount,
+            delivered_orders_count: inv.orders_count,
+            status: inv.status,
+            merchant_id: inv.merchant_id,
+            updated_at: inv.issued_at,
+            created_at: inv.created_at,
+            raw: inv.raw,
+            // استخدام account_username و partner_name_ar من قاعدة البيانات مباشرة
+            account_username: inv.account_username,
+            partner_name_ar: inv.partner_name_ar || (activePartner === 'modon' ? 'مدن' : 'الوسيط')
+          }));
           
-          // إحصائيات الحسابات
+          // إحصائيات الحسابات للتتبع
           const accountsStats = {};
           transformedInvoices.forEach(inv => {
             const account = inv.account_username || `معرف ${inv.merchant_id}`;
@@ -270,7 +258,7 @@ export const useAlWaseetInvoices = () => {
           });
           
           setInvoices(transformedInvoices);
-          console.log(`⚡ تحميل فوري: عرض ${transformedInvoices.length} فاتورة`);
+          console.log(`⚡ تحميل فوري: عرض ${transformedInvoices.length} فاتورة مع أسماء الحسابات`);
           console.log('📊 إحصائيات الفواتير حسب الحساب:', accountsStats);
         }
       } catch (cacheError) {
