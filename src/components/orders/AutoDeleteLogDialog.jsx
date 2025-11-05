@@ -104,10 +104,10 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
             
             if (orderData.delivery_partner === 'modon') {
               const ModonAPI = await import('@/lib/modon-api');
-              orderDetails = await ModonAPI.getOrderDetails(token.token, orderData.delivery_partner_order_id);
+              orderDetails = await ModonAPI.getOrderByQR(token.token, orderData.qr_id || orderData.delivery_partner_order_id);
             } else {
               const AlWaseetAPI = await import('@/lib/alwaseet-api');
-              orderDetails = await AlWaseetAPI.getOrderDetails(token.token, orderData.delivery_partner_order_id);
+              orderDetails = await AlWaseetAPI.getOrderByQR(token.token, orderData.qr_id || orderData.delivery_partner_order_id);
             }
 
             // تحديث البيانات الناقصة من API
@@ -115,11 +115,17 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
               console.log('✅ تم جلب بيانات الطلب من API:', orderDetails);
               orderData = {
                 ...orderData,
-                customer_phone: orderData.customer_phone || orderDetails.client_mobile || orderDetails.phone,
+                // رقم الهاتف - أولوية للمحفوظ ثم API
+                customer_phone: orderData.customer_phone || orderDetails.client_mobile || orderDetails.phone || orderDetails.customer_phone,
+                // المدينة
                 customer_city: orderData.customer_city || orderDetails.city_name || orderDetails.city,
-                customer_province: orderData.customer_province || orderDetails.state || orderDetails.province || orderDetails.region,
-                customer_name: orderData.customer_name || orderDetails.client_name || orderDetails.name,
-                customer_address: orderData.customer_address || orderDetails.address,
+                // المنطقة/الحي
+                customer_province: orderData.customer_province || orderDetails.state || orderDetails.province || orderDetails.region || orderDetails.region_name,
+                // الاسم
+                customer_name: orderData.customer_name || orderDetails.client_name || orderDetails.customer_name || orderDetails.name,
+                // العنوان
+                customer_address: orderData.customer_address || orderDetails.address || orderDetails.full_address,
+                // الملاحظات
                 notes: orderData.notes || orderDetails.note || orderDetails.notes
               };
               

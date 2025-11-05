@@ -32,10 +32,10 @@ const AppSplashScreen = ({ onComplete }) => {
 
   useEffect(() => {
     if (progress === 100) {
-      // انتظار أطول للانتقال السلس (1 ثانية)
+      // انتقال فوري بدون تأخير (0 ثانية)
       const timer = setTimeout(() => {
         onComplete?.();
-      }, 1000);
+      }, 0);
       return () => clearTimeout(timer);
     }
   }, [progress, onComplete]);
