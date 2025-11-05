@@ -23,9 +23,9 @@ const AppSplashScreen = ({ onComplete }) => {
           clearInterval(interval);
           return 100;
         }
-        return prev + 1.25; // أبطأ من 2.5 لوقت أطول
+        return prev + 1.67; // 3 ثواني (100 / 1.67 * 50ms ≈ 3000ms)
       });
-    }, 50); // 50ms * (100/1.25) = 4000ms = 4 ثواني
+    }, 50);
 
     return () => clearInterval(interval);
   }, []);

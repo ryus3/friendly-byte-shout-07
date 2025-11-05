@@ -3708,32 +3708,26 @@ export const AlWaseetProvider = ({ children }) => {
               invoicesData = await AlWaseetAPI.getMerchantInvoices(tokenValue);
             }
             
-            // حفظ الفواتير في قاعدة البيانات
+            // ✅ إضافة بيانات الحساب لكل فاتورة قبل الحفظ
             if (invoicesData?.length > 0) {
+              const enrichedInvoices = invoicesData.map(inv => ({
+                ...inv,
+                owner_user_id: user.id,
+                account_username: accountName,
+                partner_name_ar: partnerName === 'modon' ? 'مدن' : 'الوسيط',
+                merchant_id: inv.merchant_id || tokenData.merchant_id
+              }));
+              
               const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
-                p_invoices: invoicesData
+                p_invoices: enrichedInvoices
               });
               
               if (!upsertErr) {
                 totalInvoicesSynced += invoicesData.length;
-                console.log(`  ✅ حفظ ${invoicesData.length} فاتورة للحساب ${accountName}`);
-                
-                // ✅ تحديث كل فاتورة بـ account_username للتمييز بين الحسابات
-                try {
-                  await supabase
-                    .from('delivery_invoices')
-                    .update({ 
-                      account_username: accountName,
-                      partner_name_ar: partnerName === 'modon' ? 'مدن' : 'الوسيط'
-                    })
-                    .eq('owner_user_id', user.id)
-                    .eq('partner', partnerName)
-                    .in('external_id', invoicesData.map(inv => inv.id));
-                  
-                  console.log(`  ✅ تم تحديث account_username="${accountName}" لجميع الفواتير`);
-                } catch (updateErr) {
-                  console.warn('  ⚠️ فشل تحديث account_username:', updateErr);
-                }
+                console.log(`  ✅ حفظ ${invoicesData.length} فاتورة للحساب ${accountName} مع account_username`);
+              } else {
+                console.error(`  ❌ فشل حفظ فواتير ${accountName}:`, upsertErr);
+              }
                 
                 // ✅ جلب تفاصيل أول 10 فواتير حديثة وحفظ طلباتها
                 for (const invoice of invoicesData.slice(0, 10)) {

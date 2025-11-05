@@ -765,13 +765,7 @@ const OrdersPage = () => {
 
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-                 <Button variant="outline" onClick={() => navigate('/')}>
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                    رجوع
-                </Button>
-                <OrdersHeader title={pageConfig.title} description={pageConfig.description} icon={pageConfig.icon} />
-            </div>
+            <OrdersHeader title={pageConfig.title} description={pageConfig.description} icon={pageConfig.icon} />
             
         </div>
         
