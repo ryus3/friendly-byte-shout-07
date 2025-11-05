@@ -1500,6 +1500,7 @@ export type Database = {
       }
       delivery_invoices: {
         Row: {
+          account_username: string | null
           amount: number | null
           created_at: string
           external_id: string
@@ -1512,6 +1513,7 @@ export type Database = {
           orders_last_synced_at: string | null
           owner_user_id: string | null
           partner: string
+          partner_name_ar: string | null
           raw: Json
           received: boolean
           received_at: string | null
@@ -1521,6 +1523,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          account_username?: string | null
           amount?: number | null
           created_at?: string
           external_id: string
@@ -1533,6 +1536,7 @@ export type Database = {
           orders_last_synced_at?: string | null
           owner_user_id?: string | null
           partner?: string
+          partner_name_ar?: string | null
           raw?: Json
           received?: boolean
           received_at?: string | null
@@ -1542,6 +1546,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          account_username?: string | null
           amount?: number | null
           created_at?: string
           external_id?: string
@@ -1554,6 +1559,7 @@ export type Database = {
           orders_last_synced_at?: string | null
           owner_user_id?: string | null
           partner?: string
+          partner_name_ar?: string | null
           raw?: Json
           received?: boolean
           received_at?: string | null
@@ -6608,7 +6614,7 @@ export type Database = {
       }
       upsert_alwaseet_invoice_list: {
         Args: { p_invoices: Json }
-        Returns: Json
+        Returns: undefined
       }
       upsert_alwaseet_invoice_list_for_user: {
         Args: { p_employee_id: string; p_invoices: Json }
