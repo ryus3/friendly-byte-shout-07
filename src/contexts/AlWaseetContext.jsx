@@ -3725,9 +3725,6 @@ export const AlWaseetProvider = ({ children }) => {
               if (!upsertErr) {
                 totalInvoicesSynced += invoicesData.length;
                 console.log(`  ✅ حفظ ${invoicesData.length} فاتورة للحساب ${accountName} مع account_username`);
-              } else {
-                console.error(`  ❌ فشل حفظ فواتير ${accountName}:`, upsertErr);
-              }
                 
                 // ✅ جلب تفاصيل أول 10 فواتير حديثة وحفظ طلباتها
                 for (const invoice of invoicesData.slice(0, 10)) {
@@ -3775,7 +3772,7 @@ export const AlWaseetProvider = ({ children }) => {
                   }
                 }
               } else {
-                console.warn(`  ⚠️ فشل في حفظ فواتير ${accountName}:`, upsertErr.message);
+                console.error(`  ❌ فشل حفظ فواتير ${accountName}:`, upsertErr);
               }
             }
           } catch (apiErr) {
