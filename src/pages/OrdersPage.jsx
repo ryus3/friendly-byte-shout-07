@@ -117,20 +117,30 @@ const OrdersPage = () => {
       // تأكيد أن المزامنة تمت
       hasSyncedRef.current = true;
       
-      // جلب الطلبات النشطة بما فيها delivered (للتسليم الجزئي)
-      const activeExternalOrders = orders.filter(o => 
-        ['pending', 'shipped', 'delivery', 'delivered'].includes(o.status) &&
-        o.delivery_partner && 
-        ['alwaseet', 'modon'].includes(o.delivery_partner) &&
-        o.delivery_status !== '17' // ✅ استثناء الحالة 17 (راجع للتاجر)
-      );
+      // ✅ جلب جميع الطلبات النشطة من DB مباشرة (وليس من الذاكرة/الفلترة)
+      // هذا يضمن مزامنة الطلبات حتى لو كانت في صفحة pagination أخرى أو مخفية
+      const { data: allActiveOrders, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .in('status', ['pending', 'shipped', 'delivery', 'delivered'])
+        .in('delivery_partner', ['alwaseet', 'modon'])
+        .neq('delivery_status', '17')
+        .neq('status', 'completed')
+        .neq('status', 'returned_in_stock');
+      
+      if (ordersError) {
+        console.error('❌ خطأ في جلب الطلبات النشطة:', ordersError);
+        return;
+      }
+      
+      const activeExternalOrders = allActiveOrders || [];
       
       if (activeExternalOrders.length === 0) {
         devLog.log('ℹ️ لا توجد طلبات خارجية نشطة للمزامنة');
         return;
       }
       
-      devLog.log(`🔄 [OrdersPage] مزامنة تلقائية لـ ${activeExternalOrders.length} طلب نشط (بما فيها delivered للتسليم الجزئي)...`);
+      devLog.log(`🔄 [OrdersPage] مزامنة شاملة لـ ${activeExternalOrders.length} طلب نشط من DB (جميع الطلبات وليس الظاهرة فقط)...`);
       
       
       try {

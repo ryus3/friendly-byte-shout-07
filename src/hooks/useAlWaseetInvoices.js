@@ -35,40 +35,55 @@ export const useAlWaseetInvoices = () => {
       // Smart fetch: only get recent invoices to avoid loading thousands
       console.log(`🔄 جلب الفواتير (${timeFilter}) - ${forceRefresh ? 'إجباري' : 'تلقائي'} من ${activePartner}`);
       
-      // استدعاء API المناسب حسب activePartner
-      let invoicesData;
-      let merchantIdFromApi = null;
+      // ✅ جلب جميع التوكنات النشطة للمستخدم
+      const { data: userTokens, error: tokensError } = await supabase
+        .from('delivery_partner_tokens')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('partner_name', activePartner)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString());
       
-      if (activePartner === 'modon') {
-        const ModonAPI = await import('@/lib/modon-api');
-        invoicesData = await ModonAPI.getMerchantInvoices(token);
-        // استخراج merchant_id من أول فاتورة
-        if (invoicesData?.length > 0 && invoicesData[0].merchant_id) {
-          merchantIdFromApi = invoicesData[0].merchant_id;
-        }
-      } else {
-        invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
-        // استخراج merchant_id من أول فاتورة
-        if (invoicesData?.length > 0 && invoicesData[0].merchant_id) {
-          merchantIdFromApi = invoicesData[0].merchant_id;
-        }
+      if (tokensError) {
+        console.error('❌ خطأ في جلب التوكنات:', tokensError);
+        throw new Error('فشل جلب التوكنات');
       }
       
-      // ✅ المرحلة 2: تحديث merchant_id تلقائياً في التوكنات
-      if (merchantIdFromApi && user?.id) {
-        try {
-          await supabase
-            .from('delivery_partner_tokens')
-            .update({ merchant_id: merchantIdFromApi })
-            .eq('user_id', user.id)
-            .eq('partner_name', activePartner)
-            .is('merchant_id', null);
+      console.log(`🔑 تم جلب ${userTokens?.length || 0} توكن نشط للمستخدم`);
+      
+      let allInvoicesData = [];
+      
+      // جلب الفواتير من كل توكن على حدة
+      if (userTokens && userTokens.length > 0) {
+        for (const tokenData of userTokens) {
+          console.log(`🔄 جلب فواتير من حساب: ${tokenData.account_username}`);
           
-          console.log(`✅ تم تحديث merchant_id: ${merchantIdFromApi} للتوكن`);
-        } catch (err) {
-          console.warn('⚠️ فشل تحديث merchant_id:', err);
+          let invoicesFromThisToken;
+          if (activePartner === 'modon') {
+            const ModonAPI = await import('@/lib/modon-api');
+            invoicesFromThisToken = await ModonAPI.getMerchantInvoices(tokenData.token);
+          } else {
+            invoicesFromThisToken = await AlWaseetAPI.getMerchantInvoices(tokenData.token);
+          }
+          
+          // إضافة معلومات الحساب الصحيحة لكل فاتورة
+          if (invoicesFromThisToken && invoicesFromThisToken.length > 0) {
+            invoicesFromThisToken.forEach(inv => {
+              inv.account_username = tokenData.account_username;
+              inv.merchant_id = tokenData.merchant_id;
+              inv.partner_name_ar = activePartner === 'modon' ? 'مدن' : 'الوسيط';
+              inv.owner_user_id = user?.id;
+              inv.partner = activePartner;
+            });
+            
+            allInvoicesData.push(...invoicesFromThisToken);
+            console.log(`✅ تم جلب ${invoicesFromThisToken.length} فاتورة من حساب ${tokenData.account_username}`);
+          }
         }
       }
+      
+      const invoicesData = allInvoicesData;
+      console.log(`📊 إجمالي الفواتير من جميع الحسابات: ${invoicesData.length}`);
       
       // Persist invoices to DB (bulk upsert via RPC) - in background
       if (invoicesData?.length > 0) {
