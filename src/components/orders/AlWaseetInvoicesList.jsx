@@ -151,7 +151,7 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
             <div className="flex items-center justify-start gap-2 pb-2 border-b">
               <Building className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium text-primary">
-                {invoice.partner_name_ar || 'الوسيط'} - {invoice.account_username || `معرف ${invoice.merchant_id}`}
+                {invoice.partner_name_ar || 'الوسيط'} - {invoice.account_username || `حساب #${invoice.merchant_id}`}
               </span>
             </div>
           )}

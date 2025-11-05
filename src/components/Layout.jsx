@@ -22,9 +22,7 @@ import CartDialog from '@/components/orders/CartDialog.jsx';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
 import SyncStatusIndicator from '@/components/SyncStatusIndicator.jsx';
 import { Helmet } from 'react-helmet-async';
-import logoBlue from '@/assets/ryus-logo-blue.png';
-import logoWhite from '@/assets/ryus-logo-white.png';
-import logoDark from '@/assets/ryus-logo-dark.png';
+import ryusLogo from '@/assets/ryus-logo-new.png';
 
 const SidebarContent = ({ onClose, isMobile }) => {
   const { user, logout } = useAuth();
@@ -308,8 +306,7 @@ const Layout = ({ children }) => {
                 </Button>
               )}
               <div className="cursor-pointer" onClick={handleHomeClick}>
-                <img className="h-14 w-auto hidden dark:block" alt="RYUS BRAND Logo Dark" src={logoDark} />
-                <img className="h-14 w-auto block dark:hidden mix-blend-multiply" alt="RYUS BRAND Logo Light" src={logoBlue} />
+                <img src={ryusLogo} alt="RYUS" className="h-14 w-auto transition-opacity duration-300" />
               </div>
             </div>
             

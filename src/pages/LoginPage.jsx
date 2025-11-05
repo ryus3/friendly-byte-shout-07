@@ -8,9 +8,7 @@ import { Input } from '@/components/ui/input.jsx';
 import { toast } from '@/components/ui/use-toast.js';
 import { Lock, User, ArrowLeft, Mail, UserPlus } from 'lucide-react';
 import { ThemeSwitcher } from '@/components/ThemeSwitcher.jsx';
-import logoBlue from '@/assets/ryus-logo-blue.png';
-import logoWhite from '@/assets/ryus-logo-white.png';
-import logoDark from '@/assets/ryus-logo-dark.png';
+import ryusLogo from '@/assets/ryus-logo-new.png';
 
 const LoginPage = () => {
   const [view, setView] = useState('login'); // 'login', 'register', 'forgot'
@@ -98,8 +96,7 @@ const LoginPage = () => {
             transition={{ delay: 0.2, type: 'spring' }} 
             className="w-44 h-44 mx-auto mb-4 flex items-center justify-center"
           >
-            <img className="w-full h-full object-contain hidden dark:block" alt="RYUS BRAND Logo Dark" src={logoDark} />
-            <img className="w-full h-full object-contain block dark:hidden mix-blend-multiply" alt="RYUS BRAND Logo Light" src={logoBlue} />
+            <img src={ryusLogo} alt="RYUS" className="w-full h-full object-contain" />
           </motion.div>
           <h1 className="font-brand text-4xl font-bold gradient-text mb-2">RYUS BRAND</h1>
           <p className="text-muted-foreground">نظام إدارة المخزون ومتابعة الطلبات</p>

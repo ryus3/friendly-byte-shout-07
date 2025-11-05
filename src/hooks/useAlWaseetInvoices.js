@@ -195,8 +195,34 @@ export const useAlWaseetInvoices = () => {
     if (!isLoggedIn || (activePartner !== 'alwaseet' && activePartner !== 'modon')) return;
 
     const loadInvoicesInstantly = async () => {
-      // ✅ المرحلة 1: جلب التوكنات والفواتير منفصلة ودمجها في JavaScript
+      // ✅ جلب جميع التوكنات النشطة للمستخدم أولاً
       try {
+        // جلب جميع التوكنات النشطة
+        const { data: allTokens, error: tokensError } = await supabase
+          .from('delivery_partner_tokens')
+          .select('merchant_id, account_username, partner_name, user_id')
+          .eq('user_id', user?.id)
+          .eq('partner_name', activePartner)
+          .eq('is_active', true)
+          .gt('expires_at', new Date().toISOString());
+
+        if (tokensError) {
+          console.warn('⚠️ خطأ في جلب التوكنات:', tokensError);
+        }
+
+        // إنشاء خريطة للتوكنات (بـ merchant_id و user_id)
+        const tokensMap = {};
+        if (allTokens && allTokens.length > 0) {
+          allTokens.forEach(token => {
+            if (token.merchant_id) {
+              tokensMap[token.merchant_id] = token;
+            }
+            // إضافة mapping بـ user_id كـ fallback
+            tokensMap[`user_${token.user_id}`] = token;
+          });
+          console.log(`✅ تم جلب ${allTokens.length} توكن`, allTokens.map(t => `${t.account_username} (${t.merchant_id || 'بدون merchant_id'})`));
+        }
+
         // جلب الفواتير من قاعدة البيانات
         const { data: cachedInvoices, error: invoicesError } = await supabase
           .from('delivery_invoices')
@@ -208,30 +234,16 @@ export const useAlWaseetInvoices = () => {
 
         if (invoicesError) throw invoicesError;
 
-        // جلب التوكنات منفصلة لجميع merchant_ids الموجودة في الفواتير
-        const merchantIds = [...new Set(cachedInvoices?.map(inv => inv.merchant_id).filter(Boolean))];
-        
-        let tokensMap = {};
-        if (merchantIds.length > 0) {
-          const { data: tokens, error: tokensError } = await supabase
-            .from('delivery_partner_tokens')
-            .select('merchant_id, account_username, partner_name')
-            .eq('partner_name', activePartner)
-            .in('merchant_id', merchantIds);
-          
-          if (!tokensError && tokens) {
-            // إنشاء خريطة سريعة للوصول
-            tokensMap = tokens.reduce((acc, token) => {
-              acc[token.merchant_id] = token;
-              return acc;
-            }, {});
-          }
-        }
-
         if (cachedInvoices?.length > 0) {
-          // دمج البيانات في JavaScript
+          // دمج البيانات في JavaScript مع أولوية لـ merchant_id
           const transformedInvoices = cachedInvoices.map(inv => {
-            const token = tokensMap[inv.merchant_id];
+            // محاولة المطابقة بـ merchant_id أولاً
+            let token = tokensMap[inv.merchant_id];
+            
+            // إذا لم ينجح، استخدم user_id
+            if (!token) {
+              token = tokensMap[`user_${inv.owner_user_id}`];
+            }
             
             return {
               id: inv.external_id,
