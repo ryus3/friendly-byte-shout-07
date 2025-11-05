@@ -3718,6 +3718,23 @@ export const AlWaseetProvider = ({ children }) => {
                 totalInvoicesSynced += invoicesData.length;
                 console.log(`  ✅ حفظ ${invoicesData.length} فاتورة للحساب ${accountName}`);
                 
+                // ✅ تحديث كل فاتورة بـ account_username للتمييز بين الحسابات
+                try {
+                  await supabase
+                    .from('delivery_invoices')
+                    .update({ 
+                      account_username: accountName,
+                      partner_name_ar: partnerName === 'modon' ? 'مدن' : 'الوسيط'
+                    })
+                    .eq('owner_user_id', user.id)
+                    .eq('partner', partnerName)
+                    .in('external_id', invoicesData.map(inv => inv.id));
+                  
+                  console.log(`  ✅ تم تحديث account_username="${accountName}" لجميع الفواتير`);
+                } catch (updateErr) {
+                  console.warn('  ⚠️ فشل تحديث account_username:', updateErr);
+                }
+                
                 // ✅ جلب تفاصيل أول 10 فواتير حديثة وحفظ طلباتها
                 for (const invoice of invoicesData.slice(0, 10)) {
                   try {

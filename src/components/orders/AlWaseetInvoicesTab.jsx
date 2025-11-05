@@ -17,7 +17,8 @@ import {
   Calendar,
   TrendingUp,
   Banknote,
-  Receipt
+  Receipt,
+  Users
 } from 'lucide-react';
 import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
@@ -38,6 +39,7 @@ const AlWaseetInvoicesTab = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [accountFilter, setAccountFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   
@@ -47,7 +49,18 @@ const AlWaseetInvoicesTab = () => {
   // Remove the useEffect - let the hook handle all loading automatically
   const [customDateRange, setCustomDateRange] = useState(null);
 
-  // Filter invoices based on search, status, and time
+  // Extract unique accounts
+  const uniqueAccounts = useMemo(() => {
+    const accounts = new Set();
+    invoices.forEach(inv => {
+      if (inv.account_username) {
+        accounts.add(inv.account_username);
+      }
+    });
+    return Array.from(accounts).sort();
+  }, [invoices]);
+
+  // Filter invoices based on search, status, account, and time
   const filteredInvoices = useMemo(() => {
     let filtered = invoices;
     
@@ -56,7 +69,7 @@ const AlWaseetInvoicesTab = () => {
       filtered = applyCustomDateRangeFilter(filtered, customDateRange);
     }
     
-    // Apply search and status filters
+    // Apply search, status, and account filters
     return filtered.filter(invoice => {
       const matchesSearch = 
         invoice.id.toString().includes(searchTerm) ||
@@ -67,9 +80,13 @@ const AlWaseetInvoicesTab = () => {
         (statusFilter === 'received' && invoice.status === 'تم الاستلام من قبل التاجر') ||
         (statusFilter === 'pending' && invoice.status !== 'تم الاستلام من قبل التاجر');
       
-      return matchesSearch && matchesStatus;
+      const matchesAccount = 
+        accountFilter === 'all' || 
+        invoice.account_username === accountFilter;
+      
+      return matchesSearch && matchesStatus && matchesAccount;
     });
-  }, [invoices, searchTerm, statusFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
+  }, [invoices, searchTerm, statusFilter, accountFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
 
   // ✅ المرحلة 4: تفعيل syncAllAvailableTokens تلقائياً عند فتح تبويب الفواتير
   useEffect(() => {
@@ -334,9 +351,26 @@ const AlWaseetInvoicesTab = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Linked Accounts Info */}
+          {uniqueAccounts.length > 0 && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center gap-2 p-3 mb-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg border border-blue-200 dark:border-blue-800"
+            >
+              <Users className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                {uniqueAccounts.length} حساب مربوط: 
+                <span className="font-mono font-bold mr-2 text-primary">
+                  {uniqueAccounts.join(' • ')}
+                </span>
+              </span>
+            </motion.div>
+          )}
+
           <div className="space-y-4 mb-6">
-            {/* Time Filter and Status Filter - Equal Width Side by Side */}
-            <div className="flex gap-2">
+            {/* Time Filter, Status Filter, and Account Filter */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               <Select value={timeFilter} onValueChange={handleTimeFilterChange}>
                 <SelectTrigger className="flex-1" dir="rtl">
                   <Calendar className="h-4 w-4 mr-2" />
@@ -361,6 +395,32 @@ const AlWaseetInvoicesTab = () => {
                   <SelectItem value="all">جميع</SelectItem>
                   <SelectItem value="pending">معلقة</SelectItem>
                   <SelectItem value="received">مُستلمة</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Account Filter */}
+              <Select value={accountFilter} onValueChange={setAccountFilter}>
+                <SelectTrigger className="flex-1" dir="rtl">
+                  <Users className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="الحساب" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    جميع الحسابات ({invoices.length})
+                  </SelectItem>
+                  {uniqueAccounts.map(account => {
+                    const count = invoices.filter(i => i.account_username === account).length;
+                    return (
+                      <SelectItem key={account} value={account}>
+                        <div className="flex items-center gap-2 w-full">
+                          <span className="font-mono font-bold">{account}</span>
+                          <Badge variant="secondary" className="text-xs ml-auto">
+                            {count}
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
             </div>

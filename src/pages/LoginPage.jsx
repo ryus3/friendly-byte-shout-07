@@ -209,7 +209,12 @@ const LoginPage = () => {
         <meta name="description" content="تسجيل الدخول إلى نظام إدارة المخزون والطلبات RYUS BRAND" />
       </Helmet>
       
-      <div className="h-screen w-screen flex items-center justify-center p-4 relative overflow-hidden font-cairo">
+      <motion.div 
+        initial={{ opacity: 0, scale: 1.05, filter: 'blur(20px)' }}
+        animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
+        transition={{ duration: 1.2, ease: [0.43, 0.13, 0.23, 0.96], delay: 0.1 }}
+        className="h-screen w-screen flex items-center justify-center p-4 relative overflow-hidden font-cairo"
+      >
         <div className="absolute top-5 right-5 z-20">
           <ThemeSwitcher />
         </div>
@@ -226,7 +231,7 @@ const LoginPage = () => {
           {view === 'register' && renderRegister()}
           {view === 'forgot' && renderForgotPassword()}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </>
   );
 };

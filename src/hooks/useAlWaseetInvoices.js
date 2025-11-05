@@ -234,15 +234,18 @@ export const useAlWaseetInvoices = () => {
 
         if (invoicesError) throw invoicesError;
 
-        if (cachedInvoices?.length > 0) {
-          // دمج البيانات في JavaScript مع أولوية لـ merchant_id
+      if (cachedInvoices?.length > 0) {
+          // دمج البيانات في JavaScript مع أولوية لـ account_username من قاعدة البيانات
           const transformedInvoices = cachedInvoices.map(inv => {
-            // محاولة المطابقة بـ merchant_id أولاً
-            let token = tokensMap[inv.merchant_id];
+            // أولوية 1: استخدام account_username المحفوظ مع الفاتورة
+            let accountUsername = inv.account_username;
+            let partnerNameAr = inv.partner_name_ar;
             
-            // إذا لم ينجح، استخدم user_id
-            if (!token) {
-              token = tokensMap[`user_${inv.owner_user_id}`];
+            // أولوية 2: إذا لم يكن محفوظاً، حاول المطابقة بـ merchant_id
+            if (!accountUsername) {
+              const token = tokensMap[inv.merchant_id] || tokensMap[`user_${inv.owner_user_id}`];
+              accountUsername = token?.account_username;
+              partnerNameAr = token?.partner_name === 'modon' ? 'مدن' : (token?.partner_name === 'alwaseet' ? 'الوسيط' : null);
             }
             
             return {
@@ -254,14 +257,21 @@ export const useAlWaseetInvoices = () => {
               updated_at: inv.issued_at,
               created_at: inv.created_at,
               raw: inv.raw,
-              // ✅ إضافة معلومات الحساب من التوكن
-              account_username: token?.account_username,
-              partner_name_ar: token?.partner_name === 'modon' ? 'مدن' : (token?.partner_name === 'alwaseet' ? 'الوسيط' : null)
+              account_username: accountUsername,
+              partner_name_ar: partnerNameAr || (activePartner === 'modon' ? 'مدن' : 'الوسيط')
             };
           });
           
+          // إحصائيات الحسابات
+          const accountsStats = {};
+          transformedInvoices.forEach(inv => {
+            const account = inv.account_username || `معرف ${inv.merchant_id}`;
+            accountsStats[account] = (accountsStats[account] || 0) + 1;
+          });
+          
           setInvoices(transformedInvoices);
-          console.log(`⚡ تحميل فوري: عرض ${transformedInvoices.length} فاتورة مع أسماء الحسابات`);
+          console.log(`⚡ تحميل فوري: عرض ${transformedInvoices.length} فاتورة`);
+          console.log('📊 إحصائيات الفواتير حسب الحساب:', accountsStats);
         }
       } catch (cacheError) {
         console.warn('تعذر تحميل الفواتير المحفوظة:', cacheError);

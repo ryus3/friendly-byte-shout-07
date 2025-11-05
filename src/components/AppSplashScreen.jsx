@@ -16,26 +16,26 @@ const AppSplashScreen = ({ onComplete }) => {
   const isDark = effectiveTheme === 'dark';
 
   useEffect(() => {
-    // محاكاة التحميل - سلس واحترافي
+    // محاكاة التحميل - سلس واحترافي (4 ثواني)
     const interval = setInterval(() => {
       setProgress(prev => {
         if (prev >= 100) {
           clearInterval(interval);
           return 100;
         }
-        return prev + 2.5;
+        return prev + 1.25; // أبطأ من 2.5 لوقت أطول
       });
-    }, 40); // سلس: 4 ثواني
+    }, 50); // 50ms * (100/1.25) = 4000ms = 4 ثواني
 
     return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
     if (progress === 100) {
-      // انتظار أطول قليلاً للانتقال السلس
+      // انتظار أطول للانتقال السلس (1 ثانية)
       const timer = setTimeout(() => {
         onComplete?.();
-      }, 500);
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, [progress, onComplete]);
@@ -88,8 +88,8 @@ const AppSplashScreen = ({ onComplete }) => {
       <motion.div
       initial={{ opacity: 0, scale: 1 }}
       animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.6, ease: "easeInOut" }}
+      exit={{ opacity: 0, scale: 0.95, filter: 'blur(20px)' }}
+      transition={{ duration: 1.2, ease: [0.43, 0.13, 0.23, 0.96] }}
         className={`fixed inset-0 z-[9999] flex items-center justify-center ${bgClass} overflow-hidden`}
       >
         {/* خلفية متحركة بتدرجات شفافة */}

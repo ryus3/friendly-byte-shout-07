@@ -146,13 +146,44 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
             </div>
           </div>
 
-          {/* ✅ المرحلة 3: عرض اسم الحساب وشركة التوصيل */}
+          {/* ✅ المرحلة 3: Header احترافي لاسم الحساب وشركة التوصيل */}
           {(invoice.account_username || invoice.partner_name_ar || invoice.merchant_id) && (
-            <div className="flex items-center justify-start gap-2 pb-2 border-b">
-              <Building className="h-4 w-4 text-primary" />
-              <span className="text-sm font-medium text-primary">
-                {invoice.partner_name_ar || 'الوسيط'} - {invoice.account_username || `حساب #${invoice.merchant_id}`}
-              </span>
+            <div className="flex items-center justify-between gap-3 pb-4 mb-4 border-b-2 border-gradient-to-r from-blue-500/20 to-purple-600/20">
+              <div className="flex items-center gap-3">
+                {/* أيقونة مع خلفية ملونة */}
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl blur-sm opacity-50"></div>
+                  <div className="relative p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
+                    <Building className="h-5 w-5 text-white" />
+                  </div>
+                </div>
+                
+                {/* معلومات الحساب */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    {invoice.partner_name_ar || 'الوسيط'}
+                  </span>
+                  
+                  {/* اسم الحساب بخط كبير وواضح */}
+                  {invoice.account_username ? (
+                    <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 font-mono tracking-wider">
+                      {invoice.account_username.toUpperCase()}
+                    </span>
+                  ) : (
+                    <span className="text-sm font-semibold text-muted-foreground">
+                      حساب #{invoice.merchant_id}
+                    </span>
+                  )}
+                </div>
+              </div>
+              
+              {/* Badge للـ merchant_id */}
+              <Badge 
+                variant="outline" 
+                className="bg-gradient-to-br from-blue-500/10 to-purple-600/10 border-blue-500/30 dark:border-purple-500/30 font-mono text-xs px-3 py-1"
+              >
+                #{invoice.merchant_id}
+              </Badge>
             </div>
           )}
 
