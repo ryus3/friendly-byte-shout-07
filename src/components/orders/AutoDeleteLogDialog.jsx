@@ -182,6 +182,14 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
       delete orderData.id;
       delete orderData.created_at;
       delete orderData.order_items;
+      delete orderData.order_number; // ✅ حذف order_number لتوليد رقم جديد تلقائياً (tracking_number يبقى كما هو)
+      
+      console.log('📝 البيانات قبل الإدراج:', {
+        tracking_number: orderData.tracking_number, // يبقى كما هو من شركة التوصيل
+        customer_phone: orderData.customer_phone,
+        customer_city: orderData.customer_city,
+        customer_province: orderData.customer_province
+      });
 
       const { data: restoredOrder, error: orderError } = await supabase
         .from('orders')

@@ -88,7 +88,11 @@ const AlWaseetInvoicesTab = () => {
     });
   }, [invoices, searchTerm, statusFilter, accountFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
 
-  // ✅ المرحلة 4: تفعيل syncAllAvailableTokens تلقائياً عند فتح تبويب الفواتير
+  // ❌ معطّل: الجلب المزدوج يسبب استبدال التصميم الجميل
+  // ✅ الاعتماد فقط على التحميل الفوري من DB في useAlWaseetInvoices hook
+  // hook useAlWaseetInvoices يجلب البيانات من DB تلقائياً ويعرض account_username صحيح
+  
+  /*
   useEffect(() => {
     if (isLoggedIn && (activePartner === 'alwaseet' || activePartner === 'modon')) {
       console.log('🔄 تبويب الفواتير نشط - جلب الفواتير تلقائياً');
@@ -107,6 +111,7 @@ const AlWaseetInvoicesTab = () => {
       }
     }
   }, [isLoggedIn, activePartner, timeFilter, fetchInvoices, syncAllAvailableTokens]);
+  */
 
   const stats = getInvoiceStats();
 
