@@ -24,6 +24,7 @@ import SyncStatusIndicator from '@/components/SyncStatusIndicator.jsx';
 import { Helmet } from 'react-helmet-async';
 import logoBlue from '@/assets/ryus-logo-blue.png';
 import logoWhite from '@/assets/ryus-logo-white.png';
+import logoDark from '@/assets/ryus-logo-dark.png';
 
 const SidebarContent = ({ onClose, isMobile }) => {
   const { user, logout } = useAuth();
@@ -307,7 +308,7 @@ const Layout = ({ children }) => {
                 </Button>
               )}
               <div className="cursor-pointer" onClick={handleHomeClick}>
-                <img className="h-14 w-auto hidden dark:block mix-blend-screen" alt="RYUS BRAND Logo Dark" src={logoWhite} />
+                <img className="h-14 w-auto hidden dark:block" alt="RYUS BRAND Logo Dark" src={logoDark} />
                 <img className="h-14 w-auto block dark:hidden mix-blend-multiply" alt="RYUS BRAND Logo Light" src={logoBlue} />
               </div>
             </div>

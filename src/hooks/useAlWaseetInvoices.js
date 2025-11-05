@@ -190,42 +190,66 @@ export const useAlWaseetInvoices = () => {
     }
   }, [fetchInvoices, user?.id]);
 
-  // Enhanced instant loading with smart caching
+    // Enhanced instant loading with smart caching
   useEffect(() => {
     if (!isLoggedIn || (activePartner !== 'alwaseet' && activePartner !== 'modon')) return;
 
     const loadInvoicesInstantly = async () => {
-      // 1. Load cached invoices from database FIRST (instant) - مع account_username
+      // ✅ المرحلة 1: جلب التوكنات والفواتير منفصلة ودمجها في JavaScript
       try {
-        const { data: cachedInvoices, error } = await supabase
+        // جلب الفواتير من قاعدة البيانات
+        const { data: cachedInvoices, error: invoicesError } = await supabase
           .from('delivery_invoices')
-          .select(`
-            *,
-            delivery_partner_tokens(account_username, partner_name)
-          `)
+          .select('*')
           .eq('partner', activePartner)
           .eq('owner_user_id', user?.id)
           .order('issued_at', { ascending: false })
           .limit(50);
 
-        if (!error && cachedInvoices?.length > 0) {
-          // Transform to match API format for consistency
-          const transformedInvoices = cachedInvoices.map(inv => ({
-            id: inv.external_id,
-            merchant_price: inv.amount,
-            delivered_orders_count: inv.orders_count,
-            status: inv.status,
-            merchant_id: inv.merchant_id,
-            updated_at: inv.issued_at,
-            created_at: inv.created_at,
-            raw: inv.raw,
-            // ✅ المرحلة 3: إضافة معلومات الحساب
-            account_username: inv.delivery_partner_tokens?.account_username,
-            partner_name_ar: inv.delivery_partner_tokens?.partner_name === 'modon' ? 'مدن' : 'الوسيط'
-          }));
+        if (invoicesError) throw invoicesError;
+
+        // جلب التوكنات منفصلة لجميع merchant_ids الموجودة في الفواتير
+        const merchantIds = [...new Set(cachedInvoices?.map(inv => inv.merchant_id).filter(Boolean))];
+        
+        let tokensMap = {};
+        if (merchantIds.length > 0) {
+          const { data: tokens, error: tokensError } = await supabase
+            .from('delivery_partner_tokens')
+            .select('merchant_id, account_username, partner_name')
+            .eq('partner_name', activePartner)
+            .in('merchant_id', merchantIds);
+          
+          if (!tokensError && tokens) {
+            // إنشاء خريطة سريعة للوصول
+            tokensMap = tokens.reduce((acc, token) => {
+              acc[token.merchant_id] = token;
+              return acc;
+            }, {});
+          }
+        }
+
+        if (cachedInvoices?.length > 0) {
+          // دمج البيانات في JavaScript
+          const transformedInvoices = cachedInvoices.map(inv => {
+            const token = tokensMap[inv.merchant_id];
+            
+            return {
+              id: inv.external_id,
+              merchant_price: inv.amount,
+              delivered_orders_count: inv.orders_count,
+              status: inv.status,
+              merchant_id: inv.merchant_id,
+              updated_at: inv.issued_at,
+              created_at: inv.created_at,
+              raw: inv.raw,
+              // ✅ إضافة معلومات الحساب من التوكن
+              account_username: token?.account_username,
+              partner_name_ar: token?.partner_name === 'modon' ? 'مدن' : (token?.partner_name === 'alwaseet' ? 'الوسيط' : null)
+            };
+          });
           
           setInvoices(transformedInvoices);
-          console.log('⚡ تحميل فوري: عرض الفواتير المحفوظة -', transformedInvoices.length);
+          console.log(`⚡ تحميل فوري: عرض ${transformedInvoices.length} فاتورة مع أسماء الحسابات`);
         }
       } catch (cacheError) {
         console.warn('تعذر تحميل الفواتير المحفوظة:', cacheError);

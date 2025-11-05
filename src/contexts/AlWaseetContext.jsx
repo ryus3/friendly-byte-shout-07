@@ -3564,6 +3564,87 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, []);
 
+  // ✅ المرحلة 2: دالة لإعادة مزامنة فاتورة محددة من API
+  const resyncSpecificInvoice = useCallback(async (invoiceId, partnerName = null) => {
+    if (!invoiceId) return { success: false, error: 'معرف الفاتورة مطلوب' };
+    
+    const partner = partnerName || activePartner;
+    
+    try {
+      // جلب token نشط لشركة التوصيل
+      const { data: tokenData, error: tokenError } = await supabase
+        .from('delivery_partner_tokens')
+        .select('token, account_username, merchant_id')
+        .eq('partner_name', partner)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (tokenError || !tokenData?.token) {
+        return { success: false, error: 'لا يوجد توكن نشط' };
+      }
+
+      console.log(`🔄 إعادة مزامنة الفاتورة ${invoiceId} من ${partner}...`);
+
+      // جلب تفاصيل الفاتورة من API
+      let invoiceOrders = null;
+      if (partner === 'modon') {
+        invoiceOrders = await ModonAPI.getInvoiceOrders(tokenData.token, invoiceId);
+      } else {
+        invoiceOrders = await AlWaseetAPI.getInvoiceOrders(tokenData.token, invoiceId);
+      }
+
+      if (!invoiceOrders?.orders || invoiceOrders.orders.length === 0) {
+        return { success: false, error: 'لم يتم العثور على طلبات في الفاتورة' };
+      }
+
+      console.log(`📦 تم جلب ${invoiceOrders.orders.length} طلب من الفاتورة ${invoiceId}`);
+
+      // حفظ الطلبات في قاعدة البيانات
+      const { data: dbInvoice } = await supabase
+        .from('delivery_invoices')
+        .select('id')
+        .eq('external_id', invoiceId)
+        .eq('partner', partner)
+        .maybeSingle();
+
+      if (dbInvoice?.id) {
+        // حفظ الطلبات في delivery_invoice_orders
+        const invoiceOrdersData = invoiceOrders.orders.map(order => ({
+          invoice_id: dbInvoice.id,
+          external_order_id: order.id?.toString(),
+          raw: order,
+          partner: partner
+        }));
+
+        const { error: upsertError } = await supabase
+          .from('delivery_invoice_orders')
+          .upsert(invoiceOrdersData, {
+            onConflict: 'invoice_id,external_order_id',
+            ignoreDuplicates: false
+          });
+
+        if (upsertError) {
+          console.warn('⚠️ خطأ في حفظ طلبات الفاتورة:', upsertError);
+        } else {
+          console.log(`✅ تم حفظ ${invoiceOrdersData.length} طلب للفاتورة ${invoiceId}`);
+        }
+      }
+
+      toast({
+        title: "✅ تم إعادة المزامنة بنجاح",
+        description: `تم تحديث ${invoiceOrders.orders.length} طلب للفاتورة ${invoiceId}`,
+        variant: "default"
+      });
+
+      return { success: true, ordersCount: invoiceOrders.orders.length };
+    } catch (error) {
+      console.error('❌ فشل في إعادة مزامنة الفاتورة:', error);
+      return { success: false, error: error.message };
+    }
+  }, [activePartner]);
+
   // ✅ المرحلة 3: مزامنة كل التوكنات المتاحة
   const syncAllAvailableTokens = useCallback(async (onProgress = null) => {
     try {
@@ -3615,7 +3696,7 @@ export const AlWaseetProvider = ({ children }) => {
             });
           }
 
-          // ✅ المرحلة 4: جلب فواتير كل حساب من API وحفظها
+          // ✅ المرحلة 4: جلب فواتير كل حساب من API وحفظها مع تفاصيلها الكاملة
           try {
             let invoicesData = [];
             
@@ -3637,8 +3718,8 @@ export const AlWaseetProvider = ({ children }) => {
                 totalInvoicesSynced += invoicesData.length;
                 console.log(`  ✅ حفظ ${invoicesData.length} فاتورة للحساب ${accountName}`);
                 
-                // جلب تفاصيل كل فاتورة وحفظ طلباتها
-                for (const invoice of invoicesData.slice(0, 5)) { // أول 5 فواتير حديثة فقط
+                // ✅ جلب تفاصيل أول 10 فواتير حديثة وحفظ طلباتها
+                for (const invoice of invoicesData.slice(0, 10)) {
                   try {
                     let invoiceOrdersData;
                     
@@ -3651,13 +3732,32 @@ export const AlWaseetProvider = ({ children }) => {
                     }
                     
                     if (invoiceOrdersData?.orders?.length > 0) {
-                      // حفظ طلبات الفاتورة
-                      await supabase.rpc('sync_alwaseet_invoice_data', {
-                        p_invoice_data: invoice,
-                        p_orders_data: invoiceOrdersData.orders
-                      });
+                      // البحث عن الفاتورة في قاعدة البيانات
+                      const { data: dbInvoice } = await supabase
+                        .from('delivery_invoices')
+                        .select('id')
+                        .eq('external_id', invoice.id)
+                        .eq('partner', partnerName)
+                        .maybeSingle();
                       
-                      console.log(`    ✅ حفظ ${invoiceOrdersData.orders.length} طلب للفاتورة ${invoice.id}`);
+                      if (dbInvoice?.id) {
+                        // حفظ الطلبات في delivery_invoice_orders
+                        const invoiceOrdersList = invoiceOrdersData.orders.map(order => ({
+                          invoice_id: dbInvoice.id,
+                          external_order_id: order.id?.toString(),
+                          raw: order,
+                          partner: partnerName
+                        }));
+                        
+                        await supabase
+                          .from('delivery_invoice_orders')
+                          .upsert(invoiceOrdersList, {
+                            onConflict: 'invoice_id,external_order_id',
+                            ignoreDuplicates: false
+                          });
+                        
+                        console.log(`    📦 حفظ ${invoiceOrdersList.length} طلب للفاتورة ${invoice.id}`);
+                      }
                     }
                   } catch (invoiceErr) {
                     console.warn(`    ⚠️ فشل في جلب تفاصيل الفاتورة ${invoice.id}:`, invoiceErr.message);
@@ -4269,6 +4369,7 @@ export const AlWaseetProvider = ({ children }) => {
     
     // ✅ المراحل الجديدة - الحل الشامل
     linkInvoiceOrdersToOrders,      // المرحلة 1: ربط الفواتير بالطلبات
+    resyncSpecificInvoice,           // المرحلة 2: إعادة مزامنة فاتورة محددة
     syncAllAvailableTokens,          // المرحلة 3: مزامنة كل التوكنات
     
     // Sync status exports
