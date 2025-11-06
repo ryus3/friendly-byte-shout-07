@@ -39,7 +39,7 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
   const [newStatus, setNewStatus] = useState(order?.status);
   const [syncing, setSyncing] = useState(false);
   const [checkingInvoice, setCheckingInvoice] = useState(false);
-  const { syncOrderByTracking, syncOrderByQR, forceSyncOrder, activePartner, isLoggedIn } = useAlWaseet();
+  const { syncOrderByTracking, syncOrderByQR, activePartner, isLoggedIn } = useAlWaseet();
   const { trackingData, loading: trackingLoading } = useDeliveryTracking(order?.id);
 
   React.useEffect(() => {
@@ -94,22 +94,8 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
 
     setSyncing(true);
     try {
-      console.log('🔥 بدء المزامنة القسرية الشاملة للطلب:', order.tracking_number);
-      
-      // ✅ استخدام دالة forceSyncOrder الشاملة
-      const syncResult = await forceSyncOrder(order.tracking_number);
-      
-      if (!syncResult?.success) {
-        toast({
-          title: "❌ فشلت المزامنة",
-          description: syncResult?.error || 'لم يتم العثور على الطلب في Al-Waseet',
-          variant: "destructive",
-          duration: 8000
-        });
-        return;
-      }
-
-      console.log('✅ نجحت المزامنة عبر:', syncResult.method, '(حساب:', syncResult.account, ')');
+      // استخدام الدالة الجديدة للمزامنة المباشرة
+      const syncResult = await syncOrderByQR(order.tracking_number);
       
       // التحقق من الحذف التلقائي
       if (syncResult && syncResult.autoDeleted) {
