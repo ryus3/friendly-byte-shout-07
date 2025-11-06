@@ -300,10 +300,11 @@ export const receiveInvoice = async (token, invoiceId) => {
   return handleApiCall('receive_merchant_invoice', 'GET', token, null, { token, invoice_id: invoiceId });
 };
 
-// Get specific order by QR/tracking number - طريقة موثوقة مع fallback لـ bulk API
+// Get specific order by QR/tracking number - طريقة موثوقة لحماية نظام الحذف التلقائي
 export const getOrderByQR = async (token, qrId) => {
   try {
-    // ✅ **الطريقة الأولى**: جلب كل الطلبات والبحث فيها
+    // ✅ **الطريقة الموثوقة**: جلب كل الطلبات والبحث فيها
+    // هذه الطريقة **لا** تُرجع بيانات cached للطلبات المحذوفة
     const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
     
     if (!orders || !Array.isArray(orders)) {
@@ -318,37 +319,18 @@ export const getOrderByQR = async (token, qrId) => {
     );
     
     if (found) {
+      // ✅ إضافة timestamp للتحقق من حداثة البيانات
       found._fetched_at = new Date().toISOString();
+      // ✅ توحيد: ضمان وجود qr_id دائماً
       if (!found.qr_id && found.id) {
         found.qr_id = found.id;
       }
-      console.log(`✅ تم العثور على الطلب ${qrId} في merchant-orders (${orders.length} طلب)`);
-      return found;
+      console.log(`✅ تم العثور على الطلب ${qrId} في القائمة (${orders.length} طلب)`);
+    } else {
+      console.log(`🗑️ الطلب ${qrId} غير موجود في قائمة الطلبات (${orders.length} طلب) - محذوف أو غير موجود`);
     }
     
-    // ⚠️ **الطلب غير موجود في merchant-orders** - محتمل أنه قديم أو بحالة '4'
-    console.log(`⚠️ الطلب ${qrId} غير موجود في merchant-orders - استخدام bulk API...`);
-    
-    // ✅ **Fallback**: استخدام get-orders-by-ids-bulk للطلبات القديمة/المكتملة
-    try {
-      const bulkResults = await getOrdersByIdsBulk(token, [qrId]);
-      
-      if (bulkResults && bulkResults.length > 0) {
-        const bulkFound = bulkResults[0];
-        bulkFound._fetched_at = new Date().toISOString();
-        if (!bulkFound.qr_id && bulkFound.id) {
-          bulkFound.qr_id = bulkFound.id;
-        }
-        console.log(`✅ تم العثور على الطلب ${qrId} عبر bulk API`);
-        return bulkFound;
-      }
-    } catch (bulkError) {
-      console.warn(`❌ فشل جلب الطلب ${qrId} عبر bulk API:`, bulkError);
-    }
-    
-    console.log(`🗑️ الطلب ${qrId} غير موجود في merchant-orders ولا bulk API`);
-    return null;
-    
+    return found || null;
   } catch (error) {
     console.error(`❌ فشل جلب قائمة الطلبات:`, error);
     return null;

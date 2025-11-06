@@ -621,9 +621,6 @@ export const AlWaseetProvider = ({ children }) => {
             }))
           });
 
-          // تتبع الطلبات المفقودة من merchant-orders
-          const missingOrders = [];
-
           // تحديث كل طلب محلي بناءً على بيانات الوسيط
           for (const localOrder of employeeOrders) {
             const trackingIds = [
@@ -726,100 +723,82 @@ export const AlWaseetProvider = ({ children }) => {
                 devLog.log(`⏰ تم تحديث وقت ${localOrder.tracking_number} (لا تغيير في البيانات)`);
               }
             } else {
-              // ⚠️ الطلب غير موجود في getMerchantOrders - إضافة لقائمة المفقودة
-              missingOrders.push(localOrder);
-            }
-          }
-
-          // ✅ **جلب الطلبات المفقودة عبر bulk API** (دفعات 25 طلب)
-          if (missingOrders.length > 0) {
-            devLog.log(`📦 جلب ${missingOrders.length} طلب مفقود عبر bulk API للموظف ${employeeId}...`);
-            
-            // تقسيم لدفعات 25 طلب
-            for (let i = 0; i < missingOrders.length; i += 25) {
-              const batch = missingOrders.slice(i, i + 25);
-              const batchIds = batch.map(o => o.qr_id || o.tracking_number).filter(Boolean);
+              // ⚠️ الطلب غير موجود في getMerchantOrders
+              // (ربما مكتمل delivery_status=4 أو قديم)
+              // استخدام getOrderById كـ fallback
               
-              if (batchIds.length === 0) continue;
+              devLog.warn(`⚠️ الطلب ${localOrder.tracking_number} غير موجود في merchant-orders`);
+              devLog.log(`   → جلبه مباشرة باستخدام getOrderById...`);
               
               try {
-                const bulkResults = await AlWaseetAPI.getOrdersByIdsBulk(employeeTokenData.token, batchIds);
+                const directOrder = await AlWaseetAPI.getOrderById(
+                  employeeTokenData.token,
+                  localOrder.qr_id || localOrder.tracking_number
+                );
                 
-                if (bulkResults && bulkResults.length > 0) {
-                  devLog.log(`📥 استلام ${bulkResults.length} طلب من bulk API`);
+                if (directOrder) {
+                  // تطبيق نفس منطق التحديث
+                  const statusId = directOrder.status_id || directOrder.state_id;
+                  let newDeliveryStatus;
                   
-                  // معالجة كل طلب مُسترجع
-                  for (const remoteOrder of bulkResults) {
-                    const localOrder = batch.find(o => 
-                      (o.qr_id && o.qr_id === String(remoteOrder.qr_id || remoteOrder.id)) ||
-                      (o.tracking_number && o.tracking_number === String(remoteOrder.qr_id || remoteOrder.id))
-                    );
-                    
-                    if (!localOrder) continue;
-                    
-                    // تطبيق نفس منطق التحديث
-                    const statusId = remoteOrder.status_id || remoteOrder.state_id;
-                    let newDeliveryStatus;
-                    
-                    if (statusId) {
-                      newDeliveryStatus = String(statusId);
-                    } else if (remoteOrder.status_text === 'تم التسليم للزبون') {
-                      newDeliveryStatus = '4';
-                    } else if (remoteOrder.status_text === 'تم الارجاع الى التاجر') {
-                      newDeliveryStatus = '17';
+                  if (statusId) {
+                    newDeliveryStatus = String(statusId);
+                  } else if (directOrder.status_text === 'تم التسليم للزبون') {
+                    newDeliveryStatus = '4';
+                  } else if (directOrder.status_text === 'تم الارجاع الى التاجر') {
+                    newDeliveryStatus = '17';
+                  } else {
+                    newDeliveryStatus = directOrder.status_text;
+                  }
+                  
+                  const statusConfig = getStatusConfig(newDeliveryStatus);
+                  const newStatus = statusConfig.localStatus;
+                  const newDeliveryFee = parseFloat(directOrder.delivery_fee) || 0;
+                  const newReceiptReceived = statusConfig.receiptReceived;
+
+                  const needsUpdate = (
+                    localOrder.delivery_status !== newDeliveryStatus ||
+                    localOrder.status !== newStatus ||
+                    localOrder.delivery_fee !== newDeliveryFee ||
+                    localOrder.receipt_received !== newReceiptReceived ||
+                    !localOrder.delivery_partner_order_id
+                  );
+
+                  if (needsUpdate) {
+                    const updates = {
+                      delivery_status: newDeliveryStatus,
+                      status: newStatus,
+                      delivery_fee: newDeliveryFee,
+                      receipt_received: newReceiptReceived,
+                      delivery_partner_order_id: directOrder.id || directOrder.order_id,
+                      updated_at: new Date().toISOString()
+                    };
+
+                    const { error } = await supabase
+                      .from('orders')
+                      .update(updates)
+                      .eq('id', localOrder.id);
+
+                    if (!error) {
+                      totalUpdated++;
+                      devLog.log(`✅ تم تحديث ${localOrder.tracking_number} عبر getOrderById (fallback)`);
                     } else {
-                      newDeliveryStatus = remoteOrder.status_text;
+                      console.error(`❌ خطأ تحديث ${localOrder.tracking_number}:`, error);
                     }
+                  } else {
+                    // تحديث الوقت فقط (لإظهار أن المزامنة حدثت)
+                    await supabase
+                      .from('orders')
+                      .update({ updated_at: new Date().toISOString() })
+                      .eq('id', localOrder.id);
                     
-                    const statusConfig = getStatusConfig(newDeliveryStatus);
-                    const newStatus = statusConfig.localStatus;
-                    const newDeliveryFee = parseFloat(remoteOrder.delivery_fee) || 0;
-                    const newReceiptReceived = statusConfig.receiptReceived;
-
-                    const needsUpdate = (
-                      localOrder.delivery_status !== newDeliveryStatus ||
-                      localOrder.status !== newStatus ||
-                      localOrder.delivery_fee !== newDeliveryFee ||
-                      localOrder.receipt_received !== newReceiptReceived ||
-                      !localOrder.delivery_partner_order_id
-                    );
-
-                    if (needsUpdate) {
-                      const updates = {
-                        delivery_status: newDeliveryStatus,
-                        status: newStatus,
-                        delivery_fee: newDeliveryFee,
-                        receipt_received: newReceiptReceived,
-                        delivery_partner_order_id: remoteOrder.id || remoteOrder.order_id,
-                        updated_at: new Date().toISOString()
-                      };
-
-                      const { error } = await supabase
-                        .from('orders')
-                        .update(updates)
-                        .eq('id', localOrder.id);
-
-                      if (!error) {
-                        totalUpdated++;
-                        devLog.log(`✅ تم تحديث ${localOrder.tracking_number} عبر bulk API`);
-                      } else {
-                        console.error(`❌ خطأ تحديث ${localOrder.tracking_number}:`, error);
-                      }
-                    } else {
-                      // تحديث الوقت فقط
-                      await supabase
-                        .from('orders')
-                        .update({ updated_at: new Date().toISOString() })
-                        .eq('id', localOrder.id);
-                      
-                      devLog.log(`⏰ تم تحديث وقت ${localOrder.tracking_number} عبر bulk API (لا تغيير)`);
-                    }
+                    devLog.log(`⏰ تم تحديث وقت ${localOrder.tracking_number} عبر fallback (لا تغيير)`);
                   }
                 } else {
-                  devLog.warn(`⚠️ لم يتم استرجاع أي طلبات من bulk API للدفعة ${i/25 + 1}`);
+                  devLog.warn(`❌ الطلب ${localOrder.tracking_number} غير موجود حتى في getOrderById!`);
                 }
-              } catch (bulkError) {
-                console.error(`❌ خطأ في جلب الطلبات عبر bulk API:`, bulkError);
+              } catch (directError) {
+                console.error(`❌ خطأ جلب ${localOrder.tracking_number} مباشرة:`, directError);
               }
             }
           }
