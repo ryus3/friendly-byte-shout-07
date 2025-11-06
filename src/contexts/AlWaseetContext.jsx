@@ -632,23 +632,6 @@ export const AlWaseetProvider = ({ children }) => {
               localOrder.delivery_partner_order_id
             ].filter(Boolean);
 
-            // 🔍 Logging للطلبات الأربعة المشكلة
-            const isProblematicOrder = ['109884527', '109884534', '109884515', '109807573'].includes(String(localOrder.tracking_number));
-            if (isProblematicOrder) {
-              devLog.log(`🔍 محاولة مطابقة الطلب ${localOrder.tracking_number}:`, {
-                localIds: trackingIds,
-                totalRemoteOrders: merchantOrders.length,
-                remoteSample: merchantOrders.slice(0, 2).map(ro => ({
-                  id: ro.id,
-                  qr_id: ro.qr_id,
-                  tracking_number: ro.tracking_number,
-                  order_id: ro.order_id,
-                  status_id: ro.status_id,
-                  status_text: ro.status_text
-                }))
-              });
-            }
-
             // البحث عن الطلب في بيانات الوسيط
             const isModon = employeeTokenData.partner_name === 'modon';
             const remoteOrder = merchantOrders.find(ro => {
@@ -659,38 +642,15 @@ export const AlWaseetProvider = ({ children }) => {
                   String(ro.qr_id) === String(id)
                 );
               } else {
-                // AlWaseet يستخدم: tracking_number, qr_id, id, order_id - مع String conversion
-                return trackingIds.some(localId => {
-                  const localIdStr = String(localId || '');
-                  const match = (
-                    String(ro.tracking_number || '') === localIdStr ||
-                    String(ro.qr_id || '') === localIdStr ||
-                    String(ro.id || '') === localIdStr ||
-                    String(ro.order_id || '') === localIdStr
-                  );
-                  
-                  if (isProblematicOrder && match) {
-                    devLog.log(`  ✅ تم العثور على مطابقة:`, {
-                      localId: localIdStr,
-                      remoteId: ro.id,
-                      remoteQr: ro.qr_id,
-                      remoteTracking: ro.tracking_number,
-                      status_id: ro.status_id,
-                      status_text: ro.status_text
-                    });
-                  }
-                  
-                  return match;
-                });
+                // AlWaseet يستخدم: tracking_number, qr_id, id, order_id
+                return trackingIds.some(id => 
+                  ro.tracking_number === id || 
+                  ro.qr_id === id || 
+                  ro.id === id ||
+                  ro.order_id === id
+                );
               }
             });
-            
-            if (isProblematicOrder) {
-              devLog.log(`  📊 نتيجة المطابقة للطلب ${localOrder.tracking_number}:`, remoteOrder ? '✅ وُجد' : '❌ لم يُوجد');
-              if (!remoteOrder) {
-                devLog.warn(`  ⚠️ الطلب ${localOrder.tracking_number} سيُضاف للطلبات المفقودة`);
-              }
-            }
 
             if (remoteOrder) {
               // ✅ الطلب موجود في getMerchantOrders - تحديث عادي
@@ -774,54 +734,28 @@ export const AlWaseetProvider = ({ children }) => {
           // ✅ **جلب الطلبات المفقودة عبر bulk API** (دفعات 25 طلب)
           if (missingOrders.length > 0) {
             devLog.log(`📦 جلب ${missingOrders.length} طلب مفقود عبر bulk API للموظف ${employeeId}...`);
-            devLog.log(`📋 الطلبات المفقودة:`, missingOrders.map(o => o.tracking_number));
             
             // تقسيم لدفعات 25 طلب
             for (let i = 0; i < missingOrders.length; i += 25) {
               const batch = missingOrders.slice(i, i + 25);
-              // استخدام delivery_partner_order_id أولاً، ثم qr_id، ثم tracking_number
-              const batchIds = batch.map(o => 
-                o.delivery_partner_order_id || o.qr_id || o.tracking_number
-              ).filter(Boolean);
+              const batchIds = batch.map(o => o.qr_id || o.tracking_number).filter(Boolean);
               
               if (batchIds.length === 0) continue;
-              
-              devLog.log(`🔎 إرسال bulk API request للدفعة ${i/25 + 1}:`, batchIds);
               
               try {
                 const bulkResults = await AlWaseetAPI.getOrdersByIdsBulk(employeeTokenData.token, batchIds);
                 
                 if (bulkResults && bulkResults.length > 0) {
-                  devLog.log(`📥 استلام ${bulkResults.length} طلب من bulk API:`, 
-                    bulkResults.map(r => ({ id: r.id, qr: r.qr_id, tracking: r.tracking_number, status: r.status_text }))
-                  );
+                  devLog.log(`📥 استلام ${bulkResults.length} طلب من bulk API`);
                   
                   // معالجة كل طلب مُسترجع
                   for (const remoteOrder of bulkResults) {
-                    // تحسين المطابقة مع String conversion
-                    const localOrder = batch.find(o => {
-                      const localIds = [
-                        String(o.qr_id || ''),
-                        String(o.tracking_number || ''),
-                        String(o.delivery_partner_order_id || '')
-                      ].filter(Boolean);
-                      
-                      const remoteIds = [
-                        String(remoteOrder.qr_id || ''),
-                        String(remoteOrder.id || ''),
-                        String(remoteOrder.tracking_number || ''),
-                        String(remoteOrder.order_id || '')
-                      ].filter(Boolean);
-                      
-                      return localIds.some(localId => remoteIds.includes(localId));
-                    });
+                    const localOrder = batch.find(o => 
+                      (o.qr_id && o.qr_id === String(remoteOrder.qr_id || remoteOrder.id)) ||
+                      (o.tracking_number && o.tracking_number === String(remoteOrder.qr_id || remoteOrder.id))
+                    );
                     
-                    if (!localOrder) {
-                      devLog.warn(`⚠️ لم يتم العثور على مطابقة محلية للطلب البعيد:`, remoteOrder.id);
-                      continue;
-                    }
-                    
-                    devLog.log(`🔗 تم العثور على مطابقة: ${localOrder.tracking_number} <-> ${remoteOrder.id}`);
+                    if (!localOrder) continue;
                     
                     // تطبيق نفس منطق التحديث
                     const statusId = remoteOrder.status_id || remoteOrder.state_id;
@@ -867,32 +801,22 @@ export const AlWaseetProvider = ({ children }) => {
 
                       if (!error) {
                         totalUpdated++;
-                        devLog.log(`✅ [BULK API] تحديث ${localOrder.tracking_number}:`, {
-                          من: localOrder.delivery_status,
-                          إلى: newDeliveryStatus,
-                          النص: remoteOrder.status_text,
-                          delivery_partner_order_id: remoteOrder.id || remoteOrder.order_id
-                        });
+                        devLog.log(`✅ تم تحديث ${localOrder.tracking_number} عبر bulk API`);
                       } else {
                         console.error(`❌ خطأ تحديث ${localOrder.tracking_number}:`, error);
                       }
                     } else {
-                      // تحديث delivery_partner_order_id والوقت إذا كان فارغاً
-                      const partialUpdates = { updated_at: new Date().toISOString() };
-                      if (!localOrder.delivery_partner_order_id && (remoteOrder.id || remoteOrder.order_id)) {
-                        partialUpdates.delivery_partner_order_id = remoteOrder.id || remoteOrder.order_id;
-                      }
-                      
+                      // تحديث الوقت فقط
                       await supabase
                         .from('orders')
-                        .update(partialUpdates)
+                        .update({ updated_at: new Date().toISOString() })
                         .eq('id', localOrder.id);
                       
                       devLog.log(`⏰ تم تحديث وقت ${localOrder.tracking_number} عبر bulk API (لا تغيير)`);
                     }
                   }
                 } else {
-                  devLog.warn(`⚠️ لم يتم استرجاع أي طلبات من bulk API للدفعة ${i/25 + 1}. الطلبات المطلوبة:`, batchIds);
+                  devLog.warn(`⚠️ لم يتم استرجاع أي طلبات من bulk API للدفعة ${i/25 + 1}`);
                 }
               } catch (bulkError) {
                 console.error(`❌ خطأ في جلب الطلبات عبر bulk API:`, bulkError);
