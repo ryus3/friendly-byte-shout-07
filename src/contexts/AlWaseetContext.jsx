@@ -4427,6 +4427,182 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [normalizeUsername, toast]);
 
+  // 🔥 دالة المزامنة القسرية الشاملة - تحاول جميع الطرق الممكنة
+  const forceSyncOrder = useCallback(async (trackingNumber) => {
+    if (!trackingNumber) {
+      console.error('❌ لا يوجد tracking_number للمزامنة');
+      return { success: false, error: 'لا يوجد رقم تتبع' };
+    }
+
+    console.log('🔥 بدء المزامنة القسرية الشاملة للطلب:', trackingNumber);
+    
+    try {
+      // جلب الطلب المحلي للتحقق من صاحبه
+      const { data: localOrder } = await scopeOrdersQuery(
+        supabase
+          .from('orders')
+          .select('*, order_items(*)')
+          .or(`tracking_number.eq.${trackingNumber},qr_id.eq.${trackingNumber},delivery_partner_order_id.eq.${trackingNumber}`)
+      ).maybeSingle();
+
+      if (!localOrder) {
+        console.error('❌ الطلب غير موجود في قاعدة البيانات المحلية');
+        return { success: false, error: 'الطلب غير موجود محلياً' };
+      }
+
+      // الحصول على جميع حسابات المالك
+      const ownerAccounts = await getUserDeliveryAccounts(localOrder.created_by, 'alwaseet');
+      console.log(`🔑 وُجد ${ownerAccounts.length} حساب للمالك ${localOrder.created_by}`);
+
+      let remoteOrder = null;
+      let usedMethod = null;
+      let usedAccount = null;
+
+      // ✅ الطريقة 1: محاولة bulk API مع جميع الحسابات
+      console.log('📥 الطريقة 1: bulk API...');
+      for (const account of ownerAccounts) {
+        if (!account.token) continue;
+        
+        try {
+          console.log(`   🔄 محاولة bulk API بحساب: ${account.account_username}`);
+          const bulkResults = await AlWaseetAPI.getOrdersByIdsBulk(account.token, [trackingNumber]);
+          
+          if (bulkResults && bulkResults.length > 0) {
+            remoteOrder = bulkResults[0];
+            usedMethod = 'bulk API';
+            usedAccount = account.account_username;
+            console.log(`   ✅ نجحت bulk API بحساب: ${account.account_username}`);
+            break;
+          }
+        } catch (error) {
+          console.warn(`   ⚠️ فشلت bulk API بحساب ${account.account_username}:`, error.message);
+        }
+      }
+
+      // ✅ الطريقة 2: getOrderByQR مع جميع الحسابات
+      if (!remoteOrder) {
+        console.log('📥 الطريقة 2: getOrderByQR...');
+        for (const account of ownerAccounts) {
+          if (!account.token) continue;
+          
+          try {
+            console.log(`   🔄 محاولة getOrderByQR بحساب: ${account.account_username}`);
+            const qrOrder = await AlWaseetAPI.getOrderByQR(account.token, trackingNumber);
+            
+            if (qrOrder) {
+              remoteOrder = qrOrder;
+              usedMethod = 'getOrderByQR';
+              usedAccount = account.account_username;
+              console.log(`   ✅ نجحت getOrderByQR بحساب: ${account.account_username}`);
+              break;
+            }
+          } catch (error) {
+            console.warn(`   ⚠️ فشلت getOrderByQR بحساب ${account.account_username}:`, error.message);
+          }
+        }
+      }
+
+      // ✅ الطريقة 3: getMerchantOrders مع جميع الحسابات
+      if (!remoteOrder) {
+        console.log('📥 الطريقة 3: getMerchantOrders...');
+        for (const account of ownerAccounts) {
+          if (!account.token) continue;
+          
+          try {
+            console.log(`   🔄 محاولة getMerchantOrders بحساب: ${account.account_username}`);
+            const merchantOrders = await AlWaseetAPI.getMerchantOrders(account.token);
+            
+            const foundOrder = merchantOrders.find(o => 
+              String(o.id) === String(trackingNumber) ||
+              String(o.qr_id) === String(trackingNumber) ||
+              String(o.tracking_number) === String(trackingNumber)
+            );
+            
+            if (foundOrder) {
+              remoteOrder = foundOrder;
+              usedMethod = 'getMerchantOrders';
+              usedAccount = account.account_username;
+              console.log(`   ✅ نجحت getMerchantOrders بحساب: ${account.account_username}`);
+              break;
+            }
+          } catch (error) {
+            console.warn(`   ⚠️ فشلت getMerchantOrders بحساب ${account.account_username}:`, error.message);
+          }
+        }
+      }
+
+      // ❌ لم يُعثر على الطلب في أي من الطرق
+      if (!remoteOrder) {
+        console.error(`❌ فشلت جميع الطرق - الطلب ${trackingNumber} غير موجود في Al-Waseet`);
+        return { 
+          success: false, 
+          error: 'الطلب غير موجود في Al-Waseet بجميع الحسابات المتاحة',
+          methods_tried: ['bulk API', 'getOrderByQR', 'getMerchantOrders'],
+          accounts_tried: ownerAccounts.length
+        };
+      }
+
+      console.log(`✅ تم العثور على الطلب عبر: ${usedMethod} (حساب: ${usedAccount})`);
+      console.log('📋 بيانات الطلب من Al-Waseet:', {
+        id: remoteOrder.id,
+        qr_id: remoteOrder.qr_id,
+        status_id: remoteOrder.status_id,
+        status_text: remoteOrder.status_text || remoteOrder.status,
+        price: remoteOrder.price,
+        delivery_price: remoteOrder.delivery_price
+      });
+
+      // ✅ تحديث الطلب قسرياً
+      const statusId = remoteOrder.status_id || remoteOrder.state_id;
+      let newDeliveryStatus = String(statusId);
+
+      if (!statusId) {
+        const statusText = String(remoteOrder.status_text || remoteOrder.status || '').toLowerCase();
+        if (statusText.includes('تسليم') && statusText.includes('زبون')) {
+          newDeliveryStatus = '4';
+        } else if (statusText.includes('ارجاع') && statusText.includes('تاجر')) {
+          newDeliveryStatus = '17';
+        }
+      }
+
+      const statusConfig = getStatusConfig(newDeliveryStatus);
+      const updates = {
+        delivery_status: newDeliveryStatus,
+        status: statusConfig.localStatus,
+        delivery_fee: parseFloat(remoteOrder.delivery_price) || localOrder.delivery_fee || 0,
+        receipt_received: statusConfig.receiptReceived,
+        delivery_partner_order_id: remoteOrder.id || remoteOrder.order_id,
+        updated_at: new Date().toISOString()
+      };
+
+      console.log('🔄 تطبيق التحديثات القسرية:', updates);
+
+      const { error: updateError } = await supabase
+        .from('orders')
+        .update(updates)
+        .eq('id', localOrder.id);
+
+      if (updateError) {
+        console.error('❌ خطأ في تحديث الطلب:', updateError);
+        return { success: false, error: updateError.message };
+      }
+
+      console.log(`✅ تم تحديث الطلب ${trackingNumber} قسرياً بنجاح`);
+      
+      return {
+        success: true,
+        method: usedMethod,
+        account: usedAccount,
+        updates,
+        remoteData: remoteOrder
+      };
+
+    } catch (error) {
+      console.error('❌ خطأ في المزامنة القسرية:', error);
+      return { success: false, error: error.message };
+    }
+  }, [getUserDeliveryAccounts, scopeOrdersQuery, getStatusConfig]);
+
   const value = {
     isLoggedIn,
     token,
@@ -4476,6 +4652,9 @@ export const AlWaseetProvider = ({ children }) => {
     linkInvoiceOrdersToOrders,      // المرحلة 1: ربط الفواتير بالطلبات
     resyncSpecificInvoice,           // المرحلة 2: إعادة مزامنة فاتورة محددة
     syncAllAvailableTokens,          // المرحلة 3: مزامنة كل التوكنات
+    
+    // 🔥 المزامنة القسرية الشاملة
+    forceSyncOrder,                  // المزامنة القسرية - تجرب جميع الطرق
     
     // Sync status exports
     isSyncing,
