@@ -70,6 +70,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
     text: 'تم التسليم للزبون',
     icon: CheckCircle,
     internalStatus: 'delivered',
+    localStatus: 'delivered',
     canDelete: false,
     canEdit: false,
     releasesStock: true, // الحالة الوحيدة التي تحرر المخزون للبيع
