@@ -16,18 +16,22 @@ const AppSplashScreen = ({ onComplete }) => {
   const isDark = effectiveTheme === 'dark';
 
   useEffect(() => {
-    // محاكاة التحميل - سلس واحترافي (4 ثواني)
-    const interval = setInterval(() => {
+    const duration = 2800; // 2.8 seconds to match App.jsx transition
+    const interval = 28; // Update every 28ms (2800/100 = 28ms per 1%)
+    const step = 100 / (duration / interval);
+    
+    const timer = setInterval(() => {
       setProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
+        const next = prev + step;
+        if (next >= 100) {
+          clearInterval(timer);
           return 100;
         }
-        return prev + 1.67; // 3 ثواني (100 / 1.67 * 50ms ≈ 3000ms)
+        return next;
       });
-    }, 50);
+    }, interval);
 
-    return () => clearInterval(interval);
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {

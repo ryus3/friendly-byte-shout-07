@@ -663,11 +663,31 @@ export const AlWaseetProvider = ({ children }) => {
                 
                 if (statusId) {
                   newDeliveryStatus = String(statusId);
-                } else if (remoteOrder.status_text === 'تم التسليم للزبون') {
+                } 
+                // ✅ Fallback 1: state_id للتسليم
+                else if (remoteOrder.state_id === 4 || remoteOrder.state_id === '4') {
                   newDeliveryStatus = '4';
-                } else if (remoteOrder.status_text === 'تم الارجاع الى التاجر') {
+                  console.log('✅ تم استنتاج الحالة 4 من state_id');
+                }
+                // ✅ Fallback 2: status_text يحتوي "تسليم"
+                else if (remoteOrder.status_text && (
+                  remoteOrder.status_text.includes('تسليم') || 
+                  remoteOrder.status_text.toLowerCase().includes('deliver')
+                )) {
+                  newDeliveryStatus = '4';
+                  console.log('✅ تم استنتاج الحالة 4 من status_text:', remoteOrder.status_text);
+                }
+                // ✅ Fallback 3: deliver_confirmed_fin
+                else if (remoteOrder.deliver_confirmed_fin === 1 || remoteOrder.deliver_confirmed_fin === '1') {
+                  newDeliveryStatus = '4';
+                  console.log('✅ تم استنتاج الحالة 4 من deliver_confirmed_fin');
+                }
+                // Fallback 4: status_text للإرجاع
+                else if (remoteOrder.status_text === 'تم الارجاع الى التاجر') {
                   newDeliveryStatus = '17';
-                } else {
+                } 
+                // Fallback 5: استخدام النص كما هو
+                else {
                   newDeliveryStatus = remoteOrder.status_text;
                 }
               }
@@ -743,11 +763,31 @@ export const AlWaseetProvider = ({ children }) => {
                   
                   if (statusId) {
                     newDeliveryStatus = String(statusId);
-                  } else if (directOrder.status_text === 'تم التسليم للزبون') {
+                  } 
+                  // ✅ Fallback 1: state_id للتسليم
+                  else if (directOrder.state_id === 4 || directOrder.state_id === '4') {
                     newDeliveryStatus = '4';
-                  } else if (directOrder.status_text === 'تم الارجاع الى التاجر') {
+                    console.log('✅ تم استنتاج الحالة 4 من state_id (getOrderById)');
+                  }
+                  // ✅ Fallback 2: status_text يحتوي "تسليم"
+                  else if (directOrder.status_text && (
+                    directOrder.status_text.includes('تسليم') || 
+                    directOrder.status_text.toLowerCase().includes('deliver')
+                  )) {
+                    newDeliveryStatus = '4';
+                    console.log('✅ تم استنتاج الحالة 4 من status_text (getOrderById):', directOrder.status_text);
+                  }
+                  // ✅ Fallback 3: deliver_confirmed_fin
+                  else if (directOrder.deliver_confirmed_fin === 1 || directOrder.deliver_confirmed_fin === '1') {
+                    newDeliveryStatus = '4';
+                    console.log('✅ تم استنتاج الحالة 4 من deliver_confirmed_fin (getOrderById)');
+                  }
+                  // Fallback 4: status_text للإرجاع
+                  else if (directOrder.status_text === 'تم الارجاع الى التاجر') {
                     newDeliveryStatus = '17';
-                  } else {
+                  } 
+                  // Fallback 5: استخدام النص كما هو
+                  else {
                     newDeliveryStatus = directOrder.status_text;
                   }
                   
