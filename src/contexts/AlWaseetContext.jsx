@@ -419,11 +419,11 @@ export const AlWaseetProvider = ({ children }) => {
       
       // ✅ استبعاد الحالات النهائية تماماً فقط:
       // 1. delivery_status = '17' (راجع للتاجر) - نهائية
-      // 2. status = 'completed' (مكتمل) - نهائية
+      // 2. status = 'completed' AND receipt_received = true (مكتمل بفاتورة) - نهائية
       // 3. status = 'returned_in_stock' (راجع للمخزن) - نهائية
       
       if (order.delivery_status === '17') return false;
-      if (order.status === 'completed') return false;
+      if (order.status === 'completed' && order.receipt_received === true) return false;
       if (order.status === 'returned_in_stock') return false;
       
       // ✅ السماح بمزامنة جميع الحالات الأخرى بما فيها:
@@ -650,6 +650,19 @@ export const AlWaseetProvider = ({ children }) => {
             });
 
             if (remoteOrder) {
+              // 🔍 Logging للطلبات العالقة فقط
+              if (['109884515', '109884504', '109807573', '109700915'].includes(localOrder.tracking_number)) {
+                console.log('🔍 تحليل مفصل للطلب العالق:', localOrder.tracking_number);
+                console.log('📦 البيانات من API الوسيط:', JSON.stringify({
+                  status_id: remoteOrder.status_id,
+                  state_id: remoteOrder.state_id,
+                  status_text: remoteOrder.status_text,
+                  deliver_confirmed_fin: remoteOrder.deliver_confirmed_fin,
+                  id: remoteOrder.id,
+                  qr_id: remoteOrder.qr_id
+                }, null, 2));
+              }
+              
               // ✅ الطلب موجود في getMerchantOrders - تحديث عادي
               let statusId, newDeliveryStatus;
               

@@ -12,7 +12,7 @@ export class AutoSyncInvoiceService {
           receipt_received_at: new Date().toISOString(),
           receipt_received_by: '91484496-b887-44f7-9e5d-be9db5567604',
           delivery_partner_invoice_id: invoiceId,
-          status: 'completed', // Manager orders become completed automatically
+          // ✅ لا تغيير في status - يبقى delivered حتى تتم تسوية المستحقات
           updated_at: new Date().toISOString()
         })
         .eq('tracking_number', trackingNumber)
