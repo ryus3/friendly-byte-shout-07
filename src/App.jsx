@@ -16,9 +16,6 @@ import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 import { useAppStartSync } from '@/hooks/useAppStartSync';
 import AppSplashScreen from '@/components/AppSplashScreen.jsx';
 
-// تحميل دوال إصلاح الطلبات للـ console
-import '@/utils/fixOrderStatus.js';
-
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 
