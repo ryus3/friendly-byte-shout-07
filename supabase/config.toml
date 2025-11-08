@@ -27,3 +27,7 @@ verify_jwt = true
 # Product cache management
 [functions.refresh-product-cache]
 verify_jwt = false
+
+# Auto sync order updates from delivery partners
+[functions.sync-order-updates]
+verify_jwt = false

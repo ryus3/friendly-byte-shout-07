@@ -36,6 +36,7 @@ import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import UnifiedEmployeeProfitsManager from '@/components/manage-employees/UnifiedEmployeeProfitsManager';
 import BackupSystemDialog from '@/components/settings/BackupSystemDialog';
 import SyncNotificationSettings from '@/components/settings/SyncNotificationSettings';
+import AutoSyncScheduleSettings from '@/components/settings/AutoSyncScheduleSettings';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -150,6 +151,7 @@ const SettingsPage = () => {
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
   const [isBackupSystemOpen, setIsBackupSystemOpen] = useState(false);
   const [isSyncNotificationOpen, setIsSyncNotificationOpen] = useState(false);
+  const [isAutoSyncScheduleOpen, setIsAutoSyncScheduleOpen] = useState(false);
   const [isDeliveryManagementOpen, setIsDeliveryManagementOpen] = useState(false);
   const [employeeCodes, setEmployeeCodes] = useState([]);
 
@@ -224,13 +226,23 @@ const SettingsPage = () => {
             />
 
             {canAccessDeliveryPartners && (
-              <ModernCard
-                icon={RefreshCw}
-                title="إعدادات المزامنة والإشعارات"
-                description="التحكم في مزامنة الطلبات مع شركة التوصيل وإشعارات تحديث الحالات"
-                iconColor="from-blue-500 to-cyan-500"
-                onClick={() => setIsSyncNotificationOpen(true)}
-              />
+              <>
+                <ModernCard
+                  icon={RefreshCw}
+                  title="إعدادات المزامنة والإشعارات"
+                  description="التحكم في مزامنة الطلبات مع شركة التوصيل وإشعارات تحديث الحالات"
+                  iconColor="from-blue-500 to-cyan-500"
+                  onClick={() => setIsSyncNotificationOpen(true)}
+                />
+                
+                <ModernCard
+                  icon={Settings}
+                  title="جدولة المزامنة التلقائية"
+                  description="تحكم بأوقات تشغيل المزامنة التلقائية اليومية (4 مرات يومياً أو حسب حاجتك)"
+                  iconColor="from-purple-500 to-indigo-500"
+                  onClick={() => setIsAutoSyncScheduleOpen(true)}
+                />
+              </>
             )}
 
             {/* إشعارات المخزون - للموظفين حسب صلاحياتهم */}
@@ -559,6 +571,11 @@ const SettingsPage = () => {
       <SyncNotificationSettings 
         open={isSyncNotificationOpen} 
         onOpenChange={setIsSyncNotificationOpen} 
+      />
+
+      <AutoSyncScheduleSettings 
+        open={isAutoSyncScheduleOpen} 
+        onOpenChange={setIsAutoSyncScheduleOpen} 
       />
 
       <ComprehensiveDeliveryManagementDialog 

@@ -351,6 +351,42 @@ export type Database = {
         }
         Relationships: []
       }
+      auto_sync_schedule_settings: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          last_run_at: string | null
+          next_run_at: string | null
+          notifications_enabled: boolean
+          sync_times: string[]
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          notifications_enabled?: boolean
+          sync_times?: string[]
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          last_run_at?: string | null
+          next_run_at?: string | null
+          notifications_enabled?: boolean
+          sync_times?: string[]
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       background_sync_logs: {
         Row: {
           created_at: string
