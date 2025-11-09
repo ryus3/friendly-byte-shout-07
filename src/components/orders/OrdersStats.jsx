@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Clock, Truck, CheckCircle, AlertTriangle, CornerDownLeft, Bot, Archive, Package, RotateCcw, FolderArchive } from 'lucide-react';
+import { ShoppingCart, Clock, Truck, CheckCircle, AlertTriangle, CornerDownLeft, Bot, Archive, Package, AlertCircle, FolderArchive } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import { usePermissions } from '@/hooks/usePermissions';
 import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
@@ -20,6 +20,22 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     onStatCardClick(statusMap[stat], period);
   };
   
+  // حالات قيد التوصيل (2, 3, 14, 22, 24, 44, 38, 42)
+  const IN_DELIVERY_STATUSES = ['2', '3', '14', '22', '24', '44', '38', '42'];
+  
+  // حالات تحتاج معالجة (12, 13, 15, 16, 23, 25-41)
+  const NEEDS_PROCESSING_STATUSES = [
+    '12', '13', '15', '16', '23',
+    '25', '26', '27', '28', '29', '30',
+    '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41'
+  ];
+  
+  // حالات تم التسليم (4, 18, 20, 21)
+  const DELIVERED_STATUSES = ['4', '18', '20', '21'];
+  
+  // حالات تم الشحن (فقط 7)
+  const SHIPPED_STATUSES = ['7'];
+
   const getStats = (status) => {
     const safeOrders = Array.isArray(orders) ? orders : [];
     const filtered = globalPeriod !== 'all' ? filterOrdersByPeriod(safeOrders, globalPeriod) : safeOrders;
@@ -29,6 +45,18 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     }
     if (status === 'archived') {
       return filtered.filter(o => o.isarchived || o.status === 'completed' || o.status === 'returned_in_stock').length;
+    }
+    if (status === 'shipped') {
+      return filtered.filter(o => SHIPPED_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
+    }
+    if (status === 'delivery') {
+      return filtered.filter(o => IN_DELIVERY_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
+    }
+    if (status === 'delivered') {
+      return filtered.filter(o => DELIVERED_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
+    }
+    if (status === 'needs_processing') {
+      return filtered.filter(o => NEEDS_PROCESSING_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
     }
     return filtered.filter(o => o.status === status && !o.isarchived && o.status !== 'completed' && o.status !== 'returned_in_stock').length;
   };
@@ -54,7 +82,7 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     { key: 'shipped', title: 'تم الشحن', icon: Truck, colors: ['purple-500', 'pink-500'], value: getStats('shipped'), onClick: createClickHandler('shipped'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'delivery', title: 'قيد التوصيل', icon: Truck, colors: ['blue-500', 'sky-500'], value: getStats('delivery'), onClick: createClickHandler('delivery'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'delivered', title: 'تم التسليم', icon: CheckCircle, colors: ['green-500', 'emerald-500'], value: getStats('delivered'), onClick: createClickHandler('delivered'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'returned', title: 'راجع للمخزن', icon: RotateCcw, colors: ['orange-500', 'red-500'], value: getStats('returned_in_stock'), onClick: createClickHandler('returned_in_stock'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'needs_processing', title: 'تحتاج معالجة', icon: AlertCircle, colors: ['amber-500', 'orange-500'], value: getStats('needs_processing'), onClick: createClickHandler('needs_processing'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'archived', title: 'الأرشيف', icon: FolderArchive, colors: ['indigo-500', 'purple-500'], value: getStats('archived'), onClick: createClickHandler('archived'), periods: {all: 'كل الوقت'}},
   ], [orders, aiOrdersCount, globalPeriod]);
 

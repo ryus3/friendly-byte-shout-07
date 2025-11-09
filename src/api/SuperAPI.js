@@ -206,7 +206,7 @@ return this.fetch('all_data', async () => {
           sizes (name)
         )
       )
-    `).order('updated_at', { ascending: false }),
+    `).order('status_changed_at', { ascending: false }), // ترتيب حسب آخر تغيير في الحالة
     
     // البيانات الأساسية
     supabase.from('customers').select(`

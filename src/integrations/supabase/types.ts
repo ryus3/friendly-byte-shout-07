@@ -2949,6 +2949,7 @@ export type Database = {
           sales_amount: number | null
           source: string | null
           status: string
+          status_changed_at: string | null
           total_amount: number
           tracking_number: string | null
           updated_at: string
@@ -3002,6 +3003,7 @@ export type Database = {
           sales_amount?: number | null
           source?: string | null
           status?: string
+          status_changed_at?: string | null
           total_amount?: number
           tracking_number?: string | null
           updated_at?: string
@@ -3055,6 +3057,7 @@ export type Database = {
           sales_amount?: number | null
           source?: string | null
           status?: string
+          status_changed_at?: string | null
           total_amount?: number
           tracking_number?: string | null
           updated_at?: string

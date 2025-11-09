@@ -75,6 +75,8 @@ const OrdersPage = () => {
   }, [allUsers]);
   
   const [filters, setFilters] = useLocalStorage('ordersFilters', { searchTerm: '', status: 'all', period: 'all', archiveSubStatus: 'all' });
+  const [currentPage, setCurrentPage] = useState(1);
+  const ORDERS_PER_PAGE = 15;
   const [viewMode, setViewMode] = useLocalStorage('ordersViewMode', 'grid');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [dialogs, setDialogs] = useState({
@@ -544,6 +546,19 @@ const OrdersPage = () => {
         return o?.status === 'shipped' || o?.status === 'delivery';
       };
 
+      // حالات قيد التوصيل
+      const IN_DELIVERY_STATUSES = ['2', '3', '14', '22', '24', '44', '38', '42'];
+      // حالات تحتاج معالجة
+      const NEEDS_PROCESSING_STATUSES = [
+        '12', '13', '15', '16', '23',
+        '25', '26', '27', '28', '29', '30',
+        '31', '32', '33', '34', '35', '36', '37', '38', '39', '40', '41'
+      ];
+      // حالات تم التسليم
+      const DELIVERED_STATUSES = ['4', '18', '20', '21'];
+      // حالات تم الشحن
+      const SHIPPED_STATUSES = ['7'];
+
       let matchesStatus = true;
       
       if (status === 'archived') {
@@ -558,17 +573,46 @@ const OrdersPage = () => {
         matchesStatus = true;
       } else if (status === 'pendingSales') {
         matchesStatus = isPendingSale(order);
+      } else if (status === 'shipped') {
+        matchesStatus = SHIPPED_STATUSES.includes(order.delivery_status);
+      } else if (status === 'delivery') {
+        matchesStatus = IN_DELIVERY_STATUSES.includes(order.delivery_status);
+      } else if (status === 'delivered') {
+        matchesStatus = DELIVERED_STATUSES.includes(order.delivery_status);
+      } else if (status === 'needs_processing') {
+        matchesStatus = NEEDS_PROCESSING_STATUSES.includes(order.delivery_status);
       } else {
         // فلترة حسب الحالة المحددة - فقط للطلبات غير المؤرشفة
         matchesStatus = order.status === status;
       }
 
       return matchesSearch && matchesStatus;
-    }).map(order => ({
+    })
+    .sort((a, b) => {
+      // ✅ الترتيب حسب status_changed_at (آخر تغيير في الحالة)
+      const dateA = new Date(a.status_changed_at || a.updated_at);
+      const dateB = new Date(b.status_changed_at || b.updated_at);
+      return dateB - dateA; // الأحدث أولاً
+    })
+    .map(order => ({
       ...order,
       created_by_name: usersMap.get(order.created_by) || 'غير معروف'
     }));
   }, [userOrders, filters, usersMap]);
+
+  // ✅ Pagination - تطبيق بعد الفلترة والترتيب
+  const paginatedOrders = useMemo(() => {
+    const startIndex = (currentPage - 1) * ORDERS_PER_PAGE;
+    const endIndex = startIndex + ORDERS_PER_PAGE;
+    return filteredOrders.slice(startIndex, endIndex);
+  }, [filteredOrders, currentPage]);
+
+  const totalPages = Math.ceil(filteredOrders.length / ORDERS_PER_PAGE);
+
+  // إعادة تعيين الصفحة عند تغيير الفلاتر
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters.status, filters.searchTerm, filters.period]);
 
   // ✅ الطلبات القابلة للمزامنة - فقط النشطة (ليست مكتملة أو مرجعة)
   const syncableOrders = useMemo(() => {
@@ -852,7 +896,7 @@ const OrdersPage = () => {
             )}
 
             <OrderList
-              orders={filteredOrders}
+              orders={paginatedOrders}
               isLoading={inventoryLoading}
               onViewOrder={handleViewOrder}
               onEditOrder={handleEditOrder}
@@ -864,6 +908,30 @@ const OrdersPage = () => {
               profits={allProfits || []}
               viewMode={viewMode}
             />
+
+            {totalPages > 1 && (
+              <div className="flex justify-center items-center gap-2 mt-6">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  السابق
+                </Button>
+                <span className="text-sm text-muted-foreground">
+                  صفحة {currentPage} من {totalPages} ({filteredOrders.length} طلب)
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  التالي
+                </Button>
+              </div>
+            )}
           </TabsContent>
 
           <TabsContent value="invoices">
