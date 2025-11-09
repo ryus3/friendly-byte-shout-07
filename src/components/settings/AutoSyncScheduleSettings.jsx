@@ -215,7 +215,11 @@ const AutoSyncScheduleSettings = ({ open, onOpenChange }) => {
                         type="time"
                         value={time}
                         onChange={(e) => handleTimeChange(index, e.target.value)}
-                        className="flex-1 px-3 py-2 border rounded-md text-sm"
+                        className="flex-1 px-3 py-2 border rounded-md text-sm 
+                                   bg-white dark:bg-gray-800 
+                                   text-gray-900 dark:text-gray-100 
+                                   border-gray-300 dark:border-gray-600
+                                   focus:ring-2 focus:ring-primary"
                         disabled={!settings.enabled}
                       />
                       {settings.sync_times.length > 1 && (

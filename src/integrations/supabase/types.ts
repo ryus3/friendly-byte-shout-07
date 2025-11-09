@@ -5723,6 +5723,7 @@ export type Database = {
       }
       can_manage_finances: { Args: never; Returns: boolean }
       can_view_all_orders: { Args: never; Returns: boolean }
+      check_and_run_sync: { Args: never; Returns: undefined }
       check_city_benefits: {
         Args: { p_city_name: string; p_order_amount: number }
         Returns: Json

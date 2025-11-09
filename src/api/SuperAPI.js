@@ -194,7 +194,7 @@ return this.fetch('all_data', async () => {
       product_seasons_occasions (seasons_occasions (id, name, type))
     `).order('created_at', { ascending: false }),
     
-    // الطلبات مع العناصر
+    // الطلبات مع العناصر - ترتيب حسب آخر تحديث (updated_at) لإظهار الطلبات المحدثة أولاً
     supabase.from('orders').select(`
       *,
       order_items (
@@ -206,7 +206,7 @@ return this.fetch('all_data', async () => {
           sizes (name)
         )
       )
-    `).order('created_at', { ascending: false }),
+    `).order('updated_at', { ascending: false }),
     
     // البيانات الأساسية
     supabase.from('customers').select(`
