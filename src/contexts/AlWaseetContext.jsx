@@ -2103,51 +2103,91 @@ export const AlWaseetProvider = ({ children }) => {
         // حذف تلقائي فقط إذا لم يوجد في الوسيط وكان قبل الاستلام
         if (!waseetOrder && canAutoDeleteOrder(localOrder, user)) {
           // ✅ حماية إضافية: لا نحذف إذا كانت قائمة الطلبات النشطة الحقيقية صغيرة
-          // نحسب فقط الطلبات النشطة (غير مستلمة الفاتورة)
           const activeRealOrders = waseetOrders.filter(wo => !wo.receipt_received).length;
           if (activeRealOrders < 250) {
-            devLog.warn(`⚠️ تحذير: قائمة الطلبات النشطة الحقيقية صغيرة (${activeRealOrders} طلب نشط حقيقي من ${waseetOrders.length} إجمالي)، تجاهل الحذف التلقائي للطلب ${localOrder.tracking_number}`);
+            devLog.warn(`⚠️ قائمة الطلبات النشطة صغيرة (${activeRealOrders})، تجاهل الحذف للطلب ${localOrder.tracking_number}`);
             continue;
           }
           
-          // تحقق نهائي مباشر من الوسيط باستخدام QR/Tracking - فحص بجميع التوكنات
+          // 🔄 نظام 3 محاولات بطرق مختلفة قبل الحذف
           const confirmKey = String(localOrder.tracking_number || localOrder.qr_id || '').trim();
-          let remoteCheck = null;
+          let foundInAttempt = null;
+          const RETRY_DELAYS = [2000, 4000, 6000]; // تأخير بين المحاولات
           
           if (confirmKey) {
-            try {
-              // استخدام نفس دالة الفحص المتعدد المستخدمة في syncOrderByQR
-              const orderOwnerId = localOrder.created_by;
-              const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
-              
-              devLog.log(`🔍 فحص نهائي للطلب ${confirmKey} في ${ownerAccounts.length} حساب قبل الحذف`);
+            const orderOwnerId = localOrder.created_by;
+            const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
+            
+            // المحاولة 1: فحص بـ getOrderByQR
+            devLog.log(`🔍 محاولة 1/3: فحص الطلب ${confirmKey} بـ QR في ${ownerAccounts.length} حساب`);
+            for (const account of ownerAccounts) {
+              if (!account.token) continue;
+              try {
+                const found = await AlWaseetAPI.getOrderByQR(account.token, confirmKey);
+                if (found) {
+                  devLog.log(`✅ محاولة 1: وُجد الطلب ${confirmKey} - لن يُحذف`);
+                  foundInAttempt = 1;
+                  break;
+                }
+              } catch (e) {
+                devLog.warn(`⚠️ محاولة 1 فشلت في حساب ${account.account_username}`);
+              }
+            }
+            
+            // المحاولة 2: فحص بـ getOrderById (إذا فشلت المحاولة 1)
+            if (!foundInAttempt && localOrder.delivery_partner_order_id) {
+              await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[0]));
+              devLog.log(`🔍 محاولة 2/3: فحص الطلب بـ ID: ${localOrder.delivery_partner_order_id}`);
               
               for (const account of ownerAccounts) {
                 if (!account.token) continue;
                 try {
-                  const found = await AlWaseetAPI.getOrderByQR(account.token, confirmKey);
+                  const found = await AlWaseetAPI.getOrderById(account.token, localOrder.delivery_partner_order_id);
                   if (found) {
-                    devLog.log(`✅ وُجد الطلب ${confirmKey} في حساب ${account.account_username} - لن يُحذف`);
-                    remoteCheck = found;
+                    devLog.log(`✅ محاولة 2: وُجد الطلب بـ ID - لن يُحذف`);
+                    foundInAttempt = 2;
                     break;
                   }
                 } catch (e) {
-                  devLog.warn(`⚠️ فشل البحث في حساب ${account.account_username}:`, e.message);
+                  devLog.warn(`⚠️ محاولة 2 فشلت في حساب ${account.account_username}`);
                 }
               }
+            }
+            
+            // المحاولة 3: فحص في قائمة جميع الطلبات (إذا فشلت المحاولتان السابقتان)
+            if (!foundInAttempt) {
+              await new Promise(resolve => setTimeout(resolve, RETRY_DELAYS[1]));
+              devLog.log(`🔍 محاولة 3/3: فحص في قائمة جميع الطلبات`);
               
-              if (!remoteCheck) {
-                devLog.log(`❌ الطلب ${confirmKey} غير موجود في جميع الحسابات (${ownerAccounts.length}) - سيُحذف`);
+              for (const account of ownerAccounts) {
+                if (!account.token) continue;
+                try {
+                  const allOrders = await AlWaseetAPI.getMerchantOrders(account.token);
+                  const found = allOrders?.some(o => 
+                    String(o.id) === String(localOrder.delivery_partner_order_id) ||
+                    String(o.qr_code) === String(confirmKey) ||
+                    String(o.tracking_number) === String(confirmKey)
+                  );
+                  
+                  if (found) {
+                    devLog.log(`✅ محاولة 3: وُجد الطلب في القائمة الكاملة - لن يُحذف`);
+                    foundInAttempt = 3;
+                    break;
+                  }
+                } catch (e) {
+                  devLog.warn(`⚠️ محاولة 3 فشلت في حساب ${account.account_username}`);
+                }
               }
-            } catch (e) {
-              devLog.warn('⚠️ فشل التحقق النهائي من الوسيط قبل الحذف:', e);
             }
           }
           
-          if (!remoteCheck) {
-            devLog.log('🗑️ الطلب غير موجود في الوسيط بعد التحقق النهائي، سيتم حذفه تلقائياً:', localOrder.tracking_number);
+          // بعد 3 محاولات، إذا لم يُعثر على الطلب، احذفه
+          if (!foundInAttempt) {
+            devLog.log(`🗑️ الطلب ${confirmKey} غير موجود بعد 3 محاولات، سيُحذف تلقائياً`);
             await handleAutoDeleteOrder(localOrder.id, 'fastSync');
             continue;
+          } else {
+            devLog.log(`✅ الطلب ${confirmKey} موجود (محاولة ${foundInAttempt}/3)`);
           }
         }
 
