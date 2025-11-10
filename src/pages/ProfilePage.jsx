@@ -47,20 +47,20 @@ const ProfilePage = () => {
       setLoading(true);
 
       // جلب معلومات المستخدم والبروفايل
-      const { data: userData, error: userError } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(`
           *,
-          user_roles!inner(
+          user_roles(
             is_active,
             roles(name, display_name)
           )
         `)
-        .eq('user_id', targetUserId)
+        .eq('id', targetUserId)
         .maybeSingle();
 
-      if (userError) throw userError;
-      if (!userData) throw new Error('لم يتم العثور على المستخدم');
+      if (profileError) throw profileError;
+      if (!profileData) throw new Error('لم يتم العثور على المستخدم');
 
       // جلب الإحصائيات
       const { data: ordersData } = await supabase
@@ -80,7 +80,7 @@ const ProfilePage = () => {
 
       const totalProfits = profitsData?.reduce((sum, p) => sum + (parseFloat(p.employee_profit) || 0), 0) || 0;
 
-      setProfile(userData);
+      setProfile(profileData);
       setStats({
         totalOrders,
         totalProfits,
@@ -108,7 +108,14 @@ const ProfilePage = () => {
 
   const getRoleBadge = (roles) => {
     if (!roles || roles.length === 0) return 'موظف';
-    const roleMapping = {
+    
+    const activeRoles = roles
+      .filter(r => r && r.is_active && r.roles)
+      .map(r => r.roles.name);
+    
+    if (activeRoles.length === 0) return 'موظف';
+    
+    const roleDisplay = {
       'super_admin': 'المدير العام',
       'admin': 'مدير',
       'department_manager': 'مدير قسم',
@@ -117,14 +124,13 @@ const ProfilePage = () => {
       'cashier': 'أمين صندوق'
     };
     
-    const activeRoles = roles.filter(r => r.is_active).map(r => r.roles.name);
     const priorities = ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'];
-    
     for (const role of priorities) {
       if (activeRoles.includes(role)) {
-        return roleMapping[role] || 'موظف';
+        return roleDisplay[role] || 'موظف';
       }
     }
+    
     return 'موظف';
   };
 
@@ -370,9 +376,11 @@ const ProfilePage = () => {
       {editDialogOpen && (
         <EditProfileDialog
           profile={profile}
-          open={editDialogOpen}
-          onClose={() => setEditDialogOpen(false)}
-          onUpdate={fetchProfileData}
+          isOpen={editDialogOpen}
+          onClose={() => {
+            setEditDialogOpen(false);
+            fetchProfileData();
+          }}
         />
       )}
     </>

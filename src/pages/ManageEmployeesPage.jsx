@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Search, UserPlus, ArrowRight, Shield, LayoutGrid, List, 
   Eye, Edit2, Hash, MessageCircle, Mail, User, TrendingUp, Target, ShoppingCart
@@ -25,6 +26,7 @@ const ManageEmployeesPage = () => {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
+  const [employeeStats, setEmployeeStats] = useState({});
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
@@ -45,8 +47,60 @@ const ManageEmployeesPage = () => {
       const roleMatch = filters.role === 'all' || (user.roles && user.roles.includes(filters.role));
       
       return searchTermMatch && statusMatch && roleMatch;
-    }).sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+    }).sort((a, b) => {
+      // ترتيب حسب employee_code أو تاريخ الإنشاء أو الاسم
+      if (a.employee_code && b.employee_code) {
+        return a.employee_code.localeCompare(b.employee_code);
+      }
+      if (a.created_at && b.created_at) {
+        return new Date(a.created_at) - new Date(b.created_at);
+      }
+      return (a.full_name || '').localeCompare(b.full_name || '');
+    });
   }, [allUsers, filters]);
+
+  // جلب الإحصائيات لجميع الموظفين
+  useEffect(() => {
+    if (allUsers && allUsers.length > 0) {
+      fetchAllEmployeesStats();
+    }
+  }, [allUsers]);
+
+  const fetchAllEmployeesStats = async () => {
+    try {
+      const stats = {};
+      
+      for (const user of allUsers) {
+        // جلب الطلبات
+        const { data: orders } = await supabase
+          .from('orders')
+          .select('id, status, total_amount')
+          .eq('created_by', user.id);
+        
+        const totalOrders = orders?.length || 0;
+        const deliveredOrders = orders?.filter(o => o.status === 'delivered').length || 0;
+        const successRate = totalOrders > 0 ? Math.round((deliveredOrders / totalOrders) * 100) : 0;
+        
+        // جلب الأرباح
+        const { data: profits } = await supabase
+          .from('profits_tracking')
+          .select('employee_profit')
+          .eq('employee_id', user.id);
+        
+        const totalProfits = profits?.reduce((sum, p) => sum + (parseFloat(p.employee_profit) || 0), 0) || 0;
+        
+        stats[user.id] = {
+          orders: totalOrders,
+          profits: totalProfits,
+          successRate
+        };
+      }
+      
+      setEmployeeStats(stats);
+    } catch (error) {
+      console.error('خطأ في جلب الإحصائيات:', error);
+    }
+  };
 
   const handleEdit = (employee) => {
     setEditingEmployee(employee);
@@ -252,27 +306,27 @@ const ManageEmployeesPage = () => {
                       </div>
                     </div>
                     
-                    {/* Stats */}
+                    {/* Stats - Using Real Data */}
                     <div className="grid grid-cols-3 gap-2 mb-4">
                       <div className="text-center p-2 bg-green-50 dark:bg-green-950/30 rounded-lg">
                         <ShoppingCart className="w-4 h-4 text-green-600 dark:text-green-400 mx-auto mb-1" />
                         <p className="text-xs text-muted-foreground">الطلبات</p>
                         <p className="text-sm font-bold text-green-600 dark:text-green-400">
-                          {employee.stats?.orders || 0}
+                          {employeeStats[employee.id]?.orders || 0}
                         </p>
                       </div>
                       <div className="text-center p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
                         <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400 mx-auto mb-1" />
                         <p className="text-xs text-muted-foreground">الأرباح</p>
                         <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                          {formatShortCurrency(employee.stats?.profits || 0)}
+                          {formatShortCurrency(employeeStats[employee.id]?.profits || 0)}
                         </p>
                       </div>
                       <div className="text-center p-2 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
                         <Target className="w-4 h-4 text-purple-600 dark:text-purple-400 mx-auto mb-1" />
                         <p className="text-xs text-muted-foreground">النجاح</p>
                         <p className="text-sm font-bold text-purple-600 dark:text-purple-400">
-                          {employee.stats?.successRate || 0}%
+                          {employeeStats[employee.id]?.successRate || 0}%
                         </p>
                       </div>
                     </div>
@@ -357,8 +411,8 @@ const ManageEmployeesPage = () => {
                             <span className="text-sm">{employee.status === 'active' ? 'نشط' : employee.status === 'pending' ? 'قيد المراجعة' : 'معلق'}</span>
                           </div>
                         </td>
-                        <td className="p-4 text-sm font-medium">{employee.stats?.orders || 0}</td>
-                        <td className="p-4 text-sm font-medium text-primary">{formatShortCurrency(employee.stats?.profits || 0)}</td>
+                        <td className="p-4 text-sm font-medium">{employeeStats[employee.id]?.orders || 0}</td>
+                        <td className="p-4 text-sm font-medium text-primary">{formatShortCurrency(employeeStats[employee.id]?.profits || 0)}</td>
                         <td className="p-4">
                           <div className="flex items-center justify-center gap-2">
                             <Button variant="ghost" size="sm" onClick={() => handleViewProfile(employee.id)}>
