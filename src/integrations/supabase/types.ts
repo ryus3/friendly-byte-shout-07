@@ -3759,6 +3759,9 @@ export type Database = {
           auto_approve_ai_orders: boolean | null
           avatar_url: string | null
           bio: string | null
+          business_links: Json | null
+          business_name: string | null
+          business_page_name: string | null
           created_at: string
           customer_management_access: boolean | null
           default_ai_order_destination: string | null
@@ -3774,6 +3777,7 @@ export type Database = {
           phone: string | null
           selected_delivery_account: string | null
           selected_delivery_partner: string | null
+          social_media: Json | null
           status: string
           updated_at: string
           user_id: string
@@ -3785,6 +3789,9 @@ export type Database = {
           auto_approve_ai_orders?: boolean | null
           avatar_url?: string | null
           bio?: string | null
+          business_links?: Json | null
+          business_name?: string | null
+          business_page_name?: string | null
           created_at?: string
           customer_management_access?: boolean | null
           default_ai_order_destination?: string | null
@@ -3800,6 +3807,7 @@ export type Database = {
           phone?: string | null
           selected_delivery_account?: string | null
           selected_delivery_partner?: string | null
+          social_media?: Json | null
           status?: string
           updated_at?: string
           user_id: string
@@ -3811,6 +3819,9 @@ export type Database = {
           auto_approve_ai_orders?: boolean | null
           avatar_url?: string | null
           bio?: string | null
+          business_links?: Json | null
+          business_name?: string | null
+          business_page_name?: string | null
           created_at?: string
           customer_management_access?: boolean | null
           default_ai_order_destination?: string | null
@@ -3826,6 +3837,7 @@ export type Database = {
           phone?: string | null
           selected_delivery_account?: string | null
           selected_delivery_partner?: string | null
+          social_media?: Json | null
           status?: string
           updated_at?: string
           user_id?: string

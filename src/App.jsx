@@ -44,6 +44,7 @@ const CustomersManagementPage = lazy(() => import('@/pages/CustomersManagementPa
 const SalesPage = lazy(() => import('@/pages/SalesPage.jsx'));
 const PushNotificationControl = lazy(() => import('@/pages/PushNotificationControl.jsx'));
 const NotificationTemplates = lazy(() => import('@/pages/NotificationTemplates.jsx'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage.jsx'));
 
 function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
@@ -178,6 +179,8 @@ function AppContent() {
           <Route path="/sales" element={<ProtectedRoute permission="view_orders">{childrenWithProps(SalesPage)}</ProtectedRoute>} />
           <Route path="/push-notification-control" element={<ProtectedRoute>{childrenWithProps(PushNotificationControl)}</ProtectedRoute>} />
           <Route path="/notification-templates" element={<ProtectedRoute>{childrenWithProps(NotificationTemplates)}</ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute>{childrenWithProps(ProfilePage)}</ProtectedRoute>} />
+          <Route path="/profile/:userId" element={<ProtectedRoute>{childrenWithProps(ProfilePage)}</ProtectedRoute>} />
 
         </Routes>
       </Suspense>

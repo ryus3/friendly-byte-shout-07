@@ -1280,7 +1280,7 @@ export const AlWaseetProvider = ({ children }) => {
             .from('profiles')
             .select('order_creation_mode')
             .eq('user_id', user.id)
-            .single();
+            .maybeSingle();
           
           const creationMode = profile?.order_creation_mode || 'choice';
           

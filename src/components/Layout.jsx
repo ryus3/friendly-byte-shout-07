@@ -114,12 +114,15 @@ const SidebarContent = ({ onClose, isMobile }) => {
     <>
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between p-6 border-b border-border">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
-              <User className="w-5 h-5 text-white" />
+          <div 
+            className="flex items-center gap-3 cursor-pointer hover:bg-secondary/50 p-2 rounded-lg transition-all duration-200 flex-1"
+            onClick={() => navigate('/profile')}
+          >
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-purple-600 flex items-center justify-center shadow-md">
+              <User className="w-5 h-5 text-primary-foreground" />
             </div>
-            <div>
-              <h3 className="font-semibold text-foreground">{user?.full_name}</h3>
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-foreground truncate">{user?.full_name}</h3>
               <p className="text-sm text-muted-foreground">{getRoleDisplayName()}</p>
             </div>
           </div>
