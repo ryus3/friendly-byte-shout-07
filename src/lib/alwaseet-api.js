@@ -3,58 +3,70 @@
 
 import { supabase } from './customSupabaseClient';
 
-const handleApiCall = async (endpoint, method, token, payload, queryParams) => {
-  try {
-    const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {
-      body: { endpoint, method, token, payload, queryParams }
-    });
-
-    if (error) {
-      let errorMessage = `فشل الاتصال بالخادم الوكيل: ${error.message}`;
-      try {
-        const errorBody = await error.context.json();
-        errorMessage = errorBody.msg || errorMessage;
-      } catch {
-        // If we can't parse the error body, use the default message
-      }
-      throw new Error(errorMessage);
-    }
-    
-    if (!data) {
-      throw new Error('لم يتم استلام رد من الخادم.');
-    }
-    
-    // معالجة خاصة لـ edit-order: فحص رسالة النجاح بدلاً من الأكواد فقط
-    if (endpoint === 'edit-order') {
-      console.log('📋 تحليل استجابة edit-order:', { 
-        errNum: data.errNum, 
-        status: data.status, 
-        msg: data.msg,
-        fullResponse: data 
+const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 3) => {
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {
+        body: { endpoint, method, token, payload, queryParams }
       });
-      
-      // فحص رسالة النجاح أو الأكواد المعتادة
-      const isSuccessMessage = data.msg && data.msg.includes('تم التعديل بنجاح');
-      const isSuccessCode = data.errNum === "S000" && data.status;
-      
-      if (!isSuccessMessage && !isSuccessCode) {
-        console.error('❌ فشل تحديث الطلب:', data);
-        throw new Error(data.msg || 'فشل تحديث الطلب في شركة التوصيل.');
+
+      if (error) {
+        let errorMessage = `فشل الاتصال بالخادم الوكيل: ${error.message}`;
+        try {
+          const errorBody = await error.context.json();
+          errorMessage = errorBody.msg || errorMessage;
+        } catch {
+          // If we can't parse the error body, use the default message
+        }
+        throw new Error(errorMessage);
       }
       
-      console.log('✅ نجح تحديث الطلب في Al-Waseet');
-      return data.data || data;
-    }
-    
-    // المعالجة العادية للـ endpoints الأخرى
-    if (data.errNum !== "S000" || !data.status) {
-      throw new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
-    }
+      if (!data) {
+        throw new Error('لم يتم استلام رد من الخادم.');
+      }
+      
+      // معالجة خاصة لـ edit-order: فحص رسالة النجاح بدلاً من الأكواد فقط
+      if (endpoint === 'edit-order') {
+        const isSuccessMessage = data.msg && data.msg.includes('تم التعديل بنجاح');
+        const isSuccessCode = data.errNum === "S000" && data.status;
+        
+        if (!isSuccessMessage && !isSuccessCode) {
+          throw new Error(data.msg || 'فشل تحديث الطلب في شركة التوصيل.');
+        }
+        
+        return data.data || data;
+      }
+      
+      // المعالجة العادية للـ endpoints الأخرى
+      if (data.errNum !== "S000" || !data.status) {
+        throw new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
+      }
 
-    return data.data;
-  } catch (error) {
-    console.error(`API call failed for ${endpoint}:`, error);
-    throw error;
+      return data.data;
+    } catch (error) {
+      // ✅ معالجة ذكية لـ Rate Limiting
+      const isRateLimitError = 
+        error.message?.includes('تجاوزت الحد المسموح به') || 
+        error.message?.includes('rate limit') ||
+        error.message?.includes('429');
+      
+      // إذا كان rate limit وليست آخر محاولة، ننتظر ونعيد
+      if (isRateLimitError && attempt < retries) {
+        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+        console.warn(`⚠️ Rate limit مؤقت لـ ${endpoint} - إعادة المحاولة ${attempt}/${retries} بعد ${waitTime/1000}s...`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+        continue;
+      }
+      
+      // معالجة الخطأ النهائية
+      if (isRateLimitError) {
+        console.warn(`⚠️ Rate limit مؤقت لـ ${endpoint} - تم تجاوز عدد المحاولات`);
+      } else {
+        console.error(`API call failed for ${endpoint}:`, error);
+      }
+      
+      throw error;
+    }
   }
 };
 

@@ -182,7 +182,9 @@ const OrdersPage = () => {
         await performDeletionPassAfterStatusSync();
 
       } catch (error) {
-        // Error silently
+        console.warn('⚠️ فشلت المزامنة التلقائية للطلبات:', error.message || error);
+        // السماح بإعادة المحاولة عند الفشل
+        hasSyncedRef.current = false;
       }
     };
 
