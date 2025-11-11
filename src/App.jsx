@@ -181,7 +181,9 @@ function AppContent() {
           <Route path="/notification-templates" element={<ProtectedRoute>{childrenWithProps(NotificationTemplates)}</ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute>{childrenWithProps(ProfilePage)}</ProtectedRoute>} />
           <Route path="/profile/:identifier" element={<ProtectedRoute>{childrenWithProps(ProfilePage)}</ProtectedRoute>} />
-
+          
+          {/* Catch-all route for username-based profile URLs - must be last */}
+          <Route path="/:identifier" element={<ProtectedRoute>{childrenWithProps(ProfilePage)}</ProtectedRoute>} />
         </Routes>
       </Suspense>
       <Toaster />
