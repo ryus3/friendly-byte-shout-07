@@ -42,7 +42,7 @@ const ProfilePage = () => {
     if (identifier) {
       fetchProfileData();
     } else if (user) {
-      navigate(`/${user.username}`, { replace: true });
+      navigate(`/profile/${user.username}`, { replace: true });
     }
   }, [identifier, user]);
 
