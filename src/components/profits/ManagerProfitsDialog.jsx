@@ -75,20 +75,14 @@ const ManagerProfitsDialog = ({
   // تحقق فوري من البيانات
   if (!orders || !Array.isArray(orders) || orders.length === 0) {
     console.error('❌ ManagerProfitsDialog: لا توجد طلبات!', { orders });
-  } else {
-    console.log('✅ ManagerProfitsDialog: طلبات متوفرة', { count: orders.length });
   }
 
   if (!employees || !Array.isArray(employees) || employees.length === 0) {
     console.error('❌ ManagerProfitsDialog: لا يوجد موظفين!', { employees });
-  } else {
-    console.log('✅ ManagerProfitsDialog: موظفين متوفرين', { count: employees.length });
   }
 
   if (!calculateProfit || typeof calculateProfit !== 'function') {
     console.error('❌ ManagerProfitsDialog: دالة حساب الأرباح غير متوفرة!', { calculateProfit });
-  } else {
-    console.log('✅ ManagerProfitsDialog: دالة حساب الأرباح متوفرة');
   }
 
   // فلترة البيانات حسب الفترة - مع خيار "جميع الفترات"
@@ -121,18 +115,7 @@ const ManagerProfitsDialog = ({
 
   // حساب الأرباح المفصلة - فقط للطلبات التي أنشأها الموظفون
   const detailedProfits = useMemo(() => {
-    console.log('🚀 بدء معالجة detailedProfits لأرباح المدير من الموظفين فقط:', {
-      profitsCount: profits?.length || 0,
-      employeesCount: employees?.length || 0,
-      managerId,
-      selectedPeriod,
-      selectedEmployee,
-      searchTerm,
-      dateRange
-    });
-
     if (!profits || !Array.isArray(profits) || profits.length === 0) {
-      console.log('❌ detailedProfits: لا توجد أرباح في جدول profits');
       return [];
     }
 
@@ -147,26 +130,16 @@ const ManagerProfitsDialog = ({
       // تجاهل طلبات المدير الرئيسي - استخدام المعرف الثابت
       const isManagerOrder = relatedOrder.created_by === ADMIN_ID;
       if (isManagerOrder) {
-        console.log(`🚫 تجاهل طلب المدير: ${relatedOrder.order_number} - ${ADMIN_ID}`);
         return false;
       }
       
       // التأكد من أن منشئ الطلب موظف نشط
       const orderCreator = employees.find(emp => emp.user_id === relatedOrder.created_by);
       if (!orderCreator || orderCreator.status !== 'active') {
-        console.log(`🚫 تجاهل طلب من مستخدم غير نشط: ${relatedOrder.order_number}`);
         return false;
       }
       
-      console.log(`✅ طلب موظف: ${relatedOrder.order_number} - منشئ: ${relatedOrder.created_by} - موظف: ${orderCreator.full_name}`);
       return true;
-    });
-
-    console.log('📋 فلترة طلبات الموظفين:', {
-      totalProfits: profits.length,
-      employeeProfits: employeeOrdersOnly.length,
-      excludedAdminId: ADMIN_ID,
-      currentUserId: currentUser?.id
     });
 
     const processed = employeeOrdersOnly
@@ -193,38 +166,10 @@ const ManagerProfitsDialog = ({
           profit.order_id?.toString().includes(searchTerm) ||
           employee?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
         
-        const finalResult = withinPeriod && matchesEmployee && matchesSearch;
-        
-        console.log(`🔍 فحص فلترة الربح ${profit.id}:`, {
-          profitId: profit.id,
-          order_id: profit.order_id,
-          employee_id: profit.employee_id,
-          employee_name: employee?.full_name,
-          selectedEmployee,
-          searchTerm,
-          withinPeriod,
-          matchesEmployee,
-          matchesSearch,
-          finalResult,
-          profitDate: profit.created_at,
-          dateRange
-        });
-        
-        return finalResult;
+        return withinPeriod && matchesEmployee && matchesSearch;
       })
       .map(profit => {
         try {
-          console.log(`💰 معالجة ربح محاسبي ID: ${profit.id}:`, {
-            profitId: profit.id,
-            order_id: profit.order_id,
-            employee_id: profit.employee_id,
-            profit_amount: profit.profit_amount,
-            employee_profit: profit.employee_profit,
-            total_revenue: profit.total_revenue,
-            total_cost: profit.total_cost,
-            status: profit.status
-          });
-          
           // البيانات المحاسبية الحقيقية من جدول profits
           const totalProfit = Number(profit.profit_amount || 0);
           const employeeProfit = Number(profit.employee_profit || 0);
@@ -268,9 +213,7 @@ const ManagerProfitsDialog = ({
       .filter(profit => profit !== null)
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    console.log('✅ الأرباح المحاسبية المعالجة النهائية:', {
-      processedCount: processed.length,
-      totalManagerProfit: processed.reduce((sum, profit) => sum + profit.managerProfit, 0),
+    return processed;
       totalEmployeeProfit: processed.reduce((sum, profit) => sum + profit.employeeProfit, 0),
       samples: processed.slice(0, 3).map(p => ({
         id: p.id,

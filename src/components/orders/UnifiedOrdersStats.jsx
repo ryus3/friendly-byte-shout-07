@@ -15,7 +15,6 @@ const UnifiedOrdersStats = ({ onFilterChange, onCardClick, dateRange }) => {
     if (!orders) return [];
     
     // البيانات مفلترة تلقائياً من SuperProvider حسب المستخدم
-    console.log('📊 UnifiedOrdersStats: الطلبات من النظام الموحد:', orders.length);
     return orders;
   }, [orders]);
 

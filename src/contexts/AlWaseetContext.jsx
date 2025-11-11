@@ -767,7 +767,6 @@ export const AlWaseetProvider = ({ children }) => {
                   // ✅ Fallback 1: state_id للتسليم
                   else if (directOrder.state_id === 4 || directOrder.state_id === '4') {
                     newDeliveryStatus = '4';
-                    console.log('✅ تم استنتاج الحالة 4 من state_id (getOrderById)');
                   }
                   // ✅ Fallback 2: status_text يحتوي "تسليم"
                   else if (directOrder.status_text && (
@@ -775,12 +774,10 @@ export const AlWaseetProvider = ({ children }) => {
                     directOrder.status_text.toLowerCase().includes('deliver')
                   )) {
                     newDeliveryStatus = '4';
-                    console.log('✅ تم استنتاج الحالة 4 من status_text (getOrderById):', directOrder.status_text);
                   }
                   // ✅ Fallback 3: deliver_confirmed_fin
                   else if (directOrder.deliver_confirmed_fin === 1 || directOrder.deliver_confirmed_fin === '1') {
                     newDeliveryStatus = '4';
-                    console.log('✅ تم استنتاج الحالة 4 من deliver_confirmed_fin (getOrderById)');
                   }
                   // Fallback 4: status_text للإرجاع
                   else if (directOrder.status_text === 'تم الارجاع الى التاجر') {
@@ -838,7 +835,14 @@ export const AlWaseetProvider = ({ children }) => {
                   devLog.warn(`❌ الطلب ${localOrder.tracking_number} غير موجود حتى في getOrderById!`);
                 }
               } catch (directError) {
-                console.error(`❌ خطأ جلب ${localOrder.tracking_number} مباشرة:`, directError);
+                // ✅ معالجة خاصة لـ Rate Limiting - لا نوقف المزامنة
+                if (directError.message?.includes('تجاوزت الحد المسموح به') || 
+                    directError.message?.includes('rate limit')) {
+                  devLog.warn(`⚠️ Rate limit للطلب ${localOrder.tracking_number} - سنحاول لاحقاً`);
+                  // لا نرفع console.error هنا لتجنب إزعاج المستخدم
+                } else {
+                  console.error(`❌ خطأ جلب ${localOrder.tracking_number} مباشرة:`, directError);
+                }
               }
             }
           }
@@ -1197,17 +1201,11 @@ export const AlWaseetProvider = ({ children }) => {
           try {
             const defaultData = JSON.parse(savedDefaultToken);
             
-            console.log('🔄 استخدام الجلسة المحفوظة:', {
-              partner: defaultData.partner_name,
-              username: defaultData.username,
-              tokenLength: defaultData.token?.length || 0
-            });
             
             // ✅ تفعيل الجلسة مباشرة
             setToken(defaultData.token);
             setActivePartner(defaultData.partner_name);
             setIsLoggedIn(true);
-            setCurrentMerchantId(defaultData.merchant_id);
             setWaseetUser({
               username: defaultData.username,
               merchantId: defaultData.merchant_id,
@@ -1216,8 +1214,6 @@ export const AlWaseetProvider = ({ children }) => {
             
             // ✅ حفظ اسم الشريك في localStorage
             localStorage.setItem('active_delivery_partner', defaultData.partner_name);
-            
-            console.log('✅ تم تفعيل الجلسة من localStorage');
             
             // ✅ تحديث last_used_at
             await supabase
@@ -1264,14 +1260,11 @@ export const AlWaseetProvider = ({ children }) => {
           setToken(tokenData.data.token);
           setActivePartner(tokenData.data.partner_name);
           setIsLoggedIn(true);
-          setCurrentMerchantId(tokenData.data.merchant_id);
           setWaseetUser({
             username: tokenData.data.account_username,
             merchantId: tokenData.data.merchant_id,
             label: tokenData.data.account_label
           });
-          
-          console.log('✅ تم تفعيل الجلسة من قاعدة البيانات');
         } else {
           console.warn('⚠️ لا يوجد token افتراضي');
           

@@ -85,8 +85,6 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
                                     (orderData.delivery_partner === 'alwaseet' || orderData.delivery_partner === 'modon');
       
       if (isMissingCustomerData && hasDeliveryPartnerId) {
-        console.log('🔄 محاولة جلب بيانات الطلب من شركة التوصيل...', orderData.delivery_partner_order_id);
-        
         try {
           // جلب التوكن النشط لشركة التوصيل
           const { data: token, error: tokenError } = await supabase
@@ -110,11 +108,7 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
               orderDetails = await AlWaseetAPI.getOrderByQR(token.token, orderData.qr_id || orderData.delivery_partner_order_id);
             }
 
-            // تحديث البيانات الناقصة من API
             if (orderDetails) {
-              console.log('✅ تم جلب بيانات الطلب من API:', orderDetails);
-              console.log('📋 بيانات كاملة:', JSON.stringify(orderDetails, null, 2));
-              
               orderData = {
                 ...orderData,
                 // رقم الهاتف - جميع الاحتمالات
@@ -154,14 +148,6 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
                        orderDetails.notes ||
                        orderDetails.merchant_notes
               };
-              
-              console.log('✅ البيانات بعد التحديث:', {
-                phone: orderData.customer_phone,
-                city: orderData.customer_city,
-                province: orderData.customer_province,
-                name: orderData.customer_name,
-                address: orderData.customer_address
-              });
               
               toast({
                 title: "✅ تم استكمال البيانات",
