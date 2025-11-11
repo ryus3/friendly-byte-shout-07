@@ -180,7 +180,7 @@ function AppContent() {
           <Route path="/push-notification-control" element={<ProtectedRoute>{childrenWithProps(PushNotificationControl)}</ProtectedRoute>} />
           <Route path="/notification-templates" element={<ProtectedRoute>{childrenWithProps(NotificationTemplates)}</ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute>{childrenWithProps(ProfilePage)}</ProtectedRoute>} />
-          <Route path="/profile/:userId" element={<ProtectedRoute>{childrenWithProps(ProfilePage)}</ProtectedRoute>} />
+          <Route path="/profile/:identifier" element={<ProtectedRoute>{childrenWithProps(ProfilePage)}</ProtectedRoute>} />
 
         </Routes>
       </Suspense>

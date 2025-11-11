@@ -22,7 +22,7 @@ import EditProfileDialog from '@/components/profile/EditProfileDialog';
  * يمكن للمستخدم عرض ملفه الخاص أو ملفات الموظفين الآخرين
  */
 const ProfilePage = () => {
-  const { userId } = useParams();
+  const { identifier } = useParams();
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { canViewAllData, canManageEmployees } = usePermissions();
@@ -32,22 +32,25 @@ const ProfilePage = () => {
   const [loading, setLoading] = useState(true);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   
-  const targetUserId = userId || currentUser?.id;
-  const isOwnProfile = !userId || userId === currentUser?.id;
+  const targetIdentifier = identifier || currentUser?.username;
+  const isOwnProfile = !identifier || identifier === currentUser?.username || identifier === currentUser?.id;
   const canEdit = isOwnProfile || canManageEmployees;
 
   useEffect(() => {
-    if (targetUserId) {
+    if (targetIdentifier) {
       fetchProfileData();
     }
-  }, [targetUserId]);
+  }, [targetIdentifier]);
 
   const fetchProfileData = async () => {
     try {
       setLoading(true);
 
-      // جلب معلومات المستخدم والبروفايل
-      const { data: profileData, error: profileError } = await supabase
+      // تحديد إذا كان identifier هو UUID أو username
+      const isUUID = targetIdentifier?.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+      
+      // جلب معلومات المستخدم والبروفايل - بحث ذكي
+      const query = supabase
         .from('profiles')
         .select(`
           *,
@@ -55,9 +58,16 @@ const ProfilePage = () => {
             is_active,
             roles(name, display_name)
         )
-      `)
-        .eq('id', targetUserId)
-        .maybeSingle();
+      `);
+      
+      // إضافة شرط البحث حسب النوع
+      if (isUUID) {
+        query.eq('id', targetIdentifier);
+      } else {
+        query.eq('username', targetIdentifier);
+      }
+      
+      const { data: profileData, error: profileError } = await query.maybeSingle();
 
       if (profileError) {
         console.error('خطأ في جلب البروفايل:', profileError);
@@ -78,6 +88,11 @@ const ProfilePage = () => {
         });
         setLoading(false);
         return;
+      }
+
+      // تحويل URL تلقائياً إلى username إذا كان UUID
+      if (profileData && isUUID && profileData.username) {
+        window.history.replaceState(null, '', `/profile/${profileData.username}`);
       }
 
       // جلب الإحصائيات - استخدام profileData.user_id الصحيح

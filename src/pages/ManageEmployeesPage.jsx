@@ -66,8 +66,8 @@ const ManageEmployeesPage = () => {
     setIsEditModalOpen(true);
   };
 
-  const handleViewProfile = (employeeId) => {
-    navigate(`/profile/${employeeId}`);
+  const handleViewProfile = (employeeUsername) => {
+    navigate(`/profile/${employeeUsername}`);
   };
 
   const handleAddNew = () => {
@@ -305,7 +305,7 @@ const ManageEmployeesPage = () => {
                         variant="outline" 
                         size="sm" 
                         className="flex-1"
-                        onClick={() => handleViewProfile(employee.id)}
+                        onClick={() => handleViewProfile(employee.username)}
                       >
                         <Eye className="w-4 h-4 ml-2" />
                         عرض
@@ -383,7 +383,7 @@ const ManageEmployeesPage = () => {
                         <td className="p-4 text-sm font-medium text-primary">{formatShortCurrency(employeeStats[employee.id]?.profits || 0)}</td>
                         <td className="p-4">
                           <div className="flex items-center justify-center gap-2">
-                            <Button variant="ghost" size="sm" onClick={() => handleViewProfile(employee.id)}>
+                            <Button variant="ghost" size="sm" onClick={() => handleViewProfile(employee.username)}>
                               <Eye className="w-4 h-4" />
                             </Button>
                             <Button variant="ghost" size="sm" onClick={() => handleEdit(employee)}>
