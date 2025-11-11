@@ -68,7 +68,7 @@ const ProfilePage = () => {
         social_media,
         created_at,
         updated_at,
-        user_roles!left(
+        user_roles!user_roles_user_id_fkey!left(
           is_active,
           roles(name, display_name)
         )
