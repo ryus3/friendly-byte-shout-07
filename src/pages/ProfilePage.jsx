@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { 
   User, Store, Link2, ExternalLink, ShoppingCart, TrendingUp, Target, 
-  Edit2, ArrowRight, Mail, Phone, Hash, MessageCircle, MapPin, Award,
+  Edit2, ArrowRight, Mail, Phone, Hash, Send, MapPin, Award,
   Calendar, Activity, Briefcase
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -80,38 +80,26 @@ const ProfilePage = () => {
         return;
       }
 
-      // جلب رمز التليغرام مباشرة من employee_telegram_codes
-        const { data: telegramData } = await supabase
-          .from('employee_telegram_codes')
-          .select('telegram_code, telegram_chat_id, linked_at')
-          .eq('user_id', profileData.user_id)
-          .eq('is_active', true)
-          .maybeSingle();
-
-      // جلب الإحصائيات
+      // جلب الإحصائيات - استخدام profileData.user_id الصحيح
       const { data: ordersData } = await supabase
         .from('orders')
         .select('id, status, total_amount')
-        .eq('created_by', targetUserId);
+        .eq('created_by', profileData.user_id);
 
       const totalOrders = ordersData?.length || 0;
       const deliveredOrders = ordersData?.filter(o => o.status === 'delivered').length || 0;
       const successRate = totalOrders > 0 ? Math.round((deliveredOrders / totalOrders) * 100) : 0;
 
-      // حساب الأرباح
+      // حساب الأرباح - استخدام profileData.user_id الصحيح
       const { data: profitsData } = await supabase
         .from('profits_tracking')
         .select('employee_profit')
-        .eq('employee_id', targetUserId);
+        .eq('employee_id', profileData.user_id);
 
       const totalProfits = profitsData?.reduce((sum, p) => sum + (parseFloat(p.employee_profit) || 0), 0) || 0;
 
-      setProfile({
-        ...profileData,
-        telegram_code: telegramData?.telegram_code || null,
-        telegram_linked: !!telegramData?.telegram_chat_id,
-        telegram_linked_at: telegramData?.linked_at || null
-      });
+      // رموز التليغرام موجودة بالفعل في profileData من allUsers - لا حاجة لجلب إضافي
+      setProfile(profileData);
       setStats({
         totalOrders,
         totalProfits,
@@ -296,7 +284,7 @@ const ProfilePage = () => {
                 
                 {profile.telegram_code && (
                   <div className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg">
-                    <MessageCircle className="w-5 h-5 text-primary" />
+                    <Send className="w-5 h-5 text-primary" />
                     <div>
                       <p className="text-xs text-muted-foreground">رمز التليغرام</p>
                       <p className="text-sm font-medium">{profile.telegram_code}</p>

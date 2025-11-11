@@ -12,7 +12,7 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Search, UserPlus, ArrowRight, Shield, LayoutGrid, List, 
-  Eye, Edit2, Hash, MessageCircle, Mail, User, TrendingUp, Target, ShoppingCart
+  Eye, Edit2, Hash, Send, Mail, User, TrendingUp, Target, ShoppingCart
 } from 'lucide-react';
 import UnifiedEmployeeDialog from '@/components/manage-employees/UnifiedEmployeeDialog';
 import UpdateRolePermissionsDialog from '@/components/manage-employees/UpdateRolePermissionsDialog';
@@ -270,7 +270,7 @@ const ManageEmployeesPage = () => {
                           ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/20 border-green-200/30 dark:border-green-800/30' 
                           : 'bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-950/30 dark:to-slate-950/20 border-gray-200/30 dark:border-gray-800/30'
                       }`}>
-                        <MessageCircle className={`w-4 h-4 flex-shrink-0 ${
+                        <Send className={`w-4 h-4 flex-shrink-0 ${
                           employee.telegram_linked 
                             ? 'text-green-600 dark:text-green-400' 
                             : 'text-gray-400 dark:text-gray-600'
