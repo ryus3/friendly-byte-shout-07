@@ -69,6 +69,7 @@ const ProfilePage = () => {
         setLoading(false);
         return;
       }
+      
       if (!profileData) {
         toast({
           title: 'غير موجود',
@@ -78,6 +79,14 @@ const ProfilePage = () => {
         setLoading(false);
         return;
       }
+
+      // جلب رمز التليغرام مباشرة من employee_telegram_codes
+      const { data: telegramData } = await supabase
+        .from('employee_telegram_codes')
+        .select('telegram_code, telegram_chat_id, linked_at')
+        .eq('user_id', targetUserId)
+        .eq('is_active', true)
+        .maybeSingle();
 
       // جلب الإحصائيات
       const { data: ordersData } = await supabase
@@ -97,7 +106,12 @@ const ProfilePage = () => {
 
       const totalProfits = profitsData?.reduce((sum, p) => sum + (parseFloat(p.employee_profit) || 0), 0) || 0;
 
-      setProfile(profileData);
+      setProfile({
+        ...profileData,
+        telegram_code: telegramData?.telegram_code || null,
+        telegram_linked: !!telegramData?.telegram_chat_id,
+        telegram_linked_at: telegramData?.linked_at || null
+      });
       setStats({
         totalOrders,
         totalProfits,

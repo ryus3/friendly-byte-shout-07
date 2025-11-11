@@ -16,6 +16,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import devLog from '@/lib/devLogger';
+import FloatingScrollButton from '@/components/ui/FloatingScrollButton';
 
 import OrdersHeader from '@/components/orders/OrdersHeader';
 import OrdersStats from '@/components/orders/OrdersStats';
@@ -1138,6 +1139,8 @@ const OrdersPage = () => {
           }}
         />
 
+        {/* Floating Scroll Button */}
+        <FloatingScrollButton />
       </div>
     </>
   );

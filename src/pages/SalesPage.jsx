@@ -19,8 +19,10 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import { scrollToTopInstant } from '@/utils/scrollToTop';
 import SalesCard from '@/components/sales/SalesCard';
 import OrderDetailsModal from '@/components/sales/OrderDetailsModal';
+import FloatingScrollButton from '@/components/ui/FloatingScrollButton';
 
 const SalesPage = () => {
   const { user } = useAuth();
@@ -37,9 +39,9 @@ const SalesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
-  // Scroll to top عند تغيير الصفحة
+  // Scroll to top عند تغيير الصفحة - فوري وموثوق
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTopInstant();
   }, [currentPage]);
 
   // إعادة تعيين currentPage إلى 1 عند تغيير أي فلتر
@@ -454,18 +456,18 @@ const SalesPage = () => {
                 السابق
               </Button>
               
-              {/* أرقام الصفحات */}
+              {/* أرقام الصفحات - عكس الترتيب للـ RTL */}
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
                   let page;
                   if (totalPages <= 7) {
-                    page = i + 1;
+                    page = totalPages - i; // عكس الترتيب
                   } else if (currentPage <= 4) {
-                    page = i + 1;
+                    page = 7 - i; // عكس الترتيب
                   } else if (currentPage >= totalPages - 3) {
-                    page = totalPages - 6 + i;
+                    page = totalPages - i; // عكس الترتيب
                   } else {
-                    page = currentPage - 3 + i;
+                    page = currentPage + 3 - i; // عكس الترتيب
                   }
                   
                   return (
@@ -512,6 +514,9 @@ const SalesPage = () => {
           employee={getEmployeeByOrder(selectedOrder)}
         />
       )}
+      
+      {/* Floating Scroll Button */}
+      <FloatingScrollButton />
     </div>
   );
 };

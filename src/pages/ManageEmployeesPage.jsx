@@ -263,13 +263,39 @@ const ManageEmployeesPage = () => {
                           )}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2 p-2 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/20 rounded-md border border-blue-200/30 dark:border-blue-800/30">
-                        <MessageCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                        <span className="truncate font-mono text-xs font-semibold text-blue-700 dark:text-blue-300">
-                          {employee.telegram_code || (
-                            <span className="text-muted-foreground italic font-normal">غير مربوط</span>
+                      
+                      {/* Telegram Status - احترافي جداً */}
+                      <div className={`flex items-center gap-2 p-2 rounded-md border transition-all ${
+                        employee.telegram_linked 
+                          ? 'bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/30 dark:to-emerald-950/20 border-green-200/30 dark:border-green-800/30' 
+                          : 'bg-gradient-to-br from-gray-50 to-slate-50 dark:from-gray-950/30 dark:to-slate-950/20 border-gray-200/30 dark:border-gray-800/30'
+                      }`}>
+                        <MessageCircle className={`w-4 h-4 flex-shrink-0 ${
+                          employee.telegram_linked 
+                            ? 'text-green-600 dark:text-green-400' 
+                            : 'text-gray-400 dark:text-gray-600'
+                        }`} />
+                        <div className="flex-1 min-w-0">
+                          {employee.telegram_code ? (
+                            <div className="flex items-center gap-2">
+                              <span className="truncate font-mono text-xs font-semibold text-gray-900 dark:text-gray-100">
+                                {employee.telegram_code}
+                              </span>
+                              <Badge 
+                                variant={employee.telegram_linked ? "success" : "outline"} 
+                                className={`text-[10px] px-1.5 py-0 ${
+                                  employee.telegram_linked 
+                                    ? 'bg-green-500/90 text-white border-green-600' 
+                                    : 'text-gray-500'
+                                }`}
+                              >
+                                {employee.telegram_linked ? 'متصل' : 'غير متصل'}
+                              </Badge>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">لم يُضف بعد</span>
                           )}
-                        </span>
+                        </div>
                       </div>
                     </div>
                     

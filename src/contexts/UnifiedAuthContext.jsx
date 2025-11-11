@@ -129,16 +129,36 @@ export const UnifiedAuthProvider = ({ children }) => {
         return;
       }
       
-      // إضافة الأدوار لكل مستخدم
+      // جلب رموز التليغرام مباشرة من جدول employee_telegram_codes
+      const { data: telegramCodes } = await supabase
+        .from('employee_telegram_codes')
+        .select('user_id, telegram_code, telegram_chat_id, linked_at')
+        .eq('is_active', true);
+      
+      // إنشاء map للرموز لسهولة الوصول
+      const telegramMap = {};
+      telegramCodes?.forEach(tc => {
+        telegramMap[tc.user_id] = {
+          telegram_code: tc.telegram_code,
+          telegram_linked: !!tc.telegram_chat_id, // متصل إذا كان chat_id موجود
+          telegram_linked_at: tc.linked_at
+        };
+      });
+      
+      // إضافة الأدوار ورموز التليغرام لكل مستخدم
       const usersWithRoles = data.map(user => {
         const activeRoles = user.user_roles
           ?.filter(ur => ur.is_active)
           ?.map(ur => ur.roles.name) || [];
         
+        const telegramInfo = telegramMap[user.id] || {};
         
         return {
           ...user,
-          roles: activeRoles
+          roles: activeRoles,
+          telegram_code: telegramInfo.telegram_code || null,
+          telegram_linked: telegramInfo.telegram_linked || false,
+          telegram_linked_at: telegramInfo.telegram_linked_at || null
         };
       });
       
