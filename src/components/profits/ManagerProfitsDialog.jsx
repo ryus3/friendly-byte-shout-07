@@ -214,17 +214,6 @@ const ManagerProfitsDialog = ({
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
     return processed;
-      totalEmployeeProfit: processed.reduce((sum, profit) => sum + profit.employeeProfit, 0),
-      samples: processed.slice(0, 3).map(p => ({
-        id: p.id,
-        order_number: p.order_number,
-        employee: p.employee?.full_name,
-        managerProfit: p.managerProfit,
-        employeeProfit: p.employeeProfit
-      }))
-    });
-
-    return processed;
   }, [profits, employees, orders, dateRange, selectedEmployee, searchTerm, currentUser?.id]);
 
   const stats = useMemo(() => {
