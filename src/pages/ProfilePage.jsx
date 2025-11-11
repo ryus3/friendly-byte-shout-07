@@ -39,10 +39,13 @@ const ProfilePage = () => {
   };
 
   useEffect(() => {
-    if (identifier) {
-      fetchProfileData();
-    } else if (user) {
+    // ✅ فقط redirect إذا كنا في مسار /profile بدون identifier
+    const currentPath = window.location.pathname;
+    
+    if (currentPath === '/profile' && !identifier && user) {
       navigate(`/profile/${user.username}`, { replace: true });
+    } else if (identifier) {
+      fetchProfileData();
     }
   }, [identifier, user]);
 

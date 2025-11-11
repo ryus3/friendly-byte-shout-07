@@ -154,6 +154,19 @@ class SuperAPI {
    */
   async getAllData() {
 return this.fetch('all_data', async () => {
+  // معالجة ai_orders بشكل منفصل لتجنب فشل كامل الطلب بسبب RLS
+  let aiOrders = { data: [], error: null };
+  try {
+    aiOrders = await supabase.from('ai_orders').select('*').order('created_at', { ascending: false });
+    if (aiOrders.error) {
+      console.warn('⚠️ لا يمكن جلب ai_orders (مشكلة صلاحيات):', aiOrders.error.message);
+      aiOrders = { data: [], error: null }; // معالجة الخطأ بإرجاع مصفوفة فارغة
+    }
+  } catch (err) {
+    console.warn('⚠️ خطأ في جلب ai_orders:', err.message);
+    aiOrders = { data: [], error: null };
+  }
+
   // طلب واحد كبير بدلاً من 170+ طلب منفصل
   const [
     products,
@@ -164,7 +177,6 @@ return this.fetch('all_data', async () => {
     profits,
     cashSources,
     settings,
-    aiOrders,
     profitRules,
     profiles,
     customerLoyalty,
@@ -226,7 +238,6 @@ return this.fetch('all_data', async () => {
     supabase.from('profits').select('*').order('created_at', { ascending: false }),
     supabase.from('cash_sources').select('*').order('created_at', { ascending: false }),
     supabase.from('settings').select('*'),
-    supabase.from('ai_orders').select('*').order('created_at', { ascending: false }),
     supabase.from('employee_profit_rules').select('*'),
     supabase.from('profiles').select('user_id, full_name, employee_code, status'),
     supabase.from('customer_loyalty').select('*'),
