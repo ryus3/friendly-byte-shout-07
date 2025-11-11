@@ -567,7 +567,7 @@ const OrdersPage = () => {
       // حالات تم التسليم
       const DELIVERED_STATUSES = ['4', '18', '20', '21'];
       // حالات تم الشحن
-      const SHIPPED_STATUSES = ['7'];
+      const SHIPPED_STATUSES = ['2', '7'];
 
       let matchesStatus = true;
       

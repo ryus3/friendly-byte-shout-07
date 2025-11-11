@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ShoppingCart, Clock, Truck, CheckCircle, AlertTriangle, CornerDownLeft, Bot, Archive, Package, AlertCircle, FolderArchive } from 'lucide-react';
+import { ShoppingCart, Clock, Truck, CheckCircle, AlertCircle, CornerDownLeft, Bot, Archive, Package, FolderArchive } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import { usePermissions } from '@/hooks/usePermissions';
 import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
@@ -33,8 +33,8 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
   // حالات تم التسليم (4, 18, 20, 21)
   const DELIVERED_STATUSES = ['4', '18', '20', '21'];
   
-  // حالات تم الشحن (فقط 7)
-  const SHIPPED_STATUSES = ['7'];
+  // حالات تم الشحن (2, 7)
+  const SHIPPED_STATUSES = ['2', '7'];
 
   const getStats = (status) => {
     const safeOrders = Array.isArray(orders) ? orders : [];
@@ -82,7 +82,7 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     { key: 'shipped', title: 'تم الشحن', icon: Truck, colors: ['purple-500', 'pink-500'], value: getStats('shipped'), onClick: createClickHandler('shipped'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'delivery', title: 'قيد التوصيل', icon: Truck, colors: ['blue-500', 'sky-500'], value: getStats('delivery'), onClick: createClickHandler('delivery'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'delivered', title: 'تم التسليم', icon: CheckCircle, colors: ['green-500', 'emerald-500'], value: getStats('delivered'), onClick: createClickHandler('delivered'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'needs_processing', title: 'تحتاج معالجة', icon: AlertTriangle, colors: ['amber-500', 'orange-500'], value: getStats('needs_processing'), onClick: createClickHandler('needs_processing'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'needs_processing', title: 'تحتاج معالجة', icon: AlertCircle, colors: ['red-500', 'orange-600'], value: getStats('needs_processing'), onClick: createClickHandler('needs_processing'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'archived', title: 'الأرشيف', icon: FolderArchive, colors: ['indigo-500', 'purple-500'], value: getStats('archived'), onClick: createClickHandler('archived'), periods: {all: 'كل الوقت'}},
   ], [orders, aiOrdersCount, globalPeriod]);
 

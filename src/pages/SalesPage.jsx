@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { useSuper } from '@/contexts/SuperProvider';
@@ -13,7 +13,9 @@ import {
   ShoppingCart, 
   Receipt,
   Search, 
-  Filter
+  Filter,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -32,6 +34,8 @@ const SalesPage = () => {
   const [dateFilter, setDateFilter] = useState('all');
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 15;
 
   // Permission check - managers can view all employees
   const canViewAllEmployees = hasPermission('view_all_orders') || 
@@ -77,6 +81,11 @@ const SalesPage = () => {
   }, []);
 
   // Filter orders based on selected employee and other filters
+  // إعادة تعيين الصفحة عند تغيير الفلاتر
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, receiptFilter, dateFilter, selectedEmployee]);
+
   const filteredOrders = useMemo(() => {
     let filtered = deliveredOrders;
 
@@ -123,6 +132,12 @@ const SalesPage = () => {
 
     return filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   }, [deliveredOrders, selectedEmployee, searchTerm, statusFilter, receiptFilter, dateFilter, canViewAllEmployees, user?.id, getDateRange]);
+
+  // Pagination
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
   // Calculate statistics - using final_amount (after discount) as requested
   const stats = useMemo(() => {
@@ -190,6 +205,39 @@ const SalesPage = () => {
             <div key={i} className="h-24 bg-muted animate-pulse rounded-lg" />
           ))}
         </div>
+
+        {/* Pagination Controls */}
+        {filteredOrders.length > itemsPerPage && (
+          <div className="flex items-center justify-between mt-6 px-4 py-4 bg-card border border-border rounded-lg">
+            <div className="text-sm text-muted-foreground">
+              عرض {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} من {filteredOrders.length} طلب
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              
+              <span className="text-sm font-medium px-4">
+                صفحة {currentPage} من {totalPages}
+              </span>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -361,7 +409,7 @@ const SalesPage = () => {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredOrders.map((order) => (
+            {paginatedOrders.map((order) => (
               <SalesCard
                 key={order.id}
                 order={order}
@@ -371,6 +419,39 @@ const SalesPage = () => {
                 showEmployee={canViewAllEmployees}
               />
             ))}
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {filteredOrders.length > itemsPerPage && (
+          <div className="flex items-center justify-between mt-6 px-4 py-4 bg-card border border-border rounded-lg">
+            <div className="text-sm text-muted-foreground">
+              عرض {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} من {filteredOrders.length} طلب
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              
+              <span className="text-sm font-medium px-4">
+                صفحة {currentPage} من {totalPages}
+              </span>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         )}
       </div>

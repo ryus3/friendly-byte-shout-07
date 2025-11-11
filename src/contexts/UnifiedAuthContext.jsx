@@ -338,6 +338,8 @@ export const UnifiedAuthProvider = ({ children }) => {
         .eq('user_id', user.id)
         .eq('is_default', true)
         .gt('expires_at', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (error) {
@@ -431,6 +433,8 @@ export const UnifiedAuthProvider = ({ children }) => {
           .eq('user_id', profile.user_id)
           .eq('is_default', true)
           .gt('expires_at', new Date().toISOString())
+          .order('created_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
 
         if (defaultAccount) {

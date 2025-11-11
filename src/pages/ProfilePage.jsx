@@ -51,7 +51,7 @@ const ProfilePage = () => {
         .from('profiles')
         .select(`
           *,
-          user_roles(
+          user_roles!left(
             is_active,
             roles(name, display_name)
           )

@@ -59,48 +59,7 @@ const ManageEmployeesPage = () => {
     });
   }, [allUsers, filters]);
 
-  // جلب الإحصائيات لجميع الموظفين
-  useEffect(() => {
-    if (allUsers && allUsers.length > 0) {
-      fetchAllEmployeesStats();
-    }
-  }, [allUsers]);
-
-  const fetchAllEmployeesStats = async () => {
-    try {
-      const stats = {};
-      
-      for (const user of allUsers) {
-        // جلب الطلبات
-        const { data: orders } = await supabase
-          .from('orders')
-          .select('id, status, total_amount')
-          .eq('created_by', user.id);
-        
-        const totalOrders = orders?.length || 0;
-        const deliveredOrders = orders?.filter(o => o.status === 'delivered').length || 0;
-        const successRate = totalOrders > 0 ? Math.round((deliveredOrders / totalOrders) * 100) : 0;
-        
-        // جلب الأرباح
-        const { data: profits } = await supabase
-          .from('profits_tracking')
-          .select('employee_profit')
-          .eq('employee_id', user.id);
-        
-        const totalProfits = profits?.reduce((sum, p) => sum + (parseFloat(p.employee_profit) || 0), 0) || 0;
-        
-        stats[user.id] = {
-          orders: totalOrders,
-          profits: totalProfits,
-          successRate
-        };
-      }
-      
-      setEmployeeStats(stats);
-    } catch (error) {
-      console.error('خطأ في جلب الإحصائيات:', error);
-    }
-  };
+  // ✅ تم إلغاء الإحصائيات لتحسين الأداء وتقليل استهلاك البيانات
 
   const handleEdit = (employee) => {
     setEditingEmployee(employee);
@@ -298,36 +257,32 @@ const ManageEmployeesPage = () => {
                     <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
                       <div className="flex items-center gap-2 p-2 bg-secondary/20 rounded-md">
                         <Hash className="w-4 h-4 text-primary flex-shrink-0" />
-                        <span className="truncate">{employee.employee_code || 'غير محدد'}</span>
+                        <span className="truncate font-mono text-xs">
+                          {employee.employee_code || (
+                            <span className="text-muted-foreground italic">غير محدد</span>
+                          )}
+                        </span>
                       </div>
-                      <div className="flex items-center gap-2 p-2 bg-secondary/20 rounded-md">
-                        <MessageCircle className="w-4 h-4 text-primary flex-shrink-0" />
-                        <span className="truncate">{employee.telegram_code || 'غير مربوط'}</span>
+                      <div className="flex items-center gap-2 p-2 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/20 rounded-md border border-blue-200/30 dark:border-blue-800/30">
+                        <MessageCircle className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                        <span className="truncate font-mono text-xs font-semibold text-blue-700 dark:text-blue-300">
+                          {employee.telegram_code || (
+                            <span className="text-muted-foreground italic font-normal">غير مربوط</span>
+                          )}
+                        </span>
                       </div>
                     </div>
                     
-                    {/* Stats - Using Real Data */}
+                    {/* أيقونات احترافية بدلاً من الإحصائيات */}
                     <div className="grid grid-cols-3 gap-2 mb-4">
-                      <div className="text-center p-2 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                        <ShoppingCart className="w-4 h-4 text-green-600 dark:text-green-400 mx-auto mb-1" />
-                        <p className="text-xs text-muted-foreground">الطلبات</p>
-                        <p className="text-sm font-bold text-green-600 dark:text-green-400">
-                          {employeeStats[employee.id]?.orders || 0}
-                        </p>
+                      <div className="flex items-center justify-center p-3 bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/30 dark:to-emerald-900/20 rounded-lg border border-green-200/30 dark:border-green-800/30">
+                        <Mail className="w-5 h-5 text-green-600 dark:text-green-400" />
                       </div>
-                      <div className="text-center p-2 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                        <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400 mx-auto mb-1" />
-                        <p className="text-xs text-muted-foreground">الأرباح</p>
-                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                          {formatShortCurrency(employeeStats[employee.id]?.profits || 0)}
-                        </p>
+                      <div className="flex items-center justify-center p-3 bg-gradient-to-br from-blue-50 to-sky-100 dark:from-blue-950/30 dark:to-sky-900/20 rounded-lg border border-blue-200/30 dark:border-blue-800/30">
+                        <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                       </div>
-                      <div className="text-center p-2 bg-purple-50 dark:bg-purple-950/30 rounded-lg">
-                        <Target className="w-4 h-4 text-purple-600 dark:text-purple-400 mx-auto mb-1" />
-                        <p className="text-xs text-muted-foreground">النجاح</p>
-                        <p className="text-sm font-bold text-purple-600 dark:text-purple-400">
-                          {employeeStats[employee.id]?.successRate || 0}%
-                        </p>
+                      <div className="flex items-center justify-center p-3 bg-gradient-to-br from-purple-50 to-pink-100 dark:from-purple-950/30 dark:to-pink-900/20 rounded-lg border border-purple-200/30 dark:border-purple-800/30">
+                        <MessageCircle className="w-5 h-5 text-purple-600 dark:text-purple-400" />
                       </div>
                     </div>
                     
