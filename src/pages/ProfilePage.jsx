@@ -81,12 +81,12 @@ const ProfilePage = () => {
       }
 
       // جلب رمز التليغرام مباشرة من employee_telegram_codes
-      const { data: telegramData } = await supabase
-        .from('employee_telegram_codes')
-        .select('telegram_code, telegram_chat_id, linked_at')
-        .eq('user_id', targetUserId)
-        .eq('is_active', true)
-        .maybeSingle();
+        const { data: telegramData } = await supabase
+          .from('employee_telegram_codes')
+          .select('telegram_code, telegram_chat_id, linked_at')
+          .eq('user_id', profileData.user_id)
+          .eq('is_active', true)
+          .maybeSingle();
 
       // جلب الإحصائيات
       const { data: ordersData } = await supabase

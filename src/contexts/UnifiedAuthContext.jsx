@@ -151,7 +151,7 @@ export const UnifiedAuthProvider = ({ children }) => {
           ?.filter(ur => ur.is_active)
           ?.map(ur => ur.roles.name) || [];
         
-        const telegramInfo = telegramMap[user.id] || {};
+        const telegramInfo = telegramMap[user.user_id] || {};
         
         return {
           ...user,
