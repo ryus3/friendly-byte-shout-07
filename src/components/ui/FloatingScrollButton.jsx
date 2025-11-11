@@ -13,10 +13,17 @@ const FloatingScrollButton = () => {
       const windowHeight = window.innerHeight;
       
       // يظهر دائماً
-      setVisible(true);
+      setVisible(scrolled > 0);
       
-      // تحديد إذا كان في الأسفل (آخر 50px)
-      setAtBottom(scrolled + windowHeight >= docHeight - 50);
+      // إذا كانت الصفحة قصيرة جداً (ارتفاع أقل من 200px)
+      const scrollableHeight = docHeight - windowHeight;
+      if (scrollableHeight < 200) {
+        // الصفحة قصيرة - اعرض سهم للأعلى دائماً
+        setAtBottom(true);
+      } else {
+        // الصفحة طويلة - تحديد الموقع بذكاء
+        setAtBottom(scrolled + windowHeight >= docHeight - 50);
+      }
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -49,23 +56,19 @@ const FloatingScrollButton = () => {
         onClick={atBottom ? scrollToTop : scrollToBottom}
         size="icon"
         className={`
-          relative w-14 h-14 rounded-2xl shadow-2xl text-white 
-          border border-white/10 backdrop-blur-md
-          transition-all duration-500 ease-out
-          hover:scale-110 hover:rotate-6 hover:shadow-[0_20px_60px_rgba(0,0,0,0.4)]
+          relative w-11 h-11 rounded-xl shadow-lg
+          bg-primary/10 backdrop-blur-lg border-2 border-primary/30
+          transition-all duration-300 ease-out
+          hover:scale-110 hover:shadow-xl hover:bg-primary/20 hover:border-primary/50
           active:scale-95
-          ${atBottom 
-            ? 'bg-gradient-to-br from-emerald-500 via-green-500 to-teal-600 hover:from-emerald-600 hover:via-green-600 hover:to-teal-700' 
-            : 'bg-gradient-to-br from-blue-500 via-purple-500 to-pink-600 hover:from-blue-600 hover:via-purple-600 hover:to-pink-700'
-          }
+          ${atBottom ? 'text-green-600 dark:text-green-400' : 'text-primary'}
         `}
         aria-label={atBottom ? 'الصعود للأعلى' : 'النزول للأسفل'}
       >
-        <div className="absolute inset-0 rounded-2xl bg-gradient-to-t from-black/20 to-transparent" />
         {atBottom ? (
-          <ArrowUp className="w-6 h-6 relative z-10 drop-shadow-lg" />
+          <ArrowUp className="w-5 h-5" />
         ) : (
-          <ArrowDown className="w-6 h-6 relative z-10 drop-shadow-lg animate-bounce" />
+          <ArrowDown className="w-5 h-5 animate-bounce" />
         )}
       </Button>
     </div>

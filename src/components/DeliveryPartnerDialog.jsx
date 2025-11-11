@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus, Trash2 } from 'lucide-react';
+import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus, Trash2, User, Lock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from './ui/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -92,7 +92,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
           });
     }, [open, user?.id, activePartner, availablePartners]);
 
-    // تحميل حسابات المستخدم عند تغيير الشركة المختارة
+    // تحميل حسابات المستخدم عند تغيير الشركة المختارة + Auto Re-login
     useEffect(() => {
         const loadUserAccounts = async () => {
             if (open && user?.id && selectedPartner && selectedPartner !== 'local') {
@@ -112,13 +112,24 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                 const savedAccount = validAccounts.find(acc => acc.account_username === profile?.selected_delivery_account);
                 const defaultAccount = savedAccount || validAccounts.find(acc => acc.is_default) || validAccounts[0];
                 setSelectedAccount(defaultAccount || null);
+                
+                // ✅ Auto Re-login: إذا كان هناك حساب افتراضي ولكن التوكن منتهي
+                if (defaultAccount && defaultAccount.isExpired && !isLoggedIn) {
+                  toast({
+                    title: "🔄 إعادة تسجيل الدخول التلقائي",
+                    description: `جارٍ تسجيل الدخول إلى ${deliveryPartners[selectedPartner]?.name}...`,
+                  });
+                  
+                  // إعادة تسجيل الدخول تلقائياً
+                  await activateAccount(defaultAccount.account_username, selectedPartner, true);
+                }
             } else {
                 setUserAccounts([]);
                 setSelectedAccount(null);
             }
         };
         loadUserAccounts();
-    }, [open, user?.id, selectedPartner, getUserDeliveryAccounts]);
+    }, [open, user?.id, selectedPartner, getUserDeliveryAccounts, isLoggedIn]);
 
     // حساب حالة الاتصال لكل شريك (باستخدام hasValidToken)
     useEffect(() => {
@@ -410,25 +421,33 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                         لا توجد حسابات محفوظة لـ {deliveryPartners[selectedPartner]?.name}. يرجى تسجيل الدخول:
                     </p>
                     <div className="space-y-2">
-                        <Label htmlFor="waseet-username">اسم المستخدم</Label>
+                        <Label htmlFor="waseet-username" className="text-base font-semibold text-foreground flex items-center gap-2">
+                            <User className="w-4 h-4 text-primary" />
+                            اسم المستخدم
+                        </Label>
                         <Input 
                             id="waseet-username" 
                             type="text" 
                             value={username} 
                             onChange={(e) => setUsername(e.target.value)} 
                             required 
-                            placeholder="username" 
+                            placeholder="أدخل اسم المستخدم"
+                            className="h-12 text-base border-2 border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background placeholder:text-muted-foreground/60 font-medium shadow-sm hover:shadow-md transition-all"
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="waseet-password">كلمة المرور</Label>
+                        <Label htmlFor="waseet-password" className="text-base font-semibold text-foreground flex items-center gap-2">
+                            <Lock className="w-4 h-4 text-primary" />
+                            كلمة المرور
+                        </Label>
                         <Input 
                             id="waseet-password" 
                             type="password" 
                             value={password} 
                             onChange={(e) => setPassword(e.target.value)} 
                             required 
-                            placeholder="password" 
+                            placeholder="أدخل كلمة المرور"
+                            className="h-12 text-base border-2 border-primary/30 focus:border-primary focus:ring-2 focus:ring-primary/20 bg-background placeholder:text-muted-foreground/60 font-medium shadow-sm hover:shadow-md transition-all"
                         />
                     </div>
                 </CardContent>

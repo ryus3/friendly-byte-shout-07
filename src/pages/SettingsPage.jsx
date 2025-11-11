@@ -120,7 +120,7 @@ const SettingsPage = () => {
   const { user, updateUser } = useAuth();
   const { hasPermission } = usePermissions();
   const { settings, updateSettings } = useInventory();
-  const { isLoggedIn: isWaseetLoggedIn, waseetUser, logout: logoutWaseet, setSyncInterval, syncInterval } = useAlWaseet();
+  const { isLoggedIn: isWaseetLoggedIn, waseetUser, logout: logoutWaseet, setSyncInterval, syncInterval, activePartner, deliveryPartners } = useAlWaseet();
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   
@@ -346,7 +346,9 @@ const SettingsPage = () => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">الشركة النشطة</span>
-                    <span className="font-bold text-amber-600">{isWaseetLoggedIn ? 'الوسيط' : 'محلي'}</span>
+                    <span className="font-bold text-amber-600">
+                      {activePartner === 'local' ? 'محلي' : deliveryPartners?.[activePartner]?.name || 'غير معروف'}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">الحالة</span>
