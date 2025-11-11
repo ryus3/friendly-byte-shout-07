@@ -273,19 +273,6 @@ const ManageEmployeesPage = () => {
                       </div>
                     </div>
                     
-                    {/* أيقونات احترافية بدلاً من الإحصائيات */}
-                    <div className="grid grid-cols-3 gap-2 mb-4">
-                      <div className="flex items-center justify-center p-3 bg-gradient-to-br from-green-50 to-emerald-100 dark:from-green-950/30 dark:to-emerald-900/20 rounded-lg border border-green-200/30 dark:border-green-800/30">
-                        <Mail className="w-5 h-5 text-green-600 dark:text-green-400" />
-                      </div>
-                      <div className="flex items-center justify-center p-3 bg-gradient-to-br from-blue-50 to-sky-100 dark:from-blue-950/30 dark:to-sky-900/20 rounded-lg border border-blue-200/30 dark:border-blue-800/30">
-                        <User className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <div className="flex items-center justify-center p-3 bg-gradient-to-br from-purple-50 to-pink-100 dark:from-purple-950/30 dark:to-pink-900/20 rounded-lg border border-purple-200/30 dark:border-purple-800/30">
-                        <MessageCircle className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                      </div>
-                    </div>
-                    
                     {/* Actions */}
                     <div className="flex gap-2">
                       <Button 

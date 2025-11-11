@@ -57,9 +57,12 @@ const ProfilePage = () => {
           )
         `)
         .eq('id', targetUserId)
-        .maybeSingle();
+        .single();
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('خطأ في جلب البروفايل:', profileError);
+        throw profileError;
+      }
       if (!profileData) throw new Error('لم يتم العثور على المستخدم');
 
       // جلب الإحصائيات

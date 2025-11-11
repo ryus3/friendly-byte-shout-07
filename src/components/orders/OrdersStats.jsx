@@ -20,8 +20,8 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     onStatCardClick(statusMap[stat], period);
   };
   
-  // حالات قيد التوصيل (2, 3, 14, 22, 24, 44, 38, 42)
-  const IN_DELIVERY_STATUSES = ['2', '3', '14', '22', '24', '44', '38', '42'];
+  // حالات قيد التوصيل (3, 14, 22, 24, 44, 38, 42) - بدون الحالة 2
+  const IN_DELIVERY_STATUSES = ['3', '14', '22', '24', '44', '38', '42'];
   
   // حالات تحتاج معالجة (12, 13, 15, 16, 23, 25-41)
   const NEEDS_PROCESSING_STATUSES = [
