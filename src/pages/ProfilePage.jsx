@@ -320,35 +320,10 @@ const ProfilePage = () => {
             معلومات الاتصال
           </h2>
           
-          {/* Grid 2x2 للمعلومات */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Email */}
-            {profile.email && (
-              <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-blue-200/50 dark:border-blue-800/30 hover:border-blue-400 dark:hover:border-blue-600 transition-all group">
-                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md group-hover:scale-110 transition-transform">
-                  <Mail className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">البريد الإلكتروني</p>
-                  <p className="text-sm font-bold text-foreground truncate">{profile.email}</p>
-                </div>
-              </div>
-            )}
+          {/* عمود واحد - ترتيب: Telegram → Phone → Email */}
+          <div className="grid grid-cols-1 gap-4">
             
-            {/* Phone */}
-            {profile.phone && (
-              <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-orange-200/50 dark:border-orange-800/30 hover:border-orange-400 dark:hover:border-orange-600 transition-all group">
-                <div className="p-3 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg shadow-md group-hover:scale-110 transition-transform">
-                  <Phone className="w-5 h-5 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 mb-1">رقم الهاتف</p>
-                  <p className="text-sm font-bold text-foreground font-mono" dir="ltr">{profile.phone}</p>
-                </div>
-              </div>
-            )}
-            
-            {/* Telegram with Copy Button */}
+            {/* 1️⃣ Telegram First - مع زر النسخ */}
             {profile.telegram_code && (
               <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-emerald-200/50 dark:border-emerald-800/30 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all group">
                 <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg shadow-md group-hover:scale-110 transition-transform">
@@ -361,7 +336,7 @@ const ProfilePage = () => {
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 w-6 p-0 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
+                      className="h-7 w-7 p-0 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 rounded-md"
                       onClick={() => {
                         navigator.clipboard.writeText(profile.telegram_code);
                         toast({
@@ -377,18 +352,32 @@ const ProfilePage = () => {
               </div>
             )}
             
-            {/* Employee Code */}
-            {profile.employee_code && (
-              <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-purple-200/50 dark:border-purple-800/30 hover:border-purple-400 dark:hover:border-purple-600 transition-all group">
-                <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg shadow-md group-hover:scale-110 transition-transform">
-                  <Hash className="w-5 h-5 text-white" />
+            {/* 2️⃣ Phone Second */}
+            {profile.phone && (
+              <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-orange-200/50 dark:border-orange-800/30 hover:border-orange-400 dark:hover:border-orange-600 transition-all group">
+                <div className="p-3 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg shadow-md group-hover:scale-110 transition-transform">
+                  <Phone className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-1">معرف الموظف</p>
-                  <p className="text-sm font-bold text-foreground font-mono" dir="ltr">{profile.employee_code}</p>
+                  <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 mb-1">رقم الهاتف</p>
+                  <p className="text-sm font-bold text-foreground font-mono" dir="ltr">{profile.phone}</p>
                 </div>
               </div>
             )}
+            
+            {/* 3️⃣ Email Third */}
+            {profile.email && (
+              <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-blue-200/50 dark:border-blue-800/30 hover:border-blue-400 dark:hover:border-blue-600 transition-all group">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md group-hover:scale-110 transition-transform">
+                  <Mail className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">البريد الإلكتروني</p>
+                  <p className="text-sm font-bold text-foreground truncate">{profile.email}</p>
+                </div>
+              </div>
+            )}
+            
           </div>
         </CardContent>
       </Card>
