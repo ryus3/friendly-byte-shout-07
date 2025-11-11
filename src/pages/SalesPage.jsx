@@ -37,6 +37,16 @@ const SalesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 15;
 
+  // Scroll to top عند تغيير الصفحة
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
+  // إعادة تعيين currentPage إلى 1 عند تغيير أي فلتر
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, receiptFilter, dateFilter, selectedEmployee]);
+
   // Permission check - managers can view all employees
   const canViewAllEmployees = hasPermission('view_all_orders') || 
     user?.roles?.includes('super_admin') || 
@@ -257,7 +267,14 @@ const SalesPage = () => {
       {/* كروت الإحصائيات والفلاتر - 2x2 على الهاتف، 4x1 على الكمبيوتر */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {/* كرت إجمالي الطلبات */}
-        <Card className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden">
+        <Card 
+          className="cursor-pointer transition-all duration-300 hover:scale-105 hover:shadow-xl relative overflow-hidden"
+          onClick={() => {
+            setStatusFilter('all');
+            setCurrentPage(1);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+        >
           <CardContent className="p-4">
             <div className="text-center space-y-2 bg-gradient-to-br from-blue-500 to-cyan-400 text-white rounded-lg p-4 relative overflow-hidden h-[140px] flex flex-col justify-center">
               {/* دوائر شفافة في الخلفية */}
@@ -422,35 +439,64 @@ const SalesPage = () => {
           </div>
         )}
 
-        {/* Pagination Controls */}
+        {/* Pagination Controls - مطابق لصفحة الطلبات */}
         {filteredOrders.length > itemsPerPage && (
-          <div className="flex items-center justify-between mt-6 px-4 py-4 bg-card border border-border rounded-lg">
-            <div className="text-sm text-muted-foreground">
-              عرض {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} من {filteredOrders.length} طلب
-            </div>
-            
+          <div className="flex flex-col items-center gap-2 mt-6">
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
+                className="gap-2"
               >
                 <ChevronRight className="w-4 h-4" />
+                السابق
               </Button>
               
-              <span className="text-sm font-medium px-4">
-                صفحة {currentPage} من {totalPages}
-              </span>
+              {/* أرقام الصفحات */}
+              <div className="flex items-center gap-1">
+                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                  let page;
+                  if (totalPages <= 7) {
+                    page = i + 1;
+                  } else if (currentPage <= 4) {
+                    page = i + 1;
+                  } else if (currentPage >= totalPages - 3) {
+                    page = totalPages - 6 + i;
+                  } else {
+                    page = currentPage - 3 + i;
+                  }
+                  
+                  return (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className={`w-10 h-10 ${currentPage === page ? 'bg-primary text-primary-foreground' : ''}`}
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+              </div>
               
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
+                className="gap-2"
               >
+                التالي
                 <ChevronLeft className="w-4 h-4" />
               </Button>
+            </div>
+            
+            {/* عرض معلومات الصفحة */}
+            <div className="text-center text-sm text-muted-foreground">
+              صفحة {currentPage} من {totalPages} • عرض {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} من {filteredOrders.length} طلب
             </div>
           </div>
         )}

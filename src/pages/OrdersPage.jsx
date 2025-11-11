@@ -109,6 +109,11 @@ const OrdersPage = () => {
     scrollToTopInstant();
   }, []);
 
+  // Scroll to top عند تغيير الصفحة
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
+
   // ✅ مزامنة تلقائية للطلبات المعلقة عند الدخول - مرة واحدة فقط
   const hasSyncedRef = useRef(false);
   
@@ -556,8 +561,8 @@ const OrdersPage = () => {
         return o?.status === 'shipped' || o?.status === 'delivery';
       };
 
-      // حالات قيد التوصيل
-      const IN_DELIVERY_STATUSES = ['2', '3', '14', '22', '24', '44', '38', '42'];
+      // حالات قيد التوصيل (بدون الحالة 2 - هي في "تم الشحن" فقط)
+      const IN_DELIVERY_STATUSES = ['3', '14', '22', '24', '44', '38', '42'];
       // حالات تحتاج معالجة
       const NEEDS_PROCESSING_STATUSES = [
         '12', '13', '15', '16', '23',

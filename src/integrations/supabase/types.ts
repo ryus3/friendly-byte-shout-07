@@ -3779,6 +3779,7 @@ export type Database = {
           selected_delivery_partner: string | null
           social_media: Json | null
           status: string
+          telegram_code: string | null
           updated_at: string
           user_id: string
           username: string
@@ -3809,6 +3810,7 @@ export type Database = {
           selected_delivery_partner?: string | null
           social_media?: Json | null
           status?: string
+          telegram_code?: string | null
           updated_at?: string
           user_id: string
           username: string
@@ -3839,6 +3841,7 @@ export type Database = {
           selected_delivery_partner?: string | null
           social_media?: Json | null
           status?: string
+          telegram_code?: string | null
           updated_at?: string
           user_id?: string
           username?: string

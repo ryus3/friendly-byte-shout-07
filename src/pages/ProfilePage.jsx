@@ -54,16 +54,30 @@ const ProfilePage = () => {
           user_roles!left(
             is_active,
             roles(name, display_name)
-          )
-        `)
+        )
+      `)
         .eq('id', targetUserId)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error('خطأ في جلب البروفايل:', profileError);
-        throw profileError;
+        toast({
+          title: 'خطأ',
+          description: 'فشل تحميل بيانات الملف الشخصي',
+          variant: 'destructive'
+        });
+        setLoading(false);
+        return;
       }
-      if (!profileData) throw new Error('لم يتم العثور على المستخدم');
+      if (!profileData) {
+        toast({
+          title: 'غير موجود',
+          description: 'لم يتم العثور على المستخدم',
+          variant: 'destructive'
+        });
+        setLoading(false);
+        return;
+      }
 
       // جلب الإحصائيات
       const { data: ordersData } = await supabase
