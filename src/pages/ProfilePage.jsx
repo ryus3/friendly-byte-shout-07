@@ -8,7 +8,7 @@ import { toast } from '@/components/ui/use-toast';
 import { 
   User, Mail, ShoppingCart, TrendingUp, Award, 
   Edit2, Store, Send, Phone, Loader, Hash,
-  ExternalLink, Instagram, Facebook, Globe, ArrowUpRight
+  ExternalLink, Instagram, Facebook, Globe, ArrowUpRight, Copy
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -233,25 +233,28 @@ const ProfilePage = () => {
       </Helmet>
 
       <div className="container mx-auto p-4 md:p-8 space-y-8 max-w-7xl">
-        {/* Header Card - Revolutionary Design */}
-        <Card className="relative overflow-hidden border-none shadow-2xl bg-gradient-to-br from-white to-gray-50 dark:from-zinc-900 dark:to-zinc-950">
-          {/* Decorative Background Shapes */}
-          <div className="absolute -top-32 -right-32 w-64 h-64 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl" />
-          <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full blur-3xl" />
-          <div className="absolute top-10 right-20 w-40 h-40 bg-orange-400/10 rounded-full blur-2xl animate-pulse" />
+      {/* Header Card - Professional Gradient */}
+      <Card className="relative overflow-hidden border-none shadow-2xl">
+        {/* Unified Professional Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50/40 to-pink-50/40 dark:from-blue-950/30 dark:via-purple-950/20 dark:to-pink-950/20" />
+        
+        {/* Decorative Circles - More Subtle */}
+        <div className="absolute -top-24 -right-24 w-56 h-56 bg-gradient-to-br from-blue-400/15 to-purple-400/15 rounded-full blur-3xl" />
+        <div className="absolute -bottom-20 -left-20 w-48 h-48 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute top-1/3 right-1/4 w-32 h-32 bg-blue-300/10 rounded-full blur-2xl" />
           
           <CardContent className="relative p-8 md:p-12">
             <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
-              {/* Avatar - أصغر حجماً */}
-              <div className="relative group">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-full blur-lg opacity-60 group-hover:opacity-80 transition-all animate-pulse" />
-                <Avatar className="relative w-24 h-24 border-4 border-white dark:border-zinc-800 shadow-2xl ring-4 ring-primary/20">
+            {/* Avatar - أصغر حجماً */}
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-full blur-md opacity-50 group-hover:opacity-70 transition-all" />
+              <Avatar className="relative w-24 h-24 border-4 border-white dark:border-zinc-800 shadow-2xl">
                   <AvatarImage src={profile.avatar_url} alt={profile.full_name} />
                   <AvatarFallback className="text-2xl font-black bg-gradient-to-br from-blue-500 to-purple-600 text-white">
                     {getInitials(profile.full_name)}
                   </AvatarFallback>
                 </Avatar>
-                <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 shadow-xl px-4 py-1.5 text-xs font-bold bg-gradient-to-r from-primary to-purple-600 text-white border-0">
+              <Badge className="absolute -bottom-2 left-1/2 -translate-x-1/2 shadow-lg px-3 py-1 text-xs font-bold bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0">
                   {getRoleBadge(profile.user_roles)}
                 </Badge>
               </div>
@@ -302,83 +305,92 @@ const ProfilePage = () => {
           </CardContent>
         </Card>
 
-        {/* User Information - Beautiful Colored Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {/* Email Card */}
-          {profile.email && (
-            <div className="group relative overflow-hidden p-6 bg-gradient-to-br from-blue-400 to-blue-600 dark:from-blue-600 dark:to-blue-800 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-              <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full blur-xl" />
-              
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
-                    <Mail className="w-6 h-6 text-white" />
-                  </div>
-                  <p className="text-xs font-bold text-white/80 uppercase tracking-wide">البريد الإلكتروني</p>
-                </div>
-                <p className="text-sm font-bold text-white truncate">{profile.email}</p>
-              </div>
-            </div>
-          )}
+      {/* User Information - Unified Stunning Card */}
+      <Card className="relative overflow-hidden border-none shadow-2xl">
+        {/* Decorative Background with Transparent Circles */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30 dark:from-zinc-900/50 dark:via-blue-950/20 dark:to-purple-950/20" />
+        <div className="absolute -top-20 -right-20 w-48 h-48 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-16 -left-16 w-40 h-40 bg-gradient-to-br from-purple-400/15 to-pink-400/15 rounded-full blur-2xl" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-emerald-400/10 rounded-full blur-3xl" />
+        
+        <CardContent className="relative p-6 md:p-8">
+          <h2 className="text-2xl font-bold mb-6 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent flex items-center gap-2">
+            <User className="w-6 h-6 text-primary" />
+            معلومات الاتصال
+          </h2>
           
-          {/* Phone Card */}
-          {profile.phone && (
-            <div className="group relative overflow-hidden p-6 bg-gradient-to-br from-orange-400 to-red-500 dark:from-orange-600 dark:to-red-700 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-              <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full blur-xl" />
-              
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
-                    <Phone className="w-6 h-6 text-white" />
-                  </div>
-                  <p className="text-xs font-bold text-white/80 uppercase tracking-wide">رقم الهاتف</p>
+          {/* Grid 2x2 للمعلومات */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Email */}
+            {profile.email && (
+              <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-blue-200/50 dark:border-blue-800/30 hover:border-blue-400 dark:hover:border-blue-600 transition-all group">
+                <div className="p-3 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md group-hover:scale-110 transition-transform">
+                  <Mail className="w-5 h-5 text-white" />
                 </div>
-                <p className="text-sm font-bold text-white font-mono">{profile.phone}</p>
-              </div>
-            </div>
-          )}
-          
-          {/* Telegram Card */}
-          {profile.telegram_code && (
-            <div className="group relative overflow-hidden p-6 bg-gradient-to-br from-emerald-400 to-teal-600 dark:from-emerald-600 dark:to-teal-800 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-              <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full blur-xl" />
-              
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
-                    <Send className="w-6 h-6 text-white" />
-                  </div>
-                  <p className="text-xs font-bold text-white/80 uppercase tracking-wide">رمز التليغرام</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-bold text-white font-mono">{profile.telegram_code}</p>
-                  {profile.telegram_linked && (
-                    <Badge variant="outline" className="bg-white/20 text-white border-white/30 backdrop-blur-sm text-xs">
-                      متصل
-                    </Badge>
-                  )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">البريد الإلكتروني</p>
+                  <p className="text-sm font-bold text-foreground truncate">{profile.email}</p>
                 </div>
               </div>
-            </div>
-          )}
-          
-          {/* Employee Code Card */}
-          {profile.employee_code && (
-            <div className="group relative overflow-hidden p-6 bg-gradient-to-br from-purple-400 to-indigo-600 dark:from-purple-600 dark:to-indigo-800 rounded-2xl shadow-xl hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-              <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/10 rounded-full blur-xl" />
-              
-              <div className="relative">
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-3 bg-white/20 backdrop-blur-sm rounded-xl shadow-lg">
-                    <Hash className="w-6 h-6 text-white" />
-                  </div>
-                  <p className="text-xs font-bold text-white/80 uppercase tracking-wide">معرف الموظف</p>
+            )}
+            
+            {/* Phone */}
+            {profile.phone && (
+              <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-orange-200/50 dark:border-orange-800/30 hover:border-orange-400 dark:hover:border-orange-600 transition-all group">
+                <div className="p-3 bg-gradient-to-br from-orange-500 to-red-500 rounded-lg shadow-md group-hover:scale-110 transition-transform">
+                  <Phone className="w-5 h-5 text-white" />
                 </div>
-                <p className="text-sm font-bold text-white font-mono">{profile.employee_code}</p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-orange-600 dark:text-orange-400 mb-1">رقم الهاتف</p>
+                  <p className="text-sm font-bold text-foreground font-mono" dir="ltr">{profile.phone}</p>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+            
+            {/* Telegram with Copy Button */}
+            {profile.telegram_code && (
+              <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-emerald-200/50 dark:border-emerald-800/30 hover:border-emerald-400 dark:hover:border-emerald-600 transition-all group">
+                <div className="p-3 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-lg shadow-md group-hover:scale-110 transition-transform">
+                  <Send className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mb-1">رمز التليغرام</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-foreground font-mono" dir="ltr">{profile.telegram_code}</p>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 w-6 p-0 hover:bg-emerald-100 dark:hover:bg-emerald-900/30"
+                      onClick={() => {
+                        navigator.clipboard.writeText(profile.telegram_code);
+                        toast({
+                          title: '✓ تم النسخ',
+                          description: `تم نسخ الرمز: ${profile.telegram_code}`,
+                        });
+                      }}
+                    >
+                      <Copy className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Employee Code */}
+            {profile.employee_code && (
+              <div className="flex items-center gap-4 p-4 bg-white/60 dark:bg-zinc-800/40 backdrop-blur-sm rounded-xl border border-purple-200/50 dark:border-purple-800/30 hover:border-purple-400 dark:hover:border-purple-600 transition-all group">
+                <div className="p-3 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg shadow-md group-hover:scale-110 transition-transform">
+                  <Hash className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 mb-1">معرف الموظف</p>
+                  <p className="text-sm font-bold text-foreground font-mono" dir="ltr">{profile.employee_code}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
         {/* Business Links */}
         {profile.business_links && profile.business_links.length > 0 && (
@@ -441,8 +453,8 @@ const ProfilePage = () => {
                   <div className="p-4 bg-gradient-to-br from-blue-500 to-green-600 rounded-2xl shadow-xl">
                     <ShoppingCart className="w-10 h-10 text-white" />
                   </div>
-                  <div className="text-6xl font-black bg-gradient-to-br from-blue-600 to-green-600 bg-clip-text text-transparent drop-shadow-2xl">
-                    {stats.totalOrders}
+                  <div className="text-6xl font-black bg-gradient-to-br from-blue-600 to-green-600 bg-clip-text text-transparent drop-shadow-2xl font-mono" dir="ltr">
+                    {stats.totalOrders.toLocaleString('en-US')}
                   </div>
                 </div>
                 
@@ -475,8 +487,8 @@ const ProfilePage = () => {
                   <div className="p-4 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl shadow-xl">
                     <TrendingUp className="w-10 h-10 text-white" />
                   </div>
-                  <div className="text-4xl md:text-5xl font-black bg-gradient-to-br from-orange-600 to-red-600 bg-clip-text text-transparent drop-shadow-2xl">
-                    {formatCurrency(stats.totalProfits)}
+                  <div className="text-4xl md:text-5xl font-black bg-gradient-to-br from-orange-600 to-red-600 bg-clip-text text-transparent drop-shadow-2xl font-mono" dir="ltr">
+                    {stats.totalProfits.toLocaleString('en-US')}
                   </div>
                 </div>
                 
@@ -497,8 +509,8 @@ const ProfilePage = () => {
                   <div className="p-4 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl shadow-xl">
                     <Award className="w-10 h-10 text-white" />
                   </div>
-                  <div className="text-6xl font-black bg-gradient-to-br from-purple-600 to-pink-600 bg-clip-text text-transparent drop-shadow-2xl">
-                    {stats.successRate}%
+                  <div className="text-6xl font-black bg-gradient-to-br from-purple-600 to-pink-600 bg-clip-text text-transparent drop-shadow-2xl font-mono" dir="ltr">
+                    {stats.successRate.toFixed(1)}%
                   </div>
                 </div>
                 

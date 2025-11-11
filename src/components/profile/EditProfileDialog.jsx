@@ -83,14 +83,12 @@ const EditProfileDialog = ({ isOpen, onClose, profile }) => {
       const { error } = await supabase
         .from('profiles')
         .update({
-          full_name: formData.full_name,
-          username: formData.username,
-          phone: formData.phone,
-          employee_code: formData.employee_code,
-          telegram_code: formData.telegram_code,
-          business_name: formData.business_name,
-          business_page_name: formData.business_page_name,
-          business_links: formData.business_links
+        full_name: formData.full_name,
+        username: formData.username,
+        phone: formData.phone,
+        business_name: formData.business_name,
+        business_page_name: formData.business_page_name,
+        business_links: formData.business_links
         })
         .eq('id', profile.id);
 
@@ -240,22 +238,28 @@ const EditProfileDialog = ({ isOpen, onClose, profile }) => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="employee_code">معرف الموظف</Label>
+                    <Label htmlFor="employee_code" className="flex items-center gap-2">
+                      معرف الموظف
+                      <Badge variant="outline" className="text-xs">غير قابل للتعديل</Badge>
+                    </Label>
                     <Input
                       id="employee_code"
                       value={formData.employee_code}
-                      onChange={(e) => handleChange('employee_code', e.target.value)}
-                      placeholder="مثال: EMP001"
+                      disabled={true}
+                      className="bg-muted cursor-not-allowed opacity-70"
                     />
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="telegram_code">رمز التليغرام</Label>
+                    <Label htmlFor="telegram_code" className="flex items-center gap-2">
+                      رمز التليغرام
+                      <Badge variant="outline" className="text-xs">غير قابل للتعديل</Badge>
+                    </Label>
                     <Input
                       id="telegram_code"
                       value={formData.telegram_code}
-                      onChange={(e) => handleChange('telegram_code', e.target.value)}
-                      placeholder="مثال: @username"
+                      disabled={true}
+                      className="bg-muted cursor-not-allowed opacity-70"
                     />
                   </div>
                 </div>
