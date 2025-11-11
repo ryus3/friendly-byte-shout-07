@@ -7,7 +7,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { 
   User, Mail, ShoppingCart, TrendingUp, Award, 
-  Edit2, Store, Send, Phone, Loader, IdCard
+  Edit2, Store, Send, Phone, Loader, Hash
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -262,7 +262,7 @@ const ProfilePage = () => {
             <div className="group p-4 bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/30 dark:to-purple-900/20 rounded-xl border-2 border-purple-200 dark:border-purple-800 hover:shadow-xl hover:-translate-y-1 transition-all">
               <div className="flex items-center gap-3 mb-2">
                 <div className="p-2 bg-purple-500 rounded-lg shadow-md">
-                  <IdCard className="w-5 h-5 text-white" />
+                  <Hash className="w-5 h-5 text-white" />
                 </div>
                 <p className="text-xs font-medium text-purple-600 dark:text-purple-400 uppercase">معرف الموظف</p>
               </div>
