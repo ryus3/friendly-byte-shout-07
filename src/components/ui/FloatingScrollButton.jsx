@@ -12,8 +12,8 @@ const FloatingScrollButton = () => {
       const docHeight = document.documentElement.scrollHeight;
       const windowHeight = window.innerHeight;
       
-      // يظهر دائماً
-      setVisible(scrolled > 0);
+      // يظهر دائماً بدون شرط
+      setVisible(true);
       
       // إذا كانت الصفحة قصيرة جداً (ارتفاع أقل من 200px)
       const scrollableHeight = docHeight - windowHeight;

@@ -326,10 +326,6 @@ const SettingsPage = () => {
                     <span className="text-sm text-muted-foreground">السعر الأساسي</span>
                     <span className="font-bold text-green-600">{settings?.deliveryFee?.toLocaleString() || '5,000'} د.ع</span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">طلبات اليوم</span>
-                    <span className="font-bold text-blue-600">{settings?.todayDeliveries || '0'}</span>
-                  </div>
                 </div>
               </ModernCard>
             )}
