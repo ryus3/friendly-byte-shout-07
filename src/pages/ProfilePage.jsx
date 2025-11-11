@@ -50,13 +50,27 @@ const ProfilePage = () => {
       const isUUID = targetIdentifier?.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
       
       // جلب معلومات المستخدم والبروفايل - بحث ذكي
-      const query = supabase
-        .from('profiles')
-        .select(`
-          *,
-          user_roles!left(
-            is_active,
-            roles(name, display_name)
+    const query = supabase
+      .from('profiles')
+      .select(`
+        id,
+        user_id,
+        username,
+        full_name,
+        email,
+        phone,
+        avatar_url,
+        employee_code,
+        telegram_code,
+        business_name,
+        business_page_name,
+        business_links,
+        social_media,
+        created_at,
+        updated_at,
+        user_roles!left(
+          is_active,
+          roles(name, display_name)
         )
       `);
       
