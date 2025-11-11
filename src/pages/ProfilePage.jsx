@@ -13,6 +13,7 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+
 import { Badge } from '@/components/ui/badge';
 import EditProfileDialog from '@/components/profile/EditProfileDialog';
 
