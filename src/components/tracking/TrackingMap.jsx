@@ -29,13 +29,13 @@ const TrackingMap = ({ order }) => {
 
   return (
     <Card className="border-2 border-blue-200 dark:border-blue-800">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="w-5 h-5" />
+      <CardHeader className="p-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <MapPin className="w-4 h-4" />
           الموقع
         </CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-3">
         <div className="relative w-full h-64 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-lg overflow-hidden">
           {/* خريطة العراق المبسطة */}
           <svg viewBox="0 0 100 100" className="w-full h-full">

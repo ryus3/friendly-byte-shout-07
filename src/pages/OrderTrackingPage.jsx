@@ -3,10 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { supabase } from '@/integrations/supabase/client';
 import TrackingSearch from '@/components/tracking/TrackingSearch';
+import TrackingHeader from '@/components/tracking/TrackingHeader';
 import TrackingTimeline from '@/components/tracking/TrackingTimeline';
 import TrackingInfo from '@/components/tracking/TrackingInfo';
-import EmployeeContactCard from '@/components/tracking/EmployeeContactCard';
 import TrackingMap from '@/components/tracking/TrackingMap';
+import TrackingFooter from '@/components/tracking/TrackingFooter';
 import { Loader2 } from 'lucide-react';
 
 const OrderTrackingPage = () => {
@@ -17,21 +18,21 @@ const OrderTrackingPage = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // جلب بيانات الطلب والموظف (بدون API إضافي - من DB فقط)
+  // جلب بيانات الطلب والموظف
   const fetchOrderData = async (trackingNum) => {
     try {
       setLoading(true);
       setError(null);
 
-      // جلب الطلب مع items
+      // جلب الطلب مع items - دعم البحث برقم التتبع أو رقم الهاتف
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .select(`
           *,
           items:order_items(*)
         `)
-        .eq('tracking_number', trackingNum)
-        .single();
+        .or(`tracking_number.eq.${trackingNum},customer_phone.eq.${trackingNum}`)
+        .maybeSingle();
 
       if (orderError) throw orderError;
       if (!orderData) throw new Error('الطلب غير موجود');
@@ -54,10 +55,23 @@ const OrderTrackingPage = () => {
     }
   };
 
+  // التحديث التلقائي الذكي (كل ساعة من 8 صباحاً - 12 ليلاً)
   useEffect(() => {
-    if (trackingNumber) {
-      fetchOrderData(trackingNumber);
-    }
+    if (!trackingNumber) return;
+
+    fetchOrderData(trackingNumber);
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      const hour = now.getHours();
+      
+      // التحديث فقط بين 8 صباحاً - 12 ليلاً
+      if (hour >= 8 && hour < 24) {
+        fetchOrderData(trackingNumber);
+      }
+    }, 60 * 60 * 1000); // كل ساعة
+
+    return () => clearInterval(interval);
   }, [trackingNumber]);
 
   if (!trackingNumber) {
@@ -83,13 +97,16 @@ const OrderTrackingPage = () => {
         <meta name="description" content={`تتبع طلبك رقم ${order.tracking_number}`} />
       </Helmet>
       
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 dark:from-gray-900 dark:via-purple-950 dark:to-indigo-950 py-8 px-4">
-        <div className="max-w-4xl mx-auto space-y-6">
+      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 dark:from-gray-900 dark:via-purple-950 dark:to-indigo-950">
+        <TrackingHeader employee={employee} />
+        
+        <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
           <TrackingInfo order={order} />
           <TrackingTimeline order={order} />
           <TrackingMap order={order} />
-          <EmployeeContactCard employee={employee} />
         </div>
+
+        <TrackingFooter employee={employee} />
       </div>
     </>
   );

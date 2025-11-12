@@ -163,26 +163,42 @@ Deno.serve(async (req) => {
 
         const changesList: string[] = [];
 
+        // ✅ حماية الطلبات المُسلّمة والمكتملة من العودة إلى in_delivery
+        let finalStatus = localOrder.status;
+        
         if (statusChanged || priceChanged || accountChanged) {
-      if (statusChanged) {
-        updates.delivery_status = newStatus;
-        if (newStatus === '4') updates.status = 'delivered';
-        else if (newStatus === '17') updates.status = 'returned_in_stock';
-        else if (['31', '32'].includes(newStatus)) updates.status = 'cancelled';
-        changesList.push(`الحالة: ${currentStatus} → ${newStatus}`);
-      } else {
-        // حتى لو لم يتغير delivery_status، نضبط status الصحيح
-        if (newStatus === '4' && localOrder.status !== 'delivered') {
-          updates.status = 'delivered';
-          changesList.push(`تصحيح الحالة: ${localOrder.status} → delivered`);
-        } else if (newStatus === '17' && localOrder.status !== 'returned_in_stock') {
-          updates.status = 'returned_in_stock';
-          changesList.push(`تصحيح الحالة: ${localOrder.status} → returned_in_stock`);
-        } else if (['31', '32'].includes(newStatus) && localOrder.status !== 'cancelled') {
-          updates.status = 'cancelled';
-          changesList.push(`تصحيح الحالة: ${localOrder.status} → cancelled`);
-        }
-      }
+          if (statusChanged) {
+            updates.delivery_status = newStatus;
+            
+            // تحديد الحالة بناءً على delivery_status
+            if (newStatus === '4') {
+              finalStatus = 'delivered';
+            } else if (newStatus === '17') {
+              finalStatus = 'returned_in_stock';
+            } else if (['31', '32'].includes(newStatus)) {
+              finalStatus = 'cancelled';
+            }
+            
+            changesList.push(`الحالة: ${currentStatus} → ${newStatus}`);
+          }
+          
+          // ✅ حماية الطلبات المُسلّمة والمكتملة - لا نعيدها لـ in_delivery أبداً
+          if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
+            finalStatus = localOrder.status; // احتفظ بالحالة النهائية
+          } else if (newStatus === '4' && localOrder.status !== 'delivered') {
+            finalStatus = 'delivered';
+            changesList.push(`تصحيح الحالة: ${localOrder.status} → delivered`);
+          } else if (newStatus === '17' && localOrder.status !== 'returned_in_stock') {
+            finalStatus = 'returned_in_stock';
+            changesList.push(`تصحيح الحالة: ${localOrder.status} → returned_in_stock`);
+          } else if (['31', '32'].includes(newStatus) && localOrder.status !== 'cancelled') {
+            finalStatus = 'cancelled';
+            changesList.push(`تصحيح الحالة: ${localOrder.status} → cancelled`);
+          }
+          
+          if (finalStatus !== localOrder.status) {
+            updates.status = finalStatus;
+          }
 
           if (priceChanged) {
             const priceDifference = newPrice - currentPrice;
