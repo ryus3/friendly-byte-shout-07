@@ -159,13 +159,25 @@ Deno.serve(async (req) => {
         const changesList: string[] = [];
 
         if (statusChanged || priceChanged || accountChanged) {
-          if (statusChanged) {
-            updates.delivery_status = newStatus;
-            if (newStatus === '4') updates.status = 'delivered';
-            else if (newStatus === '17') updates.status = 'returned_in_stock';
-            else if (['31', '32'].includes(newStatus)) updates.status = 'cancelled';
-            changesList.push(`الحالة: ${currentStatus} → ${newStatus}`);
-          }
+      if (statusChanged) {
+        updates.delivery_status = newStatus;
+        if (newStatus === '4') updates.status = 'delivered';
+        else if (newStatus === '17') updates.status = 'returned_in_stock';
+        else if (['31', '32'].includes(newStatus)) updates.status = 'cancelled';
+        changesList.push(`الحالة: ${currentStatus} → ${newStatus}`);
+      } else {
+        // حتى لو لم يتغير delivery_status، نضبط status الصحيح
+        if (newStatus === '4' && localOrder.status !== 'delivered') {
+          updates.status = 'delivered';
+          changesList.push(`تصحيح الحالة: ${localOrder.status} → delivered`);
+        } else if (newStatus === '17' && localOrder.status !== 'returned_in_stock') {
+          updates.status = 'returned_in_stock';
+          changesList.push(`تصحيح الحالة: ${localOrder.status} → returned_in_stock`);
+        } else if (['31', '32'].includes(newStatus) && localOrder.status !== 'cancelled') {
+          updates.status = 'cancelled';
+          changesList.push(`تصحيح الحالة: ${localOrder.status} → cancelled`);
+        }
+      }
 
           if (priceChanged) {
             const priceDifference = newPrice - currentPrice;
