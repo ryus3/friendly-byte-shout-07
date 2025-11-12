@@ -433,7 +433,7 @@ const NotificationsPanel = () => {
       // استخراج بيانات الطلب: نحاول من data أولاً ثم من النص
       const data = notification.data || {};
       const orderId = data.order_id || data.id || null;
-      const orderNumberFromData = data.order_number || data.orderNo || null;
+      const orderNumberFromData = data.tracking_number || data.order_number || data.orderNo || null;
       let orderNumber = orderNumberFromData;
       if (!orderNumber) {
         const orderMatch = notification.message.match(/ORD\d+/) || notification.message.match(/#(\w+)|رقم (\w+)|طلب (\w+)/);
@@ -603,7 +603,7 @@ const NotificationsPanel = () => {
     
     // إشعارات الوسيط - دمج محسن لمنع التكرار
     if (n.type === 'alwaseet_status_change' || n.type === 'order_status_update') {
-      const tracking = n.data?.tracking_number || n.data?.order_number || parseTrackingFromMessage(n.message);
+      const tracking = n.data?.tracking_number || parseTrackingFromMessage(n.message) || n.data?.order_number;
       const orderId = n.data?.order_id;
       const sid = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message) || n.data?.status_id;
       
@@ -899,13 +899,13 @@ const NotificationsPanel = () => {
                                  const data = notification.data || {};
                                  const orderId = data.order_id;
                                  
-                                 // البحث عن الطلب الفعلي من النظام الموحد
-                                 if (orderId && orders && orders.length > 0) {
-                                   const foundOrder = orders.find(order => order.id === orderId);
-                                   if (foundOrder) {
-                                     // استخدام نفس منطق صفحة الطلبات
-                                     const statusInfo = getStatusForComponent(foundOrder);
-                                     const displayText = `${foundOrder.tracking_number || foundOrder.order_number} ${statusInfo.label}`;
+                                  // البحث عن الطلب الفعلي من النظام الموحد
+                                  if (orderId && orders && orders.length > 0) {
+                                    const foundOrder = orders.find(order => order.id === orderId);
+                                    if (foundOrder) {
+                                      // استخدام نفس منطق صفحة الطلبات
+                                      const statusInfo = getStatusForComponent(foundOrder);
+                                      const displayText = `${foundOrder.tracking_number || foundOrder.qr_id} ${statusInfo.label}`;
                                      
                                       return displayText.length > 30 ? (
                                         <ScrollingText text={displayText} className="" maxWidth="220px" />

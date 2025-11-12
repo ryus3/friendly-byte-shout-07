@@ -99,14 +99,20 @@ Deno.serve(async (req) => {
     // الحصول على تكوين الحالة من MODON
     const statusConfig = getModonStatusConfig(String(orderUpdate.status_id));
     
-    // ✅ تحديد الحالة الصحيحة مباشرة من delivery_status
-    let finalStatus = statusConfig.localStatus;
-    
-    // ✅ حماية مطلقة للطلبات المُسلّمة والمكتملة - لا نعيدها أبداً
+    // ✅ منطق صارم جداً: الحالة 4 = delivered حتماً، 17 = returned_in_stock حتماً
+    let finalStatus;
     if (order.status === 'delivered' || order.status === 'completed') {
-      finalStatus = order.status;  // احتفظ بالحالة النهائية
+      // حماية مطلقة للطلبات المُسلّمة والمكتملة
+      finalStatus = order.status;
     } else if (String(orderUpdate.status_id) === '4') {
-      finalStatus = 'delivered';  // الحالة 4 = delivered فوراً
+      // الحالة 4 = delivered فوراً - لا استثناءات
+      finalStatus = 'delivered';
+    } else if (String(orderUpdate.status_id) === '17') {
+      // الحالة 17 = returned_in_stock فوراً
+      finalStatus = 'returned_in_stock';
+    } else {
+      // جميع الحالات الأخرى: استخدام التعريف
+      finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'in_delivery';
     }
     
     // إعداد التحديثات

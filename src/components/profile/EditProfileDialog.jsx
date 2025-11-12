@@ -327,6 +327,8 @@ const EditProfileDialog = ({ isOpen, onClose, profile }) => {
                           <option value="website">موقع إلكتروني</option>
                           <option value="facebook">فيسبوك</option>
                           <option value="instagram">انستقرام</option>
+                          <option value="whatsapp">واتساب</option>
+                          <option value="telegram">تليغرام</option>
                           <option value="other">آخر</option>
                         </select>
                         

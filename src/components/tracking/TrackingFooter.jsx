@@ -58,8 +58,11 @@ const TrackingFooter = ({ employee }) => {
 
         {/* حقوق النشر */}
         <div className="text-center mt-6 pt-4 border-t border-border">
-          <p className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()} جميع الحقوق محفوظة
+          <p className="text-xs text-muted-foreground font-medium">
+            © {new Date().getFullYear()} جميع الحقوق محفوظة - RYUS BRAND
+          </p>
+          <p className="text-xs text-muted-foreground/70 mt-1">
+            تصميم عالمي احترافي
           </p>
         </div>
       </div>

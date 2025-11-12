@@ -1,44 +1,43 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Package, DollarSign } from 'lucide-react';
+import { Package } from 'lucide-react';
 
 const TrackingInfo = ({ order }) => {
   return (
-    <Card className="border-2 border-violet-200 dark:border-violet-800">
-      <CardHeader className="p-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Package className="w-4 h-4" />
+    <Card className="border-2 shadow-lg">
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Package className="w-5 h-5 text-primary" />
           معلومات الطلب
         </CardTitle>
       </CardHeader>
-      <CardContent className="p-3 space-y-3">
-        {/* رقم الطلب */}
-        <div className="flex items-center justify-between p-2 bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/20 dark:to-purple-950/20 rounded-lg">
-          <span className="text-xs text-muted-foreground">رقم الطلب</span>
-          <span className="text-sm font-bold text-violet-600 dark:text-violet-400">{order.tracking_number}</span>
+      <CardContent className="space-y-3">
+        {/* رقم التتبع */}
+        <div className="flex justify-between items-center pb-2 border-b">
+          <span className="text-sm text-muted-foreground">رقم التتبع</span>
+          <span className="font-bold text-base">{order.tracking_number}</span>
         </div>
 
         {/* المنتجات */}
-        {order.items && order.items.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">المنتجات:</p>
-            <div className="space-y-1">
-              {order.items.map((item, index) => (
-                <div key={index} className="flex justify-between items-center p-2 bg-muted/50 rounded text-xs">
-                  <span className="font-medium">{item.product_name}</span>
-                  <span className="text-muted-foreground">× {item.quantity}</span>
-                </div>
-              ))}
+        <div className="space-y-2">
+          <p className="text-sm font-semibold">المنتجات:</p>
+          {order.items?.map((item, index) => (
+            <div key={index} className="flex justify-between items-center text-sm bg-muted/30 p-2 rounded">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-primary">{item.quantity}x</span>
+                <span className="font-medium">{item.product?.name || item.product_name || 'منتج'}</span>
+              </div>
+              <span className="text-muted-foreground">{item.price?.toLocaleString()} د.ع</span>
             </div>
-          </div>
-        )}
+          ))}
+        </div>
 
-        {/* السعر الكلي */}
-        <div className="flex items-center justify-between p-2 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 rounded-lg border border-green-200 dark:border-green-800">
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-green-600 dark:text-green-400" />
-            <span className="text-xs text-muted-foreground">المبلغ الإجمالي</span>
+        {/* المبلغ الإجمالي */}
+        <div className="flex justify-between items-center pt-3 border-t-2 border-primary/20">
+          <div className="flex flex-col">
+            <span className="font-medium text-sm">المبلغ الإجمالي</span>
+            <span className="text-xs text-muted-foreground">(شامل التوصيل)</span>
           </div>
-          <span className="text-sm font-bold text-green-600 dark:text-green-400">
+          <span className="text-xl font-bold text-primary">
             {Number(order.total_amount || 0).toLocaleString()} د.ع
           </span>
         </div>

@@ -163,31 +163,28 @@ Deno.serve(async (req) => {
 
         const changesList: string[] = [];
 
-        // ✅ حماية الطلبات المُسلّمة والمكتملة من العودة إلى in_delivery
-        let finalStatus = localOrder.status;
+        // ✅ منطق صارم جداً: الحالة 4 = delivered حتماً، 17 = returned_in_stock حتماً
+        let finalStatus;
+        if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
+          // حماية مطلقة للطلبات المُسلّمة والمكتملة
+          finalStatus = localOrder.status;
+        } else if (newStatus === '4') {
+          // الحالة 4 = delivered فوراً - لا استثناءات
+          finalStatus = 'delivered';
+        } else if (newStatus === '17') {
+          // الحالة 17 = returned_in_stock فوراً
+          finalStatus = 'returned_in_stock';
+        } else if (['31', '32'].includes(newStatus)) {
+          finalStatus = 'cancelled';
+        } else {
+          // جميع الحالات الأخرى: ابقها كما هي
+          finalStatus = localOrder.status;
+        }
         
         if (statusChanged || priceChanged || accountChanged) {
           if (statusChanged) {
             updates.delivery_status = newStatus;
-            
-            // تحديد الحالة بناءً على delivery_status
-            if (newStatus === '4') {
-              finalStatus = 'delivered';
-            } else if (newStatus === '17') {
-              finalStatus = 'returned_in_stock';
-            } else if (['31', '32'].includes(newStatus)) {
-              finalStatus = 'cancelled';
-            }
-            
             changesList.push(`الحالة: ${currentStatus} → ${newStatus}`);
-          }
-          
-          // ✅ حماية الطلبات المُسلّمة والمكتملة - لا نعيدها لـ in_delivery أبداً
-          if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
-            finalStatus = localOrder.status; // احتفظ بالحالة النهائية
-          } else if (newStatus === '4' && localOrder.status !== 'delivered') {
-            finalStatus = 'delivered';
-            changesList.push(`تصحيح الحالة: ${localOrder.status} → delivered`);
           } else if (newStatus === '17' && localOrder.status !== 'returned_in_stock') {
             finalStatus = 'returned_in_stock';
             changesList.push(`تصحيح الحالة: ${localOrder.status} → returned_in_stock`);

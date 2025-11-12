@@ -697,10 +697,21 @@ export const AlWaseetProvider = ({ children }) => {
                 ? getModonStatusConfig(statusId, remoteOrder.status)
                 : getStatusConfig(newDeliveryStatus);
               
-              // ✅ حماية الطلبات المُسلّمة والمكتملة من العودة إلى in_delivery
-              const newStatus = (localOrder.status === 'delivered' || localOrder.status === 'completed')
-                ? localOrder.status  // احتفظ بالحالة الحالية
-                : (statusConfig.localStatus || statusConfig.internalStatus || 'in_delivery');
+              // ✅ منطق صارم جداً: الحالة 4 = delivered حتماً، 17 = returned_in_stock حتماً
+              let newStatus;
+              if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
+                // حماية مطلقة للطلبات المُسلّمة والمكتملة
+                newStatus = localOrder.status;
+              } else if (newDeliveryStatus === '4' || statusId === '4') {
+                // الحالة 4 = delivered فوراً - لا استثناءات
+                newStatus = 'delivered';
+              } else if (newDeliveryStatus === '17' || statusId === '17') {
+                // الحالة 17 = returned_in_stock فوراً
+                newStatus = 'returned_in_stock';
+              } else {
+                // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses
+                newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'in_delivery';
+              }
               
               // ✅ استخدام delivery_fee من الطلب المحلي (الإعدادات)، وليس من API
               const newDeliveryFee = localOrder.delivery_fee || 0;

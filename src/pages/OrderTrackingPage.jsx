@@ -29,7 +29,10 @@ const OrderTrackingPage = () => {
         .from('orders')
         .select(`
           *,
-          items:order_items(*)
+          items:order_items(
+            *,
+            product:products(name)
+          )
         `)
         .or(`tracking_number.eq.${trackingNum},customer_phone.eq.${trackingNum}`)
         .maybeSingle();
@@ -97,13 +100,12 @@ const OrderTrackingPage = () => {
         <meta name="description" content={`تتبع طلبك رقم ${order.tracking_number}`} />
       </Helmet>
       
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-indigo-50 dark:from-gray-900 dark:via-purple-950 dark:to-indigo-950">
+      <div className="min-h-screen bg-gradient-to-br from-violet-100 via-purple-100 to-indigo-100 dark:from-gray-950 dark:via-purple-950 dark:to-indigo-950">
         <TrackingHeader employee={employee} />
         
-        <div className="max-w-3xl mx-auto px-4 py-6 space-y-4">
+        <div className="max-w-3xl mx-auto px-4 py-4 space-y-3">
           <TrackingInfo order={order} />
           <TrackingTimeline order={order} />
-          <TrackingMap order={order} />
         </div>
 
         <TrackingFooter employee={employee} />
