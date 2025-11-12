@@ -99,10 +99,15 @@ Deno.serve(async (req) => {
     // الحصول على تكوين الحالة من MODON
     const statusConfig = getModonStatusConfig(String(orderUpdate.status_id));
     
+    // ✅ حماية الطلبات المُسلّمة والمكتملة من العودة إلى in_delivery
+    const finalStatus = (order.status === 'delivered' || order.status === 'completed')
+      ? order.status  // احتفظ بالحالة الحالية
+      : statusConfig.localStatus;
+    
     // إعداد التحديثات
     const updates: any = {
       delivery_status: String(orderUpdate.status_id),
-      status: statusConfig.localStatus,
+      status: finalStatus,
       delivery_fee: parseFloat(orderUpdate.delivery_price) || order.delivery_fee || 0,
       receipt_received: statusConfig.receiptReceived,
       updated_at: new Date().toISOString()
