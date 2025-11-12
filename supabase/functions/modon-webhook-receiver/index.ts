@@ -110,9 +110,11 @@ Deno.serve(async (req) => {
     } else if (String(orderUpdate.status_id) === '17') {
       // الحالة 17 = returned_in_stock فوراً
       finalStatus = 'returned_in_stock';
+    } else if (['31', '32'].includes(String(orderUpdate.status_id))) {
+      finalStatus = 'cancelled';
     } else {
-      // جميع الحالات الأخرى: استخدام التعريف
-      finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'in_delivery';
+      // جميع الحالات الأخرى: استخدام التعريف من modon-statuses
+      finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'shipped';
     }
     
     // إعداد التحديثات

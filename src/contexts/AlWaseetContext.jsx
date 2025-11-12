@@ -708,9 +708,12 @@ export const AlWaseetProvider = ({ children }) => {
               } else if (newDeliveryStatus === '17' || statusId === '17') {
                 // الحالة 17 = returned_in_stock فوراً
                 newStatus = 'returned_in_stock';
+              } else if (newDeliveryStatus === '31' || newDeliveryStatus === '32' || statusId === '31' || statusId === '32') {
+                // حالات الإلغاء
+                newStatus = 'cancelled';
               } else {
-                // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses
-                newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'in_delivery';
+                // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses فقط
+                newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'shipped';
               }
               
               // ✅ استخدام delivery_fee من الطلب المحلي (الإعدادات)، وليس من API

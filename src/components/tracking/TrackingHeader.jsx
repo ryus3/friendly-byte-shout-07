@@ -1,24 +1,27 @@
 import { MessageCircle, Send, Instagram, Facebook } from 'lucide-react';
+import ryusLogo from '@/assets/ryus-logo.png';
 
 const TrackingHeader = ({ employee }) => {
   const socialMedia = employee?.social_media || {};
-  const businessName = employee?.business_page_name || 'متجرنا';
+  const businessName = employee?.business_page_name || 'RYUS BRAND';
 
   return (
     <header className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 border-b-4 border-violet-400/50 dark:border-violet-700/50 shadow-2xl">
       <div className="max-w-3xl mx-auto px-4 py-6">
         <div className="flex flex-col items-center gap-4">
-          {/* Logo */}
-          <div className="w-20 h-20 rounded-full bg-white/10 backdrop-blur-sm border-4 border-white/20 shadow-xl flex items-center justify-center">
-            <div className="text-4xl font-bold text-white">
-              {businessName.charAt(0)}
-            </div>
+          {/* Logo الاحترافي */}
+          <div className="w-24 h-24 rounded-full bg-white/10 backdrop-blur-sm border-4 border-white/30 shadow-2xl flex items-center justify-center p-2">
+            <img 
+              src={ryusLogo} 
+              alt={businessName} 
+              className="w-full h-full object-contain"
+            />
           </div>
 
-          {/* Welcome Message */}
+          {/* Welcome Message - بدون كلمة "صفحة" */}
           <div className="text-center">
             <h1 className="text-2xl font-bold text-white mb-1">
-              أهلاً بك في صفحة {businessName}
+              أهلاً بك في {businessName}
             </h1>
             <p className="text-sm text-violet-100">تتبع طلبك بكل سهولة</p>
           </div>

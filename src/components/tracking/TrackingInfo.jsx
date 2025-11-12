@@ -26,7 +26,9 @@ const TrackingInfo = ({ order }) => {
                 <span className="font-bold text-primary">{item.quantity}x</span>
                 <span className="font-medium">{item.product?.name || item.product_name || 'منتج'}</span>
               </div>
-              <span className="text-muted-foreground">{item.price?.toLocaleString()} د.ع</span>
+              <span className="text-muted-foreground">
+                {Number(item.unit_price || item.price || 0).toLocaleString()} د.ع
+              </span>
             </div>
           ))}
         </div>

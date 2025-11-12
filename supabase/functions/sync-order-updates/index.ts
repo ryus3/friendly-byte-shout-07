@@ -177,8 +177,8 @@ Deno.serve(async (req) => {
         } else if (['31', '32'].includes(newStatus)) {
           finalStatus = 'cancelled';
         } else {
-          // جميع الحالات الأخرى: ابقها كما هي
-          finalStatus = localOrder.status;
+          // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses
+          finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'shipped';
         }
         
         if (statusChanged || priceChanged || accountChanged) {

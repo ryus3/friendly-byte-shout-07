@@ -104,8 +104,8 @@ const OrderTrackingPage = () => {
         <TrackingHeader employee={employee} />
         
         <div className="max-w-3xl mx-auto px-4 py-4 space-y-3">
-          <TrackingInfo order={order} />
           <TrackingTimeline order={order} />
+          <TrackingInfo order={order} />
         </div>
 
         <TrackingFooter employee={employee} />
