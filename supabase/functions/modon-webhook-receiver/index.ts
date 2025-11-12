@@ -9,24 +9,24 @@ const corsHeaders = {
 const MODON_STATUS_MAP: Record<string, { localStatus: string; receiptReceived: boolean; releasesStock: boolean }> = {
   '1': { localStatus: 'pending', receiptReceived: false, releasesStock: false },
   '2': { localStatus: 'shipped', receiptReceived: false, releasesStock: false },
-  '3': { localStatus: 'delivery', receiptReceived: false, releasesStock: false },
+  '3': { localStatus: 'in_delivery', receiptReceived: false, releasesStock: false },
   '4': { localStatus: 'delivered', receiptReceived: true, releasesStock: true },
   '5': { localStatus: 'returned', receiptReceived: false, releasesStock: false },
   '6': { localStatus: 'returned', receiptReceived: false, releasesStock: false },
   '7': { localStatus: 'returned_in_stock', receiptReceived: true, releasesStock: true },
-  '8': { localStatus: 'delivery', receiptReceived: false, releasesStock: false },
-  '9': { localStatus: 'delivery', receiptReceived: false, releasesStock: false },
-  '10': { localStatus: 'delivery', receiptReceived: false, releasesStock: false },
+  '8': { localStatus: 'in_delivery', receiptReceived: false, releasesStock: false },
+  '9': { localStatus: 'in_delivery', receiptReceived: false, releasesStock: false },
+  '10': { localStatus: 'in_delivery', receiptReceived: false, releasesStock: false },
   '11': { localStatus: 'returned', receiptReceived: false, releasesStock: false },
   '12': { localStatus: 'returned', receiptReceived: false, releasesStock: false },
-  '13': { localStatus: 'delivery', receiptReceived: false, releasesStock: false },
-  '14': { localStatus: 'delivery', receiptReceived: false, releasesStock: false },
-  '15': { localStatus: 'delivery', receiptReceived: false, releasesStock: false },
+  '13': { localStatus: 'in_delivery', receiptReceived: false, releasesStock: false },
+  '14': { localStatus: 'in_delivery', receiptReceived: false, releasesStock: false },
+  '15': { localStatus: 'in_delivery', receiptReceived: false, releasesStock: false },
 };
 
 function getModonStatusConfig(statusId: string) {
   return MODON_STATUS_MAP[statusId] || {
-    localStatus: 'delivery',
+    localStatus: 'in_delivery',
     receiptReceived: false,
     releasesStock: false
   };
