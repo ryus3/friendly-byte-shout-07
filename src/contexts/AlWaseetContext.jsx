@@ -696,7 +696,10 @@ export const AlWaseetProvider = ({ children }) => {
               const statusConfig = isModon 
                 ? getModonStatusConfig(statusId, remoteOrder.status)
                 : getStatusConfig(newDeliveryStatus);
-              const newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'in_delivery';
+              // ✅ إعطاء أولوية لـ localStatus (مثل 'delivered' للحالة 4)
+              const newStatus = statusConfig.localStatus 
+                ? statusConfig.localStatus 
+                : (statusConfig.internalStatus || 'in_delivery');
               
               // ✅ استخدام delivery_fee من الطلب المحلي (الإعدادات)، وليس من API
               const newDeliveryFee = localOrder.delivery_fee || 0;
