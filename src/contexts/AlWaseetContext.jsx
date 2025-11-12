@@ -2023,11 +2023,6 @@ export const AlWaseetProvider = ({ children }) => {
       try {
         waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
         devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
-        
-          totalLocal: pendingOrders.length,
-          totalWaseet: waseetOrders.length,
-          localOrders: pendingOrders.map(o => o.tracking_number)
-        });
       } catch (apiError) {
         // ⚠️ CRITICAL: إذا فشل جلب الطلبات، لا نحذف أي طلبات!
         console.error('❌ فشل جلب قائمة الطلبات من الوسيط:', apiError.message);
