@@ -595,8 +595,8 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                             <div className="flex items-center gap-2">
                                                 <span>{account.account_label || account.partner_data?.username || account.account_username}</span>
                                                 {account.is_default && (
-                                                    <span className="text-xs bg-green-100 text-green-700 px-1 py-0.5 rounded">
-                                                        افتراضي
+                                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
+                                                        <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
                                                     </span>
                                                 )}
                                             </div>
