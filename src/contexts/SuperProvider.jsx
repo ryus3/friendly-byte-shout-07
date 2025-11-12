@@ -201,61 +201,44 @@ export const SuperProvider = ({ children }) => {
     };
   }, []);
 
-  // نظام الحجز الموحد - حساب الكميات المحجوزة الحقيقية
+  // نظام الحجز الموحد - قراءة مباشرة من inventory.reserved_quantity المُحدّث
   const calculateUnifiedReservations = useCallback((data) => {
-    if (!data?.products || !data?.orders) return data;
+    if (!data?.products) return data;
 
-    // إنشاء خريطة للكميات المحجوزة لكل variant
-    const reservationMap = new Map();
-
-    // حساب الحجز من الطلبات النشطة
-    (data.orders || []).filter(order => order != null).forEach(order => {
-      // ✅ استبعاد طلبات الإرجاع من الحجز
-      if (order.order_type === 'return') return;
-      
-      // الطلبات التي تحجز المخزون (إزالة 'returned' لأنها لا تحجز)
-      const shouldReserveStock = ['pending', 'shipped', 'delivery'].includes(order?.status);
-      
-      if (shouldReserveStock && order?.order_items) {
-        // تصفية العناصر null/undefined قبل المعالجة
-        const validItems = (order.order_items || []).filter(item => item != null && typeof item === 'object');
-        validItems.forEach(item => {
-          // ✅ استبعاد المنتجات الواردة (incoming) من الحجز
-          if (item.item_direction === 'incoming') return;
-          
-          if (item?.variant_id) {
-            const currentReserved = reservationMap.get(item.variant_id) || 0;
-            reservationMap.set(item.variant_id, currentReserved + (Number(item?.quantity) || 0));
-          }
-        });
-      }
-    });
-
-    // تحديث البيانات مع الكميات المحجوزة الحقيقية
+    // تحديث البيانات بقراءة reserved_quantity مباشرة من inventory
     const updatedProducts = data.products.map(product => ({
       ...product,
       variants: (product.variants || []).map(variant => {
-        const realReservedQuantity = reservationMap.get(variant.id) || 0;
+        // قراءة من inventory.reserved_quantity (الآن دقيق 100% بعد Migration)
+        const dbReservedQuantity = variant.inventory?.reserved_quantity ?? variant.reserved_quantity ?? 0;
+        const quantity = variant.inventory?.quantity ?? variant.quantity ?? 0;
+        
         return {
           ...variant,
-          reserved_quantity: realReservedQuantity,
-          available_quantity: Math.max(0, (variant.quantity || 0) - realReservedQuantity)
+          reserved_quantity: dbReservedQuantity,
+          available_quantity: Math.max(0, quantity - dbReservedQuantity)
         };
       }),
       product_variants: (product.product_variants || []).map(variant => {
-        const realReservedQuantity = reservationMap.get(variant.id) || 0;
+        const dbReservedQuantity = variant.inventory?.reserved_quantity ?? variant.reserved_quantity ?? 0;
+        const quantity = variant.inventory?.quantity ?? variant.quantity ?? 0;
+        
         return {
           ...variant,
-          reserved_quantity: realReservedQuantity,
-          available_quantity: Math.max(0, (variant.quantity || 0) - realReservedQuantity)
+          reserved_quantity: dbReservedQuantity,
+          available_quantity: Math.max(0, quantity - dbReservedQuantity)
         };
       })
     }));
 
-    devLog.log('🔒 نظام الحجز الموحد:', {
-      totalVariants: reservationMap.size,
-      reservedItems: Array.from(reservationMap.entries()).filter(([_, qty]) => qty > 0).length,
-      sampleReservations: Array.from(reservationMap.entries()).slice(0, 3)
+    devLog.log('🔒 نظام الحجز الموحد (من DB مباشرة):', {
+      totalProducts: updatedProducts.length,
+      sampleVariant: updatedProducts[0]?.variants?.[0] ? {
+        id: updatedProducts[0].variants[0].id,
+        quantity: updatedProducts[0].variants[0].quantity,
+        reserved: updatedProducts[0].variants[0].reserved_quantity,
+        available: updatedProducts[0].variants[0].available_quantity
+      } : null
     });
 
     return {
