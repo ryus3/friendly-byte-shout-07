@@ -1816,6 +1816,30 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_notification_permissions: {
+        Row: {
+          can_send_whatsapp: boolean | null
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          can_send_whatsapp?: boolean | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          can_send_whatsapp?: boolean | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       employee_profit_rules: {
         Row: {
           created_at: string
