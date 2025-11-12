@@ -1187,18 +1187,44 @@ export const AlWaseetProvider = ({ children }) => {
     fetchToken();
   }, [fetchToken]);
 
-  // 🧹 Cleanup: تنظيف localStorage من القيم الفاسدة
+  // 🧹 Cleanup: تنظيف localStorage من القيم الفاسدة - نسخة قوية
   useEffect(() => {
     const cleanupLocalStorage = () => {
-      const storedValue = localStorage.getItem('active_delivery_partner');
-      if (storedValue && !storedValue.startsWith('{') && !storedValue.startsWith('[')) {
-        // القيمة فاسدة (string عادي بدلاً من JSON)
-        localStorage.removeItem('active_delivery_partner');
-        if (storedValue !== 'local' && storedValue.replace(/"/g, '')) {
-          setActivePartner(storedValue.replace(/"/g, ''));
-        } else {
-          setActivePartner('alwaseet');
+      try {
+        const storedValue = localStorage.getItem('active_delivery_partner');
+        
+        if (storedValue) {
+          let parsedValue;
+          
+          try {
+            // محاولة parse كـ JSON
+            parsedValue = JSON.parse(storedValue);
+          } catch (e) {
+            // فشل parse - القيمة فاسدة (مثل "modon" بدون JSON)
+            console.warn('🧹 تنظيف localStorage: قيمة فاسدة:', storedValue);
+            localStorage.removeItem('active_delivery_partner');
+            
+            // استخراج القيمة الفعلية إذا كانت محاطة بـ quotes
+            const cleanValue = storedValue.replace(/^"|"$/g, '');
+            if (cleanValue !== 'local' && ['alwaseet', 'modon'].includes(cleanValue)) {
+              setActivePartner(cleanValue);
+            } else {
+              setActivePartner('alwaseet');
+            }
+            return;
+          }
+          
+          // تم parse بنجاح - تحقق من القيمة
+          if (parsedValue === 'local') {
+            console.warn('🧹 تنظيف localStorage: إزالة local');
+            localStorage.removeItem('active_delivery_partner');
+            setActivePartner('alwaseet');
+          }
         }
+      } catch (error) {
+        console.error('❌ خطأ في cleanup localStorage:', error);
+        localStorage.removeItem('active_delivery_partner');
+        setActivePartner('alwaseet');
       }
     };
     

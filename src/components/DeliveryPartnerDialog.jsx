@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus, Trash2, User, Lock } from 'lucide-react';
+import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus, Trash2, User, Lock, Star } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from './ui/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -219,6 +219,33 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                 title: "خطأ", 
                 description: "فشل في تعيين الحساب الافتراضي", 
                 variant: 'destructive' 
+            });
+        }
+    };
+
+    const handleSetDefaultPartner = async () => {
+        if (!user?.id || !selectedPartner) return;
+        
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ selected_delivery_partner: selectedPartner })
+                .eq('user_id', user.id);
+
+            if (error) throw error;
+
+            setActivePartner(selectedPartner);
+            
+            toast({
+                title: "تم التحديث",
+                description: `تم تعيين ${availablePartners[selectedPartner]?.name} كشركة افتراضية`,
+            });
+        } catch (error) {
+            console.error('Error setting default partner:', error);
+            toast({
+                title: "خطأ",
+                description: "فشل تعيين الشركة الافتراضية",
+                variant: "destructive"
             });
         }
     };
@@ -466,7 +493,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="py-4 space-y-4">
-                     <div className="space-y-2">
+                     <div className="space-y-3">
                         <Label>اختر شركة التوصيل</Label>
                         <Select 
                             value={selectedPartner} 
@@ -514,6 +541,20 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                 })}
                             </SelectContent>
                         </Select>
+                        
+                        {/* زر تعيين الشركة كافتراضية */}
+                        {selectedPartner !== 'local' && partnerConnectedMap[selectedPartner] && (
+                            <Button 
+                                type="button"
+                                onClick={handleSetDefaultPartner}
+                                variant="outline"
+                                size="sm"
+                                className="w-full mt-2"
+                            >
+                                <Star className="w-4 h-4 mr-2" />
+                                تعيين {availablePartners[selectedPartner]?.name} كشركة افتراضية
+                            </Button>
+                        )}
                     </div>
 
                     {/* منسدلة الحسابات - أسفل اختيار الشركة مباشرة */}

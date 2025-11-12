@@ -27,11 +27,11 @@ Deno.serve(async (req) => {
     const notificationsEnabled = scheduleSettings?.notifications_enabled ?? false;
     console.log(`📢 الإشعارات ${notificationsEnabled ? 'مفعّلة' : 'معطلة'}`);
 
-    // 1️⃣ جلب جميع التوكنات النشطة
+    // 1️⃣ جلب جميع التوكنات النشطة لكل الشركات
     const { data: allTokens, error: tokensError } = await supabase
       .from('delivery_partner_tokens')
-      .select('user_id, token, account_username')
-      .eq('partner_name', 'alwaseet')
+      .select('user_id, token, account_username, partner_name')
+      .in('partner_name', ['alwaseet', 'modon'])
       .eq('is_active', true);
 
     if (tokensError || !allTokens || allTokens.length === 0) {
@@ -47,21 +47,25 @@ Deno.serve(async (req) => {
 
     console.log(`🔑 تم العثور على ${allTokens.length} توكن نشط`);
 
-    // 2️⃣ لكل توكن، جلب جميع طلباته من الوسيط
+    // 2️⃣ لكل توكن، جلب جميع طلباته من شركته (الوسيط/مدن)
     const allWaseetOrders: any[] = [];
     for (const tokenRecord of allTokens) {
       try {
-        console.log(`📡 جلب طلبات الحساب: ${tokenRecord.account_username}`);
-        const response = await fetch(
-          `https://api.alwaseet-iq.net/v1/merchant/merchant-orders?token=${tokenRecord.token}`,
-          {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-          }
-        );
+        const partnerName = tokenRecord.partner_name || 'alwaseet';
+        console.log(`📡 جلب طلبات ${partnerName} للحساب: ${tokenRecord.account_username}`);
+        
+        // تحديد API URL بناءً على الشركة
+        const apiUrl = partnerName === 'modon'
+          ? `https://mcht.modon-express.net/v1/merchant/merchant-orders?token=${tokenRecord.token}`
+          : `https://api.alwaseet-iq.net/v1/merchant/merchant-orders?token=${tokenRecord.token}`;
+        
+        const response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
 
         if (!response.ok) {
-          console.error(`❌ فشل جلب طلبات ${tokenRecord.account_username}: ${response.status}`);
+          console.error(`❌ فشل جلب طلبات ${partnerName}/${tokenRecord.account_username}: ${response.status}`);
           continue;
         }
 
@@ -70,10 +74,11 @@ Deno.serve(async (req) => {
           const ordersWithAccount = result.data.map((order: any) => ({
             ...order,
             _account: tokenRecord.account_username,
-            _user_id: tokenRecord.user_id
+            _user_id: tokenRecord.user_id,
+            _partner: partnerName
           }));
           allWaseetOrders.push(...ordersWithAccount);
-          console.log(`✅ تم جلب ${result.data.length} طلب من ${tokenRecord.account_username}`);
+          console.log(`✅ تم جلب ${result.data.length} طلب من ${partnerName}/${tokenRecord.account_username}`);
         }
       } catch (tokenError) {
         console.error(`❌ خطأ في جلب طلبات ${tokenRecord.account_username}:`, tokenError);
