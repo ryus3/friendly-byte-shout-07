@@ -667,7 +667,7 @@ export const AlWaseetProvider = ({ children }) => {
                 // ✅ Fallback 1: state_id للتسليم
                 else if (remoteOrder.state_id === 4 || remoteOrder.state_id === '4') {
                   newDeliveryStatus = '4';
-                  console.log('✅ تم استنتاج الحالة 4 من state_id');
+                  
                 }
                 // ✅ Fallback 2: status_text يحتوي "تسليم"
                 else if (remoteOrder.status_text && (
@@ -675,12 +675,12 @@ export const AlWaseetProvider = ({ children }) => {
                   remoteOrder.status_text.toLowerCase().includes('deliver')
                 )) {
                   newDeliveryStatus = '4';
-                  console.log('✅ تم استنتاج الحالة 4 من status_text:', remoteOrder.status_text);
+                  
                 }
                 // ✅ Fallback 3: deliver_confirmed_fin
                 else if (remoteOrder.deliver_confirmed_fin === 1 || remoteOrder.deliver_confirmed_fin === '1') {
                   newDeliveryStatus = '4';
-                  console.log('✅ تم استنتاج الحالة 4 من deliver_confirmed_fin');
+                  
                 }
                 // Fallback 4: status_text للإرجاع
                 else if (remoteOrder.status_text === 'تم الارجاع الى التاجر') {
@@ -1187,6 +1187,24 @@ export const AlWaseetProvider = ({ children }) => {
     fetchToken();
   }, [fetchToken]);
 
+  // 🧹 Cleanup: تنظيف localStorage من القيم الفاسدة
+  useEffect(() => {
+    const cleanupLocalStorage = () => {
+      const storedValue = localStorage.getItem('active_delivery_partner');
+      if (storedValue && !storedValue.startsWith('{') && !storedValue.startsWith('[')) {
+        // القيمة فاسدة (string عادي بدلاً من JSON)
+        localStorage.removeItem('active_delivery_partner');
+        if (storedValue !== 'local' && storedValue.replace(/"/g, '')) {
+          setActivePartner(storedValue.replace(/"/g, ''));
+        } else {
+          setActivePartner('alwaseet');
+        }
+      }
+    };
+    
+    cleanupLocalStorage();
+  }, []);
+
   // 🔐 Auto-Login: استعادة الجلسة تلقائياً عند بدء التطبيق
   useEffect(() => {
     const restoreSession = async () => {
@@ -1212,8 +1230,8 @@ export const AlWaseetProvider = ({ children }) => {
               label: defaultData.label
             });
             
-            // ✅ حفظ اسم الشريك في localStorage
-            localStorage.setItem('active_delivery_partner', defaultData.partner_name);
+            // ✅ استخدام setActivePartner للحفظ الصحيح
+            // بدلاً من localStorage.setItem مباشرة
             
             // ✅ تحديث last_used_at
             await supabase
@@ -1231,7 +1249,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
         
         // ✅ الطريقة الثانية: قاعدة البيانات
-        console.log('🔍 البحث في قاعدة البيانات...');
+        
         
         let tokenData = await supabase
           .from('delivery_partner_tokens')
@@ -1239,10 +1257,12 @@ export const AlWaseetProvider = ({ children }) => {
           .eq('user_id', user.id)
           .eq('is_default', true)
           .gt('expires_at', new Date().toISOString())
+          .order('last_used_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
         
         if (tokenData.data) {
-          console.log('✅ وُجد token افتراضي في القاعدة:', tokenData.data.partner_name);
+          
           
           // ✅ حفظ في localStorage للمرات القادمة
           localStorage.setItem('delivery_partner_default_token', JSON.stringify({
@@ -1253,8 +1273,7 @@ export const AlWaseetProvider = ({ children }) => {
             label: tokenData.data.account_label
           }));
           
-          // ✅ حفظ اسم الشريك في localStorage لاستخدامه في الواجهة
-          localStorage.setItem('active_delivery_partner', tokenData.data.partner_name);
+          // ✅ سيتم حفظ اسم الشريك عبر setActivePartner أدناه
           
           // ✅ تفعيل الجلسة
           setToken(tokenData.data.token);
@@ -1266,7 +1285,7 @@ export const AlWaseetProvider = ({ children }) => {
             label: tokenData.data.account_label
           });
         } else {
-          console.warn('⚠️ لا يوجد token افتراضي');
+          
           
           // ✅ Fallback: تحديد الشريك الافتراضي بناءً على order_creation_mode
           const { data: profile } = await supabase
@@ -1277,16 +1296,11 @@ export const AlWaseetProvider = ({ children }) => {
           
           const creationMode = profile?.order_creation_mode || 'choice';
           
-          if (creationMode === 'partner_only') {
-            // استخدام أول شريك متاح (غير local)
+          // ✅ منع 'local' من أن يكون افتراضي أبداً
+          if (creationMode === 'partner_only' || creationMode === 'local_only') {
             const firstPartner = Object.keys(deliveryPartners).find(k => k !== 'local') || 'alwaseet';
             setActivePartner(firstPartner);
-            localStorage.setItem('active_delivery_partner', firstPartner);
-            console.log(`✅ تم تعيين ${firstPartner} كشريك افتراضي (partner_only mode)`);
-          } else if (creationMode === 'local_only') {
-            setActivePartner('local');
-            localStorage.setItem('active_delivery_partner', 'local');
-            console.log('✅ تم تعيين local كشريك افتراضي (local_only mode)');
+          
           }
           // في وضع 'choice'، لا نفعل شيء ونترك المستخدم يختار
         }
@@ -2009,7 +2023,7 @@ export const AlWaseetProvider = ({ children }) => {
       try {
         waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
         devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
-        console.log('📊 إحصائيات المزامنة:', {
+        
           totalLocal: pendingOrders.length,
           totalWaseet: waseetOrders.length,
           localOrders: pendingOrders.map(o => o.tracking_number)
@@ -3164,7 +3178,7 @@ export const AlWaseetProvider = ({ children }) => {
         while (verificationAttempts < maxAttempts && !orderExists) {
           try {
             verificationAttempts++;
-            console.log(`🔄 محاولة ${verificationAttempts}/${maxAttempts} للطلب: ${order.tracking_number}`);
+            
 
             const response = await fetch('/api/alwaseet/check-order', {
               method: 'POST',
@@ -3177,7 +3191,7 @@ export const AlWaseetProvider = ({ children }) => {
               
               if (result.exists && result.status !== 'not_found') {
                 orderExists = true;
-                console.log(`✅ الطلب موجود في الوسيط (محاولة ${verificationAttempts}): ${order.tracking_number}`);
+                
                 break;
               }
             }
@@ -3193,7 +3207,7 @@ export const AlWaseetProvider = ({ children }) => {
 
         // إذا لم يوجد الطلب بعد كل المحاولات، احذفه
         if (!orderExists) {
-          console.log(`🗑️ حذف الطلب غير الموجود بعد ${maxAttempts} محاولات: ${order.tracking_number}`);
+          
           
           // إشعار المدير
         toast({
@@ -3213,7 +3227,7 @@ export const AlWaseetProvider = ({ children }) => {
   // دالة الحذف الفردي
   const performAutoDelete = async (order) => {
     try {
-      console.log(`🗑️ بدء الحذف التلقائي للطلب ${order.id}`);
+      
       
       // تحرير المخزون المحجوز
       if (order.order_items && order.order_items.length > 0) {
