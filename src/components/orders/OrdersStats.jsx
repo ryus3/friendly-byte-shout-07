@@ -49,7 +49,7 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     if (status === 'shipped') {
       return filtered.filter(o => SHIPPED_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
     }
-    if (status === 'delivery') {
+    if (status === 'in_delivery') {
       return filtered.filter(o => IN_DELIVERY_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
     }
     if (status === 'delivered') {

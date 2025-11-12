@@ -12,7 +12,7 @@
 export const calculateReservedQuantityForVariant = (variantId, orders = []) => {
   if (!variantId || !Array.isArray(orders)) return 0;
 
-  const activeOrderStatuses = ['pending', 'shipped', 'delivery'];
+  const activeOrderStatuses = ['pending', 'shipped', 'in_delivery'];
   
   return orders.reduce((totalReserved, order) => {
     // استبعاد طلبات الإرجاع من الحجز

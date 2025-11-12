@@ -51,7 +51,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
     // محاكاة بيانات طلب منتظم لاستخدام النظام الموحد
     const mockOrder = {
       status: order.status === 'completed' ? 'delivered' : 
-              order.status === 'processing' ? 'delivery' :
+              order.status === 'processing' ? 'in_delivery' :
               order.status === 'pending' ? 'pending' : 
               order.status === 'failed' ? 'cancelled' : 'pending',
       delivery_status: null,

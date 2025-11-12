@@ -696,7 +696,7 @@ export const AlWaseetProvider = ({ children }) => {
               const statusConfig = isModon 
                 ? getModonStatusConfig(statusId, remoteOrder.status)
                 : getStatusConfig(newDeliveryStatus);
-              const newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
+              const newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'in_delivery';
               
               // ✅ استخدام delivery_fee من الطلب المحلي (الإعدادات)، وليس من API
               const newDeliveryFee = localOrder.delivery_fee || 0;
@@ -789,7 +789,7 @@ export const AlWaseetProvider = ({ children }) => {
                   }
                   
                   const statusConfig = getStatusConfig(newDeliveryStatus);
-                  const newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
+                  const newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'in_delivery';
                   const newDeliveryFee = parseFloat(directOrder.delivery_fee) || 0;
                   const newReceiptReceived = statusConfig.receiptReceived ?? false;
 

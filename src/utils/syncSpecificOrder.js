@@ -33,10 +33,12 @@ export const syncSpecificOrder = async (qrId, token) => {
       correctLocalStatus = 'returned_in_stock';
     } else if (['31', '32'].includes(standardizedDeliveryStatus)) {
       correctLocalStatus = 'cancelled';
-    } else if (['2', '3'].includes(standardizedDeliveryStatus)) {
+    } else if (['2', '7', '8', '9', '10', '11'].includes(standardizedDeliveryStatus)) {
       correctLocalStatus = 'shipped';
-    } else if (['14', '22', '23', '24', '42', '44'].includes(standardizedDeliveryStatus)) {
-      correctLocalStatus = 'delivery';
+    } else if (['3', '5', '6', '14', '18', '22', '23', '24', '25', '26', '27', '28', '29', '30', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44'].includes(standardizedDeliveryStatus)) {
+      correctLocalStatus = 'in_delivery';
+    } else if (['12', '13', '15', '16', '19', '20', '21'].includes(standardizedDeliveryStatus)) {
+      correctLocalStatus = 'returned';
     }
 
     // جلب الطلب المحلي

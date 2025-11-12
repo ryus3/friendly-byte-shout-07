@@ -59,7 +59,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '3': {
     text: 'قيد التوصيل الى الزبون (في عهدة المندوب)',
     icon: MapPin,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -80,7 +80,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '5': {
     text: 'في موقع فرز بغداد',
     icon: Building,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -90,7 +90,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '6': {
     text: 'في مكتب',
     icon: Building,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -100,12 +100,52 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '7': {
     text: 'في الطريق الى مكتب المحافظة',
     icon: Truck,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-amber-500 to-orange-600 text-white border border-amber-300/50 shadow-lg shadow-amber-400/40',
-    description: 'قيد التوصيل - في الطريق إلى مكتب المحافظة'
+    description: 'تم الشحن - في الطريق إلى مكتب المحافظة'
+  },
+  '8': {
+    text: 'في مخزن بغداد',
+    icon: Building,
+    internalStatus: 'shipped',
+    canDelete: false,
+    canEdit: false,
+    releasesStock: false,
+    color: 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white border border-blue-400/50 shadow-lg shadow-blue-500/40',
+    description: 'تم الشحن - في مخزن بغداد'
+  },
+  '9': {
+    text: 'في طريقه للمحافظة',
+    icon: Truck,
+    internalStatus: 'shipped',
+    canDelete: false,
+    canEdit: false,
+    releasesStock: false,
+    color: 'bg-gradient-to-r from-orange-600 to-amber-700 text-white border border-orange-400/50 shadow-lg shadow-orange-500/40',
+    description: 'تم الشحن - في الطريق للمحافظة'
+  },
+  '10': {
+    text: 'وصل الى مكتب المحافظة',
+    icon: MapPin,
+    internalStatus: 'shipped',
+    canDelete: false,
+    canEdit: false,
+    releasesStock: false,
+    color: 'bg-gradient-to-r from-green-600 to-teal-700 text-white border border-green-400/50 shadow-lg shadow-green-500/40',
+    description: 'تم الشحن - وصل لمكتب المحافظة'
+  },
+  '11': {
+    text: 'تم استلامه من قبل المكتب',
+    icon: PackageCheck,
+    internalStatus: 'shipped',
+    canDelete: false,
+    canEdit: false,
+    releasesStock: false,
+    color: 'bg-gradient-to-r from-cyan-600 to-blue-700 text-white border border-cyan-400/50 shadow-lg shadow-cyan-500/40',
+    description: 'تم الشحن - تم استلامه من المكتب'
   },
 
   // حالات الإرجاع - محجوز
@@ -132,7 +172,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '14': {
     text: 'اعادة الارسال الى الزبون',
     icon: RefreshCw,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -174,7 +214,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '18': {
     text: 'تغيير سعر',
     icon: AlertTriangle,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -214,7 +254,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '22': {
     text: 'ارسال الى الفزر',
     icon: Building,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -224,7 +264,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '23': {
     text: 'ارسال الى مخزن الارجاعات',
     icon: RotateCcw,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -234,7 +274,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '24': {
     text: 'تم تغيير محافظة الزبون',
     icon: MapPin,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -246,7 +286,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '25': {
     text: 'لا يرد',
     icon: PhoneOff,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -256,7 +296,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '26': {
     text: 'لا يرد بعد الاتفاق',
     icon: PhoneOff,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -266,7 +306,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '27': {
     text: 'مغلق',
     icon: Ban,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -276,7 +316,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '28': {
     text: 'مغلق بعد الاتفاق',
     icon: Ban,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -286,7 +326,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '29': {
     text: 'مؤجل',
     icon: Clock,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -296,7 +336,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '30': {
     text: 'مؤجل لحين اعادة الطلب لاحقا',
     icon: Clock,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -330,7 +370,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '33': {
     text: 'مفصول عن الخدمة',
     icon: Ban,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -340,7 +380,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '34': {
     text: 'طلب مكرر',
     icon: AlertTriangle,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -350,7 +390,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '35': {
     text: 'مستلم مسبقا',
     icon: CheckCircle,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -360,7 +400,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '36': {
     text: 'الرقم غير معرف',
     icon: Phone,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -370,7 +410,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '37': {
     text: 'الرقم غير داخل في الخدمة',
     icon: PhoneOff,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -380,7 +420,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '38': {
     text: 'العنوان غير دقيق',
     icon: MapPin,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -390,7 +430,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '39': {
     text: 'لم يطلب',
     icon: XCircle,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -400,7 +440,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '40': {
     text: 'حظر المندوب',
     icon: Ban,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -410,7 +450,7 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '41': {
     text: 'لا يمكن الاتصال بالرقم',
     icon: PhoneOff,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -420,17 +460,27 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '42': {
     text: 'تغيير المندوب',
     icon: RefreshCw,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-blue-600 to-cyan-700 text-white border border-blue-400/50 shadow-lg shadow-blue-500/40',
     description: 'قيد التوصيل - تغيير المندوب'
   },
+  '43': {
+    text: 'تغيير العنوان',
+    icon: MapPin,
+    internalStatus: 'in_delivery',
+    canDelete: false,
+    canEdit: false,
+    releasesStock: false,
+    color: 'bg-gradient-to-r from-purple-600 to-pink-700 text-white border border-purple-400/50 shadow-lg shadow-purple-500/40',
+    description: 'قيد التوصيل - تغيير العنوان'
+  },
   '44': {
     text: 'اخراج من المخزن وارسالة الى الفرز',
     icon: Package,
-    internalStatus: 'delivery',
+    internalStatus: 'in_delivery',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
@@ -458,10 +508,12 @@ export const releasesStock = (stateId) => {
 export const getStatusConfig = (stateId) => {
   const status = ALWASEET_STATUS_DEFINITIONS[String(stateId)];
   if (!status) {
+    // ⚠️ ملاحظة: 'delivery' ليست حالة صحيحة في النظام
+    // الحالات الصحيحة: pending, shipped, in_delivery, delivered, returned, returned_in_stock, cancelled
     return {
       text: 'حالة غير معروفة',
       icon: AlertTriangle,
-      internalStatus: 'delivery',
+      internalStatus: 'in_delivery',
       canDelete: false,
       canEdit: false,
       releasesStock: false,

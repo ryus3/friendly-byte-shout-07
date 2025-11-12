@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus, Trash2, User, Lock, Star } from 'lucide-react';
+import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus, Trash2, User, Lock, Star, Badge as BadgeIcon } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from './ui/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -354,7 +354,10 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                             <span className="font-medium">الحساب المختار:</span> {selectedAccount.account_label || selectedAccount.partner_data?.username || selectedAccount.account_username}
                                         </p>
                                         {selectedAccount.is_default && (
-                                            <p className="text-xs text-green-600 dark:text-green-400 mt-1">🌟 الحساب الافتراضي</p>
+                                            <div className="flex items-center gap-1 text-xs mt-1">
+                                                <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                                                <span className="text-amber-600 dark:text-amber-400">الحساب الافتراضي</span>
+                                            </div>
                                         )}
                                     </div>
                                     {selectedAccount.expires_at && (
@@ -526,15 +529,18 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                     
                                     return (
                                         <SelectItem key={key} value={key}>
-                                            <div className="flex items-center justify-between w-full">
+                                            <div className="flex items-center justify-between w-full gap-2">
                                                 <span>{partner.name}</span>
-                                <span className={`text-xs px-2 py-0.5 rounded ${
-                                                    isConnected 
-                                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
-                                                        : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
-                                                }`}>
-                                                    {statusLabel}
-                                                </span>
+                                                <div className="flex items-center gap-1.5">
+                                                    {isConnected && key !== 'local' && (
+                                                        <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                                    )}
+                                                    {activePartner === key && (
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
+                                                            <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </SelectItem>
                                     );

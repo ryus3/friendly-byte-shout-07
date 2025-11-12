@@ -561,7 +561,7 @@ const OrdersPage = () => {
           if (o?.status === 'pending') return false; // استبعاد قيد التجهيز
           return true; // أي حالة قبل التسليم تعتبر معلّقة
         }
-        return o?.status === 'shipped' || o?.status === 'delivery';
+        return o?.status === 'shipped' || o?.status === 'in_delivery';
       };
 
       // حالات قيد التوصيل (بدون الحالة 2 - هي في "تم الشحن" فقط)
@@ -593,7 +593,7 @@ const OrdersPage = () => {
         matchesStatus = isPendingSale(order);
       } else if (status === 'shipped') {
         matchesStatus = SHIPPED_STATUSES.includes(order.delivery_status);
-      } else if (status === 'delivery') {
+      } else if (status === 'in_delivery') {
         matchesStatus = IN_DELIVERY_STATUSES.includes(order.delivery_status);
       } else if (status === 'delivered') {
         matchesStatus = DELIVERED_STATUSES.includes(order.delivery_status);

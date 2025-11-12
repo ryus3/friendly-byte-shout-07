@@ -556,7 +556,7 @@ const Dashboard = () => {
             if (o?.status === 'pending') return false; // استبعاد قيد التجهيز
             return true; // أي حالة قبل التسليم تعتبر معلّقة
           }
-          return o?.status === 'shipped' || o?.status === 'delivery';
+          return o?.status === 'shipped' || o?.status === 'in_delivery';
         };
 
         const pendingCandidates = visibleOrders.filter(isPendingSale);
