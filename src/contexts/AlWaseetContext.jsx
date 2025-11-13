@@ -713,7 +713,7 @@ export const AlWaseetProvider = ({ children }) => {
                 newStatus = 'cancelled';
               } else {
                 // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses فقط
-                newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'shipped';
+                newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
               }
               
               // ✅ استخدام delivery_fee من الطلب المحلي (الإعدادات)، وليس من API

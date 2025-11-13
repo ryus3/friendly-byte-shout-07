@@ -85,7 +85,7 @@ export const shouldKeepReservation = (status, deliveryStatus, deliveryPartner) =
   }
 
   // الحالات التي تحتفظ بالحجز
-  const reservedStatuses = ['pending', 'shipped', 'in_delivery', 'returned'];
+  const reservedStatuses = ['pending', 'shipped', 'delivery', 'returned'];
   
   // للطلبات المعادة، نحتفظ بالحجز حتى يتم إرجاعها للمخزن
   if (status === 'returned') {
@@ -210,7 +210,7 @@ export const auditAndFixReservations = async () => {
           quantity,
           item_direction
         )
-      `)
+       `)
       .in('status', ['pending', 'shipped', 'delivery', 'returned', 'completed', 'delivered']);
 
     if (ordersError) {

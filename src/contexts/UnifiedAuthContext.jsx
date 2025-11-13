@@ -86,6 +86,30 @@ export const UnifiedAuthProvider = ({ children }) => {
         return { ...supabaseUser, is_new: true, status: 'pending' };
       }
 
+      // 🔥 جلب الشركة الافتراضية من delivery_partner_tokens وحفظها
+      const { data: defaultPartner } = await supabase
+        .from('delivery_partner_tokens')
+        .select('partner_name')
+        .eq('user_id', supabaseUser.id)
+        .eq('is_active', true)
+        .order('last_used_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (defaultPartner?.partner_name) {
+        // حفظ في localStorage
+        localStorage.setItem('active_delivery_partner', defaultPartner.partner_name);
+        
+        // حفظ في profiles.selected_delivery_partner
+        await supabase
+          .from('profiles')
+          .update({ 
+            selected_delivery_partner: defaultPartner.partner_name,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', profile.id);
+      }
+
       // استخراج الأدوار
       const roles = profile.user_roles?.map(ur => ur.roles.name) || [];
       

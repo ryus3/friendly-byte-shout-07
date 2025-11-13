@@ -29,7 +29,7 @@ const useInventoryStats = () => {
     try {
       // الطلبات المحجوزة - نفس المنطق في ReservedStockDialog
       const reservedOrders = (orders || []).filter(o => 
-        ['pending', 'shipped', 'in_delivery', 'returned'].includes(o.status) &&
+        ['pending', 'shipped', 'delivery', 'returned'].includes(o.status) &&
         o.status !== 'returned_in_stock'
       );
       

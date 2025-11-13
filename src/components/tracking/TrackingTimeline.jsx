@@ -10,19 +10,19 @@ const TrackingTimeline = ({ order }) => {
       status: 'pending',
       label: 'قيد المعالجة',
       icon: Package,
-      completed: ['pending', 'shipped', 'in_delivery', 'delivered'].includes(order.status)
+      completed: ['pending', 'shipped', 'delivery', 'delivered'].includes(order.status)
     },
     {
       status: 'shipped',
       label: 'تم الشحن',
       icon: Truck,
-      completed: ['shipped', 'in_delivery', 'delivered'].includes(order.status)
+      completed: ['shipped', 'delivery', 'delivered'].includes(order.status)
     },
     {
-      status: 'in_delivery',
+      status: 'delivery',
       label: 'قيد التوصيل',
       icon: MapPin,
-      completed: ['in_delivery', 'delivered'].includes(order.status)
+      completed: ['delivery', 'delivered'].includes(order.status)
     },
     {
       status: 'delivered',

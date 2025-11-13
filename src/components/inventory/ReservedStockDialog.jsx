@@ -39,7 +39,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   // الطلبات المحجوزة - تشمل الطلبات المعادة أيضاً حتى يتم إرجاعها للمخزن
   const reservedOrders = useMemo(() => {
     return orders?.filter(order => 
-      ['pending', 'shipped', 'in_delivery', 'returned'].includes(order.status) &&
+      ['pending', 'shipped', 'delivery', 'returned'].includes(order.status) &&
       // لا تشمل الطلبات التي تم إرجاعها للمخزن
       order.status !== 'returned_in_stock'
     ) || [];
