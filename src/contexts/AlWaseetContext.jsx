@@ -807,7 +807,25 @@ export const AlWaseetProvider = ({ children }) => {
                   }
                   
                   const statusConfig = getStatusConfig(newDeliveryStatus);
-                  const newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'in_delivery';
+                  
+                  // ✅ تطبيق نفس المنطق الصارم من getMerchantOrders (السطور 700-717)
+                  let newStatus;
+                  if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
+                    // حماية مطلقة للطلبات المُسلّمة والمكتملة - لا تغيير أبداً
+                    newStatus = localOrder.status;
+                  } else if (newDeliveryStatus === '4') {
+                    // الحالة 4 = delivered فوراً - لا استثناءات
+                    newStatus = 'delivered';
+                  } else if (newDeliveryStatus === '17') {
+                    // الحالة 17 = returned_in_stock فوراً
+                    newStatus = 'returned_in_stock';
+                  } else if (newDeliveryStatus === '31' || newDeliveryStatus === '32') {
+                    // حالات الإلغاء
+                    newStatus = 'cancelled';
+                  } else {
+                    // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses فقط
+                    newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
+                  }
                   const newDeliveryFee = parseFloat(directOrder.delivery_fee) || 0;
                   const newReceiptReceived = statusConfig.receiptReceived ?? false;
 

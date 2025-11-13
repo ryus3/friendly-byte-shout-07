@@ -178,13 +178,17 @@ Deno.serve(async (req) => {
           finalStatus = 'cancelled';
         } else {
           // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses
-          finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'shipped';
+          finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
         }
         
         if (statusChanged || priceChanged || accountChanged) {
           if (statusChanged) {
             updates.delivery_status = newStatus;
             changesList.push(`الحالة: ${currentStatus} → ${newStatus}`);
+          } else if (newStatus === '4' && localOrder.status !== 'delivered') {
+            // ✅ حتى لو delivery_status لم يتغير، إذا كان '4' و status ليس 'delivered'، صحح
+            finalStatus = 'delivered';
+            changesList.push(`تصحيح الحالة: ${localOrder.status} → delivered`);
           } else if (newStatus === '17' && localOrder.status !== 'returned_in_stock') {
             finalStatus = 'returned_in_stock';
             changesList.push(`تصحيح الحالة: ${localOrder.status} → returned_in_stock`);
