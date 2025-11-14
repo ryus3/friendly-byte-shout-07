@@ -187,16 +187,27 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
         });
       }
 
-      // 5️⃣ ✅ تحديث حالة الطلب الرئيسي
+      // 5️⃣ ✅ تحديث حالة الطلب الرئيسي والمبالغ
       const newOrderStatus = unselectedItems.length > 0 
         ? 'partial_delivery' 
         : 'delivered';
+
+      // حساب المبالغ الصحيحة
+      const deliveredItemsTotal = items
+        .filter(item => selectedItems.includes(item.id))
+        .reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+
+      const originalTotal = Number(order.total_amount || 0) + Number(order.delivery_fee || 0);
+      const newDiscount = Math.max(0, originalTotal - finalPrice);
 
       await supabase
         .from('orders')
         .update({
           status: newOrderStatus,
-          price_change_type: null, // إزالة العلامة المؤقتة
+          total_amount: deliveredItemsTotal,  // سعر المنتجات المُسلّمة فقط
+          final_amount: finalPrice,           // السعر النهائي الكامل
+          discount: newDiscount,              // الفرق كخصم
+          price_change_type: null,            // إزالة العلامة المؤقتة
           updated_at: new Date().toISOString()
         })
         .eq('id', order.id);

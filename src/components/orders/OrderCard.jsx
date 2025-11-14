@@ -587,7 +587,9 @@ const OrderCard = React.memo(({
                         </div>
                        
                        {/* شارة الخصم - برتقالي تدرج مع أيقونة */}
-                       {Number(order.discount || 0) > 0 && order.order_type !== 'return' && (
+                       {Number(order.discount || 0) > 0 && 
+                        order.order_type !== 'return' && 
+                        order.status !== 'partial_delivery' && (
                          <div className="relative group/discount">
                            <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-full blur-sm"></div>
                            <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs px-2 py-0.5 shadow-md">
