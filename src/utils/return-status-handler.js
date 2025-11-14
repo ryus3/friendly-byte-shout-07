@@ -49,8 +49,64 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
     if (newDeliveryStatus === '17' || newDeliveryStatus === 17) {
       console.log('📦 الحالة 17: استلام المنتج المُرجع من المندوب');
       
-      // ✅ التحقق من المرور بالحالة 21 أولاً
-      if (order.order_status !== 'return_pending') {
+      // ✅ جلب order_items - نعالج سواء return أو partial_delivery
+      const { data: items, error: itemsError } = await supabase
+        .from('order_items')
+        .select('*, product_variants(id, product_id)')
+        .eq('order_id', orderId);
+      
+      if (itemsError || !items || items.length === 0) {
+        console.error('❌ خطأ في جلب order_items:', itemsError);
+        return { success: false, error: 'لا توجد منتجات للإرجاع' };
+      }
+
+      // ✅ معالجة المنتجات pending_return (من التسليم الجزئي)
+      const pendingReturnItems = items.filter(item => item.item_status === 'pending_return');
+      
+      if (pendingReturnItems.length > 0) {
+        console.log(`📦 إرجاع ${pendingReturnItems.length} منتج من pending_return إلى المخزون`);
+
+        // تحديث المخزون للمنتجات pending_return
+        for (const item of pendingReturnItems) {
+          const { error: stockError } = await supabase.rpc('update_variant_stock', {
+            p_variant_id: item.variant_id,
+            p_quantity_change: item.quantity,
+            p_reason: `إرجاع من الطلب ${order.order_number} (حالة 17)`
+          });
+
+          if (stockError) {
+            console.error(`❌ خطأ في تحديث المخزون:`, stockError);
+          } else {
+            console.log(`✅ تم إرجاع ${item.quantity} من ${item.variant_id} إلى المخزون`);
+          }
+        }
+
+        // تحديث حالة المنتجات من pending_return إلى returned_in_stock
+        await supabase
+          .from('order_items')
+          .update({ 
+            item_status: 'returned_in_stock',
+            updated_at: new Date().toISOString()
+          })
+          .eq('order_id', orderId)
+          .eq('item_status', 'pending_return');
+
+        // تحديث حالة الطلب
+        await supabase
+          .from('orders')
+          .update({
+            status: 'returned_in_stock',
+            status_changed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', orderId);
+
+        console.log('✅ تم معالجة التسليم الجزئي - المنتجات المُرجعة في المخزون');
+        return { success: true, processed: pendingReturnItems.length };
+      }
+      
+      // ✅ معالجة طلبات الإرجاع الكاملة (التحقق من المرور بالحالة 21)
+      if (order.order_type === 'return' && order.order_status !== 'return_pending') {
         console.log('⚠️ لم يتم المرور بالحالة 21 أولاً - إلغاء طلب الإرجاع');
         
         // إلغاء الطلب

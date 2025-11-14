@@ -255,21 +255,20 @@ const OrderCard = React.memo(({
     if (order.delivery_partner?.toLowerCase() !== 'alwaseet') return false;
     if (!order.order_items || order.order_items.length <= 1) return false;
     
-    // ✅ الحالات التي تحتاج تسليم جزئي:
-    // - الحالة 4 (تم التسليم للعميل)
-    // - الحالة 21 (تم التسليم + استرجاع جزئي)
-    const isPartialDeliveryStatus = order.delivery_status === '4' || order.delivery_status === '21';
-    if (!isPartialDeliveryStatus) return false;
-    
-    // التحقق من وجود تغيير سعر من API
-    if (order.price_change_type !== 'api_sync') return false;
-    
     // التحقق من أن جميع العناصر لا تزال في pending
     const allPending = order.order_items.every(item => 
       !item.item_status || item.item_status === 'pending'
     );
+    if (!allPending) return false;
     
-    return allPending;
+    // ✅ الحالات التي تحتاج تسليم جزئي:
+    // 1. الحالة 21 (تم التسليم + استرجاع جزئي) - دائماً
+    if (order.delivery_status === '21') return true;
+    
+    // 2. الحالة 4 (تم التسليم) - فقط إذا كان هناك تغيير سعر من API
+    if (order.delivery_status === '4' && order.price_change_type === 'api_sync') return true;
+    
+    return false;
   }, [order]);
 
   const employeeProfit = useMemo(() => {
