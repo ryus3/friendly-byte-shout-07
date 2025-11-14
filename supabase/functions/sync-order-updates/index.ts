@@ -163,11 +163,14 @@ Deno.serve(async (req) => {
 
         const changesList: string[] = [];
 
-        // ✅ منطق صارم جداً: الحالة 4 = delivered حتماً، 17 = returned_in_stock حتماً
+        // ✅ حماية مطلقة: partial_delivery + delivered + completed
         let finalStatus;
-        if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
-          // حماية مطلقة للطلبات المُسلّمة والمكتملة
+        if (localOrder.status === 'partial_delivery' || 
+            localOrder.status === 'delivered' || 
+            localOrder.status === 'completed') {
+          // ✅ حماية مطلقة - هذه الحالات لا تتغير أبداً
           finalStatus = localOrder.status;
+          console.log(`🔒 محمي: ${localOrder.tracking_number} - ${localOrder.status}`);
         } else if (newStatus === '4') {
           // الحالة 4 = delivered فوراً - لا استثناءات
           finalStatus = 'delivered';
@@ -177,9 +180,18 @@ Deno.serve(async (req) => {
         } else if (['31', '32'].includes(newStatus)) {
           finalStatus = 'cancelled';
         } else {
-          // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses
+          // ✅ استخدام المصدر الموحد getStatusConfig
           finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
         }
+        
+        console.log(`🔄 مزامنة ${localOrder.tracking_number}:`, {
+          old_delivery_status: currentStatus,
+          new_delivery_status: newStatus,
+          old_local_status: localOrder.status,
+          new_local_status: finalStatus,
+          is_protected: finalStatus === localOrder.status,
+          statusConfig: statusConfig?.text || 'غير معروف'
+        });
         
         if (statusChanged || priceChanged || accountChanged) {
           if (statusChanged) {

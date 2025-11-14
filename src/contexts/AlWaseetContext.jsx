@@ -28,6 +28,12 @@ export const AlWaseetProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [activePartner, setActivePartner] = useLocalStorage('active_delivery_partner', null);
   
+  // ✅ فصل الحساب الافتراضي لكل شركة عن الشركة النشطة
+  const [defaultAccounts, setDefaultAccounts] = useLocalStorage('delivery_default_accounts', {
+    alwaseet: null,
+    modon: null
+  });
+  
   // نظام البيانات الموحد للتأكد من الأمان وفصل الحسابات
   const { userUUID, getOrdersQuery, canViewData } = useUnifiedUserData();
   
@@ -55,10 +61,18 @@ export const AlWaseetProvider = ({ children }) => {
         const normalizedAccount = accountUsername.trim().toLowerCase().replace(/\s+/g, '-');
         query = query.ilike('account_username', normalizedAccount);
       } else {
-        // البحث عن الحساب الافتراضي أو الأحدث
-        query = query.order('is_default', { ascending: false })
-                    .order('last_used_at', { ascending: false })
-                    .limit(1);
+        // ✅ استخدام الحساب الافتراضي للشركة الحالية
+        const defaultAccountForPartner = defaultAccounts[partner];
+        
+        if (defaultAccountForPartner) {
+          const normalizedDefault = defaultAccountForPartner.trim().toLowerCase().replace(/\s+/g, '-');
+          query = query.ilike('account_username', normalizedDefault);
+        } else {
+          // البحث عن الحساب المحدد كافتراضي في DB أو الأحدث
+          query = query.order('is_default', { ascending: false })
+                      .order('last_used_at', { ascending: false })
+                      .limit(1);
+        }
       }
       
       const { data, error } = await query.maybeSingle();
@@ -74,7 +88,7 @@ export const AlWaseetProvider = ({ children }) => {
     } catch (error) {
       return null;
     }
-  }, [activePartner]);
+  }, [activePartner, defaultAccounts]);
 
   // التحقق من صلاحية التوكن المحفوظ عند تحميل الصفحة
   useEffect(() => {
@@ -3158,21 +3172,29 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
 
-      // تحديد الحالة المحلية الصحيحة
-      const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId;
-      const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
+      // ✅ استخدام المصدر الموحد لتعريفات الحالات
+      const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId || waseetOrder.state_id;
+      const statusConfig = getStatusConfig(String(waseetStatusId));
       
-      const correctLocalStatus = statusMap.get(String(waseetStatusId)) || 
-        (() => {
-          const t = String(waseetStatusText || '').toLowerCase();
-          if (t.includes('تسليم') && t.includes('مصادقة')) return 'completed';
-          if (t.includes('تسليم') || t.includes('مسلم')) return 'delivered';
-          if (t.includes('ملغي') || t.includes('إلغاء') || t.includes('رفض')) return 'cancelled';
-          if (t.includes('راجع')) return 'returned';
-          if (t.includes('مندوب') || t.includes('استلام')) return 'shipped';
-          if (t.includes('جاري') || t.includes('توصيل') || t.includes('في الطريق')) return 'delivery';
-          return 'pending';
-        })();
+      // ✅ حماية partial_delivery من التغيير
+      let correctLocalStatus;
+      if (localOrder.status === 'partial_delivery') {
+        correctLocalStatus = 'partial_delivery'; // محمي - لا يتغير
+        devLog.log(`🔒 الطلب ${qrId} محمي كـ partial_delivery`);
+      } else if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
+        correctLocalStatus = localOrder.status; // محمي أيضاً
+        devLog.log(`🔒 الطلب ${qrId} محمي كـ ${localOrder.status}`);
+      } else {
+        // ✅ استخدام التعريف الموحد
+        correctLocalStatus = statusConfig?.localStatus || statusConfig?.internalStatus || 'pending';
+      }
+      
+      devLog.log(`🔄 تحديث ${qrId}:`, {
+        delivery_status: { old: localOrder.delivery_status, new: String(waseetStatusId) },
+        status: { old: localOrder.status, new: correctLocalStatus },
+        protected: localOrder.status === 'partial_delivery' || localOrder.status === 'delivered' || localOrder.status === 'completed' ? '🔒 محمي' : 'مسموح',
+        statusConfig: statusConfig?.text || 'غير معروف'
+      });
 
       if (!localOrder) {
         devLog.warn(`❌ لم يتم العثور على الطلب ${qrId} محلياً`);

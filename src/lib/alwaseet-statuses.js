@@ -243,13 +243,14 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   },
   '21': {
     text: 'تم التسليم للزبون واستلام منة الاسترجاع',
-    icon: RefreshCw,
-    internalStatus: 'returned', // راجع - يبقى محجوز
+    icon: PackageCheck,
+    internalStatus: 'delivered', // ✅ تم التسليم للزبون فعلاً - الراجع محجوز لحين الحالة 17
+    localStatus: 'delivered', // يمكن أن يكون partial_delivery حسب السياق
     canDelete: false,
     canEdit: false,
-    releasesStock: false,
-    color: 'bg-gradient-to-r from-teal-500 to-cyan-600 text-white border border-teal-300/50 shadow-lg shadow-teal-400/40',
-    description: 'راجع - يبقى محجوز'
+    releasesStock: false, // ✅ الراجع لا يدخل المخزون حتى الحالة 17
+    color: 'bg-gradient-to-r from-emerald-500 to-green-600 text-white border border-emerald-300/50 shadow-lg shadow-emerald-400/40',
+    description: 'تم التسليم - الراجع محجوز لحين استلامه من المندوب (حالة 17)'
   },
   '22': {
     text: 'ارسال الى الفزر',
