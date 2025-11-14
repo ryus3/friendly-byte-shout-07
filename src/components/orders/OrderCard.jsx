@@ -255,8 +255,11 @@ const OrderCard = React.memo(({
     if (order.delivery_partner?.toLowerCase() !== 'alwaseet') return false;
     if (!order.order_items || order.order_items.length <= 1) return false;
     
-    // فقط في حالة 4 (تم التسليم)
-    if (order.delivery_status !== '4') return false;
+    // ✅ الحالات التي تحتاج تسليم جزئي:
+    // - الحالة 4 (تم التسليم للعميل)
+    // - الحالة 21 (تم التسليم + استرجاع جزئي)
+    const isPartialDeliveryStatus = order.delivery_status === '4' || order.delivery_status === '21';
+    if (!isPartialDeliveryStatus) return false;
     
     // التحقق من وجود تغيير سعر من API
     if (order.price_change_type !== 'api_sync') return false;

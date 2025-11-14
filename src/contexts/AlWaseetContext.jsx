@@ -756,7 +756,7 @@ export const AlWaseetProvider = ({ children }) => {
                 ? getModonStatusConfig(statusId, remoteOrder.status)
                 : getStatusConfig(newDeliveryStatus);
               
-              // ✅ منطق صارم جداً: الحالة 4 = delivered حتماً، 17 = returned_in_stock حتماً
+              // ✅ منطق صارم جداً: الحالة 4 = delivered حتماً، 17 = returned_in_stock حتماً، 21 = partial_delivery
               let newStatus;
               if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
                 // حماية مطلقة للطلبات المُسلّمة والمكتملة
@@ -767,6 +767,12 @@ export const AlWaseetProvider = ({ children }) => {
               } else if (newDeliveryStatus === '17' || statusId === '17') {
                 // الحالة 17 = returned_in_stock فوراً
                 newStatus = 'returned_in_stock';
+              } else if (newDeliveryStatus === '21' || statusId === '21') {
+                // ✅ الحالة 21 = تسليم جزئي (delivered to customer, return received)
+                // للطلبات متعددة المنتجات → partial_delivery
+                // للطلبات بمنتج واحد → returned
+                const hasMultipleItems = localOrder.order_items && localOrder.order_items.length > 1;
+                newStatus = hasMultipleItems ? 'partial_delivery' : 'returned';
               } else if (newDeliveryStatus === '31' || newDeliveryStatus === '32' || statusId === '31' || statusId === '32') {
                 // حالات الإلغاء
                 newStatus = 'cancelled';
