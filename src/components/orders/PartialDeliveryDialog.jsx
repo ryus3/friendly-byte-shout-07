@@ -189,8 +189,7 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
         });
       }
 
-      // 4️⃣ ✅ تحديث حالة الطلب الرئيسي
-      const unselectedItems = items.filter(item => !selectedItems.includes(item.id));
+      // 5️⃣ ✅ تحديث حالة الطلب الرئيسي
       const newOrderStatus = unselectedItems.length > 0 
         ? 'partial_delivery' 
         : 'delivered';
