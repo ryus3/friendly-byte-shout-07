@@ -227,7 +227,17 @@ Deno.serve(async (req) => {
         // ✅ لا حماية - نستخدم الحالة الصحيحة من شركة التوصيل مباشرة
         if (statusChanged) {
           const statusConfig = getStatusConfig(newStatus);
-          const finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
+          let finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
+          
+          // ✅ معالجة خاصة للحالة 21
+          if (newStatus === '21') {
+            finalStatus = 'partial_delivery';
+            console.log(`🟣 الحالة 21 للطلب ${localOrder.tracking_number}:`, {
+              current_status: localOrder.status,
+              new_status: 'partial_delivery',
+              note: 'يحتاج معالجة يدوية'
+            });
+          }
           
           console.log(`🔄 تحديث ${localOrder.tracking_number}:`, {
             delivery_status: `${currentStatus} → ${newStatus} (${statusConfig.text})`,
