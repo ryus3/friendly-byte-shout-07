@@ -394,17 +394,7 @@ const OrderCard = React.memo(({
                 </div>
               )}
               
-               {/* ملخص سريع للتسليم الجزئي - أسفل الحالة */}
-               {order.status === 'partial_delivery' && order.order_items && (
-                 <div className="flex items-center gap-1 text-xs bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 px-2 py-1 rounded-full border border-amber-300 dark:border-amber-800">
-                   <PackageCheck className="w-3 h-3" />
-                   <span className="font-medium">
-                     {order.order_items.filter(i => i.item_status === 'delivered').length} مُسلّم
-                     {' • '}
-                     {order.order_items.filter(i => i.item_status === 'pending_return' || i.item_status === 'returned').length} راجع
-                   </span>
-                 </div>
-               )}
+               {/* معلومات مُسلّم/راجع موجودة في قسم التفاصيل بالأسفل */}
               
                <div className="flex items-center gap-3">
                  {order.delivery_account_used && order.delivery_partner !== 'محلي' && (
