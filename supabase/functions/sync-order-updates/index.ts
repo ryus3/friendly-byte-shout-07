@@ -5,6 +5,64 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
 };
 
+// ✅ تعريفات حالات الوسيط الكاملة (45 حالة: 0-44)
+const ALWASEET_STATUS_DEFINITIONS: Record<string, { text: string; localStatus?: string; internalStatus: string; releasesStock: boolean }> = {
+  '0': { text: 'معطل او غير فعال', internalStatus: 'pending', releasesStock: false },
+  '1': { text: 'فعال ( قيد التجهير)', internalStatus: 'pending', releasesStock: false },
+  '2': { text: 'تم الاستلام من قبل المندوب', internalStatus: 'shipped', releasesStock: false },
+  '3': { text: 'قيد التوصيل الى الزبون (في عهدة المندوب)', internalStatus: 'delivery', releasesStock: false },
+  '4': { text: 'تم التسليم للزبون', localStatus: 'delivered', internalStatus: 'delivered', releasesStock: true },
+  '5': { text: 'في موقع فرز بغداد', internalStatus: 'delivery', releasesStock: false },
+  '6': { text: 'في مكتب', internalStatus: 'delivery', releasesStock: false },
+  '7': { text: 'في الطريق الى مكتب المحافظة', internalStatus: 'shipped', releasesStock: false },
+  '8': { text: 'في مخزن بغداد', internalStatus: 'shipped', releasesStock: false },
+  '9': { text: 'ملغى من قبل التاجر', localStatus: 'cancelled', internalStatus: 'cancelled', releasesStock: true },
+  '10': { text: 'راجع ( العنوان ناقص )', internalStatus: 'delivery', releasesStock: false },
+  '11': { text: 'راجع ( الهاتف مقفل )', internalStatus: 'delivery', releasesStock: false },
+  '12': { text: 'راجع ( تعطل )', internalStatus: 'delivery', releasesStock: false },
+  '13': { text: 'راجع ( تأجيل )', internalStatus: 'delivery', releasesStock: false },
+  '14': { text: 'راجع ( الاستلام من الفرع)', internalStatus: 'delivery', releasesStock: false },
+  '15': { text: 'راجع (عنوان خطأ)', internalStatus: 'delivery', releasesStock: false },
+  '16': { text: 'راجع ( رفض )', internalStatus: 'delivery', releasesStock: false },
+  '17': { text: 'تم الارجاع الى التاجر', localStatus: 'returned_in_stock', internalStatus: 'returned_in_stock', releasesStock: true },
+  '18': { text: 'راجع ( عنوان غير صحيح )', internalStatus: 'delivery', releasesStock: false },
+  '19': { text: 'راجع ( يرغب بتغير المنطقة )', internalStatus: 'delivery', releasesStock: false },
+  '20': { text: 'راجع ( طلب فحص من قبل التاجر)', internalStatus: 'delivery', releasesStock: false },
+  '21': { text: 'تم التسليم للزبون واستلام منة الاسترجاع', localStatus: 'delivered', internalStatus: 'delivered', releasesStock: false },
+  '22': { text: 'راجع ( غير موجود )', internalStatus: 'delivery', releasesStock: false },
+  '23': { text: 'ارسال الى مخزن الارجاعات', internalStatus: 'delivery', releasesStock: false },
+  '24': { text: 'راجع ( هاتف خطاء )', internalStatus: 'delivery', releasesStock: false },
+  '25': { text: 'راجع ( لتغير الاسم )', internalStatus: 'delivery', releasesStock: false },
+  '26': { text: 'راجع ( لتغير رقم الهاتف )', internalStatus: 'delivery', releasesStock: false },
+  '27': { text: 'راجع ( التاجر قام بإضافة العنوان خطأ )', internalStatus: 'delivery', releasesStock: false },
+  '28': { text: 'راجع ( الزبون طلب ان يكون استلام من التاجر او من فرع الوسيط )', internalStatus: 'delivery', releasesStock: false },
+  '29': { text: 'راجع ( لتنازل )', internalStatus: 'delivery', releasesStock: false },
+  '30': { text: 'راجع ( لتحويل الراجع )', internalStatus: 'delivery', releasesStock: false },
+  '31': { text: 'الغاء الطلب', localStatus: 'cancelled', internalStatus: 'cancelled', releasesStock: true },
+  '32': { text: 'رفض الطلب', localStatus: 'cancelled', internalStatus: 'cancelled', releasesStock: true },
+  '33': { text: 'راجع ( هاتف لا يرد )', internalStatus: 'delivery', releasesStock: false },
+  '34': { text: 'راجع ( هاتف خارج الخدمة )', internalStatus: 'delivery', releasesStock: false },
+  '35': { text: 'راجع ( عدم الاستلام من قبل الزبون )', internalStatus: 'delivery', releasesStock: false },
+  '36': { text: 'راجع ( هاتف مشغول )', internalStatus: 'delivery', releasesStock: false },
+  '37': { text: 'راجع ( تأكد من قبل الزبون )', internalStatus: 'delivery', releasesStock: false },
+  '38': { text: 'راجع ( الوسيط لا يوصل الى المنطقة )', internalStatus: 'delivery', releasesStock: false },
+  '39': { text: 'راجع ( غير مكتمل )', internalStatus: 'delivery', releasesStock: false },
+  '40': { text: 'راجع ( مع مندوب اخر )', internalStatus: 'delivery', releasesStock: false },
+  '41': { text: 'راجع ( منطقه بعيده )', internalStatus: 'delivery', releasesStock: false },
+  '42': { text: 'راجع ( حالة الطقس )', internalStatus: 'delivery', releasesStock: false },
+  '43': { text: 'راجع ( امني )', internalStatus: 'delivery', releasesStock: false },
+  '44': { text: 'راجع ( نصف غير مكتمل )', internalStatus: 'delivery', releasesStock: false }
+};
+
+function getStatusConfig(statusId: string | number) {
+  const config = ALWASEET_STATUS_DEFINITIONS[String(statusId)];
+  if (!config) {
+    console.warn(`⚠️ حالة غير معروفة: ${statusId}`);
+    return { text: `حالة ${statusId}`, localStatus: 'delivery', internalStatus: 'delivery', releasesStock: false };
+  }
+  return config;
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -163,31 +221,24 @@ Deno.serve(async (req) => {
 
         const changesList: string[] = [];
 
-        // ✅ حماية مطلقة: partial_delivery + delivered + completed
-        let finalStatus;
-        if (localOrder.status === 'partial_delivery' || 
-            localOrder.status === 'delivered' || 
-            localOrder.status === 'completed') {
-          // ✅ حماية مطلقة - هذه الحالات لا تتغير أبداً
-          finalStatus = localOrder.status;
-          console.log(`🔒 محمي: ${localOrder.tracking_number} - ${localOrder.status}`);
-        } else if (newStatus === '4') {
-          // الحالة 4 = delivered فوراً - لا استثناءات
-          finalStatus = 'delivered';
-        } else if (newStatus === '17') {
-          // الحالة 17 = returned_in_stock فوراً
-          finalStatus = 'returned_in_stock';
-        } else if (['31', '32'].includes(newStatus)) {
-          finalStatus = 'cancelled';
-        } else {
-          // ✅ استخدام المصدر الموحد getStatusConfig
-          finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
-        }
+        // Compare status
+        const statusChanged = currentStatus !== newStatus;
         
-        console.log(`🔄 مزامنة ${localOrder.tracking_number}:`, {
-          old_delivery_status: currentStatus,
-          new_delivery_status: newStatus,
-          old_local_status: localOrder.status,
+        // ✅ لا حماية - نستخدم الحالة الصحيحة من شركة التوصيل مباشرة
+        if (statusChanged) {
+          const statusConfig = getStatusConfig(newStatus);
+          const finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
+          
+          console.log(`🔄 تحديث ${localOrder.tracking_number}:`, {
+            delivery_status: `${currentStatus} → ${newStatus} (${statusConfig.text})`,
+            status: `${localOrder.status} → ${finalStatus}`,
+            no_protection: '✅ بدون حماية'
+          });
+          
+          updates.delivery_status = newStatus;
+          updates.status = finalStatus;
+          changesList.push(`الحالة: ${currentStatus} → ${newStatus} (${statusConfig.text})`);
+        }
           new_local_status: finalStatus,
           is_protected: finalStatus === localOrder.status,
           statusConfig: statusConfig?.text || 'غير معروف'

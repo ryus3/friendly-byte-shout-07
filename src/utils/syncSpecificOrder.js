@@ -53,17 +53,9 @@ export const syncSpecificOrder = async (qrId, token) => {
       return null;
     }
 
-    // ✅ حماية partial_delivery من التغيير
-    let finalStatus;
-    if (localOrder.status === 'partial_delivery') {
-      finalStatus = 'partial_delivery'; // محمي - لا يتغير أبداً
-      console.log(`🔒 الطلب ${qrId} محمي كـ partial_delivery`);
-    } else if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
-      finalStatus = localOrder.status; // محمي أيضاً
-      console.log(`🔒 الطلب ${qrId} محمي كـ ${localOrder.status}`);
-    } else {
-      finalStatus = correctLocalStatus;
-    }
+    // ✅ لا حماية - استخدام الحالة الصحيحة مباشرة
+    const finalStatus = correctLocalStatus;
+    console.log(`✅ تحديث ${qrId}: ${localOrder.status} → ${finalStatus} (${statusConfig?.text || 'غير معروف'})`);
     
     // تحضير التحديثات مع delivery_status المعياري
     const updates = {
