@@ -14,11 +14,11 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
   const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [customPrice, setCustomPrice] = useState(null); // للسماح بتعديل السعر
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open && order) {
       fetchOrderItems();
+      setCustomPrice(null); // إعادة تعيين السعر المخصص
     }
   }, [open, order]);
 
@@ -38,8 +38,8 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
 
     if (!error && data) {
       setItems(data);
-      // اختيار جميع المنتجات افتراضياً
-      setSelectedItems(data.map(item => item.id));
+      // لا تختار أي منتج افتراضياً - دع المستخدم يختار
+      setSelectedItems([]);
     }
   };
 
@@ -59,10 +59,21 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
       sum + (item.unit_price * item.quantity), 0
     );
     
-    // رسوم التوصيل كاملة إذا تم اختيار أي منتج
-    const deliveryFee = selectedItemsData.length > 0 ? (order?.delivery_fee || 0) : 0;
+    // ✅ رسوم التوصيل كاملة إذا تم اختيار أي منتج
+    const deliveryFee = selectedItemsData.length > 0 
+      ? Number(order?.delivery_fee || 0) 
+      : 0;
     
-    return itemsTotal + deliveryFee;
+    const total = itemsTotal + deliveryFee;
+    
+    console.log('💰 حساب السعر:', {
+      selectedCount: selectedItemsData.length,
+      itemsTotal,
+      deliveryFee,
+      total
+    });
+    
+    return total;
   };
 
   const handleConfirm = async () => {
@@ -314,12 +325,14 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>رسوم التوصيل:</span>
                 <span>
-                  {selectedItems.length > 0 ? (order?.delivery_fee || 0).toLocaleString() : 0} د.ع
+                  {selectedItems.length > 0 
+                    ? Number(order?.delivery_fee || 0).toLocaleString() 
+                    : 0} د.ع
                 </span>
               </div>
             </div>
             
-            {/* السعر المتوقع القابل للتعديل */}
+            {/* السعر النهائي القابل للتعديل */}
             <div className="border-t border-border pt-2">
               <div className="flex items-center justify-between gap-2">
                 <label className="text-sm font-medium">السعر النهائي (شامل التوصيل):</label>
@@ -331,7 +344,7 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
                   placeholder={expectedPrice.toLocaleString()}
                 />
               </div>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1 text-right">
                 السعر المتوقع: {expectedPrice.toLocaleString()} د.ع
               </p>
             </div>

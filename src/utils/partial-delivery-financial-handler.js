@@ -5,12 +5,14 @@ import { supabase } from '@/lib/customSupabaseClient';
  * @param {string} orderId - معرف الطلب
  * @param {Array} deliveredItemIds - معرفات المنتجات المسلمة
  * @param {Function} calculateProfit - دالة حساب ربح الموظف من SuperProvider
+ * @param {number} finalPrice - السعر النهائي (قابل للتعديل)
  * @returns {Promise<{success: boolean, profitId?: string, details?: object, error?: string}>}
  */
 export const handlePartialDeliveryFinancials = async (
   orderId,
   deliveredItemIds,
-  calculateProfit
+  calculateProfit,
+  finalPrice = null
 ) => {
   try {
     // 1️⃣ جلب تفاصيل الطلب والمنتجات المسلمة
@@ -39,9 +41,17 @@ export const handlePartialDeliveryFinancials = async (
     }
 
     // 3️⃣ حساب الإيرادات والتكاليف للمنتجات المسلمة فقط
-    // ✅ استخدام final_amount (المبلغ الفعلي المستلم من شركة التوصيل)
-    const finalAmount = order.final_amount || order.total_amount || 0;
+    // ✅ استخدام finalPrice المخصص إن وُجد، وإلا استخدام final_amount من الطلب
+    const useFinalPrice = finalPrice !== null && finalPrice !== undefined;
+    const finalAmount = useFinalPrice ? finalPrice : (order.final_amount || order.total_amount || 0);
     const orderTotalRevenue = order.total_amount || 0;
+    
+    console.log('💰 حساب الماليات:', {
+      useFinalPrice,
+      finalPrice,
+      finalAmount,
+      orderTotalRevenue
+    });
     
     // حساب نسبة التسليم
     const deliveryRatio = orderTotalRevenue > 0 
