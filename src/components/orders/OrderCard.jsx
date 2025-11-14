@@ -919,15 +919,18 @@ const OrderCard = React.memo(({
                   onClick={() => setShowPartialDelivery(true)}
                   variant="default"
                   size="sm"
-                  className="relative group overflow-hidden bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                  className="relative group overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 hover:from-blue-700 hover:via-purple-700 hover:to-pink-700 text-white border-0 shadow-xl hover:shadow-2xl transition-all duration-500 transform hover:scale-110 hover:-translate-y-1"
                 >
-                  {/* خلفية متحركة */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                  {/* طبقة الإضاءة المتحركة */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                  
+                  {/* وهج خارجي */}
+                  <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-md blur opacity-30 group-hover:opacity-70 transition-opacity duration-500"></div>
                   
                   {/* المحتوى */}
-                  <div className="relative flex items-center gap-2">
+                  <div className="relative flex items-center gap-2 px-2">
                     <Package className="w-4 h-4 animate-pulse" />
-                    <span className="font-bold">تحديد المنتجات المُسلّمة</span>
+                    <span className="font-bold text-sm">تحديد المنتجات المُسلّمة</span>
                     <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
                   </div>
                 </Button>
