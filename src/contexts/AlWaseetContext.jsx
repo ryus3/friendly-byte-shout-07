@@ -730,6 +730,25 @@ export const AlWaseetProvider = ({ children }) => {
                 else {
                   newDeliveryStatus = remoteOrder.status_text;
                 }
+                
+                // 🔍 Logging مفصّل للتشخيص
+                console.log(`🔍 [SYNC-DETAIL] الطلب ${localOrder.tracking_number}:`, {
+                  from_api: {
+                    id: remoteOrder.id,
+                    status_id: remoteOrder.status_id,
+                    state_id: remoteOrder.state_id,
+                    status_text: remoteOrder.status,
+                    deliver_confirmed: remoteOrder.deliver_confirmed_fin
+                  },
+                  computed: {
+                    statusId,
+                    newDeliveryStatus
+                  },
+                  current_in_db: {
+                    status: localOrder.status,
+                    delivery_status: localOrder.delivery_status
+                  }
+                });
               }
               
               // استخدام التعريف الصحيح حسب الشريك
@@ -760,6 +779,18 @@ export const AlWaseetProvider = ({ children }) => {
                 newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'pending';
               }
               
+              // 🔍 Logging للحالة المحسوبة
+              console.log(`📊 [SYNC-STATUS] الطلب ${localOrder.tracking_number}:`, {
+                statusConfig: {
+                  internalStatus: statusConfig.internalStatus,
+                  localStatus: statusConfig.localStatus,
+                  text: statusConfig.text
+                },
+                computed_newStatus: newStatus,
+                will_change: localOrder.status !== newStatus,
+                change_from_to: localOrder.status !== newStatus ? `${localOrder.status} → ${newStatus}` : 'no change'
+              });
+              
               // ✅ استخدام delivery_fee من الطلب المحلي (الإعدادات)، وليس من API
               const newDeliveryFee = localOrder.delivery_fee || 0;
               const newReceiptReceived = statusConfig.receiptReceived ?? false;
@@ -772,6 +803,24 @@ export const AlWaseetProvider = ({ children }) => {
                 localOrder.receipt_received !== newReceiptReceived ||
                 !localOrder.delivery_partner_order_id
               );
+              
+              // 🔍 Logging لسبب التحديث أو عدمه
+              console.log(`🔄 [SYNC-UPDATE] الطلب ${localOrder.tracking_number}:`, {
+                needsUpdate,
+                reasons: {
+                  delivery_status_changed: localOrder.delivery_status !== newDeliveryStatus,
+                  status_changed: localOrder.status !== newStatus,
+                  delivery_fee_changed: localOrder.delivery_fee !== newDeliveryFee,
+                  receipt_changed: localOrder.receipt_received !== newReceiptReceived,
+                  missing_partner_id: !localOrder.delivery_partner_order_id
+                },
+                changes: needsUpdate ? {
+                  delivery_status: `${localOrder.delivery_status} → ${newDeliveryStatus}`,
+                  status: `${localOrder.status} → ${newStatus}`,
+                  delivery_fee: `${localOrder.delivery_fee} → ${newDeliveryFee}`,
+                  receipt_received: `${localOrder.receipt_received} → ${newReceiptReceived}`
+                } : 'لا توجد تغييرات'
+              });
 
               if (needsUpdate) {
                 const updates = {
@@ -791,9 +840,9 @@ export const AlWaseetProvider = ({ children }) => {
 
                 if (!error) {
                   totalUpdated++;
-                  devLog.log(`✅ تم تحديث ${localOrder.tracking_number} عبر getMerchantOrders`);
+                  console.log(`✅ [SYNC-SUCCESS] تم تحديث ${localOrder.tracking_number} بنجاح`);
                 } else {
-                  console.error(`❌ خطأ في تحديث الطلب ${localOrder.tracking_number}:`, error);
+                  console.error(`❌ [SYNC-ERROR] خطأ في تحديث الطلب ${localOrder.tracking_number}:`, error);
                 }
               } else {
                 // ✅ حتى لو لم تتغير البيانات، نحدث وقت المزامنة
@@ -802,7 +851,7 @@ export const AlWaseetProvider = ({ children }) => {
                   .update({ updated_at: new Date().toISOString() })
                   .eq('id', localOrder.id);
                 
-                devLog.log(`⏰ تم تحديث وقت ${localOrder.tracking_number} (لا تغيير في البيانات)`);
+                console.log(`⏰ [SYNC-TIMESTAMP] تم تحديث وقت ${localOrder.tracking_number} فقط (لا تغيير في البيانات)`);
               }
             } else {
               // ⚠️ الطلب غير موجود في getMerchantOrders
@@ -4111,6 +4160,14 @@ export const AlWaseetProvider = ({ children }) => {
         } catch (e) {
           console.warn('⚠️ خطأ في مزامنة الفواتير المستلمة:', e?.message || e);
         }
+        
+        // ✅ إصلاح تعارضات الحالات التلقائي بعد كل مزامنة
+        console.log('🔧 فحص وإصلاح تعارضات الحالات...');
+        const fixResult = await fixStatusMismatches();
+        if (fixResult?.fixed > 0) {
+          console.log(`✅ تم إصلاح ${fixResult.fixed} طلب تلقائياً`);
+        }
+        
         setLastSyncAt(new Date());
         console.log('✅ تمت المزامنة بنجاح');
       } catch (error) {
@@ -4257,6 +4314,71 @@ export const AlWaseetProvider = ({ children }) => {
       console.error('❌ خطأ في الإصلاح الصامت:', error);
     }
   }, [token, correctionComplete]);
+
+  // ✅ دالة للتحقق من تعارضات الحالات وإصلاحها تلقائياً
+  const fixStatusMismatches = useCallback(async () => {
+    if (!token) {
+      console.warn('⚠️ لا يوجد token - قم بتسجيل الدخول أولاً');
+      return { fixed: 0, error: 'No token' };
+    }
+    
+    console.log('🔧 فحص تعارضات الحالات...');
+    
+    try {
+      const { data: conflictedOrders, error } = await scopeOrdersQuery(
+        supabase
+          .from('orders')
+          .select('id, tracking_number, order_number, status, delivery_status')
+          .eq('delivery_partner', 'alwaseet')
+          .not('delivery_status', 'is', null)
+          .not('status', 'in', '(completed)')
+      );
+      
+      if (error) {
+        console.error('❌ خطأ في جلب الطلبات:', error);
+        return { fixed: 0, error };
+      }
+      
+      if (!conflictedOrders?.length) {
+        console.log('✅ لا توجد طلبات للفحص');
+        return { fixed: 0 };
+      }
+      
+      let fixedCount = 0;
+      
+      for (const order of conflictedOrders) {
+        const statusConfig = getStatusConfig(order.delivery_status);
+        const correctStatus = statusConfig.localStatus || statusConfig.internalStatus || 'pending';
+        
+        if (order.status !== correctStatus) {
+          console.log(`🔧 إصلاح تعارض للطلب ${order.tracking_number} (${order.order_number}): ${order.status} → ${correctStatus} (delivery_status=${order.delivery_status})`);
+          
+          const { error: updateError } = await supabase
+            .from('orders')
+            .update({ 
+              status: correctStatus,
+              status_changed_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', order.id);
+          
+          if (!updateError) {
+            fixedCount++;
+          } else {
+            console.error(`❌ خطأ في إصلاح الطلب ${order.tracking_number}:`, updateError);
+          }
+        }
+      }
+      
+      console.log(`✅ تم إصلاح ${fixedCount} طلب من أصل ${conflictedOrders.length}`);
+      return { fixed: fixedCount, total: conflictedOrders.length };
+      
+    } catch (error) {
+      console.error('❌ خطأ في fixStatusMismatches:', error);
+      return { fixed: 0, error };
+    }
+  }, [token]);
+
 
   // إضافة مستمع لحدث تشغيل مرور الحذف
   useEffect(() => {
@@ -4606,15 +4728,61 @@ export const AlWaseetProvider = ({ children }) => {
     syncVisibleOrdersBatch,
     fixDamagedAlWaseetStock,
     hasValidToken,
+    fixStatusMismatches,  // ✅ دالة إصلاح التعارضات
   };
 
   // Export linkRemoteIdsForExistingOrders to window for SuperProvider access
   useEffect(() => {
     window.linkRemoteIdsForExistingOrders = linkRemoteIdsForExistingOrders;
+    window.fixStatusMismatches = fixStatusMismatches;  // ✅ إتاحة من Console
+    
+    // ✅ دالة مفيدة لفحص طلب معين
+    window.checkOrderStatus = async (trackingNumber) => {
+      try {
+        console.log(`🔍 فحص الطلب ${trackingNumber}...`);
+        
+        const { data: order, error } = await supabase
+          .from('orders')
+          .select('*')
+          .eq('tracking_number', trackingNumber)
+          .single();
+        
+        if (error) {
+          console.error('❌ خطأ:', error);
+          return;
+        }
+        
+        const statusConfig = getStatusConfig(order.delivery_status);
+        const expectedStatus = statusConfig.localStatus || statusConfig.internalStatus || 'pending';
+        const hasMatch = order.status === expectedStatus;
+        
+        console.log(`📊 الطلب ${trackingNumber}:`, {
+          order_number: order.order_number,
+          current_status: order.status,
+          delivery_status: order.delivery_status,
+          expected_status: expectedStatus,
+          status_text: statusConfig.text,
+          match: hasMatch ? '✅ متطابق' : '❌ تعارض',
+          updated_at: order.updated_at,
+          status_changed_at: order.status_changed_at
+        });
+        
+        if (!hasMatch) {
+          console.warn(`⚠️ تعارض في الحالة! استخدم: await window.fixStatusMismatches()`);
+        }
+        
+        return order;
+      } catch (error) {
+        console.error('❌ خطأ:', error);
+      }
+    };
+    
     return () => {
       delete window.linkRemoteIdsForExistingOrders;
+      delete window.fixStatusMismatches;
+      delete window.checkOrderStatus;
     };
-  }, [linkRemoteIdsForExistingOrders]);
+  }, [linkRemoteIdsForExistingOrders, fixStatusMismatches]);
 
   // 🔍 دالة فحص يدوية لتتبع مشكلة تحديث الأسعار
   useEffect(() => {
