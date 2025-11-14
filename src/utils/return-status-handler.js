@@ -123,18 +123,8 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
         return { success: true, cancelled: true, reason: 'لم يتم المرور بالحالة 21' };
       }
 
-      // ✅ جلب order_items
-      const { data: items, error: itemsError } = await supabase
-        .from('order_items')
-        .select('*, product_variants(id, product_id)')
-        .eq('order_id', orderId);
-      
-      if (itemsError || !items || items.length === 0) {
-        console.error('❌ خطأ في جلب order_items:', itemsError);
-        return { success: false, error: 'لا توجد منتجات للإرجاع' };
-      }
-      
-      console.log(`📦 جلب ${items.length} منتج للإرجاع`);
+      // ✅ معالجة طلبات الإرجاع الكاملة - إرجاع المخزون
+      console.log(`📦 جلب ${items.length} منتج للإرجاع الكامل`);
 
       // ✅ إرجاع المنتجات للمخزون الفعلي
       let stockUpdatedCount = 0;
