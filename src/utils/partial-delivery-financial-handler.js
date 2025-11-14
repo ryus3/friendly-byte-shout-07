@@ -53,11 +53,7 @@ export const handlePartialDeliveryFinancials = async (
       orderTotalRevenue
     });
     
-    // حساب نسبة التسليم
-    const deliveryRatio = orderTotalRevenue > 0 
-      ? finalAmount / orderTotalRevenue 
-      : 1;
-    
+    // ✅ حساب إيراد المنتجات المُسلّمة فقط (بدون تقسيم)
     let totalRevenue = 0;
     let totalCost = 0;
 
@@ -69,8 +65,7 @@ export const handlePartialDeliveryFinancials = async (
       totalCost += itemCost;
     });
     
-    // ✅ تطبيق نسبة التسليم على الإيراد (بسبب التسليم الجزئي)
-    totalRevenue = totalRevenue * deliveryRatio;
+    console.log('💰 الإيراد الحقيقي للمنتجات المسلمة:', totalRevenue);
 
     // 4️⃣ حساب ربح الموظف للمنتجات المسلمة فقط
     const employeeId = order.created_by;
@@ -97,8 +92,11 @@ export const handlePartialDeliveryFinancials = async (
     // 5️⃣ حساب ربح النظام
     const systemProfit = totalRevenue - totalCost - employeeProfit;
 
-    // 6️⃣ حساب رسوم التوصيل المخصصة (نسبي بناءً على deliveryRatio)
-    const allocatedDeliveryFee = (order.delivery_fee || 0) * deliveryRatio;
+    // 6️⃣ رسوم التوصيل كاملة تذهب لشركة التوصيل (في حالة التسليم الجزئي)
+    // ✅ عند تسليم أي منتج، شركة التوصيل تستحق كامل الرسوم
+    const allocatedDeliveryFee = deliveredItems.length > 0 
+      ? (order.delivery_fee || 0) 
+      : 0;
 
     // 7️⃣ إنشاء أو تحديث سجل الربح
     const { data: existingProfit } = await supabase
@@ -159,7 +157,7 @@ export const handlePartialDeliveryFinancials = async (
           user_id: employeeId,
           type: 'partial_delivery',
           title: 'تسليم جزئي ✅',
-          message: `تم معالجة تسليم جزئي للطلب #${order.order_number}\n` +
+        message: `تم معالجة تسليم جزئي للطلب #${order.tracking_number || order.order_number}\n` +
                    `• ${deliveredItems.length} منتج مُسلّم\n` +
                    `• الإيراد: ${(totalRevenue + allocatedDeliveryFee).toLocaleString()} د.ع\n` +
                    `• ربحك: ${employeeProfit.toLocaleString()} د.ع`,
