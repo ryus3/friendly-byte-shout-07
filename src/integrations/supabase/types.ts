@@ -5930,6 +5930,7 @@ export type Database = {
         Returns: undefined
       }
       fix_incorrect_price_increase_v2: { Args: never; Returns: Json }
+      fix_partial_delivery_financials_112066293: { Args: never; Returns: Json }
       fix_regions_cities_linking: { Args: never; Returns: Json }
       generate_customer_promo_code: {
         Args: { customer_id_param: string }
