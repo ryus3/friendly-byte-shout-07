@@ -552,12 +552,52 @@ export const AlWaseetProvider = ({ children }) => {
                 continue;
               }
             } else {
-              console.log('📞 استدعاء AlWaseetAPI.getMerchantOrders...');
-              merchantOrders = await AlWaseetAPI.getMerchantOrders(employeeTokenData.token);
-              console.log('✅ تم استلام رد من AlWaseet:', {
-                ordersCount: merchantOrders?.length || 0,
-                isArray: Array.isArray(merchantOrders)
-              });
+              // ✅ جلب الطلبات الظاهرة فقط باستخدام getOrdersByIdsBulk (أسرع وأدق)
+              console.log('📞 استدعاء AlWaseetAPI.getOrdersByIdsBulk للطلبات الظاهرة...');
+              
+              // جمع IDs الطلبات الظاهرة للموظف الحالي
+              const orderIds = employeeOrders
+                .map(o => o.delivery_partner_order_id || o.tracking_number || o.qr_id)
+                .filter(Boolean);
+
+              if (orderIds.length > 0) {
+                // تقسيم إلى batches (AlWaseet API يقبل حتى 25 طلب في استدعاء واحد)
+                const chunks = [];
+                for (let i = 0; i < orderIds.length; i += 25) {
+                  chunks.push(orderIds.slice(i, i + 25));
+                }
+                
+                merchantOrders = [];
+                console.log(`📦 سيتم جلب ${orderIds.length} طلب في ${chunks.length} دفعة(s)`);
+                
+                for (const chunk of chunks) {
+                  try {
+                    const batchOrders = await AlWaseetAPI.getOrdersByIdsBulk(
+                      employeeTokenData.token,
+                      chunk
+                    );
+                    merchantOrders.push(...(batchOrders || []));
+                    
+                    console.log(`✅ [Bulk] جلب ${batchOrders?.length || 0} طلب من ${chunk.length} مطلوب`);
+                  } catch (err) {
+                    console.error(`❌ خطأ في جلب دفعة:`, err);
+                  }
+                }
+                
+                console.log('✅ تم استلام رد من AlWaseet (Bulk):', {
+                  ordersCount: merchantOrders?.length || 0,
+                  requestedCount: orderIds.length,
+                  isArray: Array.isArray(merchantOrders),
+                  sampleOrder: merchantOrders?.[0] ? {
+                    qr_id: merchantOrders[0].qr_id,
+                    tracking_number: merchantOrders[0].tracking_number,
+                    status_id: merchantOrders[0].status_id
+                  } : 'لا توجد طلبات'
+                });
+              } else {
+                merchantOrders = [];
+                console.log('⚠️ لا توجد طلبات ظاهرة للمزامنة');
+              }
             }
             
           if (!merchantOrders || !Array.isArray(merchantOrders) || merchantOrders.length === 0) {
@@ -713,7 +753,11 @@ export const AlWaseetProvider = ({ children }) => {
                 newStatus = 'cancelled';
               } else {
                 // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses فقط
-                newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
+                // ⚠️ Fallback إلى 'pending' بدلاً من 'delivery' لتجنب الأخطاء
+                if (!statusConfig.internalStatus) {
+                  console.warn(`⚠️ [Fallback] لا يوجد mapping للحالة ${newDeliveryStatus} - استخدام pending كـ fallback`);
+                }
+                newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'pending';
               }
               
               // ✅ استخدام delivery_fee من الطلب المحلي (الإعدادات)، وليس من API
@@ -824,7 +868,11 @@ export const AlWaseetProvider = ({ children }) => {
                     newStatus = 'cancelled';
                   } else {
                     // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses فقط
-                    newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
+                    // ⚠️ Fallback إلى 'pending' بدلاً من 'delivery' لتجنب الأخطاء
+                    if (!statusConfig.internalStatus) {
+                      console.warn(`⚠️ [Fallback] لا يوجد mapping للحالة ${newDeliveryStatus} - استخدام pending كـ fallback`);
+                    }
+                    newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'pending';
                   }
                   const newDeliveryFee = parseFloat(directOrder.delivery_fee) || 0;
                   const newReceiptReceived = statusConfig.receiptReceived ?? false;
@@ -2293,6 +2341,26 @@ export const AlWaseetProvider = ({ children }) => {
         // 5) معالجة التحديثات
         const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId || waseetOrder.status?.id;
         const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
+        
+        // 🔍 LOGGING مفصّل لفهم ماذا يُرسل API
+        console.log(`🔍 [SYNC DEBUG] الطلب ${localOrder.tracking_number}:`, {
+          // من API الوسيط
+          waseetStatusId,
+          waseetStatusText,
+          waseetOrder_state_id: waseetOrder.state_id,
+          waseetOrder_status_id: waseetOrder.status_id,
+          waseetOrder_status: waseetOrder.status,
+          
+          // من قاعدة البيانات المحلية
+          localOrder_status: localOrder.status,
+          localOrder_delivery_status: localOrder.delivery_status,
+          
+          // من الـ mapping
+          statusMap_result: statusMap.get(String(waseetStatusId)),
+          
+          // الوقت
+          timestamp: new Date().toISOString()
+        });
         
         // تحسين التحويل للحالات الشائعة مثل "حالة ثابتة"
         const localStatus = statusMap.get(String(waseetStatusId)) || (() => {
