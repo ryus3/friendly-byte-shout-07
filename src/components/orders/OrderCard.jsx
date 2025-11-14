@@ -608,6 +608,17 @@ const OrderCard = React.memo(({
                          </div>
                        )}
                        
+                       {/* شارة التسليم الجزئي - بنفسجي تدرج مع أيقونة */}
+                       {order.status === 'partial_delivery' && (
+                         <div className="relative group/partial">
+                           <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-violet-500/20 rounded-full blur-sm"></div>
+                           <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-purple-500 to-violet-600 text-white text-xs px-2 py-0.5 shadow-md">
+                             <PackageCheck className="w-3 h-3" />
+                             <span>تسليم جزئي • {Number(order.final_amount || 0).toLocaleString()}</span>
+                           </Badge>
+                         </div>
+                       )}
+                       
                         {/* شارة الإرجاع - أحمر تدرج مع أيقونة */}
                         {order.order_type === 'return' && (
                           <div className="relative group/return">

@@ -2897,7 +2897,7 @@ export const AlWaseetProvider = ({ children }) => {
             // حفظ معرف طلب الوسيط إن كان مفقوداً
             if (!existingOrder.delivery_partner_order_id && waseetOrder.id) {
               updates.delivery_partner_order_id = String(waseetOrder.id);
-              updates.delivery_partner = 'alwaseet';
+              updates.delivery_partner = existingOrder.delivery_partner || 'alwaseet';
             }
             
             // تحديث رسوم التوصيل إن وُجدت
@@ -3552,7 +3552,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       if (waseetOrder.id && (!existingOrder?.delivery_partner_order_id)) {
         updates.delivery_partner_order_id = String(waseetOrder.id);
-        updates.delivery_partner = 'alwaseet';
+        updates.delivery_partner = existingOrder.delivery_partner || 'alwaseet';
       }
       
       const dp = parseInt(String(waseetOrder.delivery_price || 0)) || 0;

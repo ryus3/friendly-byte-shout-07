@@ -237,7 +237,7 @@ export const handlePartialDeliveryFinancials = async (
           user_id: employeeId,
           type: 'partial_delivery',
           title: 'تسليم جزئي ✅',
-          message: `تم معالجة تسليم جزئي للطلب #${order.order_number}\n` +
+          message: `تم معالجة تسليم جزئي للطلب #${order.tracking_number || order.order_number}\n` +
                    `• ${deliveredItems.length} منتج مُسلّم\n` +
                    `• الإيراد: ${(totalRevenue + allocatedDeliveryFee).toLocaleString()} د.ع\n` +
                    `• ربحك: ${employeeProfit.toLocaleString()} د.ع`,
