@@ -99,10 +99,6 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
         totalItemsCount: items.length,
         selectedItems,
         unselectedItems: items.filter(item => !selectedItems.includes(item.id)).map(i => i.id)
-        orderNumber: order.order_number,
-        deliveryStatus: order.delivery_status,
-        selectedItemsCount: selectedItems.length,
-        totalItemsCount: items.length
       });
 
       // 1️⃣ تحديث المنتجات المُختارة إلى 'delivered' (كل منتج على حدة)
