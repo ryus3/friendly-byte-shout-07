@@ -249,30 +249,7 @@ Deno.serve(async (req) => {
           updates.status = finalStatus;
           changesList.push(`الحالة: ${currentStatus} → ${newStatus} (${statusConfig.text})`);
         }
-          new_local_status: finalStatus,
-          is_protected: finalStatus === localOrder.status,
-          statusConfig: statusConfig?.text || 'غير معروف'
-        });
-        
-        if (statusChanged || priceChanged || accountChanged) {
-          if (statusChanged) {
-            updates.delivery_status = newStatus;
-            changesList.push(`الحالة: ${currentStatus} → ${newStatus}`);
-          } else if (newStatus === '4' && localOrder.status !== 'delivered') {
-            // ✅ حتى لو delivery_status لم يتغير، إذا كان '4' و status ليس 'delivered'، صحح
-            finalStatus = 'delivered';
-            changesList.push(`تصحيح الحالة: ${localOrder.status} → delivered`);
-          } else if (newStatus === '17' && localOrder.status !== 'returned_in_stock') {
-            finalStatus = 'returned_in_stock';
-            changesList.push(`تصحيح الحالة: ${localOrder.status} → returned_in_stock`);
-          } else if (['31', '32'].includes(newStatus) && localOrder.status !== 'cancelled') {
-            finalStatus = 'cancelled';
-            changesList.push(`تصحيح الحالة: ${localOrder.status} → cancelled`);
-          }
-          
-          if (finalStatus !== localOrder.status) {
-            updates.status = finalStatus;
-          }
+
 
           if (priceChanged) {
             const priceDifference = newPrice - currentPrice;
