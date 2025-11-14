@@ -13,6 +13,8 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
   const [items, setItems] = useState([]);
   const [selectedItems, setSelectedItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [customPrice, setCustomPrice] = useState(null); // للسماح بتعديل السعر
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (open && order) {
@@ -50,9 +52,17 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
   };
 
   const calculateExpectedPrice = () => {
-    return items
-      .filter(item => selectedItems.includes(item.id))
-      .reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
+    const selectedItemsData = items.filter(item => selectedItems.includes(item.id));
+    
+    // حساب سعر المنتجات
+    const itemsTotal = selectedItemsData.reduce((sum, item) => 
+      sum + (item.unit_price * item.quantity), 0
+    );
+    
+    // رسوم التوصيل كاملة إذا تم اختيار أي منتج
+    const deliveryFee = selectedItemsData.length > 0 ? (order?.delivery_fee || 0) : 0;
+    
+    return itemsTotal + deliveryFee;
   };
 
   const handleConfirm = async () => {
@@ -75,18 +85,26 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
         totalItemsCount: items.length
       });
 
-      // 1️⃣ تحديث المنتجات المُختارة إلى 'delivered'
-      const { error: deliveredError } = await supabase
-        .from('order_items')
-        .update({ 
-          item_status: 'delivered',
-          quantity_delivered: items.find(i => selectedItems.includes(i.id))?.quantity,
-          delivered_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        })
-        .in('id', selectedItems);
+      // 1️⃣ تحديث المنتجات المُختارة إلى 'delivered' (كل منتج على حدة)
+      for (const itemId of selectedItems) {
+        const item = items.find(i => i.id === itemId);
+        if (!item) continue;
 
-      if (deliveredError) throw deliveredError;
+        const { error: deliveredError } = await supabase
+          .from('order_items')
+          .update({ 
+            item_status: 'delivered',
+            quantity_delivered: item.quantity,
+            delivered_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', itemId);
+
+        if (deliveredError) {
+          console.error(`❌ خطأ في تحديث المنتج ${item.product?.name}:`, deliveredError);
+          throw deliveredError;
+        }
+      }
 
       // 2️⃣ تحرير المخزون للمنتجات المُسلّمة (من reserved إلى sold)
       for (const itemId of selectedItems) {
@@ -127,12 +145,14 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
         }
       }
 
-      // 4️⃣ معالجة الحسابات المالية
+      // 4️⃣ معالجة الحسابات المالية (باستخدام السعر المخصص إن وُجد)
+      const finalPrice = customPrice ?? expectedPrice;
       const deliveredItemIds = selectedItems;
       const financialResult = await handlePartialDeliveryFinancials(
         order.id,
         deliveredItemIds,
-        calculateProfit
+        calculateProfit,
+        finalPrice // تمرير السعر النهائي
       );
 
       if (!financialResult.success) {
@@ -274,23 +294,69 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
             ))}
           </div>
 
-          <div className="bg-muted rounded-lg p-3 space-y-1 text-sm">
-            <div className="flex justify-between">
+          <div className="bg-muted rounded-lg p-4 space-y-3">
+            <div className="flex justify-between text-sm">
               <span>المنتجات المُختارة:</span>
               <span className="font-semibold">{selectedItems.length} / {items.length}</span>
             </div>
-            <div className="flex justify-between">
-              <span>السعر المتوقع:</span>
-              <span className="font-semibold text-green-600 dark:text-green-400">
-                {expectedPrice.toLocaleString()} د.ع
-              </span>
+            
+            {/* تفاصيل السعر */}
+            <div className="border-t border-border pt-2 space-y-2">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>سعر المنتجات:</span>
+                <span>
+                  {items
+                    .filter(item => selectedItems.includes(item.id))
+                    .reduce((sum, item) => sum + (item.unit_price * item.quantity), 0)
+                    .toLocaleString()} د.ع
+                </span>
+              </div>
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>رسوم التوصيل:</span>
+                <span>
+                  {selectedItems.length > 0 ? (order?.delivery_fee || 0).toLocaleString() : 0} د.ع
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between">
+            
+            {/* السعر المتوقع القابل للتعديل */}
+            <div className="border-t border-border pt-2">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-sm font-medium">السعر النهائي (شامل التوصيل):</label>
+                <input
+                  type="number"
+                  value={customPrice ?? expectedPrice}
+                  onChange={(e) => setCustomPrice(e.target.value ? Number(e.target.value) : null)}
+                  className="w-32 px-2 py-1 text-sm font-bold text-right bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder={expectedPrice.toLocaleString()}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                السعر المتوقع: {expectedPrice.toLocaleString()} د.ع
+              </p>
+            </div>
+            
+            <div className="flex justify-between text-sm border-t border-border pt-2">
               <span>سعر شركة التوصيل:</span>
               <span className="font-semibold">
                 {apiPrice.toLocaleString()} د.ع
               </span>
             </div>
+            
+            {/* تحذير فرق السعر */}
+            {Math.abs((customPrice ?? expectedPrice) - apiPrice) > 0 && (
+              <div className="flex items-start gap-2 p-2 bg-amber-50 dark:bg-amber-950/20 border border-amber-300 dark:border-amber-800 rounded-md">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <p className="font-semibold text-amber-800 dark:text-amber-300">
+                    فرق السعر: {Math.abs((customPrice ?? expectedPrice) - apiPrice).toLocaleString()} د.ع
+                  </p>
+                  <p className="text-amber-700 dark:text-amber-400">
+                    {(customPrice ?? expectedPrice) > apiPrice ? 'زيادة' : 'خصم'} عن سعر شركة التوصيل
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">

@@ -917,12 +917,19 @@ const OrderCard = React.memo(({
               {needsPartialDeliverySelection && (
                 <Button
                   onClick={() => setShowPartialDelivery(true)}
-                  variant="outline"
+                  variant="default"
                   size="sm"
-                  className="bg-amber-50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-950/30"
+                  className="relative group overflow-hidden bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:via-orange-600 hover:to-amber-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
                 >
-                  <Package className="w-4 h-4 mr-2" />
-                  تحديد المنتجات المُسلّمة
+                  {/* خلفية متحركة */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+                  
+                  {/* المحتوى */}
+                  <div className="relative flex items-center gap-2">
+                    <Package className="w-4 h-4 animate-pulse" />
+                    <span className="font-bold">تحديد المنتجات المُسلّمة</span>
+                    <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+                  </div>
                 </Button>
               )}
               {additionalButtons}
