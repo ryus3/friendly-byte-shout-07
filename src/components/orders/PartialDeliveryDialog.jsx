@@ -20,7 +20,7 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
       fetchOrderItems();
       setCustomPrice(null); // إعادة تعيين السعر المخصص
     }
-  }, [open, order]);
+  }, [open, order?.id]); // ✅ استخدام order.id لتجنب re-render
 
   const fetchOrderItems = async () => {
     const { data, error } = await supabase
@@ -44,11 +44,14 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
   };
 
   const toggleItem = (itemId) => {
-    setSelectedItems(prev =>
-      prev.includes(itemId)
+    console.log('🔄 تبديل اختيار المنتج:', itemId);
+    setSelectedItems(prev => {
+      const newSelection = prev.includes(itemId)
         ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    );
+        : [...prev, itemId];
+      console.log('✅ الاختيار الجديد:', newSelection);
+      return newSelection;
+    });
   };
 
   const calculateExpectedPrice = () => {
@@ -90,6 +93,12 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
     try {
       console.log('🔄 بدء معالجة التسليم الجزئي...', {
         orderId: order.id,
+        orderNumber: order.order_number,
+        deliveryStatus: order.delivery_status,
+        selectedItemsCount: selectedItems.length,
+        totalItemsCount: items.length,
+        selectedItems,
+        unselectedItems: items.filter(item => !selectedItems.includes(item.id)).map(i => i.id)
         orderNumber: order.order_number,
         deliveryStatus: order.delivery_status,
         selectedItemsCount: selectedItems.length,
@@ -185,7 +194,8 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
       }
 
       // 4️⃣ ✅ تحديث حالة الطلب الرئيسي
-      const newOrderStatus = undeliveredIds.length > 0 
+      const unselectedItems = items.filter(item => !selectedItems.includes(item.id));
+      const newOrderStatus = unselectedItems.length > 0 
         ? 'partial_delivery' 
         : 'delivered';
 
@@ -201,10 +211,16 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
       onConfirm?.();
       onOpenChange(false);
     } catch (error) {
-      console.error('خطأ في تحديث المنتجات:', error);
+      console.error('💥 خطأ في تحديث المنتجات:', error);
+      console.error('Stack trace:', error.stack);
+      console.error('Error details:', {
+        message: error.message,
+        orderId: order?.id,
+        selectedItemsCount: selectedItems.length
+      });
       toast({
         title: 'خطأ',
-        description: 'حدث خطأ غير متوقع',
+        description: `حدث خطأ: ${error.message}`,
         variant: 'destructive'
       });
     } finally {
