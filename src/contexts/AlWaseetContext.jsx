@@ -3176,18 +3176,9 @@ export const AlWaseetProvider = ({ children }) => {
       const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId || waseetOrder.state_id;
       const statusConfig = getStatusConfig(String(waseetStatusId));
       
-      // ✅ حماية partial_delivery من التغيير
-      let correctLocalStatus;
-      if (localOrder.status === 'partial_delivery') {
-        correctLocalStatus = 'partial_delivery'; // محمي - لا يتغير
-        devLog.log(`🔒 الطلب ${qrId} محمي كـ partial_delivery`);
-      } else if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
-        correctLocalStatus = localOrder.status; // محمي أيضاً
-        devLog.log(`🔒 الطلب ${qrId} محمي كـ ${localOrder.status}`);
-      } else {
-        // ✅ استخدام التعريف الموحد
-        correctLocalStatus = statusConfig?.localStatus || statusConfig?.internalStatus || 'pending';
-      }
+      // ✅ لا حماية - استخدام الحالة الصحيحة مباشرة
+      const correctLocalStatus = statusConfig?.localStatus || statusConfig?.internalStatus || 'pending';
+      devLog.log(`✅ تحديث ${qrId}: ${localOrder.status} → ${correctLocalStatus} (${statusConfig?.text || 'غير معروف'})`);
       
       devLog.log(`🔄 تحديث ${qrId}:`, {
         delivery_status: { old: localOrder.delivery_status, new: String(waseetStatusId) },
