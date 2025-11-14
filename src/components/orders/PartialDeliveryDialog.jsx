@@ -111,8 +111,7 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
           .update({ 
             item_status: 'delivered',
             quantity_delivered: item.quantity,
-            delivered_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            delivered_at: new Date().toISOString()
           })
           .eq('id', itemId);
 
@@ -149,8 +148,7 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
         const { error: pendingReturnError } = await supabase
           .from('order_items')
           .update({ 
-            item_status: 'pending_return',
-            updated_at: new Date().toISOString()
+            item_status: 'pending_return'
           })
           .in('id', unselectedItems);
 
