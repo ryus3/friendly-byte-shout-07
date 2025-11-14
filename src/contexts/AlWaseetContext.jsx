@@ -2013,7 +2013,7 @@ export const AlWaseetProvider = ({ children }) => {
       if (source === 'fastSync') {
         toast({
           title: "حذف طلب تلقائي",
-          description: `تم حذف الطلب ${orderToDelete.tracking_number} وتم تحرير المخزون المحجوز تلقائياً`,
+          description: `تم حذف الطلب ${orderToDelete.tracking_number || orderToDelete.order_number} وتم تحرير المخزون المحجوز تلقائياً`,
           variant: "default"
         });
       }
@@ -2381,6 +2381,7 @@ export const AlWaseetProvider = ({ children }) => {
           
           if (showNotifications && lastStatus !== localStatus) {
             statusChanges.push({
+              trackingNumber: localOrder.tracking_number,
               orderNumber: localOrder.qr_id || localOrder.order_number,
               oldStatus: localOrder.status,
               newStatus: localStatus,
@@ -2663,7 +2664,7 @@ export const AlWaseetProvider = ({ children }) => {
           const change = statusChanges[0];
           toast({
             title: "🔄 تحديث حالة طلب",
-            description: `الطلب ${change.orderNumber}: ${getStatusLabel(change.oldStatus)} → ${getStatusLabel(change.newStatus)}`,
+            description: `الطلب ${change.trackingNumber || change.orderNumber}: ${getStatusLabel(change.oldStatus)} → ${getStatusLabel(change.newStatus)}`,
             variant: "info",
             duration: 5000
           });
@@ -3269,7 +3270,7 @@ export const AlWaseetProvider = ({ children }) => {
           // إشعار المدير
         toast({
           title: "حذف طلب تلقائي",
-          description: `${order.tracking_number} - تم حذف الطلب وتحرير المخزون المحجوز تلقائياً`,
+          description: `${order.tracking_number || order.order_number} - تم حذف الطلب وتحرير المخزون المحجوز تلقائياً`,
           variant: "destructive"
         });
 
