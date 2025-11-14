@@ -10,6 +10,9 @@ export const syncSpecificOrder = async (qrId, token) => {
       return null;
     }
 
+    // ✅ استخدام المصدر الموحد لتعريفات الحالات
+    import { getStatusConfig } from '@/lib/alwaseet-statuses';
+    
     // تحديد الحالة المحلية الصحيحة مع أولوية للمعرفات الرقمية
     const statusId = waseetOrder.status_id || waseetOrder.state_id;
     let standardizedDeliveryStatus;
@@ -25,21 +28,13 @@ export const syncSpecificOrder = async (qrId, token) => {
       standardizedDeliveryStatus = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
     }
     
-    // تحديد الحالة المحلية بناءً على delivery_status المعياري
-    let correctLocalStatus = 'pending';
-    if (standardizedDeliveryStatus === '4') {
-      correctLocalStatus = 'delivered';
-    } else if (standardizedDeliveryStatus === '17') {
-      correctLocalStatus = 'returned_in_stock';
-    } else if (['31', '32'].includes(standardizedDeliveryStatus)) {
-      correctLocalStatus = 'cancelled';
-    } else if (['2', '7', '8', '9', '10', '11'].includes(standardizedDeliveryStatus)) {
-      correctLocalStatus = 'shipped';
-    } else if (['3', '5', '6', '14', '18', '22', '23', '24', '25', '26', '27', '28', '29', '30', '33', '34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44'].includes(standardizedDeliveryStatus)) {
-      correctLocalStatus = 'in_delivery';
-    } else if (['12', '13', '15', '16', '19', '20', '21'].includes(standardizedDeliveryStatus)) {
-      correctLocalStatus = 'returned';
-    }
+    // ✅ استخدام getStatusConfig من المصدر الموحد
+    const statusConfig = getStatusConfig(standardizedDeliveryStatus);
+    
+    // ✅ تحديد الحالة المحلية بناءً على التعريف الموحد
+    let correctLocalStatus = statusConfig?.localStatus || statusConfig?.internalStatus || 'pending';
+    
+    console.log(`🔄 ${qrId}: حالة ${standardizedDeliveryStatus} → ${correctLocalStatus}`);
 
     // جلب الطلب المحلي
     const { data: localOrder, error: localErr } = await supabase
@@ -58,9 +53,21 @@ export const syncSpecificOrder = async (qrId, token) => {
       return null;
     }
 
+    // ✅ حماية partial_delivery من التغيير
+    let finalStatus;
+    if (localOrder.status === 'partial_delivery') {
+      finalStatus = 'partial_delivery'; // محمي - لا يتغير أبداً
+      console.log(`🔒 الطلب ${qrId} محمي كـ partial_delivery`);
+    } else if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
+      finalStatus = localOrder.status; // محمي أيضاً
+      console.log(`🔒 الطلب ${qrId} محمي كـ ${localOrder.status}`);
+    } else {
+      finalStatus = correctLocalStatus;
+    }
+    
     // تحضير التحديثات مع delivery_status المعياري
     const updates = {
-      status: correctLocalStatus,
+      status: finalStatus,
       delivery_status: standardizedDeliveryStatus,
       delivery_partner_order_id: String(waseetOrder.id),
       updated_at: new Date().toISOString()
