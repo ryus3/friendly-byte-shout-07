@@ -622,13 +622,20 @@ export const ProfitsProvider = ({ children }) => {
         return { success: true, message: 'لا توجد رسوم توصيل' };
       }
 
+      // جلب tracking_number للطلب
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('tracking_number')
+        .eq('id', orderId)
+        .single();
+
       const { error: expenseError } = await supabase
         .from('accounting')
         .insert({
           type: 'expense',
           category: 'رسوم توصيل تبديل',
           amount: deliveryFee,
-          description: `رسوم توصيل تبديل - طلب ${orderId}`,
+          description: `رسوم توصيل تبديل - طلب ${orderData?.tracking_number || orderId}`,
           payment_method: 'نقدي',
           created_by: employeeId,
           expense_type: 'delivery',
