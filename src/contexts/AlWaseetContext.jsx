@@ -782,11 +782,14 @@ export const AlWaseetProvider = ({ children }) => {
                 // الحالة 17 = returned_in_stock فوراً
                 newStatus = 'returned_in_stock';
               } else if (newDeliveryStatus === '21' || statusId === '21') {
-                // ✅ الحالة 21 = تسليم جزئي (delivered to customer, return received)
-                // للطلبات متعددة المنتجات → partial_delivery
-                // للطلبات بمنتج واحد → returned
-                const hasMultipleItems = localOrder.order_items && localOrder.order_items.length > 1;
-                newStatus = hasMultipleItems ? 'partial_delivery' : 'returned';
+                // ✅ الحالة 21 = تسليم جزئي **دائماً**
+                // (حتى لو منتج واحد - المستخدم يحدد المسلّم والمرجع يدوياً)
+                newStatus = 'partial_delivery';
+                
+                console.log(`🟣 الحالة 21: ${localOrder.tracking_number} → partial_delivery`, {
+                  items_count: localOrder.order_items?.length || 0,
+                  note: 'يحتاج معالجة يدوية'
+                });
               } else if (newDeliveryStatus === '31' || newDeliveryStatus === '32' || statusId === '31' || statusId === '32') {
                 // حالات الإلغاء
                 newStatus = 'cancelled';

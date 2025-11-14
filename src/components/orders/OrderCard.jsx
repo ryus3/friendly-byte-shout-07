@@ -271,6 +271,13 @@ const OrderCard = React.memo(({
     return false;
   }, [order]);
 
+  // ✅ فتح تلقائي عند الحالة 21
+  React.useEffect(() => {
+    if (order.delivery_status === '21' && !showPartialDelivery) {
+      setShowPartialDelivery(true);
+    }
+  }, [order.delivery_status, order.tracking_number]);
+
   const employeeProfit = useMemo(() => {
     if (!calculateProfit || !order.items) return 0;
     
