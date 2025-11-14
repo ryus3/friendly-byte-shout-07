@@ -865,7 +865,23 @@ export const AlWaseetProvider = ({ children }) => {
                   totalUpdated++;
                   console.log(`✅ [SYNC-SUCCESS] تم تحديث ${localOrder.tracking_number} بنجاح`);
                 } else {
-                  console.error(`❌ [SYNC-ERROR] خطأ في تحديث الطلب ${localOrder.tracking_number}:`, error);
+                  // ✅ إضافة logging مفصّل للأخطاء
+                  console.error(`❌ [SYNC-ERROR] فشل تحديث الطلب ${localOrder.tracking_number}:`, {
+                    error_code: error.code,
+                    error_message: error.message,
+                    error_details: error.details,
+                    error_hint: error.hint,
+                    attempted_updates: updates,
+                    order_id: localOrder.id,
+                    tracking_number: localOrder.tracking_number
+                  });
+                  
+                  // Toast للمستخدم مع تفاصيل الخطأ
+                  toast({
+                    title: '❌ خطأ في مزامنة الطلب',
+                    description: `الطلب ${localOrder.tracking_number}: ${error.message || 'خطأ غير معروف'}`,
+                    variant: 'destructive'
+                  });
                 }
               } else {
                 // ✅ حتى لو لم تتغير البيانات، نحدث وقت المزامنة
