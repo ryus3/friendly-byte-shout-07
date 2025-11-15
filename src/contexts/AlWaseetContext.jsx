@@ -14,7 +14,7 @@ import { displaySecuritySummary } from '@/utils/securityLogger';
 import devLog from '@/lib/devLogger';
 
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
-const CONTEXT_VERSION = '2.7.1';
+const CONTEXT_VERSION = '2.8.0';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 const AlWaseetContext = createContext();
@@ -488,52 +488,53 @@ export const AlWaseetProvider = ({ children }) => {
     devLog.log(`🚀 بدء مزامنة ${syncableOrders.length} طلب نشط من ${visibleOrders.length} طلب ظاهر...`);
     
     try {
-      // تجميع الطلبات حسب منشئها (created_by)
-      const ordersByEmployee = new Map();
+      // ✅ تجميع مركب: created_by + delivery_partner + delivery_account_used
+      const ordersByKey = new Map();
       
       for (const order of syncableOrders) {
-        if (!ordersByEmployee.has(order.created_by)) {
-          ordersByEmployee.set(order.created_by, []);
+        // ✅ مفتاح مركب: employeeId|||partner|||account
+        const syncKey = `${order.created_by}|||${order.delivery_partner}|||${order.delivery_account_used || 'افتراضي'}`;
+        
+        if (!ordersByKey.has(syncKey)) {
+          ordersByKey.set(syncKey, []);
         }
-        ordersByEmployee.get(order.created_by).push(order);
+        ordersByKey.get(syncKey).push(order);
       }
 
-      devLog.log(`📊 تم تجميع الطلبات: ${ordersByEmployee.size} موظف`);
+      devLog.log(`📊 تم تجميع الطلبات: ${ordersByKey.size} مجموعة مستقلة (موظف+شركة+حساب)`);
       
       let totalUpdated = 0;
-      let processedEmployees = 0;
+      let processedGroups = 0;
       
-      // معالجة كل موظف على حدة باستخدام توكن منشئ الطلب
-      for (const [employeeId, employeeOrders] of ordersByEmployee) {
+      // معالجة كل مجموعة على حدة
+      for (const [syncKey, groupOrders] of ordersByKey) {
         try {
-          // ✅ استخراج delivery_account_used و delivery_partner من الطلب الأول
-          const orderAccount = employeeOrders[0]?.delivery_account_used;
-          const orderPartner = employeeOrders[0]?.delivery_partner;
+          // ✅ استخراج البيانات من المفتاح
+          const [employeeId, orderPartner, orderAccount] = syncKey.split('|||');
           
-          devLog.log(`🔄 [SYNC-BATCH] معالجة ${employeeOrders.length} طلب للموظف ${employeeId} - Partner: ${orderPartner}, Account: ${orderAccount || 'افتراضي'}`);
+          devLog.log(`🔄 [SYNC-BATCH] معالجة ${groupOrders.length} طلب - Employee: ${employeeId}, Partner: ${orderPartner}, Account: ${orderAccount}`);
           
           // ✅ محاولة الحصول على التوكن بالوضع الصارم (strictMode)
-          let employeeTokenData = await getTokenForUser(employeeId, orderAccount, orderPartner, true);
+          let employeeTokenData = await getTokenForUser(employeeId, orderAccount === 'افتراضي' ? null : orderAccount, orderPartner, true);
           
-          // ✅ FALLBACK 1: استخدام توكن المستخدم الحالي بنفس الحساب
+          // ✅ FALLBACK: استخدام توكن المستخدم الحالي بنفس الحساب
           if (!employeeTokenData && user?.id) {
-            devLog.log(`⚠️ لا يوجد توكن للموظف ${employeeId} - محاولة استخدام توكن المستخدم الحالي بنفس الحساب...`);
+            devLog.log(`⚠️ لا يوجد توكن للموظف ${employeeId} - محاولة استخدام توكن المستخدم الحالي...`);
             
-            employeeTokenData = await getTokenForUser(user.id, orderAccount, orderPartner, true);
+            employeeTokenData = await getTokenForUser(user.id, orderAccount === 'افتراضي' ? null : orderAccount, orderPartner, true);
             
             if (employeeTokenData) {
-              devLog.log(`✅ تم استخدام توكن المستخدم الحالي (${orderAccount || 'افتراضي'}) لمزامنة طلبات الموظف ${employeeId}`);
+              devLog.log(`✅ تم استخدام توكن المستخدم الحالي (${orderAccount}) لمزامنة طلبات الموظف ${employeeId}`);
             }
           }
           
-          // ✅ إذا لم يوجد توكن: تسجيل تحذير وتخطي المجموعة
+          // ✅ إذا لم يوجد توكن: تحذير وتخطي
           if (!employeeTokenData) {
-            const missingAccount = orderAccount || 'الحساب الافتراضي';
-            devLog.warn(`❌ [SYNC-BATCH] لا يوجد توكن للحساب "${missingAccount}" في ${orderPartner} - تخطي ${employeeOrders.length} طلب`);
+            devLog.warn(`❌ [SYNC-BATCH] لا يوجد توكن للحساب "${orderAccount}" في ${orderPartner} - تخطي ${groupOrders.length} طلب`);
             
             toast({
               title: "⚠️ تحذير: حساب غير متصل",
-              description: `${employeeOrders.length} طلب من ${orderPartner} (${missingAccount}) لم تتم مزامنتها - يرجى تسجيل الدخول لهذا الحساب`,
+              description: `${groupOrders.length} طلب من ${orderPartner} (${orderAccount}) لم تتم مزامنتها - يرجى تسجيل الدخول لهذا الحساب`,
               variant: "destructive"
             });
             
@@ -562,7 +563,7 @@ export const AlWaseetProvider = ({ children }) => {
           const partnerName = employeeTokenData.partner_name === 'modon' ? 'مدن' : 'الوسيط';
           const accountUsed = employeeTokenData.account_username || employeeTokenData.account_label || 'افتراضي';
           
-          devLog.log(`🔄 [SYNC-BATCH] مزامنة ${employeeOrders.length} طلب ${partnerName} (${accountUsed}) للموظف: ${employeeId}`);
+          devLog.log(`🔄 [SYNC-BATCH] مزامنة ${groupOrders.length} طلب ${partnerName} (${accountUsed}) - Employee: ${employeeId}`);
           
           // استدعاء API المناسب حسب partner_name
           let merchantOrders;
@@ -716,7 +717,8 @@ export const AlWaseetProvider = ({ children }) => {
           });
 
           // تحديث كل طلب محلي بناءً على بيانات الوسيط
-          for (const localOrder of employeeOrders) {
+          let groupUpdated = 0;
+          for (const localOrder of groupOrders) {
             const trackingIds = [
               localOrder.tracking_number,
               localOrder.qr_id,
@@ -925,6 +927,7 @@ export const AlWaseetProvider = ({ children }) => {
                   .eq('id', localOrder.id);
 
                 if (!error) {
+                  groupUpdated++;
                   totalUpdated++;
                   console.log(`✅ [SYNC-SUCCESS] تم تحديث ${localOrder.tracking_number} بنجاح`);
                 } else {
@@ -1117,28 +1120,21 @@ export const AlWaseetProvider = ({ children }) => {
             }
           }
 
-          processedEmployees++;
+          processedGroups++;
+          devLog.log(`✅ تمت معالجة المجموعة ${processedGroups}/${ordersByKey.size} - تم تحديث ${groupUpdated} طلب`);
           
-          // تحديث التقدم
-          if (onProgress) {
-            onProgress({
-              processed: processedEmployees,
-              total: ordersByEmployee.size,
-              updated: totalUpdated,
-              currentEmployee: employeeId
-            });
-          }
-
-        } catch (error) {
-          console.error(`❌ خطأ في مزامنة طلبات الموظف ${employeeId}:`, error);
+        } catch (groupError) {
+          console.error(`❌ خطأ في معالجة المجموعة ${syncKey}:`, groupError);
         }
       }
+      
+      devLog.log(`🎉 انتهت مزامنة الدفعة - ${totalUpdated} طلب محدث من ${processedGroups} مجموعة`);
       
       return {
         success: true, 
         updatedCount: totalUpdated,
-        processedEmployees,
-        totalEmployees: ordersByEmployee.size
+        processedGroups,
+        totalGroups: ordersByKey.size
       };
 
     } catch (error) {

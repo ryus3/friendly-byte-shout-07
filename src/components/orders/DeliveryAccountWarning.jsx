@@ -46,6 +46,8 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
 
       for (const { partner, account } of ordersAccounts) {
         try {
+          console.log(`🔍 [DeliveryAccountWarning] فحص الحساب: ${partner} - ${account}`);
+          
           let query = supabase
             .from('delivery_partner_tokens')
             .select('id, expires_at, is_active, account_username')
@@ -55,6 +57,7 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
 
           if (account !== 'افتراضي') {
             const normalizedAccount = account.trim().toLowerCase().replace(/\s+/g, '-');
+            console.log(`   - البحث عن: ${normalizedAccount}`);
             query = query.ilike('account_username', normalizedAccount);
           }
 
@@ -64,10 +67,20 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
 
           const { data, error } = await query.maybeSingle();
 
+          console.log(`   - النتيجة:`, { 
+            found: !!data, 
+            error: error?.message,
+            account_username: data?.account_username,
+            expires_at: data?.expires_at
+          });
+
           if (error || !data) {
+            console.log(`   - ❌ لم يتم العثور على توكن صالح`);
             missing.push({ partner, account });
             continue;
           }
+          
+          console.log(`   - ✅ توكن صالح موجود`);
         } catch (err) {
           console.error('خطأ في فحص الحساب:', partner, account, err);
           missing.push({ partner, account });
