@@ -306,7 +306,7 @@ Deno.serve(async (req) => {
               user_id: localOrder.created_by,
               type: 'alwaseet_sync_update',
               title: 'تحديث من شركة التوصيل',
-              message: `الطلب ${localOrder.order_number || localOrder.tracking_number}: ${changesList.join('، ')}`,
+              message: `الطلب ${localOrder.tracking_number || localOrder.order_number}: ${changesList.join('، ')}`,
               data: {
                 order_id: localOrder.id,
                 order_number: localOrder.order_number,
