@@ -217,13 +217,14 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   // حالات خاصة
   '18': {
     text: 'تغيير سعر',
-    icon: AlertTriangle,
-    internalStatus: 'delivery',
+    icon: RefreshCw,
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-purple-500 to-pink-600 text-white border border-purple-300/50 shadow-lg shadow-purple-400/40',
-    description: 'قيد التوصيل - تغيير سعر'
+    description: 'تم الشحن - تغيير السعر'
   },
   '19': {
     text: 'ارجاع بعد الاستلام',
