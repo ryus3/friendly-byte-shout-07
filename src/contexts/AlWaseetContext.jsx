@@ -14,7 +14,7 @@ import { displaySecuritySummary } from '@/utils/securityLogger';
 import devLog from '@/lib/devLogger';
 
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
-const CONTEXT_VERSION = '2.0.3';
+const CONTEXT_VERSION = '2.0.4';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 const AlWaseetContext = createContext();
@@ -986,23 +986,71 @@ export const AlWaseetProvider = ({ children }) => {
                   
                   const statusConfig = getStatusConfig(newDeliveryStatus);
                   
-                  // ✅ تطبيق نفس المنطق الصارم من getMerchantOrders (السطور 700-717)
+                  // 🔒 فحص partial_delivery_history لحماية التسليم الجزئي
+                  const { data: partialHistory } = await supabase
+                    .from('partial_delivery_history')
+                    .select('id, delivered_revenue, delivery_fee_allocated')
+                    .eq('order_id', localOrder.id)
+                    .maybeSingle();
+
+                  const isPartialDeliveryFlagged = !!partialHistory;
+
+                  // 🔧 تصحيح final_amount تلقائياً إذا كان الطلب تسليم جزئي
+                  if (isPartialDeliveryFlagged && partialHistory.delivered_revenue) {
+                    const correctFinalAmount = parseFloat(partialHistory.delivered_revenue);
+                    const currentFinalAmount = parseFloat(localOrder.final_amount) || 0;
+                    
+                    if (Math.abs(correctFinalAmount - currentFinalAmount) > 1) {
+                      console.log(`🔧 [AUTO-FIX-FALLBACK] تصحيح final_amount للطلب ${localOrder.tracking_number}: ${currentFinalAmount} → ${correctFinalAmount}`);
+                      
+                      await supabase
+                        .from('orders')
+                        .update({ 
+                          final_amount: correctFinalAmount,
+                          updated_at: new Date().toISOString()
+                        })
+                        .eq('id', localOrder.id);
+                      
+                      localOrder.final_amount = correctFinalAmount;
+                    }
+                  }
+
+                  // ✅ منطق محسّن: حماية التسليم الجزئي من جميع الحالات إلا 17
                   let newStatus;
-                  if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
-                    // حماية مطلقة للطلبات المُسلّمة والمكتملة - لا تغيير أبداً
-                    newStatus = localOrder.status;
-                  } else if (newDeliveryStatus === '4') {
-                    // الحالة 4 = delivered فوراً - لا استثناءات
-                    newStatus = 'delivered';
-                  } else if (newDeliveryStatus === '17') {
-                    // الحالة 17 = returned_in_stock فوراً
+
+                  // 🔒 حماية التسليم الجزئي - الأولوية القصوى (ما عدا الحالة 17)
+                  if (isPartialDeliveryFlagged && newDeliveryStatus !== '17' && statusId !== '17') {
+                    newStatus = 'partial_delivery';
+                    console.log(`🔒 [PARTIAL-PROTECTED-FALLBACK] ${localOrder.tracking_number} محمي كتسليم جزئي (الحالة الواردة: ${newDeliveryStatus})`);
+                  }
+                  // ✅ الحالة 17 - مرتجع في المخزون (نهائية) - الوحيدة التي تتجاوز حماية partial_delivery
+                  else if (newDeliveryStatus === '17' || statusId === '17') {
                     newStatus = 'returned_in_stock';
-                  } else if (newDeliveryStatus === '31' || newDeliveryStatus === '32') {
-                    // حالات الإلغاء
+                    console.log(`🔄 [STATUS-17-FALLBACK] ${localOrder.tracking_number} → returned_in_stock (إنهاء التسليم الجزئي)`);
+                  }
+                  // ✅ الحالة 21 - تسليم جزئي جديد
+                  else if (newDeliveryStatus === '21' || statusId === '21') {
+                    newStatus = 'partial_delivery';
+                    console.log(`🔄 [STATUS-21-FALLBACK] ${localOrder.tracking_number} → partial_delivery`);
+                  }
+                  // ✅ الحالة 4 - تم التسليم
+                  else if (newDeliveryStatus === '4' || statusId === '4') {
+                    if (localOrder.status !== 'delivered' && localOrder.status !== 'completed') {
+                      newStatus = 'delivered';
+                    } else {
+                      newStatus = localOrder.status;
+                    }
+                  }
+                  // ✅ حماية الطلبات المكتملة
+                  else if (localOrder.status === 'completed') {
+                    newStatus = 'completed';
+                  }
+                  // ✅ حالات الإلغاء
+                  else if (newDeliveryStatus === '31' || newDeliveryStatus === '32' || statusId === '31' || statusId === '32') {
                     newStatus = 'cancelled';
-                  } else {
-                    // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses فقط
-                    // ⚠️ Fallback إلى 'pending' بدلاً من 'delivery' لتجنب الأخطاء
+                  }
+                  // ✅ الحالة الافتراضية
+                  else {
                     if (!statusConfig.internalStatus) {
                       console.warn(`⚠️ [Fallback] لا يوجد mapping للحالة ${newDeliveryStatus} - استخدام pending كـ fallback`);
                     }
