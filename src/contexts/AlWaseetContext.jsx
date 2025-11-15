@@ -770,54 +770,56 @@ export const AlWaseetProvider = ({ children }) => {
                 ? getModonStatusConfig(statusId, remoteOrder.status)
                 : getStatusConfig(newDeliveryStatus);
               
-              // ✅ منطق محسّن: التعامل مع الحالات النهائية والتسليم الجزئي
+              // 🔍 الخطوة 1: التحقق من partial_delivery_history
+              const { data: partialHistory } = await supabase
+                .from('partial_delivery_history')
+                .select('id')
+                .eq('order_id', localOrder.id)
+                .maybeSingle();
+
+              const isPartialDeliveryFlagged = !!partialHistory;
+
+              // ✅ منطق محسّن: التعامل مع الحالات النهائية والتسليم الجزئي المحمي
               let newStatus;
               
-              // ✅ حماية الطلبات المكتملة فقط (النهائية)
-              if (localOrder.status === 'completed') {
-                newStatus = localOrder.status;
+              // ✅ الحالة 17 - مرتجع في المخزون (نهائية) - تتجاوز حماية partial_delivery
+              if (newDeliveryStatus === '17' || statusId === '17') {
+                newStatus = 'returned_in_stock';
+                console.log(`🔄 [STATUS-17] ${localOrder.tracking_number} → returned_in_stock`);
               }
-              // ✅ منطق التسليم الجزئي - الحالة 21
+              // ✅ حماية التسليم الجزئي - إذا يوجد سجل في partial_delivery_history
+              else if (isPartialDeliveryFlagged) {
+                newStatus = 'partial_delivery';
+                console.log(`🔒 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي كتسليم جزئي (الحالة الواردة: ${newDeliveryStatus})`);
+              }
+              // ✅ الحالة 21 - تسليم جزئي جديد
               else if (newDeliveryStatus === '21' || statusId === '21') {
-                if (localOrder.status !== 'partial_delivery') {
-                  newStatus = 'partial_delivery';
-                  console.log(`🔄 [PARTIAL-DELIVERY] الطلب ${localOrder.tracking_number} أصبح تسليم جزئي (حالة 21)`);
-                } else {
-                  newStatus = localOrder.status;
-                }
+                newStatus = 'partial_delivery';
+                console.log(`🔄 [STATUS-21] ${localOrder.tracking_number} → partial_delivery`);
               }
-              // ✅ الحالة 17 - مرتجع في المخزون (نهائية)
-              else if (newDeliveryStatus === '17' || statusId === '17') {
-                if (localOrder.status === 'partial_delivery') {
-                  newStatus = 'returned_in_stock';
-                  console.log(`🔄 [PARTIAL→RETURNED] الطلب ${localOrder.tracking_number} تحول من تسليم جزئي إلى مرتجع في المخزون (حالة 17)`);
-                } else {
-                  newStatus = 'returned_in_stock';
-                }
+              // ✅ الحالة 23 - استلم التاجر (لا يغير status)
+              else if (newDeliveryStatus === '23' || statusId === '23') {
+                newStatus = localOrder.status;
+                console.log(`🔄 [STATUS-23] ${localOrder.tracking_number} - استلم التاجر، الحالة تبقى: ${newStatus}`);
               }
-              // ✅ الحالة 4 - تم التسليم (ليست نهائية، يمكن أن تتحول إلى 23 أو completed)
+              // ✅ الحالة 4 - تم التسليم
               else if (newDeliveryStatus === '4' || statusId === '4') {
-                // السماح بتحديث delivered فقط إذا لم يكن delivered أو partial_delivery
-                if (localOrder.status !== 'delivered' && localOrder.status !== 'partial_delivery') {
+                if (localOrder.status !== 'delivered' && localOrder.status !== 'completed') {
                   newStatus = 'delivered';
                 } else {
                   newStatus = localOrder.status;
                 }
-              } else if (newDeliveryStatus === '21' || statusId === '21') {
-                // ✅ الحالة 21 = تسليم جزئي **دائماً**
-                // (حتى لو منتج واحد - المستخدم يحدد المسلّم والمرجع يدوياً)
-                newStatus = 'partial_delivery';
-                
-                console.log(`🟣 الحالة 21: ${localOrder.tracking_number} → partial_delivery`, {
-                  items_count: localOrder.order_items?.length || 0,
-                  note: 'يحتاج معالجة يدوية'
-                });
-              } else if (newDeliveryStatus === '31' || newDeliveryStatus === '32' || statusId === '31' || statusId === '32') {
-                // حالات الإلغاء
+              }
+              // ✅ حماية الطلبات المكتملة
+              else if (localOrder.status === 'completed') {
+                newStatus = 'completed';
+              }
+              // ✅ حالات الإلغاء
+              else if (newDeliveryStatus === '31' || newDeliveryStatus === '32' || statusId === '31' || statusId === '32') {
                 newStatus = 'cancelled';
-              } else {
-                // جميع الحالات الأخرى: استخدام التعريف من alwaseet-statuses فقط
-                // ⚠️ Fallback إلى 'pending' بدلاً من 'delivery' لتجنب الأخطاء
+              }
+              // ✅ الحالة الافتراضية
+              else {
                 if (!statusConfig.internalStatus) {
                   console.warn(`⚠️ [Fallback] لا يوجد mapping للحالة ${newDeliveryStatus} - استخدام pending كـ fallback`);
                 }
@@ -4742,6 +4744,7 @@ export const AlWaseetProvider = ({ children }) => {
     getUserDeliveryAccounts,
     setDefaultDeliveryAccount,
     activateAccount,
+    reactivateExpiredAccount, // ✅ إضافة تجديد الجلسة
     deleteDeliveryAccount,
     isOrderOwner,
     canAutoDeleteOrder,
