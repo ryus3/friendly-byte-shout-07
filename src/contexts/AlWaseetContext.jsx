@@ -14,7 +14,7 @@ import { displaySecuritySummary } from '@/utils/securityLogger';
 import devLog from '@/lib/devLogger';
 
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
-const CONTEXT_VERSION = '2.5.0';
+const CONTEXT_VERSION = '2.6.0';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 const AlWaseetContext = createContext();
@@ -2512,6 +2512,26 @@ export const AlWaseetProvider = ({ children }) => {
           timestamp: new Date().toISOString()
         });
         
+        // ✅ CRITICAL: حماية الحالات النهائية - لا تحديث لـ completed أو returned_in_stock
+        if (localOrder.status === 'completed' || localOrder.status === 'returned_in_stock') {
+          devLog.info(`🔒 [ALWASEET-CTX-PROTECTED] ${localOrder.tracking_number} محمي كـ ${localOrder.status}`);
+          
+          // تحديث delivery_status فقط (بدون status)
+          const waseetNumericStatus = String(waseetOrder.state_id || waseetOrder.status_id || waseetStatusId || '');
+          if (localOrder.delivery_status !== waseetNumericStatus) {
+            await supabase
+              .from('orders')
+              .update({ 
+                delivery_status: waseetNumericStatus,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', localOrder.id);
+            devLog.info(`🔄 [ALWASEET-CTX] ${localOrder.tracking_number}: delivery_status → ${waseetNumericStatus}`);
+          }
+          
+          continue; // ← تخطي باقي المعالجة
+        }
+
         // تحسين التحويل للحالات الشائعة مثل "حالة ثابتة"
         const localStatus = statusMap.get(String(waseetStatusId)) || (() => {
           const t = String(waseetStatusText || '').toLowerCase();
@@ -2591,26 +2611,31 @@ export const AlWaseetProvider = ({ children }) => {
         }
 
         if (needsStatusUpdate) {
-          updates.status = localStatus;
-          
-          // إشعار ذكي فقط عند تغيير الحالة الفعلي
-          const orderKey = localOrder.qr_id || localOrder.order_number || localOrder.id;
-          const lastStatus = lastNotificationStatus[orderKey];
-          
-          if (showNotifications && lastStatus !== localStatus) {
-            statusChanges.push({
-              trackingNumber: localOrder.tracking_number,
-              orderNumber: localOrder.qr_id || localOrder.order_number,
-              oldStatus: localOrder.status,
-              newStatus: localStatus,
-              deliveryStatus: waseetStatusText
-            });
+          // ✅ DOUBLE-CHECK: حماية إضافية قبل تحديث الحالة
+          if (localOrder.status === 'completed' || localOrder.status === 'returned_in_stock') {
+            devLog.info(`🔒 [ALWASEET-CTX-DOUBLE-CHECK] ${localOrder.tracking_number} محمي - تم تخطي تحديث الحالة`);
+          } else {
+            updates.status = localStatus;
             
-            // تحديث آخر حالة تم إشعار المستخدم بها
-            setLastNotificationStatus(prev => ({
-              ...prev,
-              [orderKey]: localStatus
-            }));
+            // إشعار ذكي فقط عند تغيير الحالة الفعلي
+            const orderKey = localOrder.qr_id || localOrder.order_number || localOrder.id;
+            const lastStatus = lastNotificationStatus[orderKey];
+            
+            if (showNotifications && lastStatus !== localStatus) {
+              statusChanges.push({
+                trackingNumber: localOrder.tracking_number,
+                orderNumber: localOrder.qr_id || localOrder.order_number,
+                oldStatus: localOrder.status,
+                newStatus: localStatus,
+                deliveryStatus: waseetStatusText
+              });
+              
+              // تحديث آخر حالة تم إشعار المستخدم بها
+              setLastNotificationStatus(prev => ({
+                ...prev,
+                [orderKey]: localStatus
+              }));
+            }
           }
         }
 

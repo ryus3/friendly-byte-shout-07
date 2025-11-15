@@ -57,7 +57,13 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
       return filtered.filter(o => DELIVERED_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
     }
     if (status === 'needs_processing') {
-      return filtered.filter(o => NEEDS_PROCESSING_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
+      return filtered.filter(o => 
+        NEEDS_PROCESSING_STATUSES.includes(String(o.delivery_status)) && 
+        !o.isarchived &&
+        o.status !== 'completed' &&
+        o.status !== 'returned_in_stock' &&
+        o.status !== 'cancelled'
+      ).length;
     }
     return filtered.filter(o => o.status === status && !o.isarchived && o.status !== 'completed' && o.status !== 'returned_in_stock').length;
   };
