@@ -14,7 +14,7 @@ import { displaySecuritySummary } from '@/utils/securityLogger';
 import devLog from '@/lib/devLogger';
 
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
-const CONTEXT_VERSION = '2.6.0';
+const CONTEXT_VERSION = '2.7.0';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 const AlWaseetContext = createContext();
@@ -47,7 +47,8 @@ export const AlWaseetProvider = ({ children }) => {
   }, []);
   
   // دالة للحصول على توكن المستخدم من النظام الأصلي - دعم متعدد الحسابات
-  const getTokenForUser = useCallback(async (userId, accountUsername = null, partnerName = null) => {
+  // ✅ معامل strictMode: إذا كان true ولم يُمرر accountUsername، إرجاع null (بدون fallback)
+  const getTokenForUser = useCallback(async (userId, accountUsername = null, partnerName = null, strictMode = false) => {
     if (!userId) return null;
     
     // استخدام activePartner إذا لم يتم تحديد partnerName
@@ -64,6 +65,11 @@ export const AlWaseetProvider = ({ children }) => {
         // تطبيع اسم الحساب: lowercase + trim + إزالة المسافات وتحويلها لشرطات
         const normalizedAccount = accountUsername.trim().toLowerCase().replace(/\s+/g, '-');
         query = query.ilike('account_username', normalizedAccount);
+        devLog.log(`🔍 [getTokenForUser] بحث دقيق عن حساب: ${normalizedAccount} في ${partner}`);
+      } else if (strictMode) {
+        // ✅ Strict Mode: لا fallback - إرجاع null مباشرة
+        devLog.warn(`⚠️ [getTokenForUser-STRICT] لم يتم تمرير accountUsername - إرجاع null`);
+        return null;
       } else {
         // ✅ استخدام الحساب الافتراضي للشركة الحالية
         const defaultAccountForPartner = defaultAccounts[partner];
@@ -71,11 +77,13 @@ export const AlWaseetProvider = ({ children }) => {
         if (defaultAccountForPartner) {
           const normalizedDefault = defaultAccountForPartner.trim().toLowerCase().replace(/\s+/g, '-');
           query = query.ilike('account_username', normalizedDefault);
+          devLog.log(`🔍 [getTokenForUser] استخدام الحساب الافتراضي: ${normalizedDefault} في ${partner}`);
         } else {
           // البحث عن الحساب المحدد كافتراضي في DB أو الأحدث
           query = query.order('is_default', { ascending: false })
                       .order('last_used_at', { ascending: false })
                       .limit(1);
+          devLog.log(`🔍 [getTokenForUser] استخدام fallback: الحساب الافتراضي أو الأحدث في ${partner}`);
         }
       }
       
@@ -476,32 +484,37 @@ export const AlWaseetProvider = ({ children }) => {
       // معالجة كل موظف على حدة باستخدام توكن منشئ الطلب
       for (const [employeeId, employeeOrders] of ordersByEmployee) {
         try {
-          // الحصول على توكن منشئ الطلب مع تحديد delivery_partner
-          let employeeTokenData = await getTokenForUser(employeeId, null, employeeOrders[0]?.delivery_partner);
+          // ✅ استخراج delivery_account_used و delivery_partner من الطلب الأول
+          const orderAccount = employeeOrders[0]?.delivery_account_used;
+          const orderPartner = employeeOrders[0]?.delivery_partner;
           
-          // ✅ FALLBACK: استخدام توكن المستخدم الحالي إذا لم يكن هناك توكن للموظف
+          devLog.log(`🔄 [SYNC-BATCH] معالجة ${employeeOrders.length} طلب للموظف ${employeeId} - Partner: ${orderPartner}, Account: ${orderAccount || 'افتراضي'}`);
+          
+          // ✅ محاولة الحصول على التوكن بالوضع الصارم (strictMode)
+          let employeeTokenData = await getTokenForUser(employeeId, orderAccount, orderPartner, true);
+          
+          // ✅ FALLBACK 1: استخدام توكن المستخدم الحالي بنفس الحساب
           if (!employeeTokenData && user?.id) {
-            devLog.log(`⚠️ لا يوجد توكن للموظف ${employeeId} - محاولة استخدام توكن المستخدم الحالي...`);
+            devLog.log(`⚠️ لا يوجد توكن للموظف ${employeeId} - محاولة استخدام توكن المستخدم الحالي بنفس الحساب...`);
             
-            employeeTokenData = await getTokenForUser(user.id, null, employeeOrders[0]?.delivery_partner);
+            employeeTokenData = await getTokenForUser(user.id, orderAccount, orderPartner, true);
             
             if (employeeTokenData) {
-              devLog.log(`✅ تم استخدام توكن المستخدم الحالي لمزامنة طلبات الموظف ${employeeId}`);
-            } else {
-              devLog.log(`❌ لا يوجد توكن صالح - تجاهل ${employeeOrders.length} طلب للموظف ${employeeId}`);
-              
-              toast({
-                title: "⚠️ تحذير: فشل المزامنة",
-                description: `${employeeOrders.length} طلب للموظف لم تتم مزامنتها (لا يوجد توكن)`,
-                variant: "destructive"
-              });
-              
-              continue;
+              devLog.log(`✅ تم استخدام توكن المستخدم الحالي (${orderAccount || 'افتراضي'}) لمزامنة طلبات الموظف ${employeeId}`);
             }
           }
           
+          // ✅ إذا لم يوجد توكن: تسجيل تحذير وتخطي المجموعة
           if (!employeeTokenData) {
-            devLog.log(`⚠️ لا يوجد توكن صالح للموظف منشئ الطلب: ${employeeId}`);
+            const missingAccount = orderAccount || 'الحساب الافتراضي';
+            devLog.warn(`❌ [SYNC-BATCH] لا يوجد توكن للحساب "${missingAccount}" في ${orderPartner} - تخطي ${employeeOrders.length} طلب`);
+            
+            toast({
+              title: "⚠️ تحذير: حساب غير متصل",
+              description: `${employeeOrders.length} طلب من ${orderPartner} (${missingAccount}) لم تتم مزامنتها - يرجى تسجيل الدخول لهذا الحساب`,
+              variant: "destructive"
+            });
+            
             continue;
           }
 
@@ -523,10 +536,11 @@ export const AlWaseetProvider = ({ children }) => {
             });
           }
 
-          devLog.log(`🔄 مزامنة ${employeeOrders.length} طلب للموظف: ${employeeId} باستخدام توكنه الشخصي (${employeeTokenData.partner_name})`);
-          
           // ✅ تعريف partnerName في البداية ليكون متاحاً في كل مكان
           const partnerName = employeeTokenData.partner_name === 'modon' ? 'مدن' : 'الوسيط';
+          const accountUsed = employeeTokenData.account_username || employeeTokenData.account_label || 'افتراضي';
+          
+          devLog.log(`🔄 [SYNC-BATCH] مزامنة ${employeeOrders.length} طلب ${partnerName} (${accountUsed}) للموظف: ${employeeId}`);
           
           // استدعاء API المناسب حسب partner_name
           let merchantOrders;
