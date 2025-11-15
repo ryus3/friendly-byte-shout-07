@@ -14,7 +14,7 @@ import { displaySecuritySummary } from '@/utils/securityLogger';
 import devLog from '@/lib/devLogger';
 
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
-const CONTEXT_VERSION = '2.8.0';
+const CONTEXT_VERSION = '2.8.1';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 const AlWaseetContext = createContext();
@@ -610,8 +610,8 @@ export const AlWaseetProvider = ({ children }) => {
               // ✅ جلب الطلبات الظاهرة فقط باستخدام getOrdersByIdsBulk (أسرع وأدق)
               console.log('📞 استدعاء AlWaseetAPI.getOrdersByIdsBulk للطلبات الظاهرة...');
               
-              // جمع IDs الطلبات الظاهرة للموظف الحالي
-              const orderIds = employeeOrders
+              // جمع IDs الطلبات الظاهرة للمجموعة الحالية
+              const orderIds = groupOrders
                 .map(o => o.delivery_partner_order_id || o.tracking_number || o.qr_id)
                 .filter(Boolean);
 

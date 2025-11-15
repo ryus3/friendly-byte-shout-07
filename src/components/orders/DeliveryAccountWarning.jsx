@@ -56,8 +56,12 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
             .gt('expires_at', new Date().toISOString());
 
           if (account !== 'افتراضي') {
-            const normalizedAccount = account.trim().toLowerCase().replace(/\s+/g, '-');
-            console.log(`   - البحث عن: ${normalizedAccount}`);
+            const normalizedAccount = account
+              .trim()
+              .toLowerCase()
+              .replace(/\s+/g, '-')
+              .replace(/[^\w-]/g, ''); // إزالة أي أحرف خاصة
+            console.log(`   - البحث عن: "${normalizedAccount}"`);
             query = query.ilike('account_username', normalizedAccount);
           }
 
@@ -75,12 +79,35 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
           });
 
           if (error || !data) {
-            console.log(`   - ❌ لم يتم العثور على توكن صالح`);
+            // ✅ إذا لم يُعثر على توكن للحساب المحدد، ابحث عن أي توكن صالح للشركة
+            if (account !== 'افتراضي') {
+              console.log(`   - 🔄 محاولة البحث عن توكن افتراضي للشركة ${partner}...`);
+              
+              const { data: defaultToken } = await supabase
+                .from('delivery_partner_tokens')
+                .select('id, expires_at, is_active, account_username')
+                .eq('partner_name', partner)
+                .eq('is_active', true)
+                .gt('expires_at', new Date().toISOString())
+                .order('last_used_at', { ascending: false, nullsFirst: false })
+                .limit(1)
+                .maybeSingle();
+              
+              if (defaultToken) {
+                console.log(`   - ✅ تم العثور على توكن افتراضي: ${defaultToken.account_username}`);
+                continue; // لا تعتبره مفقوداً
+              }
+            }
+            
+            console.log(`   - ❌ لم يتم العثور على توكن صالح للحساب أو الشركة`);
             missing.push({ partner, account });
             continue;
           }
           
-          console.log(`   - ✅ توكن صالح موجود`);
+          console.log(`   - ✅ توكن صالح موجود:`, {
+            account_username: data.account_username,
+            expires_at: data.expires_at
+          });
         } catch (err) {
           console.error('خطأ في فحص الحساب:', partner, account, err);
           missing.push({ partner, account });
@@ -116,23 +143,24 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
       <AlertDescription>
         <div className="mt-2 space-y-2">
           <p className="font-medium">
-            يوجد طلبات من حسابات لم يتم تسجيل الدخول إليها أو منتهية الصلاحية. لن تتم مزامنة هذه الطلبات:
+            يوجد طلبات من حسابات لم يتم تسجيل الدخول إليها أو منتهية الصلاحية:
           </p>
           <ul className="list-disc list-inside space-y-1">
             {Object.entries(missingByPartner).map(([partnerName, accounts]) => (
               <li key={partnerName} className="text-sm">
                 <strong>{partnerName}:</strong>{' '}
-                {accounts.map(({ account, expired }) => (
-                  <span key={account} className="mx-1">
+                {accounts.map(({ account }) => (
+                  <span key={account} className="mx-1 font-mono bg-muted px-2 py-1 rounded">
                     {account}
-                    {expired && <span className="text-destructive font-bold"> (منتهي - يجب تجديده)</span>}
                   </span>
                 ))}
               </li>
             ))}
           </ul>
           <p className="text-sm mt-3 text-muted-foreground">
-            يرجى تسجيل الدخول {missingAccounts.some(a => a.expired) ? 'مجدداً ' : ''}إلى هذه الحسابات من صفحة <strong>تسجيل الدخول لشركة التوصيل</strong>.
+            💡 <strong>ملاحظة:</strong> إذا كانت هذه الحسابات تابعة لموظفين، يجب عليهم تسجيل الدخول بأنفسهم.
+            <br />
+            إذا كانت حساباتك أنت، يرجى تسجيل الدخول من صفحة <strong>تسجيل الدخول لشركة التوصيل</strong>.
           </p>
         </div>
       </AlertDescription>
