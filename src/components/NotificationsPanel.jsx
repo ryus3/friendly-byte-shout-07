@@ -858,9 +858,13 @@ const NotificationsPanel = () => {
                                        const data = notification.data || {};
                                        const orderId = data.order_id;
                                        
-                                       // البحث عن الطلب من النظام الموحد
-                                       if (orderId && orders && orders.length > 0) {
-                                         const foundOrder = orders.find(order => order.id === orderId);
+                                        // البحث عن الطلب من النظام الموحد (بـ UUID أو tracking_number)
+                                        if (orderId && orders && orders.length > 0) {
+                                          const foundOrder = orders.find(order => 
+                                            order.id === orderId || 
+                                            order.tracking_number === orderId ||
+                                            order.order_number === orderId
+                                          );
                                           if (foundOrder) {
                                             // استخدام تنسيق "المدينة - المنطقة" مباشرة من customer_province
                                             const city = (foundOrder.customer_city || '').trim() || 'غير محدد';
