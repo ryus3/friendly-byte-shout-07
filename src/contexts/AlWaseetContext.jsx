@@ -14,7 +14,7 @@ import { displaySecuritySummary } from '@/utils/securityLogger';
 import devLog from '@/lib/devLogger';
 
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
-const CONTEXT_VERSION = '2.0.2';
+const CONTEXT_VERSION = '2.0.3';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 const AlWaseetContext = createContext();
@@ -806,28 +806,23 @@ export const AlWaseetProvider = ({ children }) => {
                 }
               }
 
-              // ✅ منطق محسّن: التعامل مع الحالات النهائية والتسليم الجزئي المحمي
+              // ✅ منطق محسّن: حماية التسليم الجزئي من جميع الحالات إلا 17
               let newStatus;
               
-              // ✅ الحالة 17 - مرتجع في المخزون (نهائية) - تتجاوز حماية partial_delivery
-              if (newDeliveryStatus === '17' || statusId === '17') {
-                newStatus = 'returned_in_stock';
-                console.log(`🔄 [STATUS-17] ${localOrder.tracking_number} → returned_in_stock`);
-              }
-              // ✅ حماية التسليم الجزئي - إذا يوجد سجل في partial_delivery_history
-              else if (isPartialDeliveryFlagged) {
+              // 🔒 حماية التسليم الجزئي - الأولوية القصوى (ما عدا الحالة 17)
+              if (isPartialDeliveryFlagged && newDeliveryStatus !== '17' && statusId !== '17') {
                 newStatus = 'partial_delivery';
                 console.log(`🔒 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي كتسليم جزئي (الحالة الواردة: ${newDeliveryStatus})`);
+              }
+              // ✅ الحالة 17 - مرتجع في المخزون (نهائية) - الوحيدة التي تتجاوز حماية partial_delivery
+              else if (newDeliveryStatus === '17' || statusId === '17') {
+                newStatus = 'returned_in_stock';
+                console.log(`🔄 [STATUS-17] ${localOrder.tracking_number} → returned_in_stock (إنهاء التسليم الجزئي)`);
               }
               // ✅ الحالة 21 - تسليم جزئي جديد
               else if (newDeliveryStatus === '21' || statusId === '21') {
                 newStatus = 'partial_delivery';
                 console.log(`🔄 [STATUS-21] ${localOrder.tracking_number} → partial_delivery`);
-              }
-              // ✅ الحالة 23 - استلم التاجر (لا يغير status)
-              else if (newDeliveryStatus === '23' || statusId === '23') {
-                newStatus = localOrder.status;
-                console.log(`🔄 [STATUS-23] ${localOrder.tracking_number} - استلم التاجر، الحالة تبقى: ${newStatus}`);
               }
               // ✅ الحالة 4 - تم التسليم
               else if (newDeliveryStatus === '4' || statusId === '4') {
