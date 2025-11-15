@@ -42,25 +42,21 @@ const ALWASEET_STATUS_DEFINITIONS: Record<string, { text: string; localStatus?: 
   '32': { text: 'رفض الطلب', localStatus: 'cancelled', internalStatus: 'cancelled', releasesStock: true },
   '33': { text: 'راجع ( هاتف لا يرد )', internalStatus: 'delivery', releasesStock: false },
   '34': { text: 'راجع ( هاتف خارج الخدمة )', internalStatus: 'delivery', releasesStock: false },
-  '35': { text: 'راجع ( عدم الاستلام من قبل الزبون )', internalStatus: 'delivery', releasesStock: false },
-  '36': { text: 'راجع ( هاتف مشغول )', internalStatus: 'delivery', releasesStock: false },
-  '37': { text: 'راجع ( تأكد من قبل الزبون )', internalStatus: 'delivery', releasesStock: false },
-  '38': { text: 'راجع ( الوسيط لا يوصل الى المنطقة )', internalStatus: 'delivery', releasesStock: false },
-  '39': { text: 'راجع ( غير مكتمل )', internalStatus: 'delivery', releasesStock: false },
-  '40': { text: 'راجع ( مع مندوب اخر )', internalStatus: 'delivery', releasesStock: false },
-  '41': { text: 'راجع ( منطقه بعيده )', internalStatus: 'delivery', releasesStock: false },
-  '42': { text: 'راجع ( حالة الطقس )', internalStatus: 'delivery', releasesStock: false },
-  '43': { text: 'راجع ( امني )', internalStatus: 'delivery', releasesStock: false },
-  '44': { text: 'راجع ( نصف غير مكتمل )', internalStatus: 'delivery', releasesStock: false }
+  '35': { text: 'راجع ( لتغير نوع الدفع )', internalStatus: 'delivery', releasesStock: false },
+  '36': { text: 'راجع ( رفض السعر )', internalStatus: 'delivery', releasesStock: false },
+  '37': { text: 'راجع ( لعدم الحاجة )', internalStatus: 'delivery', releasesStock: false },
+  '38': { text: 'راجع ( الاستلام من فرع الوسيط )', internalStatus: 'delivery', releasesStock: false },
+  '39': { text: 'راجع ( عنوان جديد )', internalStatus: 'delivery', releasesStock: false },
+  '40': { text: 'راجع ( رفض الفحص )', internalStatus: 'delivery', releasesStock: false },
+  '41': { text: 'راجع ( لتغير التفاصيل )', internalStatus: 'delivery', releasesStock: false },
+  '42': { text: 'راجع ( رفض رسوم التوصيل )', internalStatus: 'delivery', releasesStock: false },
+  '43': { text: 'راجع ( رفض جزئي )', internalStatus: 'delivery', releasesStock: false },
+  '44': { text: 'راجع ( أخرى )', internalStatus: 'delivery', releasesStock: false },
 };
 
 function getStatusConfig(statusId: string | number) {
-  const config = ALWASEET_STATUS_DEFINITIONS[String(statusId)];
-  if (!config) {
-    console.warn(`⚠️ حالة غير معروفة: ${statusId}`);
-    return { text: `حالة ${statusId}`, localStatus: 'delivery', internalStatus: 'delivery', releasesStock: false };
-  }
-  return config;
+  const id = String(statusId);
+  return ALWASEET_STATUS_DEFINITIONS[id] || { text: 'حالة غير معروفة', internalStatus: 'delivery', releasesStock: false };
 }
 
 Deno.serve(async (req) => {
@@ -118,17 +114,15 @@ Deno.serve(async (req) => {
           : `https://api.alwaseet-iq.net/v1/merchant/merchant-orders?token=${tokenRecord.token}`;
         
         const response = await fetch(apiUrl, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
+          headers: { 'Accept': 'application/json' }
         });
 
         if (!response.ok) {
-          console.error(`❌ فشل جلب طلبات ${partnerName}/${tokenRecord.account_username}: ${response.status}`);
-          continue;
+          throw new Error(`HTTP ${response.status}`);
         }
 
         const result = await response.json();
-        if (result.status && result.data && Array.isArray(result.data)) {
+        if (result?.status && result?.data) {
           const ordersWithAccount = result.data.map((order: any) => ({
             ...order,
             _account: tokenRecord.account_username,
@@ -200,106 +194,81 @@ Deno.serve(async (req) => {
         }
 
         if (!waseetOrder) {
-          console.log(`⚠️ لم يتم العثور على الطلب ${localOrder.tracking_number} في بيانات الوسيط - تخطي`);
+          console.log(`⏭️ الطلب ${localOrder.tracking_number} غير موجود في نتائج الوسيط`);
           continue;
         }
 
-        console.log(`✅ تم العثور على الطلب ${localOrder.tracking_number} - الحساب: ${waseetOrder._account} - الحالة: ${waseetOrder.status_id}`);
-
-        // مقارنة البيانات
         const currentStatus = String(localOrder.delivery_status || '');
-        const newStatus = String(waseetOrder.status_id || '');
-        const currentPrice = Number(localOrder.final_amount || 0);
-        const newPrice = Number(waseetOrder.price || 0);
+        const newStatus = String(waseetOrder.status_id || waseetOrder.state_id || waseetOrder.status || '');
 
-        const statusChanged = currentStatus !== newStatus;
-        const priceChanged = currentPrice !== newPrice && newPrice > 0;
-        const accountChanged = waseetOrder._account && waseetOrder._account !== localOrder.delivery_account_used;
-
-        const updates: any = {
-          updated_at: new Date().toISOString()
-        };
-
+        const updates: any = {};
         const changesList: string[] = [];
+        let statusChanged = false;
+        let priceChanged = false;
+        let accountChanged = false;
 
         // Compare status
-        const statusChanged = currentStatus !== newStatus;
-        
-        // ✅ لا حماية - نستخدم الحالة الصحيحة من شركة التوصيل مباشرة
-        if (statusChanged) {
+        const statusChangedCheck = currentStatus !== newStatus;
+
+        if (statusChangedCheck) {
           const statusConfig = getStatusConfig(newStatus);
-          let finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
-          
-          // ✅ معالجة خاصة للحالة 21
-          if (newStatus === '21') {
-            finalStatus = 'partial_delivery';
-            console.log(`🟣 الحالة 21 للطلب ${localOrder.tracking_number}:`, {
-              current_status: localOrder.status,
-              new_status: 'partial_delivery',
-              note: 'يحتاج معالجة يدوية'
-            });
-          }
+          const finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
           
           console.log(`🔄 تحديث ${localOrder.tracking_number}:`, {
             delivery_status: `${currentStatus} → ${newStatus} (${statusConfig.text})`,
-            status: `${localOrder.status} → ${finalStatus}`,
-            no_protection: '✅ بدون حماية'
+            status: `${localOrder.status} → ${finalStatus}`
           });
           
           updates.delivery_status = newStatus;
           updates.status = finalStatus;
+          statusChanged = true;
           changesList.push(`الحالة: ${currentStatus} → ${newStatus} (${statusConfig.text})`);
         }
 
+        // Compare prices
+        const currentPrice = parseInt(String(localOrder.final_amount || 0));
+        const newPrice = parseInt(String(waseetOrder.price || 0));
 
-          if (priceChanged) {
+        if (newPrice > 0 && currentPrice !== newPrice) {
+          updates.final_amount = newPrice;
+          priceChanged = true;
+
+          // إعادة حساب الأرباح
+          const { data: profitRecord } = await supabase
+            .from('order_employee_profits')
+            .select('*')
+            .eq('order_id', localOrder.id)
+            .maybeSingle();
+
+          if (profitRecord) {
             const priceDifference = newPrice - currentPrice;
-            updates.final_amount = newPrice;
-            const deliveryFee = Number(waseetOrder.delivery_price || localOrder.delivery_fee || 0);
-            updates.delivery_fee = deliveryFee;
-            updates.sales_amount = newPrice - deliveryFee;
+            const employeeShare = Math.floor(priceDifference * 0.5);
 
-            if (localOrder.order_type === 'return') {
-              const calculatedRefund = Math.abs(newPrice) - deliveryFee;
-              if (calculatedRefund > 0) {
-                updates.refund_amount = calculatedRefund;
-              }
-            }
+            await supabase
+              .from('order_employee_profits')
+              .update({
+                order_total_amount: newPrice,
+                employee_profit: employeeShare,
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', profitRecord.id);
 
-            // تحديث الأرباح
-            const { data: profitRecord } = await supabase
-              .from('profits')
-              .select('id, total_cost, employee_percentage')
-              .eq('order_id', localOrder.id)
-              .maybeSingle();
-
-            if (profitRecord) {
-              const newProfit = newPrice - deliveryFee - profitRecord.total_cost;
-              const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
-
-              await supabase
-                .from('profits')
-                .update({
-                  total_revenue: newPrice,
-                  profit_amount: newProfit,
-                  employee_profit: employeeShare,
-                  updated_at: new Date().toISOString()
-                })
-                .eq('id', profitRecord.id);
-
-              console.log(`💰 تحديث الأرباح للطلب ${localOrder.order_number}: ${priceDifference} د.ع`);
-            }
-
-            const currentNotes = localOrder.notes || '';
-            updates.notes = `${currentNotes}\n[${new Date().toISOString()}] السعر تغير من ${currentPrice.toLocaleString()} إلى ${newPrice.toLocaleString()} د.ع`;
-            changesList.push(`السعر: ${currentPrice} → ${newPrice} د.ع`);
+            console.log(`💰 تحديث الأرباح للطلب ${localOrder.order_number}: ${priceDifference} د.ع`);
           }
 
-          if (accountChanged) {
-            updates.delivery_account_used = waseetOrder._account;
-            changesList.push(`الحساب: ${waseetOrder._account}`);
-          }
+          const currentNotes = localOrder.notes || '';
+          updates.notes = `${currentNotes}\n[${new Date().toISOString()}] السعر تغير من ${currentPrice.toLocaleString()} إلى ${newPrice.toLocaleString()} د.ع`;
+          changesList.push(`السعر: ${currentPrice} → ${newPrice} د.ع`);
+        }
 
+        // Compare account
+        if (waseetOrder._account && localOrder.delivery_account_used !== waseetOrder._account) {
+          accountChanged = true;
+          updates.delivery_account_used = waseetOrder._account;
+          changesList.push(`الحساب: ${waseetOrder._account}`);
+        }
+
+        if (statusChanged || priceChanged || accountChanged) {
           // حفظ الإشعار للإدراج لاحقاً (فقط إذا كانت الإشعارات مفعلة)
           if (notificationsEnabled) {
             notificationsToInsert.push({
@@ -355,7 +324,7 @@ Deno.serve(async (req) => {
         .insert(notificationsToInsert);
 
       if (notifError) {
-        console.error('❌ فشل إدراج الإشعارات:', notifError);
+        console.error('❌ خطأ في إدراج الإشعارات:', notifError);
       } else {
         console.log(`📬 تم إرسال ${notificationsToInsert.length} إشعار`);
       }
