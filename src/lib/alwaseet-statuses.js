@@ -59,12 +59,13 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '3': {
     text: 'قيد التوصيل الى الزبون (في عهدة المندوب)',
     icon: MapPin,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-status-delivery-start to-status-delivery-end text-white border border-status-delivery-border shadow-lg shadow-status-delivery-shadow/40',
-    description: 'قيد التوصيل - في عهدة المندوب'
+    description: 'تم الشحن - في عهدة المندوب'
   },
   '4': {
     text: 'تم التسليم للزبون',
@@ -80,22 +81,24 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '5': {
     text: 'في موقع فرز بغداد',
     icon: Building,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-cyan-500 to-teal-600 text-white border border-cyan-300/50 shadow-lg shadow-cyan-400/40',
-    description: 'قيد التوصيل - في موقع الفرز'
+    description: 'تم الشحن - في موقع الفرز'
   },
   '6': {
     text: 'في مكتب',
     icon: Building,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border border-indigo-300/50 shadow-lg shadow-indigo-400/40',
-    description: 'قيد التوصيل - في المكتب'
+    description: 'تم الشحن - في المكتب'
   },
   '7': {
     text: 'في الطريق الى مكتب المحافظة',
@@ -172,12 +175,13 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '14': {
     text: 'اعادة الارسال الى الزبون',
     icon: RefreshCw,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40',
-    description: 'قيد التوصيل - إعادة الإرسال'
+    description: 'تم الشحن - إعادة الإرسال'
   },
   '15': {
     text: 'ارجاع الى التاجر',
@@ -256,94 +260,103 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '22': {
     text: 'ارسال الى الفزر',
     icon: Building,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-slate-500 to-gray-600 text-white border border-slate-300/50 shadow-lg shadow-slate-400/40',
-    description: 'قيد التوصيل - إرسال للفرز'
+    description: 'تم الشحن - إرسال للفرز'
   },
   '23': {
     text: 'ارسال الى مخزن الارجاعات',
     icon: RotateCcw,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-orange-500 to-yellow-600 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40',
-    description: 'قيد التوصيل - إرسال لمخزن الإرجاعات'
+    description: 'تم الشحن - إرسال لمخزن الإرجاعات'
   },
   '24': {
     text: 'تم تغيير محافظة الزبون',
     icon: MapPin,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white border border-blue-300/50 shadow-lg shadow-blue-400/40',
-    description: 'قيد التوصيل - تغيير المحافظة'
+    description: 'تم الشحن - تغيير المحافظة'
   },
 
   // حالات المشاكل - تحتاج معالجة
   '25': {
     text: 'لا يرد',
     icon: PhoneOff,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-red-500 to-rose-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40',
-    description: 'يحتاج معالجة - لا يرد'
+    description: 'تم الشحن - لا يرد'
   },
   '26': {
     text: 'لا يرد بعد الاتفاق',
     icon: PhoneOff,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-red-500 to-rose-600 text-white border border-red-300/50 shadow-lg shadow-red-400/40',
-    description: 'يحتاج معالجة - لا يرد بعد الاتفاق'
+    description: 'تم الشحن - لا يرد بعد الاتفاق'
   },
   '27': {
     text: 'مغلق',
     icon: Ban,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-gray-500 to-slate-600 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40',
-    description: 'يحتاج معالجة - مغلق'
+    description: 'تم الشحن - مغلق'
   },
   '28': {
     text: 'مغلق بعد الاتفاق',
     icon: Ban,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-gray-500 to-slate-600 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40',
-    description: 'يحتاج معالجة - مغلق بعد الاتفاق'
+    description: 'تم الشحن - مغلق بعد الاتفاق'
   },
   '29': {
     text: 'مؤجل',
     icon: Clock,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-yellow-500 to-amber-600 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40',
-    description: 'يحتاج معالجة - مؤجل'
+    description: 'تم الشحن - مؤجل'
   },
   '30': {
     text: 'مؤجل لحين اعادة الطلب لاحقا',
     icon: Clock,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-yellow-500 to-amber-600 text-white border border-yellow-300/50 shadow-lg shadow-yellow-400/40',
-    description: 'يحتاج معالجة - مؤجل لإعادة الطلب'
+    description: 'تم الشحن - مؤجل لإعادة الطلب'
   },
 
   // حالات الإلغاء والرفض
@@ -372,12 +385,13 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '33': {
     text: 'مفصول عن الخدمة',
     icon: Ban,
-    internalStatus: 'delivery',
+    internalStatus: 'shipped',
+    localStatus: 'shipped',
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-gray-600 to-slate-700 text-white border border-gray-400/50 shadow-lg shadow-gray-500/40',
-    description: 'يحتاج معالجة - مفصول عن الخدمة'
+    description: 'تم الشحن - مفصول عن الخدمة'
   },
   '34': {
     text: 'طلب مكرر',
