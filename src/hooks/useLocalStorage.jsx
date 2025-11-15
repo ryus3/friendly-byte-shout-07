@@ -9,7 +9,17 @@ function useLocalStorage(key, initialValue) {
     
     try {
       const item = window.localStorage.getItem(key);
-      return item ? JSON.parse(item) : initialValue;
+      if (!item) return initialValue;
+      
+      // ✅ محاولة parse كـ JSON أولاً
+      try {
+        return JSON.parse(item);
+      } catch (parseError) {
+        // ✅ إذا فشل، افترض أنها قيمة نصية مباشرة وقم بحفظها بشكل صحيح
+        console.warn(`localStorage key "${key}" is not valid JSON, using raw value:`, item);
+        window.localStorage.setItem(key, JSON.stringify(item));
+        return item;
+      }
     } catch (error) {
       console.error(`Error reading localStorage key "${key}":`, error);
       return initialValue;
