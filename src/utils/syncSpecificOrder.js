@@ -53,6 +53,17 @@ export const syncSpecificOrder = async (qrId, token) => {
       return null;
     }
 
+    // ✅ استبعاد الحالات النهائية من المزامنة
+    if (localOrder.status === 'completed') {
+      console.log(`🔒 [SYNC-SPECIFIC] ${qrId} مكتمل - لا يحتاج مزامنة`);
+      return { success: true, updated: false, reason: 'completed_order' };
+    }
+
+    if (localOrder.status === 'returned_in_stock') {
+      console.log(`🔒 [SYNC-SPECIFIC] ${qrId} راجع للمخزن - لا يحتاج مزامنة`);
+      return { success: true, updated: false, reason: 'returned_in_stock' };
+    }
+
     // ✅ لا حماية - استخدام الحالة الصحيحة مباشرة
     const finalStatus = correctLocalStatus;
     console.log(`✅ تحديث ${qrId}: ${localOrder.status} → ${finalStatus} (${statusConfig?.text || 'غير معروف'})`);
