@@ -14,7 +14,7 @@ import { displaySecuritySummary } from '@/utils/securityLogger';
 import devLog from '@/lib/devLogger';
 
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
-const CONTEXT_VERSION = '2.7.0';
+const CONTEXT_VERSION = '2.7.1';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 const AlWaseetContext = createContext();
@@ -87,20 +87,35 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
       
-      const { data, error } = await query.maybeSingle();
+      const { data, error } = await query
+        .gt('expires_at', new Date().toISOString())
+        .maybeSingle();
       
       if (error || !data) return null;
-      
-      // التحقق من صلاحية التوكن
-      if (new Date(data.expires_at) <= new Date()) {
-        return null;
-      }
       
       return data;
     } catch (error) {
       return null;
     }
   }, [activePartner, defaultAccounts]);
+
+  // 🧹 تنظيف التوكنات المنتهية تلقائياً
+  const cleanupExpiredTokens = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('delivery_partner_tokens')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .lt('expires_at', new Date().toISOString())
+        .eq('is_active', true)
+        .select('id');
+
+      if (!error && data?.length > 0) {
+        devLog.log(`🧹 تم تعطيل ${data.length} توكن منتهي الصلاحية`);
+      }
+    } catch (err) {
+      console.error('خطأ في تنظيف التوكنات:', err);
+    }
+  }, []);
 
   // التحقق من صلاحية التوكن المحفوظ عند تحميل الصفحة
   useEffect(() => {
@@ -134,7 +149,14 @@ export const AlWaseetProvider = ({ children }) => {
         });
       }
     }
-  }, [token, tokenExpiry, user?.id, activePartner]);
+  }, [token, tokenExpiry, user?.id, activePartner, getTokenForUser]);
+
+  // 🧹 تنظيف التوكنات المنتهية عند التهيئة
+  useEffect(() => {
+    if (user?.id) {
+      cleanupExpiredTokens();
+    }
+  }, [user?.id, cleanupExpiredTokens]);
 
   // ✅ استعادة آخر شركة توصيل غير 'local' عند التحميل
   useEffect(() => {
@@ -3314,6 +3336,7 @@ export const AlWaseetProvider = ({ children }) => {
 
       // ✅ استخدام المصدر الموحد لتعريفات الحالات
       const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId || waseetOrder.state_id;
+      const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
       const statusConfig = getStatusConfig(String(waseetStatusId));
       
       // ✅ لا حماية - استخدام الحالة الصحيحة مباشرة
@@ -3335,7 +3358,7 @@ export const AlWaseetProvider = ({ children }) => {
       // تحضير التحديثات
       const updates = {
         status: correctLocalStatus,
-        delivery_status: String(waseetOrder.state_id || waseetOrder.status_id || ''),
+        delivery_status: String(waseetStatusText),
         delivery_partner_order_id: String(waseetOrder.id),
         qr_id: waseetOrder.qr_id || localOrder.qr_id || qrId, // ✅ حفظ qr_id أيضاً
         updated_at: new Date().toISOString()

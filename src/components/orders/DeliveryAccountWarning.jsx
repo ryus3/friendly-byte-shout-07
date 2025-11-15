@@ -50,26 +50,23 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
             .from('delivery_partner_tokens')
             .select('id, expires_at, is_active, account_username')
             .eq('partner_name', partner)
-            .eq('is_active', true);
+            .eq('is_active', true)
+            .gt('expires_at', new Date().toISOString());
 
           if (account !== 'افتراضي') {
             const normalizedAccount = account.trim().toLowerCase().replace(/\s+/g, '-');
             query = query.ilike('account_username', normalizedAccount);
           }
 
+          query = query
+            .order('last_used_at', { ascending: false, nullsFirst: false })
+            .limit(1);
+
           const { data, error } = await query.maybeSingle();
 
           if (error || !data) {
             missing.push({ partner, account });
             continue;
-          }
-
-          // التحقق من انتهاء الصلاحية
-          if (data.expires_at) {
-            const expiryDate = new Date(data.expires_at);
-            if (expiryDate < new Date()) {
-              missing.push({ partner, account, expired: true });
-            }
           }
         } catch (err) {
           console.error('خطأ في فحص الحساب:', partner, account, err);
@@ -106,7 +103,7 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
       <AlertDescription>
         <div className="mt-2 space-y-2">
           <p className="font-medium">
-            يوجد طلبات من حسابات لم يتم تسجيل الدخول إليها. لن تتم مزامنة هذه الطلبات:
+            يوجد طلبات من حسابات لم يتم تسجيل الدخول إليها أو منتهية الصلاحية. لن تتم مزامنة هذه الطلبات:
           </p>
           <ul className="list-disc list-inside space-y-1">
             {Object.entries(missingByPartner).map(([partnerName, accounts]) => (
@@ -114,14 +111,15 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
                 <strong>{partnerName}:</strong>{' '}
                 {accounts.map(({ account, expired }) => (
                   <span key={account} className="mx-1">
-                    {account} {expired && '(منتهي الصلاحية)'}
+                    {account}
+                    {expired && <span className="text-destructive font-bold"> (منتهي - يجب تجديده)</span>}
                   </span>
                 ))}
               </li>
             ))}
           </ul>
           <p className="text-sm mt-3 text-muted-foreground">
-            يرجى تسجيل الدخول إلى هذه الحسابات من صفحة <strong>تسجيل الدخول لشركة التوصيل</strong>.
+            يرجى تسجيل الدخول {missingAccounts.some(a => a.expired) ? 'مجدداً ' : ''}إلى هذه الحسابات من صفحة <strong>تسجيل الدخول لشركة التوصيل</strong>.
           </p>
         </div>
       </AlertDescription>
