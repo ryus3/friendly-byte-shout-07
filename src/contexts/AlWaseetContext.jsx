@@ -14,7 +14,7 @@ import { displaySecuritySummary } from '@/utils/securityLogger';
 import devLog from '@/lib/devLogger';
 
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
-const CONTEXT_VERSION = '2.1.0';
+const CONTEXT_VERSION = '2.3.0';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 const AlWaseetContext = createContext();
@@ -827,13 +827,6 @@ export const AlWaseetProvider = ({ children }) => {
               // ✅ الأولوية 4: استخدام statusConfig مباشرة
               else {
                 newStatus = statusConfig.localStatus || statusConfig.internalStatus;
-                
-                // ✅ تحذير فقط إذا لم نجد mapping
-                if (!newStatus) {
-                  console.error(`❌ [CRITICAL] الحالة ${newDeliveryStatus} غير معرّفة في ALWASEET_STATUS_DEFINITIONS!`);
-                  console.error(`📋 statusConfig:`, statusConfig);
-                  newStatus = localOrder.status; // ✅ نترك الحالة كما هي
-                }
               }
               
               // 🔍 Logging للحالة المحسوبة
