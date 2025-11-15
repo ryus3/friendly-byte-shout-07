@@ -13,6 +13,10 @@ import { verifyOrderOwnership, createSecureOrderFilter, logSecurityWarning } fro
 import { displaySecuritySummary } from '@/utils/securityLogger';
 import devLog from '@/lib/devLogger';
 
+// 🔄 Context Version - لإجبار المتصفح على تحديث الكود
+const CONTEXT_VERSION = '2.0.2';
+console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
+
 const AlWaseetContext = createContext();
 
 export const useAlWaseet = () => useContext(AlWaseetContext);
@@ -770,14 +774,37 @@ export const AlWaseetProvider = ({ children }) => {
                 ? getModonStatusConfig(statusId, remoteOrder.status)
                 : getStatusConfig(newDeliveryStatus);
               
-              // 🔍 الخطوة 1: التحقق من partial_delivery_history
+              // 🔍 الخطوة 1: التحقق من partial_delivery_history وجلب delivered_revenue
               const { data: partialHistory } = await supabase
                 .from('partial_delivery_history')
-                .select('id')
+                .select('id, delivered_revenue, delivery_fee_allocated')
                 .eq('order_id', localOrder.id)
                 .maybeSingle();
 
               const isPartialDeliveryFlagged = !!partialHistory;
+
+              // 🔧 تصحيح final_amount تلقائياً إذا كان الطلب تسليم جزئي
+              if (isPartialDeliveryFlagged && partialHistory.delivered_revenue) {
+                const correctFinalAmount = parseFloat(partialHistory.delivered_revenue);
+                const currentFinalAmount = parseFloat(localOrder.final_amount) || 0;
+                
+                // إذا كان final_amount مختلف عن delivered_revenue (بفارق > 1 دينار)
+                if (Math.abs(correctFinalAmount - currentFinalAmount) > 1) {
+                  console.log(`🔧 [AUTO-FIX] تصحيح final_amount للطلب ${localOrder.tracking_number}: ${currentFinalAmount} → ${correctFinalAmount}`);
+                  
+                  // تحديث final_amount في قاعدة البيانات
+                  await supabase
+                    .from('orders')
+                    .update({ 
+                      final_amount: correctFinalAmount,
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', localOrder.id);
+                  
+                  // تحديث الطلب المحلي
+                  localOrder.final_amount = correctFinalAmount;
+                }
+              }
 
               // ✅ منطق محسّن: التعامل مع الحالات النهائية والتسليم الجزئي المحمي
               let newStatus;
