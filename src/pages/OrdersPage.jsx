@@ -34,6 +34,7 @@ import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
 import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
 import * as ModonAPI from '@/lib/modon-api';
 import { Activity } from 'lucide-react';
+import DeliveryAccountWarning from '@/components/orders/DeliveryAccountWarning';
 
 
 
@@ -837,6 +838,9 @@ const OrdersPage = () => {
       </Helmet>
 
       <div className="space-y-6">
+        {/* ✅ تحذير الحسابات غير المتصلة */}
+        <DeliveryAccountWarning orders={userOrders} activePartner={null} />
+        
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <OrdersHeader title={pageConfig.title} description={pageConfig.description} icon={pageConfig.icon} />
             

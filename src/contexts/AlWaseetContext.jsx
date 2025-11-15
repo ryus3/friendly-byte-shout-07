@@ -2342,6 +2342,26 @@ export const AlWaseetProvider = ({ children }) => {
       const statusChanges = [];
 
       for (const localOrder of pendingOrders) {
+        // ✅ استخراج delivery_account_used و delivery_partner من الطلب
+        const orderAccount = localOrder.delivery_account_used;
+        const orderPartner = localOrder.delivery_partner;
+        const orderCreatedBy = localOrder.created_by;
+        
+        // ✅ محاولة الحصول على توكن بالوضع الصارم
+        let orderTokenData = await getTokenForUser(orderCreatedBy, orderAccount, orderPartner, true);
+        
+        // ✅ FALLBACK: استخدام توكن المستخدم الحالي
+        if (!orderTokenData && user?.id) {
+          orderTokenData = await getTokenForUser(user.id, orderAccount, orderPartner, true);
+        }
+        
+        // ✅ تخطي الطلب إذا لم يوجد توكن صالح
+        if (!orderTokenData) {
+          devLog.warn(`⚠️ [FAST-SYNC] تخطي ${localOrder.tracking_number} - لا يوجد توكن للحساب "${orderAccount || 'افتراضي'}" في ${orderPartner}`);
+          checked++;
+          continue;
+        }
+        
         let waseetOrder = null;
         let needsIdRepair = false;
 
@@ -4920,10 +4940,48 @@ export const AlWaseetProvider = ({ children }) => {
       }
     };
     
+    // ✅ دالة للتحقق من وجود توكن صالح لحساب محدد
+    window.hasValidTokenForAccount = async (accountUsername, partnerName, userId = null) => {
+      if (!accountUsername || !partnerName) return false;
+      
+      try {
+        const normalizedAccount = accountUsername.trim().toLowerCase().replace(/\s+/g, '-');
+        
+        let query = supabase
+          .from('delivery_partner_tokens')
+          .select('id, expires_at, is_active')
+          .eq('partner_name', partnerName)
+          .ilike('account_username', normalizedAccount)
+          .eq('is_active', true);
+        
+        if (userId) {
+          query = query.eq('user_id', userId);
+        }
+        
+        const { data, error } = await query.maybeSingle();
+        
+        if (error || !data) return false;
+        
+        // التحقق من انتهاء الصلاحية
+        if (data.expires_at) {
+          const expiryDate = new Date(data.expires_at);
+          if (expiryDate < new Date()) {
+            return false; // منتهي الصلاحية
+          }
+        }
+        
+        return true;
+      } catch (error) {
+        console.error('خطأ في hasValidTokenForAccount:', error);
+        return false;
+      }
+    };
+    
     return () => {
       delete window.linkRemoteIdsForExistingOrders;
       delete window.fixStatusMismatches;
       delete window.checkOrderStatus;
+      delete window.hasValidTokenForAccount;
     };
   }, [linkRemoteIdsForExistingOrders, fixStatusMismatches]);
 

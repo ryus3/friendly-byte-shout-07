@@ -28,6 +28,7 @@ import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 import EmployeeDeliveryInvoicesTab from '@/components/orders/EmployeeDeliveryInvoicesTab';
 import ProfessionalSyncToolbar from '@/components/shared/ProfessionalSyncToolbar';
+import DeliveryAccountWarning from '@/components/orders/DeliveryAccountWarning';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -895,6 +896,9 @@ useEffect(() => {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="space-y-6"
+      >
+        {/* ✅ تحذير الحسابات غير المتصلة */}
+        <DeliveryAccountWarning orders={filteredOrders} activePartner={null} />
       >
         {/* العنوان الرئيسي */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
