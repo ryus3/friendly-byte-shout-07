@@ -50,9 +50,10 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
           
           let query = supabase
             .from('delivery_partner_tokens')
-            .select('id, expires_at, is_active, account_username')
+            .select('id, expires_at, is_active, account_username, user_id')
             .eq('partner_name', partner)
             .eq('is_active', true)
+            .eq('user_id', user.id) // ✅ فحص توكنات المستخدم الحالي فقط
             .gt('expires_at', new Date().toISOString());
 
           if (account !== 'افتراضي') {

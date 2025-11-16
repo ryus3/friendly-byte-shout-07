@@ -239,21 +239,22 @@ export const releasesModonStock = (statusId) => {
   return status ? status.releasesStock : false;
 };
 
-export const getModonStatusConfig = (statusId, statusText = '') => {
+export const getModonStatusConfig = (statusId, statusText = '', currentStatus = null) => {
   const status = MODON_STATUS_DEFINITIONS[String(statusId)];
   if (!status) {
-    // استخدام statusText كبديل إذا لم نجد statusId
+    // ✅ CRITICAL: لا تُرجع حالة افتراضية - أبقِ الحالة كما هي
+    console.error(`❌ [MODON-STATUS] حالة غير معروفة: ${statusId} - النص: ${statusText}`);
     return {
       text: statusText || 'حالة غير معروفة',
       icon: AlertTriangle,
-      localStatus: 'delivery',
+      localStatus: currentStatus || 'unknown', // ✅ لا تغيير افتراضي
       canDelete: false,
       canEdit: false,
       releasesStock: false,
       receiptReceived: false,
       isFinal: false,
       color: 'bg-gradient-to-r from-gray-500 to-slate-600 text-white border border-gray-300/50 shadow-lg shadow-gray-400/40',
-      description: 'حالة غير معروفة'
+      description: 'حالة غير معروفة - لم يتم التعديل'
     };
   }
   return status;

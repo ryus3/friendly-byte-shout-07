@@ -14,7 +14,7 @@ import { displaySecuritySummary } from '@/utils/securityLogger';
 import devLog from '@/lib/devLogger';
 
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
-const CONTEXT_VERSION = '2.8.1';
+const CONTEXT_VERSION = '2.9.0';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 const AlWaseetContext = createContext();
@@ -465,14 +465,18 @@ export const AlWaseetProvider = ({ children }) => {
     const syncableOrders = visibleOrders.filter(order => {
       if (!order.created_by || !order.delivery_partner || order.delivery_partner === 'local') return false;
       
-      // ✅ استبعاد الحالات النهائية تماماً فقط:
+      // ✅ استبعاد الحالات النهائية والطلبات المستلمة فواتيرها:
       // 1. delivery_status = '17' (راجع للتاجر) - نهائية
       // 2. status = 'completed' (مكتمل) - نهائية
       // 3. status = 'returned_in_stock' (راجع للمخزن) - نهائية
+      // 4. receipt_received = true (استلمت الفاتورة) - نهائية
+      // 5. delivery_partner_invoice_id موجود (له فاتورة) - نهائية
       
       if (order.delivery_status === '17') return false;
       if (order.status === 'completed') return false;
       if (order.status === 'returned_in_stock') return false;
+      if (order.receipt_received === true) return false;
+      if (order.delivery_partner_invoice_id) return false;
       
       // ✅ السماح بمزامنة جميع الحالات الأخرى بما فيها:
       // - delivery_status = '4' (مسلّم) ← ليست نهائية، قد يحدث تحديثات
@@ -809,7 +813,7 @@ export const AlWaseetProvider = ({ children }) => {
               
               // استخدام التعريف الصحيح حسب الشريك
               const statusConfig = isModon 
-                ? getModonStatusConfig(statusId, remoteOrder.status)
+                ? getModonStatusConfig(statusId, remoteOrder.status, localOrder.status)
                 : getStatusConfig(newDeliveryStatus);
               
               // 🔍 الخطوة 1: التحقق من partial_delivery_history وجلب delivered_revenue
@@ -844,11 +848,16 @@ export const AlWaseetProvider = ({ children }) => {
                 }
               }
 
-              // ✅ منطق بسيط ومباشر - حماية التسليم الجزئي
+              // ✅ منطق بسيط ومباشر مع حماية الطلبات المستلمة فواتيرها
               let newStatus;
               
+              // 🔒 الأولوية 0: حماية الطلبات المستلمة فواتيرها (محمية 100%)
+              if (localOrder.receipt_received === true || localOrder.delivery_partner_invoice_id) {
+                newStatus = localOrder.status; // لا تغيير أبداً
+                console.log(`🔒 [INVOICE-PROTECTED] ${localOrder.tracking_number} محمي (فاتورة مستلمة)`);
+              }
               // 🔒 الأولوية 1: حماية التسليم الجزئي (ما عدا الحالة 17)
-              if (isPartialDeliveryFlagged && newDeliveryStatus !== '17') {
+              else if (isPartialDeliveryFlagged && newDeliveryStatus !== '17') {
                 newStatus = 'partial_delivery';
                 console.log(`🔒 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي كتسليم جزئي (delivery_status: ${newDeliveryStatus})`);
               }
@@ -882,6 +891,19 @@ export const AlWaseetProvider = ({ children }) => {
               // ✅ استخدام delivery_fee من الطلب المحلي (الإعدادات)، وليس من API
               const newDeliveryFee = localOrder.delivery_fee || 0;
               const newReceiptReceived = statusConfig.receiptReceived ?? false;
+
+              // ✅ تخطي الطلبات المحمية تماماً
+              const isProtected = (
+                localOrder.receipt_received === true ||
+                localOrder.delivery_partner_invoice_id ||
+                localOrder.status === 'completed' ||
+                localOrder.status === 'returned_in_stock'
+              );
+
+              if (isProtected) {
+                console.log(`🔒 [PROTECTED] ${localOrder.tracking_number} محمي - لا تحديث`);
+                continue; // تخطي التحديث تماماً
+              }
 
               // تحديث الطلب إذا تغيرت بياناته
               const needsUpdate = (
