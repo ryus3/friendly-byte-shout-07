@@ -84,15 +84,16 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
             if (account !== 'افتراضي') {
               console.log(`   - 🔄 محاولة البحث عن توكن افتراضي للشركة ${partner}...`);
               
-              const { data: defaultToken } = await supabase
-                .from('delivery_partner_tokens')
-                .select('id, expires_at, is_active, account_username')
-                .eq('partner_name', partner)
-                .eq('is_active', true)
-                .gt('expires_at', new Date().toISOString())
-                .order('last_used_at', { ascending: false, nullsFirst: false })
-                .limit(1)
-                .maybeSingle();
+            const { data: defaultToken } = await supabase
+              .from('delivery_partner_tokens')
+              .select('id, expires_at, is_active, account_username')
+              .eq('partner_name', partner)
+              .eq('is_active', true)
+              .eq('user_id', user.id)
+              .gt('expires_at', new Date().toISOString())
+              .order('last_used_at', { ascending: false, nullsFirst: false })
+              .limit(1)
+              .maybeSingle();
               
               if (defaultToken) {
                 console.log(`   - ✅ تم العثور على توكن افتراضي: ${defaultToken.account_username}`);
