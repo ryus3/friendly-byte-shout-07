@@ -32,7 +32,7 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
     });
   }, [orders]);
 
-  // فحص وجود توكن صالح لكل حساب
+  // ✅ فحص بسيط: هل يوجد توكن صالح للشركة فقط (بدون التحقق الدقيق من اسم الحساب)
   useEffect(() => {
     const checkAccounts = async () => {
       if (!user?.id || ordersAccounts.length === 0) {
@@ -44,75 +44,37 @@ const DeliveryAccountWarning = ({ orders, activePartner }) => {
       setLoading(true);
       const missing = [];
 
-      for (const { partner, account } of ordersAccounts) {
+      // استخراج الشركات الفريدة فقط
+      const uniquePartners = [...new Set(ordersAccounts.map(({ partner }) => partner))];
+
+      for (const partner of uniquePartners) {
         try {
-          console.log(`🔍 [DeliveryAccountWarning] فحص الحساب: ${partner} - ${account}`);
+          console.log(`🔍 [DeliveryAccountWarning] فحص توكن للشركة: ${partner}`);
           
-          let query = supabase
+          // ✅ فقط التحقق من وجود توكن صالح للشركة (بدون التحقق من اسم الحساب)
+          const { data, error } = await supabase
             .from('delivery_partner_tokens')
-            .select('id, expires_at, is_active, account_username, user_id')
+            .select('id, expires_at, is_active, account_username')
             .eq('partner_name', partner)
             .eq('is_active', true)
-            .eq('user_id', user.id) // ✅ فحص توكنات المستخدم الحالي فقط
-            .gt('expires_at', new Date().toISOString());
-
-          if (account !== 'افتراضي') {
-            const normalizedAccount = account
-              .trim()
-              .toLowerCase()
-              .replace(/\s+/g, '-')
-              .replace(/[^\w-]/g, ''); // إزالة أي أحرف خاصة
-            console.log(`   - البحث عن: "${normalizedAccount}"`);
-            query = query.ilike('account_username', normalizedAccount);
-          }
-
-          query = query
+            .eq('user_id', user.id)
+            .gt('expires_at', new Date().toISOString())
             .order('last_used_at', { ascending: false, nullsFirst: false })
-            .limit(1);
-
-          const { data, error } = await query.maybeSingle();
-
-          console.log(`   - النتيجة:`, { 
-            found: !!data, 
-            error: error?.message,
-            account_username: data?.account_username,
-            expires_at: data?.expires_at
-          });
+            .limit(1)
+            .maybeSingle();
 
           if (error || !data) {
-            // ✅ إذا لم يُعثر على توكن للحساب المحدد، ابحث عن أي توكن صالح للشركة
-            if (account !== 'افتراضي') {
-              console.log(`   - 🔄 محاولة البحث عن توكن افتراضي للشركة ${partner}...`);
-              
-            const { data: defaultToken } = await supabase
-              .from('delivery_partner_tokens')
-              .select('id, expires_at, is_active, account_username')
-              .eq('partner_name', partner)
-              .eq('is_active', true)
-              .eq('user_id', user.id)
-              .gt('expires_at', new Date().toISOString())
-              .order('last_used_at', { ascending: false, nullsFirst: false })
-              .limit(1)
-              .maybeSingle();
-              
-              if (defaultToken) {
-                console.log(`   - ✅ تم العثور على توكن افتراضي: ${defaultToken.account_username}`);
-                continue; // لا تعتبره مفقوداً
-              }
-            }
-            
-            console.log(`   - ❌ لم يتم العثور على توكن صالح للحساب أو الشركة`);
-            missing.push({ partner, account });
-            continue;
+            console.log(`   - ❌ لم يتم العثور على توكن صالح للشركة ${partner}`);
+            missing.push({ partner, account: 'الشركة' });
+          } else {
+            console.log(`   - ✅ توكن صالح موجود للشركة ${partner}:`, {
+              account_username: data.account_username,
+              expires_at: data.expires_at
+            });
           }
-          
-          console.log(`   - ✅ توكن صالح موجود:`, {
-            account_username: data.account_username,
-            expires_at: data.expires_at
-          });
         } catch (err) {
-          console.error('خطأ في فحص الحساب:', partner, account, err);
-          missing.push({ partner, account });
+          console.error('خطأ في فحص الشركة:', partner, err);
+          missing.push({ partner, account: 'الشركة' });
         }
       }
 
