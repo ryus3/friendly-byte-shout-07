@@ -1,6 +1,7 @@
 /**
- * SuperProvider - مزود البيانات الموحد الجديد
+ * SuperProvider - مزود البيانات الموحد الجديد v2.9.4
  * يستبدل InventoryContext بنظام أكثر كفاءة مع ضمان عدم تغيير أي وظيفة
+ * النسخة 2.9.4: توحيد نظام الحجز - returned تحجز + استثناء item_status='delivered'
  */
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef, useMemo } from 'react';

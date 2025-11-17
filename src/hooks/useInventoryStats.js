@@ -27,26 +27,30 @@ const useInventoryStats = () => {
 
   const computeReservedFallback = () => {
     try {
-      // الطلبات المحجوزة - نفس المنطق في ReservedStockDialog
+      // ✅ الطلبات المحجوزة: pending, shipped, delivery, returned
       const reservedOrders = (orders || []).filter(o => 
         ['pending', 'shipped', 'delivery', 'returned'].includes(o.status) &&
-        o.status !== 'returned_in_stock'
+        o.status !== 'returned_in_stock' &&
+        o.status !== 'completed'
       );
       
-      // حساب مجموع الكميات المحجوزة من عناصر الطلبات
+      // حساب مجموع الكميات المحجوزة مع استثناء item_status='delivered'
       const totalReservedQuantity = reservedOrders.reduce((total, order) => {
-        return total + (order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0);
+        const orderReserved = (order.items || []).reduce((sum, item) => {
+          // ❌ لا تحجز: المنتجات المُسلّمة في التسليم الجزئي
+          if (item.item_status === 'delivered') return sum;
+          // ❌ لا تحجز: المنتجات الواردة
+          if (item.item_direction === 'incoming') return sum;
+          
+          return sum + (item.quantity || 0);
+        }, 0);
+        
+        return total + orderReserved;
       }, 0);
       
       console.log('🔢 [InventoryStats] حساب المخزون المحجوز:', {
         reservedOrdersCount: reservedOrders.length,
-        totalReservedQuantity,
-        orders: reservedOrders.map(o => ({ 
-          id: o.id, 
-          status: o.status, 
-          itemsCount: o.items?.length || 0,
-          totalQuantity: o.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0
-        }))
+        totalReservedQuantity
       });
       
       return totalReservedQuantity;
