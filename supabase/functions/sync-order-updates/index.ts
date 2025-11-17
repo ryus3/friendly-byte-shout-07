@@ -210,9 +210,29 @@ Deno.serve(async (req) => {
         // Compare status
         const statusChangedCheck = currentStatus !== newStatus;
 
+        // 🔒 جلب سجل التسليم الجزئي أولاً للحماية
+        const { data: partialHistory } = await supabase
+          .from('partial_delivery_history')
+          .select('delivered_revenue')
+          .eq('order_id', localOrder.id)
+          .maybeSingle();
+
+        const isPartialDelivery = localOrder.status === 'partial_delivery' || !!partialHistory;
+
         if (statusChangedCheck) {
           const statusConfig = getStatusConfig(newStatus);
-          const finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
+          let finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
+          
+          // 🔒 حماية مطلقة للتسليم الجزئي - فقط الحالة 17 تسمح بالتحول
+          if (isPartialDelivery && localOrder.status !== 'completed') {
+            if (newStatus === '17') {
+              finalStatus = 'returned_in_stock';
+              console.log(`🔄 [PARTIAL→RETURNED] ${localOrder.tracking_number}`);
+            } else if (newStatus !== '4') {
+              finalStatus = 'partial_delivery';
+              console.log(`🔒 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي (delivery_status: ${newStatus})`);
+            }
+          }
           
           console.log(`🔄 تحديث ${localOrder.tracking_number}:`, {
             delivery_status: `${currentStatus} → ${newStatus} (${statusConfig.text})`,
@@ -225,21 +245,21 @@ Deno.serve(async (req) => {
           changesList.push(`الحالة: ${currentStatus} → ${newStatus} (${statusConfig.text})`);
         }
 
-        // ✅ حماية طلبات التسليم الجزئي من تحديث السعر الخاطئ
-        const { data: partialHistory } = await supabase
-          .from('partial_delivery_history')
-          .select('delivered_revenue')
-          .eq('order_id', localOrder.id)
-          .maybeSingle();
-
-        const isPartialDelivery = !!partialHistory;
-
         // Compare prices
         const currentPrice = parseInt(String(localOrder.final_amount || 0));
         const newPrice = parseInt(String(waseetOrder.price || 0));
 
-        // ✅ لا تحدث السعر إذا كان partial_delivery - احترم delivered_revenue
-        if (newPrice > 0 && currentPrice !== newPrice && !isPartialDelivery) {
+        // 💰 حماية السعر للطلبات الجزئية - استخدام delivered_revenue
+        if (isPartialDelivery && partialHistory?.delivered_revenue) {
+          const correctPrice = partialHistory.delivered_revenue;
+          if (currentPrice !== correctPrice) {
+            updates.final_amount = correctPrice;
+            priceChanged = true;
+            console.log(`🔒 [PARTIAL-PRICE-FIX] ${localOrder.tracking_number}: ${currentPrice} → ${correctPrice} (من delivered_revenue)`);
+          }
+        }
+        // تحديث السعر للطلبات العادية
+        else if (newPrice > 0 && currentPrice !== newPrice) {
           updates.final_amount = newPrice;
           priceChanged = true;
 
