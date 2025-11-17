@@ -830,6 +830,12 @@ export const AlWaseetProvider = ({ children }) => {
                 const correctFinalAmount = parseFloat(partialHistory.delivered_revenue);
                 const currentFinalAmount = parseFloat(localOrder.final_amount) || 0;
                 
+                console.log(`💰 [PARTIAL-DELIVERY] الطلب ${localOrder.tracking_number}:`, {
+                  current_final_amount: currentFinalAmount,
+                  delivered_revenue_from_history: correctFinalAmount,
+                  difference: Math.abs(correctFinalAmount - currentFinalAmount)
+                });
+                
                 // إذا كان final_amount مختلف عن delivered_revenue (بفارق > 1 دينار)
                 if (Math.abs(correctFinalAmount - currentFinalAmount) > 1) {
                   console.log(`🔧 [AUTO-FIX] تصحيح final_amount للطلب ${localOrder.tracking_number}: ${currentFinalAmount} → ${correctFinalAmount}`);
