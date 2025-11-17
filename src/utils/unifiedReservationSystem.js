@@ -12,11 +12,17 @@
 export const calculateReservedQuantityForVariant = (variantId, orders = []) => {
   if (!variantId || !Array.isArray(orders)) return 0;
 
-  const activeOrderStatuses = ['pending', 'shipped', 'delivery'];
+  // ✅ الحالات المحجوزة: pending, shipped, delivery, returned
+  const activeOrderStatuses = ['pending', 'shipped', 'delivery', 'returned'];
   
   return orders.reduce((totalReserved, order) => {
     // استبعاد طلبات الإرجاع من الحجز
     if (order.order_type === 'return') return totalReserved;
+    
+    // ❌ لا تحجز: الحالة 4 (مباع) أو 17 (مخزون فعلي)
+    if (order.status === 'completed' || order.status === 'returned_in_stock') {
+      return totalReserved;
+    }
     
     // تحقق من أن الطلب يحجز مخزون
     if (!activeOrderStatuses.includes(order.status)) return totalReserved;
@@ -26,6 +32,9 @@ export const calculateReservedQuantityForVariant = (variantId, orders = []) => {
     const reservedFromThisOrder = orderItems.reduce((orderReserved, item) => {
       // استبعاد المنتجات الواردة (incoming) من الحجز
       if (item.item_direction === 'incoming') return orderReserved;
+      
+      // ❌ لا تحجز: المنتجات المُسلّمة في التسليم الجزئي (21)
+      if (item.item_status === 'delivered') return orderReserved;
       
       if (item.variant_id === variantId) {
         return orderReserved + (item.quantity || 0);
