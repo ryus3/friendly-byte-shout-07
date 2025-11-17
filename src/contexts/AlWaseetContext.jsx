@@ -862,10 +862,17 @@ export const AlWaseetProvider = ({ children }) => {
                 newStatus = localOrder.status; // لا تغيير أبداً
                 console.log(`🔒 [INVOICE-PROTECTED] ${localOrder.tracking_number} محمي (فاتورة مستلمة)`);
               }
-              // 🔒 الأولوية 1: حماية التسليم الجزئي (ما عدا الحالة 17 أو completed)
-              else if (isPartialDeliveryFlagged && newDeliveryStatus !== '17' && localOrder.status !== 'completed') {
-                newStatus = 'partial_delivery';
-                console.log(`🔒 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي كتسليم جزئي (delivery_status: ${newDeliveryStatus})`);
+              // 🔒 الأولوية 1: حماية التسليم الجزئي (السماح بالتحول لـ 17 فقط)
+              else if (isPartialDeliveryFlagged && localOrder.status !== 'completed') {
+                if (newDeliveryStatus === '17') {
+                  // ✅ السماح بالتحول لـ returned_in_stock
+                  newStatus = 'returned_in_stock';
+                  console.log(`🔄 [PARTIAL→RETURNED] ${localOrder.tracking_number} تحول من partial_delivery إلى returned_in_stock`);
+                } else {
+                  // ✅ الاحتفاظ بـ partial_delivery
+                  newStatus = 'partial_delivery';
+                  console.log(`🔒 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي كتسليم جزئي (delivery_status: ${newDeliveryStatus})`);
+                }
               }
               // ✅ الأولوية 2: الحالة 17 - مرتجع في المخزون
               else if (newDeliveryStatus === '17') {
