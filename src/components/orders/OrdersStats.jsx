@@ -50,20 +50,21 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     if (status === 'shipped') {
       return filtered.filter(o => SHIPPED_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
     }
-    if (status === 'in_delivery') {
+    if (status === 'delivery') {
       return filtered.filter(o => IN_DELIVERY_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
     }
     if (status === 'delivered') {
       return filtered.filter(o => DELIVERED_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
     }
     if (status === 'needs_processing') {
+      // ✅ يشمل: delivery_status (24-41) + status='returned' + status='cancelled'
       return filtered.filter(o => 
-        NEEDS_PROCESSING_STATUSES.includes(String(o.delivery_status)) && 
+        (NEEDS_PROCESSING_STATUSES.includes(String(o.delivery_status)) ||
+         o.status === 'returned' ||
+         o.status === 'cancelled') &&
         !o.isarchived &&
         o.status !== 'completed' &&
-        o.status !== 'returned_in_stock' &&
-        o.status !== 'cancelled' &&
-        o.status !== 'returned'  // ✅ استثناء returned
+        o.status !== 'returned_in_stock'
       ).length;
     }
     if (status === 'partial_delivery') {
@@ -95,8 +96,9 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     { key: 'pending', title: 'قيد التجهيز', icon: Clock, colors: ['yellow-500', 'orange-500'], value: getStats('pending'), onClick: createClickHandler('pending'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'shipped', title: 'تم الشحن', icon: Truck, colors: ['purple-500', 'pink-500'], value: getStats('shipped'), onClick: createClickHandler('shipped'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'delivery', title: 'قيد التوصيل', icon: Truck, colors: ['blue-500', 'sky-500'], value: getStats('delivery'), onClick: createClickHandler('delivery'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
-    { key: 'delivered', title: 'تم التسليم', icon: CheckCircle, colors: ['green-500', 'emerald-500'], value: getStats('delivered'), onClick: createClickHandler('delivered'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'needs_processing', title: 'تحتاج معالجة', icon: AlertCircle, colors: ['red-500', 'orange-600'], value: getStats('needs_processing'), onClick: createClickHandler('needs_processing'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'delivered', title: 'تم التسليم', icon: CheckCircle, colors: ['green-500', 'emerald-500'], value: getStats('delivered'), onClick: createClickHandler('delivered'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
+    { key: 'partial_delivery', title: 'تسليم جزئي', icon: Package, colors: ['amber-500', 'yellow-500'], value: getStats('partial_delivery'), onClick: createClickHandler('partial_delivery'), periods: { today: 'اليوم', week: 'آخر أسبوع', month: 'آخر شهر', all: 'كل الوقت'} },
     { key: 'archived', title: 'الأرشيف', icon: FolderArchive, colors: ['indigo-500', 'purple-500'], value: getStats('archived'), onClick: createClickHandler('archived'), periods: {all: 'كل الوقت'}},
   ], [orders, aiOrdersCount, globalPeriod]);
 

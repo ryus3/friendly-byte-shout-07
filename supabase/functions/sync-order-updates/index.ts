@@ -225,11 +225,21 @@ Deno.serve(async (req) => {
           changesList.push(`الحالة: ${currentStatus} → ${newStatus} (${statusConfig.text})`);
         }
 
+        // ✅ حماية طلبات التسليم الجزئي من تحديث السعر الخاطئ
+        const { data: partialHistory } = await supabase
+          .from('partial_delivery_history')
+          .select('delivered_revenue')
+          .eq('order_id', localOrder.id)
+          .maybeSingle();
+
+        const isPartialDelivery = !!partialHistory;
+
         // Compare prices
         const currentPrice = parseInt(String(localOrder.final_amount || 0));
         const newPrice = parseInt(String(waseetOrder.price || 0));
 
-        if (newPrice > 0 && currentPrice !== newPrice) {
+        // ✅ لا تحدث السعر إذا كان partial_delivery - احترم delivered_revenue
+        if (newPrice > 0 && currentPrice !== newPrice && !isPartialDelivery) {
           updates.final_amount = newPrice;
           priceChanged = true;
 
