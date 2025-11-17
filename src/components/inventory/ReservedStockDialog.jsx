@@ -40,8 +40,8 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
   const reservedOrders = useMemo(() => {
     return orders?.filter(order => 
       ['pending', 'shipped', 'delivery', 'returned'].includes(order.status) &&
-      // لا تشمل الطلبات التي تم إرجاعها للمخزن
-      order.status !== 'returned_in_stock'
+      order.status !== 'returned_in_stock' &&
+      order.status !== 'completed'
     ) || [];
   }, [orders]);
 
@@ -81,9 +81,19 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
     return total + (order.items?.length || 0);
   }, 0);
 
-  const totalReservedQuantity = filteredOrders.reduce((total, order) => {
-    return total + (order.items?.reduce((sum, item) => sum + (item.quantity || 0), 0) || 0);
-  }, 0);
+  const totalReservedQuantity = useMemo(() => {
+    return filteredOrders.reduce((total, order) => {
+      const orderReserved = (order.items || []).reduce((sum, item) => {
+        // ❌ لا تحجز: المنتجات المُسلّمة في التسليم الجزئي
+        if (item.item_status === 'delivered') return sum;
+        // ❌ لا تحجز: المنتجات الواردة
+        if (item.item_direction === 'incoming') return sum;
+        
+        return sum + (item.quantity || 0);
+      }, 0);
+      return total + orderReserved;
+    }, 0);
+  }, [filteredOrders]);
 
   const totalReservedValue = filteredOrders.reduce((total, order) => {
     return total + (order.total_amount || 0);
@@ -348,7 +358,13 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                             المنتجات المحجوزة ({order.items.length})
                           </h4>
                           <div className="grid gap-2 md:gap-3">
-                            {order.items.map((item, itemIndex) => (
+                            {order.items.map((item, itemIndex) => {
+                              // Skip incoming items
+                              if (item.item_direction === 'incoming') return null;
+                              
+                              const isDelivered = item.item_status === 'delivered';
+                              
+                              return (
                               <Card key={itemIndex} className="border border-violet-200/40 hover:border-violet-400/60 transition-all duration-300 bg-gradient-to-r from-violet-50/30 to-purple-50/30 dark:from-violet-950/20 dark:to-purple-950/20 hover:shadow-lg hover:shadow-violet-500/10">
                                 <CardContent className="p-2 md:p-3">
                                   <div className="flex items-center gap-2 md:gap-3">
@@ -372,6 +388,11 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                                <>
                                                  <p className="font-bold text-sm md:text-base text-foreground truncate">
                                                    {productName}
+                                                   {isDelivered && (
+                                                     <Badge variant="outline" className="mr-2 bg-green-500/10 text-green-600 dark:bg-green-500/20 dark:text-green-400 text-xs">
+                                                       مُسلّم (21)
+                                                     </Badge>
+                                                   )}
                                                  </p>
                                                       {(productColor !== 'غير محدد' || productSize !== 'غير محدد') && (
                                                         <p className="text-xs md:text-sm text-muted-foreground">
@@ -402,13 +423,13 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                              
                                              return (
                                                <>
-                                                 <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 px-2 py-1 text-xs">
+                                                 <Badge variant="secondary" className={`bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 px-2 py-1 text-xs ${isDelivered ? 'line-through opacity-60' : ''}`}>
                                                    العدد: {quantity}
                                                  </Badge>
-                                                 <Badge variant="secondary" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 px-2 py-1 text-xs">
+                                                 <Badge variant="secondary" className={`bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-300 px-2 py-1 text-xs ${isDelivered ? 'line-through opacity-60' : ''}`}>
                                                    السعر: {price.toLocaleString()} د.ع
                                                  </Badge>
-                                                 <Badge variant="secondary" className="bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 px-2 py-1 text-xs font-semibold">
+                                                 <Badge variant="secondary" className={`bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-900/20 dark:text-violet-300 px-2 py-1 text-xs font-semibold ${isDelivered ? 'line-through opacity-60' : ''}`}>
                                                    المجموع: {subtotal.toLocaleString()} د.ع
                                                  </Badge>
                                                </>
@@ -420,7 +441,8 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                   </div>
                                 </CardContent>
                               </Card>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       )}

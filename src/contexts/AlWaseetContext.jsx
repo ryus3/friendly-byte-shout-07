@@ -14,7 +14,7 @@ import { displaySecuritySummary } from '@/utils/securityLogger';
 import devLog from '@/lib/devLogger';
 
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
-const CONTEXT_VERSION = '2.9.3';
+const CONTEXT_VERSION = '2.9.4';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 const AlWaseetContext = createContext();
