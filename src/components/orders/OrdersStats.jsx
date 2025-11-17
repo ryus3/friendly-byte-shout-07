@@ -62,7 +62,14 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
         !o.isarchived &&
         o.status !== 'completed' &&
         o.status !== 'returned_in_stock' &&
-        o.status !== 'cancelled'
+        o.status !== 'cancelled' &&
+        o.status !== 'returned'  // ✅ استثناء returned
+      ).length;
+    }
+    if (status === 'partial_delivery') {
+      return filtered.filter(o => 
+        (o.status === 'partial_delivery' || o.delivery_status === '21') && 
+        !o.isarchived
       ).length;
     }
     return filtered.filter(o => o.status === status && !o.isarchived && o.status !== 'completed' && o.status !== 'returned_in_stock').length;

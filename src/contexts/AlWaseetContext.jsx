@@ -856,8 +856,8 @@ export const AlWaseetProvider = ({ children }) => {
                 newStatus = localOrder.status; // لا تغيير أبداً
                 console.log(`🔒 [INVOICE-PROTECTED] ${localOrder.tracking_number} محمي (فاتورة مستلمة)`);
               }
-              // 🔒 الأولوية 1: حماية التسليم الجزئي (ما عدا الحالة 17)
-              else if (isPartialDeliveryFlagged && newDeliveryStatus !== '17') {
+              // 🔒 الأولوية 1: حماية التسليم الجزئي (ما عدا الحالة 17 أو completed)
+              else if (isPartialDeliveryFlagged && newDeliveryStatus !== '17' && localOrder.status !== 'completed') {
                 newStatus = 'partial_delivery';
                 console.log(`🔒 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي كتسليم جزئي (delivery_status: ${newDeliveryStatus})`);
               }
