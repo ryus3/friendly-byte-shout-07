@@ -2954,6 +2954,7 @@ export type Database = {
           id: string
           invoice_received_at: string | null
           invoice_received_by: string | null
+          is_partial_delivery: boolean | null
           isarchived: boolean | null
           merchant_pays_delivery: boolean | null
           notes: string | null
@@ -3008,6 +3009,7 @@ export type Database = {
           id?: string
           invoice_received_at?: string | null
           invoice_received_by?: string | null
+          is_partial_delivery?: boolean | null
           isarchived?: boolean | null
           merchant_pays_delivery?: boolean | null
           notes?: string | null
@@ -3062,6 +3064,7 @@ export type Database = {
           id?: string
           invoice_received_at?: string | null
           invoice_received_by?: string | null
+          is_partial_delivery?: boolean | null
           isarchived?: boolean | null
           merchant_pays_delivery?: boolean | null
           notes?: string | null
