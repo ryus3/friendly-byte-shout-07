@@ -149,11 +149,11 @@ Deno.serve(async (req) => {
 
     console.log(`🗺️ تم بناء خريطة بـ ${waseetOrdersMap.size} مدخل للبحث`);
 
-    // 4️⃣ جلب الطلبات المحلية النشطة
+    // 4️⃣ جلب الطلبات المحلية النشطة من كلا الشركتين
     const { data: activeOrders, error: ordersError } = await supabase
       .from('orders')
-      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status')
-      .eq('delivery_partner', 'alwaseet')
+      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner')
+      .in('delivery_partner', ['alwaseet', 'modon'])
       .not('delivery_status', 'in', '(17,31,32)')
       .not('status', 'in', '(completed,returned_in_stock)')
       .order('created_at', { ascending: false })
@@ -179,7 +179,7 @@ Deno.serve(async (req) => {
     // 5️⃣ مطابقة وتحديث الطلبات
     for (const localOrder of activeOrders || []) {
       try {
-        console.log(`🔍 معالجة الطلب ${localOrder.order_number} (${localOrder.tracking_number})`);
+        console.log(`🔍 معالجة الطلب ${localOrder.order_number} (${localOrder.tracking_number}) - الشركة: ${localOrder.delivery_partner}`);
 
         // البحث عن الطلب في خريطة الوسيط
         let waseetOrder = null;
@@ -195,6 +195,12 @@ Deno.serve(async (req) => {
 
         if (!waseetOrder) {
           console.log(`⏭️ الطلب ${localOrder.tracking_number} غير موجود في نتائج الوسيط`);
+          continue;
+        }
+
+        // ✅ CRITICAL: تحقق من أن الطلب المُطابق ينتمي لنفس شركة التوصيل
+        if (waseetOrder._partner !== localOrder.delivery_partner) {
+          console.warn(`⚠️ تم تجاهل الطلب ${localOrder.tracking_number} - تداخل بين الشركات! (محلي: ${localOrder.delivery_partner}, مزامن: ${waseetOrder._partner})`);
           continue;
         }
 
