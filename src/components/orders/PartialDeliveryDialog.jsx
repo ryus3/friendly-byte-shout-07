@@ -17,10 +17,24 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
 
   useEffect(() => {
     if (open && order) {
-      fetchOrderItems();
-      setCustomPrice(null); // إعادة تعيين السعر المخصص
+      // ✅ فحص: هل تم معالجة هذا الطلب مسبقاً؟
+      const alreadyProcessed = order.status === 'partial_delivery' && 
+                               order.delivery_status === '21';
+      
+      if (!alreadyProcessed) {
+        fetchOrderItems();
+        setCustomPrice(null);
+      } else {
+        // إغلاق النافذة تلقائياً - الطلب تم معالجته
+        toast({
+          title: 'تنبيه',
+          description: 'هذا الطلب تم معالجته كتسليم جزئي مسبقاً',
+          variant: 'default'
+        });
+        onOpenChange(false);
+      }
     }
-  }, [open, order?.id]); // ✅ استخدام order.id لتجنب re-render
+  }, [open, order?.id, order?.status, order?.delivery_status]);
 
   const fetchOrderItems = async () => {
     const { data, error } = await supabase

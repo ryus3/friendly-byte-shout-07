@@ -369,7 +369,7 @@ export const useAlWaseetInvoices = () => {
           // البحث عن الفاتورة بـ external_id
           const { data: invoiceRecord, error: invoiceError } = await supabase
             .from('delivery_invoices')
-            .select('id, external_id, raw')
+            .select('id, external_id, raw, orders_count')
             .eq('external_id', invoiceId)
             .limit(1)
             .single();
@@ -379,6 +379,61 @@ export const useAlWaseetInvoices = () => {
           }
 
           const finalInvoiceId = invoiceRecord?.id || invoiceId;
+          
+          // ✅ إذا الفاتورة موجودة لكن delivery_invoice_orders فارغة - أعد المزامنة
+          if (invoiceRecord?.orders_count > 0) {
+            const { data: existingOrders, error: checkError } = await supabase
+              .from('delivery_invoice_orders')
+              .select('id')
+              .eq('invoice_id', finalInvoiceId)
+              .limit(1);
+            
+            if (!checkError && (!existingOrders || existingOrders.length === 0)) {
+              console.warn('⚠️ الفاتورة موجودة لكن الطلبات فارغة - إجبار المزامنة');
+              
+              // محاولة جلب من API مرة أخرى مع retry
+              if (token && isLoggedIn) {
+                try {
+                  let apiOrders;
+                  if (activePartner === 'modon') {
+                    const ModonAPI = await import('@/lib/modon-api');
+                    apiOrders = await ModonAPI.getInvoiceOrders(token, invoiceId);
+                  } else {
+                    apiOrders = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
+                  }
+                  
+                  if (apiOrders?.orders && apiOrders.orders.length > 0) {
+                    // حفظ في delivery_invoice_orders
+                    const ordersToInsert = apiOrders.orders.map(order => ({
+                      invoice_id: finalInvoiceId,
+                      external_order_id: String(order.id),
+                      raw: order,
+                      status: order.status,
+                      amount: order.price
+                    }));
+                    
+                    const { error: insertError } = await supabase
+                      .from('delivery_invoice_orders')
+                      .upsert(ordersToInsert, { 
+                        onConflict: 'invoice_id,external_order_id' 
+                      });
+                    
+                    if (!insertError) {
+                      // تحديث orders_last_synced_at
+                      await supabase
+                        .from('delivery_invoices')
+                        .update({ orders_last_synced_at: new Date().toISOString() })
+                        .eq('id', finalInvoiceId);
+                      
+                      console.log(`✅ تمت مزامنة ${apiOrders.orders.length} طلب من API`);
+                    }
+                  }
+                } catch (retryError) {
+                  console.error('❌ فشل retry للمزامنة:', retryError.message);
+                }
+              }
+            }
+          }
 
           // جلب الطلبات المرتبطة بالفاتورة
           const { data: dbOrders, error: dbError } = await supabase
