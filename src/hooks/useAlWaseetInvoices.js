@@ -332,16 +332,42 @@ export const useAlWaseetInvoices = () => {
     try {
       let invoiceData = null;
       let dataSource = 'database';
+      let selectedToken = token;
+
+      // ✅ CRITICAL FIX: استخدام التوكن الصحيح للفاتورة بدلاً من التوكن العام
+      const { data: invoiceRecord } = await supabase
+        .from('delivery_invoices')
+        .select('owner_user_id, partner, account_username, external_id, orders_count, orders_last_synced_at')
+        .eq('external_id', invoiceId)
+        .single();
+
+      if (invoiceRecord?.owner_user_id && invoiceRecord?.partner) {
+        // جلب التوكن الصحيح للمستخدم والشركة المحددة
+        const { data: tokenData } = await supabase
+          .from('delivery_partner_tokens')
+          .select('token, partner_name')
+          .eq('user_id', invoiceRecord.owner_user_id)
+          .eq('partner_name', invoiceRecord.partner)
+          .eq('is_active', true)
+          .order('last_used_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (tokenData?.token) {
+          selectedToken = tokenData.token;
+          console.log(`✅ استخدام التوكن الصحيح للفاتورة ${invoiceId} (${invoiceRecord.partner})`);
+        }
+      }
 
       // محاولة API أولاً إذا كان التوكن متاحاً - أولوية للبيانات الحية
-      if (token && isLoggedIn) {
+      if (selectedToken && isLoggedIn) {
         try {
-          // استدعاء API المناسب حسب activePartner
-          if (activePartner === 'modon') {
+          // استدعاء API المناسب حسب partner الفاتورة
+          if (invoiceRecord?.partner === 'modon') {
             const ModonAPI = await import('@/lib/modon-api');
-            invoiceData = await ModonAPI.getInvoiceOrders(token, invoiceId);
+            invoiceData = await ModonAPI.getInvoiceOrders(selectedToken, invoiceId);
           } else {
-            invoiceData = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
+            invoiceData = await AlWaseetAPI.getInvoiceOrders(selectedToken, invoiceId);
           }
           dataSource = 'api';
           console.log('✅ جلب طلبات الفاتورة من API مباشرة:', invoiceData?.orders?.length || 0);
@@ -392,14 +418,14 @@ export const useAlWaseetInvoices = () => {
               console.warn('⚠️ الفاتورة موجودة لكن الطلبات فارغة - إجبار المزامنة');
               
               // محاولة جلب من API مرة أخرى مع retry
-              if (token && isLoggedIn) {
+              if (selectedToken && isLoggedIn) {
                 try {
                   let apiOrders;
-                  if (activePartner === 'modon') {
+                  if (invoiceRecord?.partner === 'modon') {
                     const ModonAPI = await import('@/lib/modon-api');
-                    apiOrders = await ModonAPI.getInvoiceOrders(token, invoiceId);
+                    apiOrders = await ModonAPI.getInvoiceOrders(selectedToken, invoiceId);
                   } else {
-                    apiOrders = await AlWaseetAPI.getInvoiceOrders(token, invoiceId);
+                    apiOrders = await AlWaseetAPI.getInvoiceOrders(selectedToken, invoiceId);
                   }
                   
                   if (apiOrders?.orders && apiOrders.orders.length > 0) {
@@ -424,9 +450,13 @@ export const useAlWaseetInvoices = () => {
                         .from('delivery_invoices')
                         .update({ orders_last_synced_at: new Date().toISOString() })
                         .eq('id', finalInvoiceId);
-                      
-                      console.log(`✅ تمت مزامنة ${apiOrders.orders.length} طلب من API`);
+
+                      console.log(`✅ تم حفظ ${ordersToInsert.length} طلب للفاتورة ${invoiceId}`);
+                      invoiceData = apiOrders;
+                      dataSource = 'api_retry';
                     }
+                  } else {
+                    console.warn(`⚠️ الفاتورة ${invoiceId}: شركة التوصيل لم تُرجع طلبات. قد تكون قديمة أو محذوفة.`);
                   }
                 } catch (retryError) {
                   console.error('❌ فشل retry للمزامنة:', retryError.message);
