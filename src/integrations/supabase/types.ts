@@ -2101,6 +2101,7 @@ export type Database = {
       }
       inventory: {
         Row: {
+          available_quantity: number | null
           created_at: string
           id: string
           last_updated_by: string
@@ -2114,6 +2115,7 @@ export type Database = {
           variant_id: string | null
         }
         Insert: {
+          available_quantity?: number | null
           created_at?: string
           id?: string
           last_updated_by: string
@@ -2127,6 +2129,7 @@ export type Database = {
           variant_id?: string | null
         }
         Update: {
+          available_quantity?: number | null
           created_at?: string
           id?: string
           last_updated_by?: string
@@ -2140,13 +2143,6 @@ export type Database = {
           variant_id?: string | null
         }
         Relationships: [
-          {
-            foreignKeyName: "inventory_last_updated_by_fkey"
-            columns: ["last_updated_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["user_id"]
-          },
           {
             foreignKeyName: "inventory_product_id_fkey"
             columns: ["product_id"]
