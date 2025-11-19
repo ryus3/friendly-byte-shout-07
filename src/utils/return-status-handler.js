@@ -66,13 +66,13 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
       if (pendingReturnItems.length > 0) {
         console.log(`📦 إرجاع ${pendingReturnItems.length} منتج من pending_return إلى المخزون`);
 
-        // تحديث المخزون للمنتجات pending_return (إرجاع من reserved إلى actual)
+        // تحديث المخزون للمنتجات pending_return (إرجاع من reserved إلى quantity)
         for (const item of pendingReturnItems) {
-          // 1️⃣ جلب المخزون الحالي
+          // 1️⃣ جلب المخزون الحالي من inventory table
           const { data: currentStock, error: fetchError } = await supabase
-            .from('product_variants')
-            .select('reserved_quantity, actual_quantity')
-            .eq('id', item.variant_id)
+            .from('inventory')
+            .select('quantity, reserved_quantity')
+            .eq('variant_id', item.variant_id)
             .single();
 
           if (fetchError || !currentStock) {
@@ -80,25 +80,25 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
             continue;
           }
 
-          // 2️⃣ تحديث المخزون: تخفيض reserved + زيادة actual
+          // 2️⃣ تحديث المخزون: تخفيض reserved + زيادة quantity
           const newReserved = Math.max(0, currentStock.reserved_quantity - item.quantity);
-          const newActual = currentStock.actual_quantity + item.quantity;
+          const newQuantity = currentStock.quantity + item.quantity;
 
           const { error: stockError } = await supabase
-            .from('product_variants')
+            .from('inventory')
             .update({
               reserved_quantity: newReserved,
-              actual_quantity: newActual,
+              quantity: newQuantity,
               updated_at: new Date().toISOString()
             })
-            .eq('id', item.variant_id);
+            .eq('variant_id', item.variant_id);
 
           if (stockError) {
             console.error(`❌ خطأ في تحديث المخزون للـ variant ${item.variant_id}:`, stockError);
           } else {
-            console.log(`✅ تم إرجاع ${item.quantity} من reserved إلى actual للـ variant ${item.variant_id}`);
+            console.log(`✅ تم إرجاع ${item.quantity} من reserved إلى quantity للـ variant ${item.variant_id}`);
             console.log(`   • Reserved: ${currentStock.reserved_quantity} → ${newReserved}`);
-            console.log(`   • Actual: ${currentStock.actual_quantity} → ${newActual}`);
+            console.log(`   • Quantity: ${currentStock.quantity} → ${newQuantity}`);
           }
         }
 
