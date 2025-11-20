@@ -216,27 +216,29 @@ Deno.serve(async (req) => {
         // Compare status
         const statusChangedCheck = currentStatus !== newStatus;
 
-        // 🔒 جلب سجل التسليم الجزئي أولاً للحماية
-        const { data: partialHistory } = await supabase
-          .from('partial_delivery_history')
-          .select('delivered_revenue')
-          .eq('order_id', localOrder.id)
-          .maybeSingle();
-
-        const isPartialDelivery = localOrder.status === 'partial_delivery' || !!partialHistory;
+        // 🔒 حماية partial_delivery من المزامنة التلقائية
+        const isPartialDelivery = localOrder.order_type === 'partial_delivery';
 
         if (statusChangedCheck) {
           const statusConfig = getStatusConfig(newStatus);
           let finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
           
-          // 🔒 حماية مطلقة للتسليم الجزئي - فقط الحالة 17 تسمح بالتحول
-          if (isPartialDelivery && localOrder.status !== 'completed') {
-            if (newStatus === '17') {
+          // 🔒 حماية مطلقة partial_delivery - لا نغير status أبداً عند المزامنة
+          if (isPartialDelivery) {
+            // partial_delivery يبقى كما هو - فقط delivery_status يتغير
+            finalStatus = localOrder.status;
+            console.log(`🔒 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي - status يبقى ${localOrder.status}`);
+          } else {
+            // الطلبات العادية: تطبيق منطق المزامنة الكامل
+            if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
+              // حماية delivered/completed من التغيير
+              finalStatus = localOrder.status;
+            } else if (newStatus === '4') {
+              finalStatus = 'delivered';
+            } else if (newStatus === '17') {
               finalStatus = 'returned_in_stock';
-              console.log(`🔄 [PARTIAL→RETURNED] ${localOrder.tracking_number}`);
-            } else if (newStatus !== '4') {
-              finalStatus = 'partial_delivery';
-              console.log(`🔒 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي (delivery_status: ${newStatus})`);
+            } else if (newStatus === '31' || newStatus === '32') {
+              finalStatus = 'cancelled';
             }
           }
           
@@ -251,21 +253,12 @@ Deno.serve(async (req) => {
           changesList.push(`الحالة: ${currentStatus} → ${newStatus} (${statusConfig.text})`);
         }
 
-        // Compare prices
+        // Compare prices (تجاهل للطلبات الجزئية - السعر ثابت)
         const currentPrice = parseInt(String(localOrder.final_amount || 0));
         const newPrice = parseInt(String(waseetOrder.price || 0));
 
-        // 💰 حماية السعر للطلبات الجزئية - استخدام delivered_revenue
-        if (isPartialDelivery && partialHistory?.delivered_revenue) {
-          const correctPrice = partialHistory.delivered_revenue;
-          if (currentPrice !== correctPrice) {
-            updates.final_amount = correctPrice;
-            priceChanged = true;
-            console.log(`🔒 [PARTIAL-PRICE-FIX] ${localOrder.tracking_number}: ${currentPrice} → ${correctPrice} (من delivered_revenue)`);
-          }
-        }
-        // تحديث السعر للطلبات العادية
-        else if (newPrice > 0 && currentPrice !== newPrice) {
+        // تحديث السعر للطلبات العادية فقط
+        if (!isPartialDelivery && newPrice > 0 && currentPrice !== newPrice) {
           updates.final_amount = newPrice;
           priceChanged = true;
 
