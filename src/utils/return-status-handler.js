@@ -136,34 +136,8 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
           .eq('id', item.id);
       }
 
-        // تحديث حالة المنتجات من pending_return إلى returned_in_stock
-        await supabase
-          .from('order_items')
-          .update({ 
-            item_status: 'returned_in_stock',
-            updated_at: new Date().toISOString()
-          })
-          .eq('order_id', orderId)
-          .eq('item_status', 'pending_return');
-
-        // ✅ للتسليم الجزئي: لا تحديث status الطلب!
-        if (order.order_type === 'partial_delivery') {
-          console.log('✅ تسليم جزئي: تم إرجاع pending_return للمخزون - status يبقى كما هو');
-          return { success: true, processed: pendingReturnItems.length };
-        }
-        
-        // للطلبات العادية: تحديث status
-        await supabase
-          .from('orders')
-          .update({
-            status: 'returned_in_stock',
-            status_changed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', orderId);
-
-        console.log('✅ تم معالجة الإرجاع - المنتجات المُرجعة في المخزون');
-        return { success: true, processed: pendingReturnItems.length };
+        console.log('✅ تسليم جزئي: تم إرجاع pending_return للمخزون - status يبقى كما هو');
+        return { success: true, processed: items.length };
       }
       
       // ✅ معالجة طلبات الإرجاع الكاملة (التحقق من المرور بالحالة 21)
