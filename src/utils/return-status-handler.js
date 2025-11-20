@@ -134,25 +134,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
           .from('order_items')
           .update({ item_status: 'returned_in_stock' })
           .eq('id', item.id);
-          const newQuantity = currentStock.quantity + item.quantity;
-
-          const { error: stockError } = await supabase
-            .from('inventory')
-            .update({
-              reserved_quantity: newReserved,
-              quantity: newQuantity,
-              updated_at: new Date().toISOString()
-            })
-            .eq('variant_id', item.variant_id);
-
-          if (stockError) {
-            console.error(`❌ خطأ في تحديث المخزون للـ variant ${item.variant_id}:`, stockError);
-          } else {
-            console.log(`✅ تم إرجاع ${item.quantity} من reserved إلى quantity للـ variant ${item.variant_id}`);
-            console.log(`   • Reserved: ${currentStock.reserved_quantity} → ${newReserved}`);
-            console.log(`   • Quantity: ${currentStock.quantity} → ${newQuantity}`);
-          }
-        }
+      }
 
         // تحديث حالة المنتجات من pending_return إلى returned_in_stock
         await supabase
