@@ -135,10 +135,6 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
           .update({ item_status: 'returned_in_stock' })
           .eq('id', item.id);
       }
-
-        console.log('✅ تسليم جزئي: تم إرجاع pending_return للمخزون - status يبقى كما هو');
-        return { success: true, processed: items.length };
-      }
       
       // ✅ معالجة طلبات الإرجاع الكاملة (التحقق من المرور بالحالة 21)
       if (order.order_type === 'return' && order.order_status !== 'return_pending') {
