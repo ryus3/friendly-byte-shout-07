@@ -329,9 +329,6 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
       };
     }
 
-    // حالة أخرى - لا حاجة لمعالجة
-    console.log('⏭️ حالة غير معروفة، تخطي المعالجة');
-    return { success: true, skipped: true };
 
   } catch (error) {
     console.error('❌ خطأ في معالجة حالة الإرجاع:', error);
