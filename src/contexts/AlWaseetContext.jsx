@@ -817,42 +817,8 @@ export const AlWaseetProvider = ({ children }) => {
                 : getStatusConfig(newDeliveryStatus);
               
               // 🔍 الخطوة 1: التحقق من partial_delivery_history وجلب delivered_revenue
-              const { data: partialHistory } = await supabase
-                .from('partial_delivery_history')
-                .select('id, delivered_revenue, delivery_fee_allocated')
-                .eq('order_id', localOrder.id)
-                .maybeSingle();
-
-              const isPartialDeliveryFlagged = !!partialHistory;
-
-              // 🔧 تصحيح final_amount تلقائياً إذا كان الطلب تسليم جزئي
-              if (isPartialDeliveryFlagged && partialHistory.delivered_revenue) {
-                const correctFinalAmount = parseFloat(partialHistory.delivered_revenue);
-                const currentFinalAmount = parseFloat(localOrder.final_amount) || 0;
-                
-                console.log(`💰 [PARTIAL-DELIVERY] الطلب ${localOrder.tracking_number}:`, {
-                  current_final_amount: currentFinalAmount,
-                  delivered_revenue_from_history: correctFinalAmount,
-                  difference: Math.abs(correctFinalAmount - currentFinalAmount)
-                });
-                
-                // إذا كان final_amount مختلف عن delivered_revenue (بفارق > 1 دينار)
-                if (Math.abs(correctFinalAmount - currentFinalAmount) > 1) {
-                  console.log(`🔧 [AUTO-FIX] تصحيح final_amount للطلب ${localOrder.tracking_number}: ${currentFinalAmount} → ${correctFinalAmount}`);
-                  
-                  // تحديث final_amount في قاعدة البيانات
-                  await supabase
-                    .from('orders')
-                    .update({ 
-                      final_amount: correctFinalAmount,
-                      updated_at: new Date().toISOString()
-                    })
-                    .eq('id', localOrder.id);
-                  
-                  // تحديث الطلب المحلي
-                  localOrder.final_amount = correctFinalAmount;
-                }
-              }
+              // 🔒 حماية partial_delivery - لا تغيير لـ status عند المزامنة
+              const isPartialDelivery = localOrder.order_type === 'partial_delivery';
 
               // ✅ منطق أولوية مطلقة لتحديد الحالة الصحيحة
               let newStatus;
@@ -867,17 +833,11 @@ export const AlWaseetProvider = ({ children }) => {
                 newStatus = localOrder.status;
                 console.log(`🔒 [FINAL-PROTECTED] ${localOrder.tracking_number} محمي (${localOrder.status})`);
               }
-              // 📦 الأولوية 2: معالجة خاصة لطلبات التسليم الجزئي
-              else if (localOrder.order_type === 'partial_delivery') {
-                if (newDeliveryStatus === '17') {
-                  // ✅ لا تغيير status - return-status-handler سيعالج pending_return فقط
-                  newStatus = localOrder.status;
-                  console.log(`📦 [PARTIAL-17] ${localOrder.tracking_number} الحالة 17 - status يبقى ${localOrder.status}`);
-                } else {
-                  // ✅ باقي الحالات: زامن طبيعياً من statusConfig
-                  newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
-                  console.log(`📦 [PARTIAL-SYNC] ${localOrder.tracking_number} يتزامن: ${newStatus}`);
-                }
+              // 📦 الأولوية 2: معالجة خاصة لطلبات partial_delivery
+              else if (isPartialDelivery) {
+                // ✅ partial_delivery: status يبقى كما هو - فقط delivery_status يتغير
+                newStatus = localOrder.status;
+                console.log(`📦 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي - status: ${localOrder.status}`);
               }
               // ✅ الأولوية 3: delivery_status الصريح (للطلبات العادية)
               else if (newDeliveryStatus === '4') {

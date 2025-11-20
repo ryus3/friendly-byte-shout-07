@@ -22,8 +22,11 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
       return { success: false, error: error?.message };
     }
 
-    // التحقق من نوع الطلب - نعالج return و partial_delivery
-    if (order.order_type !== 'return' && order.order_type !== 'partial_delivery') {
+    // ✅ حماية partial_delivery - نعالج فقط الحالة 17 للمنتجات pending_return
+    const isPartialDelivery = order.order_type === 'partial_delivery';
+    const isReturnOrder = order.order_type === 'return';
+    
+    if (!isPartialDelivery && !isReturnOrder) {
       console.log('⏭️ ليس طلب إرجاع أو تسليم جزئي، تخطي المعالجة');
       return { success: true, skipped: true };
     }
@@ -49,39 +52,88 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
     if (newDeliveryStatus === '17' || newDeliveryStatus === 17) {
       console.log('📦 الحالة 17: استلام المنتج المُرجع من المندوب');
       
-      // ✅ جلب order_items - نعالج سواء return أو partial_delivery
+      // ✅ حماية partial_delivery: معالجة خاصة - لا نغير status للطلب أبداً
+      if (isPartialDelivery) {
+        console.log('🔒 partial_delivery: معالجة المنتجات pending_return فقط');
+        
+        // جلب فقط المنتجات pending_return
+        const { data: items, error: itemsError } = await supabase
+          .from('order_items')
+          .select('*, product_variants(id, product_id)')
+          .eq('order_id', orderId)
+          .eq('item_status', 'pending_return');
+      
+        if (itemsError || !items || items.length === 0) {
+          console.log('⏭️ لا توجد منتجات pending_return للإرجاع في هذا التسليم الجزئي');
+          return { success: true, skipped: true };
+        }
+
+        // ✅ معالجة كل منتج pending_return
+        for (const item of items) {
+          try {
+            // استخدام RPC لإرجاع المنتج للمخزون
+            const { error: rpcError } = await supabase.rpc('return_item_to_stock', {
+              p_variant_id: item.variant_id,
+              p_quantity: item.quantity,
+              p_user_id: order.created_by
+            });
+
+            if (rpcError) {
+              console.error(`❌ خطأ في return_item_to_stock للـ variant ${item.variant_id}:`, rpcError);
+              continue;
+            }
+
+            // تحديث item_status إلى returned_in_stock
+            await supabase
+              .from('order_items')
+              .update({ item_status: 'returned_in_stock' })
+              .eq('id', item.id);
+
+            console.log(`✅ تم إرجاع ${item.quantity} من variant ${item.variant_id} للمخزون`);
+          } catch (err) {
+            console.error(`❌ خطأ في معالجة المنتج ${item.id}:`, err);
+          }
+        }
+
+        console.log('✅ تمت معالجة جميع المنتجات pending_return - لا تغيير لـ status الطلب');
+        return { success: true, processed: items.length, partialDelivery: true };
+      }
+      
+      // ✅ معالجة الإرجاع الكامل (return orders فقط)
       const { data: items, error: itemsError } = await supabase
         .from('order_items')
         .select('*, product_variants(id, product_id)')
         .eq('order_id', orderId);
-      
+
       if (itemsError || !items || items.length === 0) {
         console.error('❌ خطأ في جلب order_items:', itemsError);
         return { success: false, error: 'لا توجد منتجات للإرجاع' };
       }
 
-      // ✅ معالجة المنتجات pending_return (من التسليم الجزئي)
-      const pendingReturnItems = items.filter(item => item.item_status === 'pending_return');
+      // في حالة return: كل المنتجات ترجع
+      const pendingReturnItems = items;
       
-      if (pendingReturnItems.length > 0) {
-        console.log(`📦 إرجاع ${pendingReturnItems.length} منتج من pending_return إلى المخزون`);
+      // معالجة الإرجاع الكامل (return orders)
+      console.log(`📦 إرجاع ${pendingReturnItems.length} منتج كاملاً إلى المخزون`);
 
-        // تحديث المخزون للمنتجات pending_return (إرجاع من reserved إلى quantity)
-        for (const item of pendingReturnItems) {
-          // 1️⃣ جلب المخزون الحالي من inventory table
-          const { data: currentStock, error: fetchError } = await supabase
-            .from('inventory')
-            .select('quantity, reserved_quantity')
-            .eq('variant_id', item.variant_id)
-            .single();
+      for (const item of pendingReturnItems) {
+        // استخدام RPC لإرجاع المنتج للمخزون
+        const { error: rpcError } = await supabase.rpc('return_item_to_stock', {
+          p_variant_id: item.variant_id,
+          p_quantity: item.quantity,
+          p_user_id: order.created_by
+        });
 
-          if (fetchError || !currentStock) {
-            console.error(`❌ خطأ في جلب المخزون للـ variant ${item.variant_id}:`, fetchError);
-            continue;
-          }
+        if (rpcError) {
+          console.error(`❌ خطأ في return_item_to_stock للـ variant ${item.variant_id}:`, rpcError);
+          continue;
+        }
 
-          // 2️⃣ تحديث المخزون: تخفيض reserved + زيادة quantity
-          const newReserved = Math.max(0, currentStock.reserved_quantity - item.quantity);
+        // تحديث item_status
+        await supabase
+          .from('order_items')
+          .update({ item_status: 'returned_in_stock' })
+          .eq('id', item.id);
           const newQuantity = currentStock.quantity + item.quantity;
 
           const { error: stockError } = await supabase
