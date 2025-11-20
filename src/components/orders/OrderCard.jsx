@@ -584,9 +584,9 @@ const OrderCard = React.memo(({
                         </div>
                        
                        {/* شارة الخصم - برتقالي تدرج مع أيقونة */}
-                       {Number(order.discount || 0) > 0 && 
-                        order.order_type !== 'return' && 
-                        order.status !== 'partial_delivery' && (
+                        {Number(order.discount || 0) > 0 && 
+                         order.order_type !== 'return' && 
+                         order.order_type !== 'partial_delivery' && (
                          <div className="relative group/discount">
                            <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-rose-500/20 rounded-full blur-sm"></div>
                            <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-red-500 to-rose-600 text-white text-xs px-2 py-0.5 shadow-md">
@@ -607,8 +607,8 @@ const OrderCard = React.memo(({
                          </div>
                        )}
                        
-                       {/* شارة التسليم الجزئي - بنفسجي تدرج مع أيقونة */}
-                       {order.status === 'partial_delivery' && (
+              {/* شارة التسليم الجزئي - بنفسجي تدرج مع أيقونة */}
+              {order.order_type === 'partial_delivery' && (
                          <div className="relative group/partial">
                            <div className="absolute inset-0 bg-gradient-to-r from-purple-500/20 to-violet-500/20 rounded-full blur-sm"></div>
                            <Badge className="relative flex items-center gap-1 bg-gradient-to-r from-purple-500 to-violet-600 text-white text-xs px-2 py-0.5 shadow-md">
@@ -897,8 +897,8 @@ const OrderCard = React.memo(({
                         </div>
                       )}
                       
-                      {/* ✅ تفاصيل التسليم الجزئي - مجاور السعر */}
-                      {order.status === 'partial_delivery' && order.order_items && (
+            {/* ✅ تفاصيل التسليم الجزئي - مجاور السعر */}
+            {order.order_type === 'partial_delivery' && order.order_items && (
                         <div className="mt-2 pt-2 border-t border-border/30 space-y-1">
                           {order.order_items.filter(i => i.item_status === 'delivered').map((item, idx) => (
                             <div key={idx} className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 justify-end">
