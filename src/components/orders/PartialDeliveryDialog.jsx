@@ -214,10 +214,12 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
       const originalTotal = Number(order.total_amount || 0) + Number(order.delivery_fee || 0);
       const newDiscount = Math.max(0, originalTotal - finalPrice);
 
+      // ✅ تحديث الطلب - تعيين order_type فقط (status يتزامن طبيعياً)
       await supabase
         .from('orders')
         .update({
-          status: newOrderStatus,
+          order_type: 'partial_delivery',     // ✅ نوع الطلب الجديد
+          is_partial_delivery: true,          // ✅ نبقيه للتوافق
           total_amount: deliveredItemsTotal,  // سعر المنتجات المُسلّمة فقط
           final_amount: finalPrice,           // السعر النهائي الكامل
           discount: newDiscount,              // الفرق كخصم

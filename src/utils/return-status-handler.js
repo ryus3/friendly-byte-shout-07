@@ -22,9 +22,9 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
       return { success: false, error: error?.message };
     }
 
-    // التحقق من نوع الطلب
-    if (order.order_type !== 'return') {
-      console.log('⏭️ ليس طلب إرجاع، تخطي المعالجة');
+    // التحقق من نوع الطلب - نعالج return و partial_delivery
+    if (order.order_type !== 'return' && order.order_type !== 'partial_delivery') {
+      console.log('⏭️ ليس طلب إرجاع أو تسليم جزئي، تخطي المعالجة');
       return { success: true, skipped: true };
     }
 
@@ -112,7 +112,13 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
           .eq('order_id', orderId)
           .eq('item_status', 'pending_return');
 
-        // تحديث حالة الطلب
+        // ✅ للتسليم الجزئي: لا تحديث status الطلب!
+        if (order.order_type === 'partial_delivery') {
+          console.log('✅ تسليم جزئي: تم إرجاع pending_return للمخزون - status يبقى كما هو');
+          return { success: true, processed: pendingReturnItems.length };
+        }
+        
+        // للطلبات العادية: تحديث status
         await supabase
           .from('orders')
           .update({
@@ -122,7 +128,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
           })
           .eq('id', orderId);
 
-        console.log('✅ تم معالجة التسليم الجزئي - المنتجات المُرجعة في المخزون');
+        console.log('✅ تم معالجة الإرجاع - المنتجات المُرجعة في المخزون');
         return { success: true, processed: pendingReturnItems.length };
       }
       

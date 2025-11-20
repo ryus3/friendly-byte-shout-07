@@ -854,7 +854,7 @@ export const AlWaseetProvider = ({ children }) => {
                 }
               }
 
-              // ✅ منطق بسيط ومباشر مع حماية الطلبات المستلمة فواتيرها
+              // ✅ منطق أولوية مطلقة لتحديد الحالة الصحيحة
               let newStatus;
               
               // 🔒 الأولوية 0: حماية الطلبات المستلمة فواتيرها (محمية 100%)
@@ -862,31 +862,34 @@ export const AlWaseetProvider = ({ children }) => {
                 newStatus = localOrder.status; // لا تغيير أبداً
                 console.log(`🔒 [INVOICE-PROTECTED] ${localOrder.tracking_number} محمي (فاتورة مستلمة)`);
               }
-              // 🔒 الأولوية 1: حماية التسليم الجزئي (السماح بالتحول لـ 17 فقط)
-              else if (isPartialDeliveryFlagged && localOrder.status !== 'completed') {
+              // 🔒 الأولوية 1: حماية delivered و completed
+              else if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
+                newStatus = localOrder.status;
+                console.log(`🔒 [FINAL-PROTECTED] ${localOrder.tracking_number} محمي (${localOrder.status})`);
+              }
+              // 📦 الأولوية 2: معالجة خاصة لطلبات التسليم الجزئي
+              else if (localOrder.order_type === 'partial_delivery') {
                 if (newDeliveryStatus === '17') {
-                  // ✅ السماح بالتحول لـ returned_in_stock
-                  newStatus = 'returned_in_stock';
-                  console.log(`🔄 [PARTIAL→RETURNED] ${localOrder.tracking_number} تحول من partial_delivery إلى returned_in_stock`);
+                  // ✅ لا تغيير status - return-status-handler سيعالج pending_return فقط
+                  newStatus = localOrder.status;
+                  console.log(`📦 [PARTIAL-17] ${localOrder.tracking_number} الحالة 17 - status يبقى ${localOrder.status}`);
                 } else {
-                  // ✅ الاحتفاظ بـ partial_delivery
-                  newStatus = 'partial_delivery';
-                  console.log(`🔒 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي كتسليم جزئي (delivery_status: ${newDeliveryStatus})`);
+                  // ✅ باقي الحالات: زامن طبيعياً من statusConfig
+                  newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
+                  console.log(`📦 [PARTIAL-SYNC] ${localOrder.tracking_number} يتزامن: ${newStatus}`);
                 }
               }
-              // ✅ الأولوية 2: الحالة 17 - مرتجع في المخزون
-              else if (newDeliveryStatus === '17') {
+              // ✅ الأولوية 3: delivery_status الصريح (للطلبات العادية)
+              else if (newDeliveryStatus === '4') {
+                newStatus = 'delivered';
+              } else if (newDeliveryStatus === '17') {
                 newStatus = 'returned_in_stock';
-                console.log(`🔄 [STATUS-17] ${localOrder.tracking_number} → returned_in_stock`);
+              } else if (newDeliveryStatus === '31' || newDeliveryStatus === '32') {
+                newStatus = 'cancelled';
               }
-              // ✅ الأولوية 3: حماية completed
-              else if (localOrder.status === 'completed') {
-                newStatus = 'completed';
-                console.log(`🔒 [COMPLETED-PROTECTED] ${localOrder.tracking_number} محمي كمكتمل`);
-              }
-              // ✅ الأولوية 4: استخدام statusConfig مباشرة
+              // ✅ الأولوية 4: استخدام statusConfig
               else {
-                newStatus = statusConfig.localStatus || statusConfig.internalStatus;
+                newStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
               }
               
               // 🔍 Logging للحالة المحسوبة
