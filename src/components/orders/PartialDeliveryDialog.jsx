@@ -234,12 +234,7 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
         ? 'partial_delivery' 
         : 'delivered';
 
-      // حساب المبالغ الصحيحة
-      const deliveredItemsTotal = items
-        .filter(item => selectedItems.includes(item.id))
-        .reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
-
-      const originalTotal = Number(order.total_amount || 0) + Number(order.delivery_fee || 0);
+      // المبالغ محسوبة مسبقاً في السطر 192-196
       const newDiscount = Math.max(0, originalTotal - finalPrice);
 
       // ✅ تحديث الطلب - تعيين order_type فقط (status يتزامن طبيعياً)
