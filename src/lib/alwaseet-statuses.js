@@ -186,22 +186,22 @@ export const ALWASEET_STATUS_DEFINITIONS = {
   '15': {
     text: 'ارجاع الى التاجر',
     icon: ArrowLeft,
-    internalStatus: 'returned', // راجع - يبقى محجوز
+    internalStatus: 'returned', // ملاحظة: partial_delivery محمي في المزامنة
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-orange-500 to-red-600 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40',
-    description: 'راجع - يبقى محجوز'
+    description: 'راجع - يبقى محجوز. لـ partial_delivery: status لا يتغير'
   },
   '16': {
     text: 'قيد الارجاع الى التاجر (في عهدة المندوب)',
     icon: ArrowLeft,
-    internalStatus: 'returned', // راجع - يبقى محجوز
+    internalStatus: 'returned', // ملاحظة: partial_delivery محمي في المزامنة
     canDelete: false,
     canEdit: false,
     releasesStock: false,
     color: 'bg-gradient-to-r from-orange-500 to-red-600 text-white border border-orange-300/50 shadow-lg shadow-orange-400/40',
-    description: 'راجع - يبقى محجوز'
+    description: 'راجع - يبقى محجوز. لـ partial_delivery: status لا يتغير'
   },
   '17': {
     text: 'تم الارجاع الى التاجر',
