@@ -2664,7 +2664,13 @@ export const AlWaseetProvider = ({ children }) => {
           // ✅ DOUBLE-CHECK: حماية إضافية قبل تحديث الحالة
           if (localOrder.status === 'completed' || localOrder.status === 'returned_in_stock') {
             devLog.info(`🔒 [ALWASEET-CTX-DOUBLE-CHECK] ${localOrder.tracking_number} محمي - تم تخطي تحديث الحالة`);
-          } else {
+          }
+          // ✅ حماية partial_delivery - لا نغير status
+          else if (localOrder.order_type === 'partial_delivery') {
+            devLog.info(`🔒 [PARTIAL-DELIVERY-PROTECTED] ${localOrder.tracking_number}: order_type=partial_delivery - تخطي تحديث status`);
+            // نحدث delivery_status فقط - status يبقى كما هو
+          }
+          else {
             updates.status = localStatus;
             
             // إشعار ذكي فقط عند تغيير الحالة الفعلي
