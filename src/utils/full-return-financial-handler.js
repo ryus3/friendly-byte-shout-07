@@ -153,7 +153,7 @@ export const handleFullReturnFinancials = async (
         user_id: employeeId,
         type: 'return_processed',
         title: 'تم معالجة طلب الإرجاع',
-        message: `تم خصم ${Math.abs(refundAmount).toLocaleString()} د.ع من ${originalOrderId ? 'الطلب الأصلي' : 'حسابك'} - طلب الإرجاع: ${returnOrder.order_number}`,
+        message: `تم خصم ${Math.abs(refundAmount).toLocaleString()} د.ع من ${originalOrderId ? 'الطلب الأصلي' : 'حسابك'} - طلب الإرجاع: ${returnOrder.tracking_number || returnOrder.order_number}`,
         data: {
           return_order_id: returnOrderId,
           original_order_id: originalOrderId,
