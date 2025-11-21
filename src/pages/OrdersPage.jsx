@@ -599,6 +599,9 @@ const OrdersPage = () => {
         matchesStatus = DELIVERED_STATUSES.includes(order.delivery_status);
       } else if (status === 'needs_processing') {
         matchesStatus = NEEDS_PROCESSING_STATUSES.includes(order.delivery_status);
+      } else if (status === 'partial_delivery') {
+        // ✅ فلترة طلبات التسليم الجزئي بناءً على order_type فقط
+        matchesStatus = order.order_type === 'partial_delivery';
       } else {
         // فلترة حسب الحالة المحددة - فقط للطلبات غير المؤرشفة
         matchesStatus = order.status === status;

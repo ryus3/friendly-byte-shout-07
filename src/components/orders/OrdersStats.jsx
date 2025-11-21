@@ -68,8 +68,9 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
       ).length;
     }
     if (status === 'partial_delivery') {
+      // ✅ الفلترة بناءً على order_type فقط - لا علاقة بـ status أو delivery_status
       return filtered.filter(o => 
-        (o.status === 'partial_delivery' || o.delivery_status === '21') && 
+        o.order_type === 'partial_delivery' && 
         !o.isarchived
       ).length;
     }

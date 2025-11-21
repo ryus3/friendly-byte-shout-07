@@ -6513,6 +6513,10 @@ export type Database = {
         Returns: Json
       }
       restore_manager_orders: { Args: never; Returns: Json }
+      return_item_to_stock: {
+        Args: { p_quantity: number; p_user_id: string; p_variant_id: string }
+        Returns: undefined
+      }
       return_items_to_inventory: { Args: { p_order_id: string }; Returns: Json }
       return_stock_item: {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
@@ -6674,6 +6678,14 @@ export type Database = {
           p_product_id: string
           p_quantity_change: number
           p_sku?: string
+        }
+        Returns: undefined
+      }
+      update_variant_stock: {
+        Args: {
+          p_quantity_change: number
+          p_reason?: string
+          p_variant_id: string
         }
         Returns: undefined
       }
