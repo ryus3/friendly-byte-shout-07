@@ -1174,8 +1174,8 @@ export const SuperProvider = ({ children }) => {
           const { handleExchangeStatusChange } = await import('@/utils/exchange-status-handler');
           await handleExchangeStatusChange(orderId, updates.delivery_status);
         }
-        // معالجة طلبات الإرجاع
-        else if (currentOrder?.order_type === 'return') {
+        // معالجة طلبات الإرجاع والتسليم الجزئي
+        else if (currentOrder?.order_type === 'return' || currentOrder?.order_type === 'partial_delivery') {
           const { handleReturnStatusChange } = await import('@/utils/return-status-handler');
           await handleReturnStatusChange(orderId, updates.delivery_status);
         }
