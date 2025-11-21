@@ -90,6 +90,16 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
               .eq('id', item.id);
 
             console.log(`✅ تم إرجاع ${item.quantity} من variant ${item.variant_id} للمخزون`);
+            
+            // ✅ إشعار بنجاح الإرجاع للمخزون
+            await supabase.from('notifications').insert({
+              user_id: order.created_by,
+              title: 'تم إرجاع منتج للمخزون',
+              message: `تم إرجاع ${item.quantity} قطعة للمخزون من الطلب ${order.tracking_number}`,
+              type: 'inventory_return',
+              related_order_id: orderId,
+              data: { variant_id: item.variant_id, quantity: item.quantity }
+            });
           } catch (err) {
             console.error(`❌ خطأ في معالجة المنتج ${item.id}:`, err);
           }
@@ -134,6 +144,16 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
           .from('order_items')
           .update({ item_status: 'returned_in_stock' })
           .eq('id', item.id);
+        
+        // ✅ إشعار بنجاح الإرجاع للمخزون
+        await supabase.from('notifications').insert({
+          user_id: order.created_by,
+          title: 'تم إرجاع منتج للمخزون',
+          message: `تم إرجاع ${item.quantity} قطعة للمخزون من الطلب ${order.tracking_number}`,
+          type: 'inventory_return',
+          related_order_id: orderId,
+          data: { variant_id: item.variant_id, quantity: item.quantity }
+        });
       }
       
       // ✅ معالجة طلبات الإرجاع الكاملة (التحقق من المرور بالحالة 21)
