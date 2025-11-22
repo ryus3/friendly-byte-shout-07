@@ -837,20 +837,38 @@ export const AlWaseetProvider = ({ children }) => {
               else if (isPartialDelivery) {
                 // ✅ partial_delivery: status يبقى كما هو - فقط delivery_status يتغير
                 newStatus = localOrder.status;
-                console.log(`📦 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي - status: ${localOrder.status}`);
+                devLog.info(`📦 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي - status: ${localOrder.status}`);
                 
                 // 🔥 جلب delivered_revenue من partial_delivery_history لتحديث final_amount
                 const { data: partialHistory } = await supabase
                   .from('partial_delivery_history')
-                  .select('delivered_revenue')
+                  .select('delivered_revenue, delivery_fee_allocated')
                   .eq('order_id', localOrder.id)
                   .maybeSingle();
                 
                 if (partialHistory?.delivered_revenue) {
-                  // 🔥 تحديث final_amount بناءً على delivered_revenue
-                  // Trigger سيحدث تلقائياً عند INSERT/UPDATE في partial_delivery_history
-                  // لكن للمزامنة نحدث يدوياً هنا أيضاً للضمان
-                  console.log(`💰 [PARTIAL-SYNC] تحديث final_amount للطلب ${localOrder.tracking_number}: ${partialHistory.delivered_revenue}`);
+                  // 🔥 تحديث final_amount + discount = 0 مباشرة أثناء المزامنة
+                  // Trigger في database سيضمن التزامن، لكن نحدث هنا للضمان الفوري
+                  devLog.info(`💰 [PARTIAL-SYNC] تحديث final_amount للطلب ${localOrder.tracking_number}:`, {
+                    deliveredRevenue: partialHistory.delivered_revenue,
+                    discount: 0,
+                    deliveryFeeAllocated: partialHistory.delivery_fee_allocated
+                  });
+                  
+                  // تحديث في orderUpdates
+                  const existingUpdate = orderUpdates.find(u => u.id === localOrder.id);
+                  if (existingUpdate) {
+                    existingUpdate.final_amount = partialHistory.delivered_revenue;
+                    existingUpdate.discount = 0;
+                  } else {
+                    orderUpdates.push({
+                      id: localOrder.id,
+                      final_amount: partialHistory.delivered_revenue,
+                      discount: 0,
+                      delivery_status: newDeliveryStatus,
+                      updated_at: newOrder.updated_at || new Date().toISOString()
+                    });
+                  }
                 }
               }
               // ✅ الأولوية 3: delivery_status الصريح (للطلبات العادية)
