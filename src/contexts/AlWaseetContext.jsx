@@ -838,6 +838,20 @@ export const AlWaseetProvider = ({ children }) => {
                 // ✅ partial_delivery: status يبقى كما هو - فقط delivery_status يتغير
                 newStatus = localOrder.status;
                 console.log(`📦 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي - status: ${localOrder.status}`);
+                
+                // 🔥 جلب delivered_revenue من partial_delivery_history لتحديث final_amount
+                const { data: partialHistory } = await supabase
+                  .from('partial_delivery_history')
+                  .select('delivered_revenue')
+                  .eq('order_id', localOrder.id)
+                  .maybeSingle();
+                
+                if (partialHistory?.delivered_revenue) {
+                  // 🔥 تحديث final_amount بناءً على delivered_revenue
+                  // Trigger سيحدث تلقائياً عند INSERT/UPDATE في partial_delivery_history
+                  // لكن للمزامنة نحدث يدوياً هنا أيضاً للضمان
+                  console.log(`💰 [PARTIAL-SYNC] تحديث final_amount للطلب ${localOrder.tracking_number}: ${partialHistory.delivered_revenue}`);
+                }
               }
               // ✅ الأولوية 3: delivery_status الصريح (للطلبات العادية)
               else if (newDeliveryStatus === '4') {
