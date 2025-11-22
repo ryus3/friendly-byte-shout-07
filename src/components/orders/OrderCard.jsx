@@ -559,6 +559,11 @@ const OrderCard = React.memo(({
                           <span className="text-xs text-primary/70 font-bold">د.ع</span>
                           <span className="font-bold text-lg text-primary">
                             {(() => {
+                              // ✅ التسليم الجزئي: عرض final_amount مباشرة (شامل التوصيل)
+                              if (order.order_type === 'partial_delivery') {
+                                return Number(order.final_amount || 0).toLocaleString();
+                              }
+                              
                               // عرض المبلغ السالب لطلبات الإرجاع
                               if (order.order_type === 'return') {
                                 return '-' + Math.abs(order.refund_amount || 0).toLocaleString();
