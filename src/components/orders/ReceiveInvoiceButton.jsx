@@ -52,8 +52,8 @@ const ReceiveInvoiceButton = ({ order, onSuccess }) => {
     return null;
   }
 
-  // إظهار الزر فقط للطلبات المُسلّمة (delivered) - سواء محلية أو خارجية
-  if (order?.status !== 'delivered') {
+  // إظهار الزر للطلبات المُسلّمة أو طلبات التسليم الجزئي
+  if (order?.status !== 'delivered' && order?.order_type !== 'partial_delivery') {
     return null;
   }
 
