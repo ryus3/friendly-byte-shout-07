@@ -122,6 +122,7 @@ export const handlePartialDeliveryFinancials = async (
       if (updateError) throw updateError;
 
       // ✅ تسجيل في partial_delivery_history
+      // 🔥 Trigger التزامن سيحدث orders.final_amount تلقائياً
       await supabase
         .from('partial_delivery_history')
         .insert({
@@ -157,7 +158,7 @@ export const handlePartialDeliveryFinancials = async (
           user_id: employeeId,
           type: 'partial_delivery',
           title: 'تسليم جزئي ✅',
-        message: `تم معالجة تسليم جزئي للطلب #${order.tracking_number || order.order_number}\n` +
+          message: `تم معالجة تسليم جزئي للطلب #${order.tracking_number || order.order_number}\n` +
                    `• ${deliveredItems.length} منتج مُسلّم\n` +
                    `• الإيراد: ${(totalRevenue + allocatedDeliveryFee).toLocaleString()} د.ع\n` +
                    `• ربحك: ${employeeProfit.toLocaleString()} د.ع`,
@@ -177,8 +178,7 @@ export const handlePartialDeliveryFinancials = async (
           totalCost,
           systemProfit,
           employeeProfit,
-          deliveredItemsCount: deliveredItems.length,
-          deliveryRatio
+          deliveredItemsCount: deliveredItems.length
         }
       };
     } else {
@@ -202,6 +202,7 @@ export const handlePartialDeliveryFinancials = async (
       if (insertError) throw insertError;
 
       // ✅ تسجيل في partial_delivery_history
+      // 🔥 Trigger التزامن سيحدث orders.final_amount تلقائياً
       await supabase
         .from('partial_delivery_history')
         .insert({
@@ -257,8 +258,7 @@ export const handlePartialDeliveryFinancials = async (
           totalCost,
           systemProfit,
           employeeProfit,
-          deliveredItemsCount: deliveredItems.length,
-          deliveryRatio
+          deliveredItemsCount: deliveredItems.length
         }
       };
     }
