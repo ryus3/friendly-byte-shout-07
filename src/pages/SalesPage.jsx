@@ -23,6 +23,7 @@ import { scrollToTopInstant } from '@/utils/scrollToTop';
 import SalesCard from '@/components/sales/SalesCard';
 import OrderDetailsModal from '@/components/sales/OrderDetailsModal';
 import FloatingScrollButton from '@/components/ui/FloatingScrollButton';
+import SmartPagination from '@/components/ui/SmartPagination';
 
 const SalesPage = () => {
   const { user } = useAuth();
@@ -154,9 +155,10 @@ const SalesPage = () => {
   }, [deliveredOrders, selectedEmployee, searchTerm, statusFilter, receiptFilter, dateFilter, canViewAllEmployees, user?.id, getDateRange]);
 
   // Pagination
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
+  const ITEMS_PER_PAGE = 20; // ثابت واضح
+  const totalPages = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
   const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
 
   // Calculate statistics - using final_amount (after discount) as requested
@@ -449,66 +451,19 @@ const SalesPage = () => {
           </div>
         )}
 
-        {/* Pagination Controls - مطابق لصفحة الطلبات */}
-        {filteredOrders.length > itemsPerPage && (
-          <div className="flex flex-col items-center gap-2 mt-6">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="gap-2"
-              >
-                <ChevronRight className="w-4 h-4" />
-                السابق
-              </Button>
-              
-              {/* أرقام الصفحات - عكس الترتيب للـ RTL */}
-              <div className="flex items-center gap-1">
-                {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                  let page;
-                  if (totalPages <= 7) {
-                    page = totalPages - i; // عكس الترتيب
-                  } else if (currentPage <= 4) {
-                    page = 7 - i; // عكس الترتيب
-                  } else if (currentPage >= totalPages - 3) {
-                    page = totalPages - i; // عكس الترتيب
-                  } else {
-                    page = currentPage + 3 - i; // عكس الترتيب
-                  }
-                  
-                  return (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? 'default' : 'outline'}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className={`w-10 h-10 ${currentPage === page ? 'bg-primary text-primary-foreground' : ''}`}
-                    >
-                      {page}
-                    </Button>
-                  );
-                })}
-              </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="gap-2"
-              >
-                التالي
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-            </div>
-            
-            {/* عرض معلومات الصفحة */}
-            <div className="text-center text-sm text-muted-foreground">
-              صفحة {currentPage} من {totalPages} • عرض {startIndex + 1}-{Math.min(endIndex, filteredOrders.length)} من {filteredOrders.length} طلب
-            </div>
-          </div>
+
+        {/* Pagination Controls - نظام احترافي responsive */}
+        {totalPages > 1 && (
+          <SmartPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={(page) => {
+              setCurrentPage(page);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            totalItems={filteredOrders.length}
+            itemsPerPage={ITEMS_PER_PAGE}
+          />
         )}
       </div>
 

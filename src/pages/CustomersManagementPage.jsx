@@ -17,6 +17,7 @@ import { useInventory } from "@/contexts/InventoryContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/UnifiedAuthContext";
 import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
+import SmartPagination from "@/components/ui/SmartPagination";
 import { 
   Users, 
   Search, 
@@ -60,6 +61,8 @@ const CustomersManagementPage = () => {
 const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('customers');
   const [cityDiscountsData, setCityDiscountsData] = useState({ cityDiscounts: [], monthlyBenefits: [], topCities: [] });
+  const [currentPage, setCurrentPage] = useState(1);
+  const CUSTOMERS_PER_PAGE = 20;
 
   // Sample data for demonstration
   const sampleCustomers = [
@@ -393,6 +396,22 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
 
     return filtered;
   }, [myCustomers, searchTerm, cityFilter, genderFilter, loyaltyLevelFilter, pointsRangeFilter, getLoyaltyLevel]);
+
+  // Pagination للعملاء
+  const totalPages = Math.ceil(filteredCustomers.length / CUSTOMERS_PER_PAGE);
+  const startIndex = (currentPage - 1) * CUSTOMERS_PER_PAGE;
+  const endIndex = startIndex + CUSTOMERS_PER_PAGE;
+  const paginatedCustomers = filteredCustomers.slice(startIndex, endIndex);
+
+  // العودة للصفحة الأولى عند تغيير الفلاتر
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, cityFilter, genderFilter, loyaltyLevelFilter, pointsRangeFilter]);
+
+  // Scroll to top عند تغيير الصفحة
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
 
   // إحصائيات العملاء (المشتريات بدون التوصيل)
   const customerStats = useMemo(() => {
@@ -1002,7 +1021,7 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             <AnimatePresence>
-              {filteredCustomers.map((customer, index) => {
+              {paginatedCustomers.map((customer, index) => {
                 const loyaltyLevel = getLoyaltyLevel(customer.customer_loyalty?.total_points || 0);
                 
                 return (
@@ -1175,7 +1194,19 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
             </AnimatePresence>
             </div>
 
-            {filteredCustomers.length === 0 && (
+            {/* Pagination - نظام احترافي responsive */}
+            <SmartPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => {
+                setCurrentPage(page);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              totalItems={filteredCustomers.length}
+              itemsPerPage={CUSTOMERS_PER_PAGE}
+            />
+
+            {paginatedCustomers.length === 0 && (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
