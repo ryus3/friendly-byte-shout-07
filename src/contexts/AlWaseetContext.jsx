@@ -893,6 +893,24 @@ export const AlWaseetProvider = ({ children }) => {
                 newStatus = 'delivered';
               } else if (newDeliveryStatus === '17') {
                 newStatus = 'returned_in_stock';
+                
+                // ✅ استدعاء النظام المثالي لمعالجة الحالة 17
+                try {
+                  const { handleReturnStatusChange } = await import('@/utils/return-status-handler');
+                  const returnResult = await handleReturnStatusChange(localOrder.id, '17');
+                  
+                  if (returnResult.success) {
+                    console.log('✅ [RETURN-17] تم معالجة الحالة 17 بنجاح:', {
+                      order: localOrder.tracking_number,
+                      processedItems: returnResult.processedItems,
+                      financialResult: returnResult.financialResult
+                    });
+                  } else {
+                    console.error('❌ [RETURN-17] خطأ في معالجة الحالة 17:', returnResult.error);
+                  }
+                } catch (error) {
+                  console.error('❌ [RETURN-17] خطأ في استدعاء handleReturnStatusChange:', error);
+                }
               } else if (newDeliveryStatus === '31' || newDeliveryStatus === '32') {
                 newStatus = 'cancelled';
               }
