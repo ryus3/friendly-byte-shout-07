@@ -167,9 +167,6 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
       delete orderData.created_at;
       delete orderData.order_items;
       delete orderData.order_number;
-        customer_city: orderData.customer_city,
-        customer_province: orderData.customer_province
-      });
 
       const { data: restoredOrder, error: orderError } = await supabase
         .from('orders')
