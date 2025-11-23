@@ -35,10 +35,10 @@ const SyncStatusIndicator = ({ className }) => {
       // Start sync after animation completes
       setTimeout(() => {
         performSyncWithCountdown((progress) => {
-          // تحديث شريط التقدم بالبيانات الحية
+          // تحديث شريط التقدم بالبيانات الحية - عدد الطلبات
           setSyncProgress({
-            current: progress?.updated || 0,
-            total: progress?.total || 0,
+            current: progress?.processedOrders || 0,  // ✅ عدد الطلبات المعالجة
+            total: progress?.totalOrders || 0,        // ✅ إجمالي الطلبات
             syncing: true
           });
         });
