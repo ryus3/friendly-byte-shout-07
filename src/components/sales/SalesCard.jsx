@@ -38,6 +38,16 @@ const SalesCard = ({
   }, [order, onViewDetails]);
 
   const getStatusInfo = (order) => {
+    // أولاً: تحقق من نوع الطلب (التسليم الجزئي له أولوية)
+    if (order.order_type === 'partial_delivery') {
+      return {
+        badge: <Badge className="bg-gradient-to-r from-purple-500 to-pink-600 text-white border-0 shadow-md hover:shadow-lg transition-all"><Package className="w-3 h-3 mr-1" />تسليم جزئي</Badge>,
+        color: 'from-purple-50 to-pink-50 dark:from-purple-950/50 dark:to-pink-950/50',
+        borderColor: 'border-purple-200 dark:border-purple-800'
+      };
+    }
+    
+    // ثانياً: تحقق من الحالة
     if (order.status === 'completed') {
       return {
         badge: <Badge className="bg-gradient-to-r from-emerald-500 to-green-600 text-white border-0 shadow-md hover:shadow-lg transition-all"><CheckCircle className="w-3 h-3 mr-1" />مكتمل</Badge>,

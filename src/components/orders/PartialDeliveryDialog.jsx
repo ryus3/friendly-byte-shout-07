@@ -58,12 +58,10 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
   };
 
   const toggleItem = (itemId) => {
-    console.log('🔄 تبديل اختيار المنتج:', itemId);
     setSelectedItems(prev => {
       const newSelection = prev.includes(itemId)
         ? prev.filter(id => id !== itemId)
         : [...prev, itemId];
-      console.log('✅ الاختيار الجديد:', newSelection);
       return newSelection;
     });
   };
@@ -83,13 +81,6 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
     
     const total = itemsTotal + deliveryFee;
     
-    console.log('💰 حساب السعر:', {
-      selectedCount: selectedItemsData.length,
-      itemsTotal,
-      deliveryFee,
-      total
-    });
-    
     return total;
   };
 
@@ -105,16 +96,6 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
 
     setLoading(true);
     try {
-      console.log('🔄 بدء معالجة التسليم الجزئي...', {
-        orderId: order.id,
-        orderNumber: order.order_number,
-        deliveryStatus: order.delivery_status,
-        selectedItemsCount: selectedItems.length,
-        totalItemsCount: items.length,
-        selectedItems,
-        unselectedItems: items.filter(item => !selectedItems.includes(item.id)).map(i => i.id)
-      });
-
       // 1️⃣ تحديث المنتجات المُختارة إلى 'delivered' (كل منتج على حدة)
       for (const itemId of selectedItems) {
         const item = items.find(i => i.id === itemId);
@@ -130,7 +111,6 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
           .eq('id', itemId);
 
         if (deliveredError) {
-          console.error(`❌ خطأ في تحديث المنتج ${item.product?.name}:`, deliveredError);
           throw deliveredError;
         }
       }
@@ -140,17 +120,11 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
         const item = items.find(i => i.id === itemId);
         if (!item) continue;
 
-        const { error: stockError } = await supabase.rpc('release_stock_item', {
+        await supabase.rpc('release_stock_item', {
           p_product_id: item.product_id,
           p_variant_id: item.variant_id,
           p_quantity: item.quantity
         });
-
-        if (stockError) {
-          console.error(`❌ خطأ في تحرير المخزون للمنتج ${item.product?.name}:`, stockError);
-        } else {
-          console.log(`✅ تم تحرير المخزون: ${item.product?.name} × ${item.quantity}`);
-        }
       }
 
       // 3️⃣ تحديث المنتجات غير المُختارة إلى 'pending_return'
@@ -166,11 +140,6 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
           })
           .in('id', unselectedItems);
 
-        if (pendingReturnError) {
-          console.error('❌ خطأ في تحديث المنتجات غير المُسلّمة:', pendingReturnError);
-        } else {
-          console.log(`✅ تم تحديث ${unselectedItems.length} منتج إلى pending_return`);
-        }
       }
 
       // 4️⃣ معالجة الحسابات المالية (باستخدام السعر المخصص إن وُجد)

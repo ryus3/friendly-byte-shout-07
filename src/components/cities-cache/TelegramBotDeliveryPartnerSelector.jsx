@@ -47,8 +47,6 @@ const TelegramBotDeliveryPartnerSelector = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      console.log('💾 حفظ شركة التوصيل:', currentPartner);
-      
       const { error } = await supabase
         .from('settings')
         .upsert({
@@ -61,11 +59,7 @@ const TelegramBotDeliveryPartnerSelector = () => {
 
       if (error) throw error;
 
-      console.log('✅ تم الحفظ، إعادة جلب الإعداد...');
-      // ✅ إعادة جلب القيمة المحفوظة للتأكيد
       await fetchCurrentSetting();
-      
-      console.log('📖 القيمة بعد إعادة الجلب:', currentPartner);
 
       toast({
         title: "✅ تم الحفظ",

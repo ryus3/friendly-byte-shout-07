@@ -107,9 +107,8 @@ const BarcodeScannerDialog = ({
           await handleScanResult(decodedText);
         },
         (errorMessage) => {
-          // تجاهل أخطاء عدم وجود كود - هذا طبيعي
           if (!errorMessage.includes('NotFoundException')) {
-            console.log('Scanner error (ignored):', errorMessage);
+            // Ignore scanner errors
           }
         }
       );
@@ -150,7 +149,6 @@ const BarcodeScannerDialog = ({
     }
     lastScanTimeRef.current = now;
     
-    console.log("🎯 تم قراءة QR Code:", decodedText);
     setScanCount(prev => prev + 1);
     
     // إضافة اهتزاز للهاتف المحمول
@@ -178,19 +176,15 @@ const BarcodeScannerDialog = ({
           if (added) {
             setAddedProducts(prev => [...prev, resultMessage]);
             playSuccessSound();
-            // عرض Toast مختصر للمسح السريع
             toast({
               title: "✅ تمت الإضافة",
               description: `${resultMessage} (${scanCount + 1})`,
-              duration: 1500, // Toast أقصر للمسح السريع
+              duration: 1500,
             });
           }
         }
       }
     } catch (e) {
-      // QR Code بسيط
-      console.log("📄 QR Code بسيط:", decodedText);
-      
       if (mode === 'cart') {
         const added = addFromQRScan(decodedText, products);
         if (added) {
