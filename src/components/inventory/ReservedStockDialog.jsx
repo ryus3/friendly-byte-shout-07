@@ -501,6 +501,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                 </CardContent>
                               </Card>
                               );
+                            });
                             })()}
                           </div>
                         </div>
