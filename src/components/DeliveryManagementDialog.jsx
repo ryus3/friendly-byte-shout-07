@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useSmartSync } from '@/hooks/useSmartSync';
+import { useAlWaseet } from '@/contexts/AlWaseetContext';
 
 /**
  * نافذة إدارة التوصيل الشاملة - للمديرين فقط
@@ -37,7 +37,8 @@ export const DeliveryManagementDialog = ({ open, onOpenChange }) => {
   const [syncLogs, setSyncLogs] = useState([]);
   const [activeTab, setActiveTab] = useState('settings');
   
-  const { syncing, smartSync, comprehensiveSync, syncOrdersOnly } = useSmartSync();
+  const { syncVisibleOrdersBatch } = useAlWaseet();
+  const [syncing, setSyncing] = useState(false);
 
   // تحميل الإعدادات والإحصائيات
   useEffect(() => {
@@ -165,29 +166,34 @@ export const DeliveryManagementDialog = ({ open, onOpenChange }) => {
   };
 
   const handleManualSync = async (type) => {
+    setSyncing(true);
     try {
-      let result;
-      switch (type) {
-        case 'smart':
-          result = await smartSync();
-          break;
-        case 'comprehensive':
-          result = await comprehensiveSync();
-          break;
-        case 'orders':
-          result = await syncOrdersOnly();
-          break;
-        default:
-          return;
-      }
-
-      if (result.success) {
-        await loadStats();
-        await loadSyncLogs();
-      }
+      // جلب الطلبات المرئية
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('delivery_partner', 'alwaseet')
+        .order('created_at', { ascending: false })
+        .limit(100);
+      
+      await syncVisibleOrdersBatch(orders || []);
+      
+      toast({
+        title: "✅ تمت المزامنة",
+        description: "تم تحديث الطلبات بنجاح",
+      });
+      
+      await loadStats();
+      await loadSyncLogs();
 
     } catch (error) {
-      // Error silently handled
+      toast({
+        title: "خطأ في المزامنة",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setSyncing(false);
     }
   };
 
