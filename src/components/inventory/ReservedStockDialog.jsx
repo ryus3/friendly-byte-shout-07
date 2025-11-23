@@ -391,12 +391,33 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                       {/* قائمة المنتجات - تصميم أنيق وصغير */}
                       {order.items && order.items.length > 0 && (
                         <div className="space-y-3 md:space-y-4">
+                          {/* العنوان مع عدد المنتجات المحجوزة فعلياً فقط */}
                           <h4 className="text-sm md:text-lg font-bold text-foreground flex items-center gap-2">
                             <Package className="w-4 h-4 md:w-5 md:h-5 text-violet-600" />
-                            المنتجات المحجوزة ({order.items.length})
+                            المنتجات المحجوزة ({(() => {
+                              const reservedCount = (order.items || []).filter(item => 
+                                item.item_status !== 'delivered' && 
+                                item.item_status !== 'returned_in_stock' && 
+                                item.item_status !== 'returned' &&
+                                item.item_direction !== 'incoming'
+                              ).length;
+                              return reservedCount;
+                            })()})
                           </h4>
                           <div className="grid gap-2 md:gap-3">
-                            {order.items.map((item, itemIndex) => {
+                            {(() => {
+                              // ✅ فلترة العناصر المحجوزة فعلياً فقط
+                              const reservedItems = (order.items || []).filter(item => {
+                                // ❌ لا تحجز: المنتجات المُسلّمة
+                                if (item.item_status === 'delivered') return false;
+                                // ❌ لا تحجز: المنتجات المُرجعة للمخزون
+                                if (item.item_status === 'returned_in_stock' || item.item_status === 'returned') return false;
+                                // ❌ لا تحجز: المنتجات الواردة
+                                if (item.item_direction === 'incoming') return false;
+                                return true;
+                              });
+                              
+                              return reservedItems.map((item, itemIndex) => {
                               // Skip incoming items
                               if (item.item_direction === 'incoming') return null;
                               
@@ -480,7 +501,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                                 </CardContent>
                               </Card>
                               );
-                            })}
+                            })()}
                           </div>
                         </div>
                       )}
