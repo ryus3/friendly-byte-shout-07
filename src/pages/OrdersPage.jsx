@@ -17,6 +17,7 @@ import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import devLog from '@/lib/devLogger';
 import FloatingScrollButton from '@/components/ui/FloatingScrollButton';
+import OrdersSyncProgress from '@/components/orders/OrdersSyncProgress';
 
 import OrdersHeader from '@/components/orders/OrdersHeader';
 import OrdersStats from '@/components/orders/OrdersStats';
@@ -90,6 +91,7 @@ const OrdersPage = () => {
     returnReceipt: false,
   });
   const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0 });
   const [selectedOrders, setSelectedOrders] = useState([]);
   const [userEmployeeCode, setUserEmployeeCode] = useState(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('all');
@@ -188,10 +190,10 @@ const OrdersPage = () => {
       }
     };
 
-    // تأخير 3 ثواني قبل المزامنة (لضمان تحميل الطلبات)
+    // ⚡ تقليل التأخير من 3s إلى 500ms لسرعة فائقة
     const timer = setTimeout(() => {
       performInitialSync();
-    }, 3000);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, []); // ✅ dependencies فارغة = مرة واحدة فقط عند تحميل الصفحة
@@ -1147,6 +1149,13 @@ const OrdersPage = () => {
 
         {/* Floating Scroll Button */}
         <FloatingScrollButton />
+        
+        {/* مؤشر التقدم الاحترافي */}
+        <OrdersSyncProgress 
+          syncing={syncing} 
+          current={syncProgress.current} 
+          total={syncProgress.total} 
+        />
       </div>
     </>
   );
