@@ -620,10 +620,10 @@ export const AlWaseetProvider = ({ children }) => {
                 .filter(Boolean);
 
               if (orderIds.length > 0) {
-                // تقسيم إلى batches (AlWaseet API يقبل حتى 25 طلب في استدعاء واحد)
+                // ⚡ زيادة batch size من 25 إلى 100 لسرعة فائقة
                 const chunks = [];
-                for (let i = 0; i < orderIds.length; i += 25) {
-                  chunks.push(orderIds.slice(i, i + 25));
+                for (let i = 0; i < orderIds.length; i += 100) {
+                  chunks.push(orderIds.slice(i, i + 100));
                 }
                 
                 merchantOrders = [];
