@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/integrations/supabase/client';
@@ -40,6 +40,9 @@ export const AlWaseetProvider = ({ children }) => {
   
   // نظام البيانات الموحد للتأكد من الأمان وفصل الحسابات
   const { userUUID, getOrdersQuery, canViewData } = useUnifiedUserData();
+  
+  // ✅ Smart cache لتقليل طلبات API المكررة
+  const orderCacheRef = useRef(null);
   
   // Helper function to normalize username (declared early to avoid TDZ)
   const normalizeUsername = useCallback((username) => {
@@ -637,28 +640,81 @@ export const AlWaseetProvider = ({ children }) => {
                 .filter(Boolean);
 
               if (orderIds.length > 0) {
-                // ⚡ زيادة batch size من 25 إلى 100 لسرعة فائقة
+                // ✅ استخدام الحد الصحيح للـ API (25 طلب فقط) + معالجة متوازية
+                const ALWASEET_BULK_LIMIT = 25;
+                const PARALLEL_LIMIT = 3; // 3 طلبات متوازية
+                const CACHE_TTL = 5 * 60 * 1000; // 5 دقائق
+                
+                // Smart caching: فحص الطلبات المُخزنة مؤقتاً
+                if (!orderCacheRef.current) {
+                  orderCacheRef.current = new Map();
+                }
+                
+                const uncachedOrders = orderIds.filter(id => {
+                  const cached = orderCacheRef.current.get(id);
+                  return !cached || (Date.now() - cached.timestamp > CACHE_TTL);
+                });
+                
+                console.log(`📦 طلبات: ${orderIds.length} إجمالي، ${orderIds.length - uncachedOrders.length} من cache، ${uncachedOrders.length} سيُجلب`);
+                
+                // تقسيم إلى chunks بحجم 25
                 const chunks = [];
-                for (let i = 0; i < orderIds.length; i += 100) {
-                  chunks.push(orderIds.slice(i, i + 100));
+                for (let i = 0; i < uncachedOrders.length; i += ALWASEET_BULK_LIMIT) {
+                  chunks.push(uncachedOrders.slice(i, i + ALWASEET_BULK_LIMIT));
                 }
                 
                 merchantOrders = [];
-                console.log(`📦 سيتم جلب ${orderIds.length} طلب في ${chunks.length} دفعة(s)`);
                 
-                for (const chunk of chunks) {
-                  try {
-                    const batchOrders = await AlWaseetAPI.getOrdersByIdsBulk(
-                      employeeTokenData.token,
-                      chunk
-                    );
-                    merchantOrders.push(...(batchOrders || []));
-                    
-                    console.log(`✅ [Bulk] جلب ${batchOrders?.length || 0} طلب من ${chunk.length} مطلوب`);
-                  } catch (err) {
-                    console.error(`❌ خطأ في جلب دفعة:`, err);
+                // معالجة متوازية: 3 دفعات في نفس الوقت
+                for (let i = 0; i < chunks.length; i += PARALLEL_LIMIT) {
+                  const parallelChunks = chunks.slice(i, i + PARALLEL_LIMIT);
+                  
+                  const results = await Promise.allSettled(
+                    parallelChunks.map(chunk => 
+                      AlWaseetAPI.getOrdersByIdsBulk(employeeTokenData.token, chunk)
+                    )
+                  );
+                  
+                  results.forEach((result, idx) => {
+                    if (result.status === 'fulfilled') {
+                      const batchOrders = result.value || [];
+                      merchantOrders.push(...batchOrders);
+                      
+                      // حفظ في cache
+                      batchOrders.forEach(order => {
+                        orderCacheRef.current.set(order.qr_id, {
+                          data: order,
+                          timestamp: Date.now()
+                        });
+                      });
+                      
+                      console.log(`✅ دفعة ${i + idx + 1}: ${batchOrders.length} طلب`);
+                    } else {
+                      console.error(`❌ فشل دفعة ${i + idx + 1}:`, result.reason?.message);
+                    }
+                  });
+                  
+                  // تأخير قصير بين المجموعات المتوازية (تجنب rate limit)
+                  if (i + PARALLEL_LIMIT < chunks.length) {
+                    await new Promise(resolve => setTimeout(resolve, 500));
                   }
+                  
+                  // تحديث progress
+                  const processedChunks = Math.min(i + PARALLEL_LIMIT, chunks.length);
+                  const totalProcessed = processedSoFar + (processedChunks / chunks.length) * groupOrders.length;
+                  onProgress?.({
+                    processedOrders: Math.floor(totalProcessed),
+                    totalOrders: syncableOrders.length
+                  });
                 }
+                
+                // إضافة الطلبات من cache
+                const cachedOrders = orderIds
+                  .filter(id => orderCacheRef.current.has(id) && !uncachedOrders.includes(id))
+                  .map(id => orderCacheRef.current.get(id).data)
+                  .filter(Boolean);
+                
+                merchantOrders.push(...cachedOrders);
                 
                 console.log('✅ تم استلام رد من AlWaseet (Bulk):', {
                   ordersCount: merchantOrders?.length || 0,
