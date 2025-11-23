@@ -56,12 +56,20 @@ const SalesPage = () => {
 
   // Filter orders based on delivery status (delivered orders only)
   const deliveredOrders = useMemo(() => {
-    return orders?.filter(order => 
-      order.status === 'delivered' || 
-      order.status === 'completed' ||
-      order.status === 'partial_delivery' || // ✅ إضافة التسليم الجزئي
-      (order.delivery_status === '4' && order.delivery_partner?.toLowerCase() === 'alwaseet')
-    ) || [];
+    return orders?.filter(order => {
+      // ✅ التسليم الجزئي: يظهر إذا كان final_amount > 0 حتى لو status='returned'
+      const isPartialSale = 
+        order.order_type === 'partial_delivery' && 
+        ['returned', 'partial_delivery', 'completed'].includes(order.status) &&
+        (order.final_amount || 0) > 0;
+      
+      return (
+        order.status === 'delivered' || 
+        order.status === 'completed' ||
+        isPartialSale ||
+        (order.delivery_status === '4' && order.delivery_partner?.toLowerCase() === 'alwaseet')
+      );
+    }) || [];
   }, [orders]);
 
   // دالة تحديد نطاق التاريخ المحسنة

@@ -452,7 +452,13 @@ export const SuperProvider = ({ children }) => {
                 productname: oi.products?.name,
                 product_name: oi.products?.name,
                 sku: oi.product_variants?.id,
-                product_variants: oi.product_variants
+                product_variants: oi.product_variants,
+                // ✅ إضافة الحقول المطلوبة لنظام الحجز الدقيق
+                item_status: oi.item_status,
+                item_direction: oi.item_direction,
+                variant_id: oi.variant_id,
+                product_id: oi.product_id,
+                unit_price: oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0
               }))
             : (o.items || [])
         }))
