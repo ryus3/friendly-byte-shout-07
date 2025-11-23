@@ -29,7 +29,6 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
   // تحديد القيمة المعروضة في حقل الاسم
   const customerNameValue = formData.name || (!wasCleared && formData.defaultCustomerName ? formData.defaultCustomerName : '');
   const isUsingDefault = !formData.name && !wasCleared && formData.defaultCustomerName;
-  });
 
 
   return (
