@@ -5,7 +5,6 @@ import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { AutoSyncInvoiceService } from '@/components/orders/AutoSyncInvoiceService';
 
 const LAST_SYNC_COOLDOWN_KEY = 'alwaseet_last_sync_timestamp';
 const SYNC_COOLDOWN_MINUTES = 10;
