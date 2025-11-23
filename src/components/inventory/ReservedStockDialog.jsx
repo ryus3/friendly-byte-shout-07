@@ -77,19 +77,6 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
     return formatDistanceToNow(date, { addSuffix: true, locale: ar });
   };
 
-  // عدد المنتجات المختلفة المحجوزة فعلياً
-  const totalReservedItems = useMemo(() => {
-    return ordersWithActualReservation.reduce((total, order) => {
-      const actualItems = (order.items || []).filter(item => {
-        if (item.item_status === 'delivered') return false;
-        if (item.item_status === 'returned_in_stock' || item.item_status === 'returned') return false;
-        if (item.item_direction === 'incoming') return false;
-        return true;
-      });
-      return total + actualItems.length;
-    }, 0);
-  }, [ordersWithActualReservation]);
-
   // حساب المحجوز الفعلي - استثناء delivered و returned_in_stock و returned
   const calculateOrderReservedQuantity = (order) => {
     return (order.items || []).reduce((sum, item) => {
@@ -104,12 +91,6 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
     }, 0);
   };
 
-  const totalReservedQuantity = useMemo(() => {
-    return filteredOrders.reduce((total, order) => {
-      return total + calculateOrderReservedQuantity(order);
-    }, 0);
-  }, [filteredOrders]);
-
   // فلترة الطلبات التي لها حجز فعلي فقط
   const ordersWithActualReservation = useMemo(() => {
     return filteredOrders.filter(order => {
@@ -117,6 +98,25 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
       return reservedQty > 0;
     });
   }, [filteredOrders]);
+
+  const totalReservedQuantity = useMemo(() => {
+    return filteredOrders.reduce((total, order) => {
+      return total + calculateOrderReservedQuantity(order);
+    }, 0);
+  }, [filteredOrders]);
+
+  // عدد المنتجات المختلفة المحجوزة فعلياً
+  const totalReservedItems = useMemo(() => {
+    return ordersWithActualReservation.reduce((total, order) => {
+      const actualItems = (order.items || []).filter(item => {
+        if (item.item_status === 'delivered') return false;
+        if (item.item_status === 'returned_in_stock' || item.item_status === 'returned') return false;
+        if (item.item_direction === 'incoming') return false;
+        return true;
+      });
+      return total + actualItems.length;
+    }, 0);
+  }, [ordersWithActualReservation]);
 
   // القيمة المحجوزة الفعلية - من المنتجات المحجوزة فقط
   const totalReservedValue = useMemo(() => {
