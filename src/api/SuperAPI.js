@@ -159,11 +159,9 @@ return this.fetch('all_data', async () => {
   try {
     aiOrders = await supabase.from('ai_orders').select('*').order('created_at', { ascending: false });
     if (aiOrders.error) {
-      console.warn('⚠️ لا يمكن جلب ai_orders (مشكلة صلاحيات):', aiOrders.error.message);
-      aiOrders = { data: [], error: null }; // معالجة الخطأ بإرجاع مصفوفة فارغة
+      aiOrders = { data: [], error: null };
     }
   } catch (err) {
-    console.warn('⚠️ خطأ في جلب ai_orders:', err.message);
     aiOrders = { data: [], error: null };
   }
 

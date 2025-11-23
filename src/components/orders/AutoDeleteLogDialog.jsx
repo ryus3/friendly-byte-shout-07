@@ -156,10 +156,8 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
               });
             }
           } else {
-            console.warn('⚠️ لا يوجد توكن نشط لشركة التوصيل');
           }
         } catch (apiError) {
-          console.error('❌ فشل في جلب البيانات من API:', apiError);
           // نواصل الاستعادة بالبيانات المتاحة
         }
       }
@@ -168,11 +166,7 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
       delete orderData.id;
       delete orderData.created_at;
       delete orderData.order_items;
-      delete orderData.order_number; // ✅ حذف order_number لتوليد رقم جديد تلقائياً (tracking_number يبقى كما هو)
-      
-      console.log('📝 البيانات قبل الإدراج:', {
-        tracking_number: orderData.tracking_number, // يبقى كما هو من شركة التوصيل
-        customer_phone: orderData.customer_phone,
+      delete orderData.order_number;
         customer_city: orderData.customer_city,
         customer_province: orderData.customer_province
       });

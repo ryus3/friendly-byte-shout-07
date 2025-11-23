@@ -13,19 +13,12 @@ export const EditOrderDataLoader = ({ aiOrderData, isEditMode, onDataLoaded }) =
       return;
     }
 
-    console.log('🔧 EditOrderDataLoader - بدء تحميل البيانات للتعديل');
-
     const loadRealProducts = async () => {
-      // مسح السلة أولاً
       clearCart();
 
-      // تحميل المنتجات الحقيقية من قاعدة البيانات
       for (const item of aiOrderData.items) {
         if (item?.product_id && item?.variant_id) {
-          console.log('🔍 تحميل منتج حقيقي:', item);
-
           try {
-            // تحميل المنتج والمتغير من قاعدة البيانات
             const { data: productData, error: productError } = await supabase
               .from('products')
               .select(`
@@ -42,7 +35,6 @@ export const EditOrderDataLoader = ({ aiOrderData, isEditMode, onDataLoaded }) =
               .single();
 
             if (productError) {
-              console.warn('⚠️ خطأ في تحميل المنتج من قاعدة البيانات:', productError);
               throw new Error(productError.message);
             }
 
@@ -50,25 +42,17 @@ export const EditOrderDataLoader = ({ aiOrderData, isEditMode, onDataLoaded }) =
               const realProduct = productData;
               const realVariant = productData.product_variants[0];
               
-              console.log('✅ تم العثور على المنتج والمتغير الحقيقي من قاعدة البيانات');
-              
-              // إضافة المنتج الحقيقي للسلة مع إمكانية التعديل الكامل
               addToCart(realProduct, realVariant, item.quantity || 1, false);
             } else {
               throw new Error('المنتج غير موجود في قاعدة البيانات');
             }
           } catch (error) {
-            console.log('⚠️ لم يتم العثور على المنتج في قاعدة البيانات، محاولة البحث في البيانات المحملة...');
-            
-            // البحث في البيانات المحملة كبديل
             const realProduct = allData?.products?.find(p => p.id === item.product_id);
             const realVariant = allData?.product_variants?.find(v => v.id === item.variant_id);
 
             if (realProduct && realVariant) {
-              console.log('✅ تم العثور على المنتج في البيانات المحملة');
               addToCart(realProduct, realVariant, item.quantity || 1, false);
             } else {
-              console.log('⚠️ إنشاء منتج مؤقت للتعديل');
               
               // إنشاء كائنات مؤقتة قابلة للتعديل
               const tempProduct = {

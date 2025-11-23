@@ -21,23 +21,14 @@ const CustomerInfoForm = ({ formData, handleChange, handleSelectChange, errors, 
 
   // دالة مسح اسم العميل
   const clearCustomerName = () => {
-    console.log('🔄 مسح اسم العميل - قبل المسح:', { name: formData.name, defaultName: formData.defaultCustomerName, wasCleared });
     handleChange({ target: { name: 'name', value: '' } });
     setWasCleared(true);
     setTimeout(() => nameInputRef.current?.focus(), 0);
-    console.log('✅ تم مسح اسم العميل');
   };
 
   // تحديد القيمة المعروضة في حقل الاسم
   const customerNameValue = formData.name || (!wasCleared && formData.defaultCustomerName ? formData.defaultCustomerName : '');
   const isUsingDefault = !formData.name && !wasCleared && formData.defaultCustomerName;
-  
-  console.log('📝 حالة حقل الاسم:', { 
-    formDataName: formData.name, 
-    defaultCustomerName: formData.defaultCustomerName, 
-    wasCleared, 
-    customerNameValue, 
-    isUsingDefault 
   });
 
 
