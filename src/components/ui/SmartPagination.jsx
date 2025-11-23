@@ -82,7 +82,7 @@ const SmartPagination = ({
         </Button>
 
         {/* أزرار الصفحات */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" dir="ltr">
           {pageRange.map((page) => (
             <Button
               key={page}
