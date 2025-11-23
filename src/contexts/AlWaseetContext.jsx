@@ -505,25 +505,30 @@ export const AlWaseetProvider = ({ children }) => {
         ordersByKey.get(syncKey).push(order);
       }
 
-      devLog.log(`📊 تم تجميع الطلبات: ${ordersByKey.size} مجموعة مستقلة (موظف+شركة+حساب)`);
-      
-      let totalUpdated = 0;
-      let processedGroups = 0;
-      
-      // معالجة كل مجموعة على حدة
-      for (const [syncKey, groupOrders] of ordersByKey) {
-        try {
-          processedGroups++;
-          
-          // ✅ إرسال تحديث التقدم
-          if (onProgress) {
-            onProgress({
-              processed: processedGroups,
-              total: ordersByKey.size,
-              updated: totalUpdated,
-              current: groupOrders.length
-            });
-          }
+    devLog.log(`📊 تم تجميع الطلبات: ${ordersByKey.size} مجموعة مستقلة (موظف+شركة+حساب)`);
+    
+    const totalOrders = syncableOrders.length;  // إجمالي الطلبات القابلة للمزامنة
+    let processedOrders = 0;  // عداد الطلبات التي تمت معالجتها
+    let totalUpdated = 0;
+    let processedGroups = 0;
+    
+    // معالجة كل مجموعة على حدة
+    for (const [syncKey, groupOrders] of ordersByKey) {
+      try {
+        processedGroups++;
+        processedOrders += groupOrders.length;  // ✅ زيادة العداد بعدد طلبات المجموعة
+        
+        // ✅ إرسال تحديث التقدم
+        if (onProgress) {
+          onProgress({
+            processed: processedGroups,
+            total: ordersByKey.size,
+            updated: totalUpdated,
+            current: groupOrders.length,
+            processedOrders,      // ✅ عدد الطلبات المعالجة
+            totalOrders           // ✅ إجمالي الطلبات
+          });
+        }
           
           // ✅ استخراج البيانات من المفتاح
           const [employeeId, orderPartner, orderAccount] = syncKey.split('|||');

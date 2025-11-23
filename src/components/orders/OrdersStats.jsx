@@ -58,13 +58,15 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     }
     if (status === 'needs_processing') {
       // ✅ يشمل: delivery_status (24-41) + status='returned' + status='cancelled'
+      // ✅ استثناء الحالة 17 (راجع للتاجر - نهائية)
       return filtered.filter(o => 
         (NEEDS_PROCESSING_STATUSES.includes(String(o.delivery_status)) ||
          o.status === 'returned' ||
          o.status === 'cancelled') &&
         !o.isarchived &&
         o.status !== 'completed' &&
-        o.status !== 'returned_in_stock'
+        o.status !== 'returned_in_stock' &&
+        o.delivery_status !== '17'  // ✅ استثناء الحالة 17
       ).length;
     }
     if (status === 'partial_delivery') {
