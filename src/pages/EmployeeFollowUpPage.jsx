@@ -129,15 +129,6 @@ const EmployeeFollowUpPage = () => {
       setSyncing(false);
     }
   };
-    } catch (error) {
-      console.error('خطأ في المزامنة الشاملة:', error);
-      toast({
-        title: "خطأ في المزامنة الشاملة",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
 
   // دالة مزامنة الطلبات المرئية الجديدة - سريعة وذكية
   const syncVisibleOrders = async () => {
