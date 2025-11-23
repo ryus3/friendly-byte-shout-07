@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { OrdersSyncProgress } from '@/components/orders/OrdersSyncProgress';
 
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { toast } from '@/hooks/use-toast';
@@ -56,6 +57,7 @@ const ComprehensiveDeliveryManagementDialog = ({ open, onOpenChange }) => {
   const [saving, setSaving] = useState(false);
   const [stats, setStats] = useState({});
   const [syncLogs, setSyncLogs] = useState([]);
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, syncing: false });
 
   // إعدادات شاملة للنظام
   const [settings, setSettings] = useLocalStorage('comprehensive-delivery-settings', {
@@ -212,6 +214,7 @@ const ComprehensiveDeliveryManagementDialog = ({ open, onOpenChange }) => {
 
   const handleManualSync = async (type) => {
     setManualSyncStates(prev => ({ ...prev, [type]: true }));
+    setSyncProgress({ current: 0, total: 0, syncing: true });
     
     try {
       // جلب الطلبات المرئية
@@ -222,7 +225,13 @@ const ComprehensiveDeliveryManagementDialog = ({ open, onOpenChange }) => {
         .order('created_at', { ascending: false })
         .limit(100);
       
-      await syncVisibleOrdersBatch(orders || []);
+      await syncVisibleOrdersBatch(orders || [], (progress) => {
+        setSyncProgress({
+          current: progress?.updated || 0,
+          total: orders?.length || 0,
+          syncing: true
+        });
+      });
       
       toast({
         title: "✅ تمت المزامنة",
@@ -239,6 +248,9 @@ const ComprehensiveDeliveryManagementDialog = ({ open, onOpenChange }) => {
       });
     } finally {
       setManualSyncStates(prev => ({ ...prev, [type]: false }));
+      setTimeout(() => {
+        setSyncProgress({ current: 0, total: 0, syncing: false });
+      }, 1500);
     }
   };
 
@@ -256,6 +268,13 @@ const ComprehensiveDeliveryManagementDialog = ({ open, onOpenChange }) => {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-lg">
+          {/* شريط التقدم العائم */}
+          <OrdersSyncProgress 
+            syncing={syncProgress.syncing}
+            current={syncProgress.current}
+            total={syncProgress.total}
+          />
+          
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Truck className="w-5 h-5" />

@@ -3,6 +3,7 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { OrdersSyncProgress } from '@/components/orders/OrdersSyncProgress';
 
 const SyncStatusIndicator = ({ className }) => {
   const {
@@ -24,18 +25,37 @@ const SyncStatusIndicator = ({ className }) => {
   }
 
   const [isSpinning, setIsSpinning] = useState(false);
+  const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, syncing: false });
 
   const handleClick = () => {
     if (!isSyncing && syncMode === 'standby') {
       setIsSpinning(true);
+      setSyncProgress({ current: 0, total: 0, syncing: true });
       
       // Start sync after animation completes
       setTimeout(() => {
-        performSyncWithCountdown(); // السلوك الافتراضي - performSyncWithCountdown يتعامل مع الطلبات الظاهرة تلقائياً
+        performSyncWithCountdown((progress) => {
+          // تحديث شريط التقدم بالبيانات الحية
+          setSyncProgress({
+            current: progress?.updated || 0,
+            total: progress?.total || 0,
+            syncing: true
+          });
+        });
         setIsSpinning(false);
       }, 1500);
     }
   };
+
+  // إخفاء شريط التقدم عند انتهاء المزامنة
+  useEffect(() => {
+    if (!isSyncing && syncProgress.syncing) {
+      // تأخير بسيط لعرض 100% قبل الإخفاء
+      setTimeout(() => {
+        setSyncProgress({ current: 0, total: 0, syncing: false });
+      }, 1500);
+    }
+  }, [isSyncing]);
 
   const formatLastSync = (timestamp) => {
     if (!timestamp) return '';
@@ -66,27 +86,35 @@ const SyncStatusIndicator = ({ className }) => {
   };
 
   return (
-    <div 
-      className={cn(
-        "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
-        "backdrop-blur-sm bg-white/90 dark:bg-gray-800/90 shadow-lg border",
-        autoSyncEnabled 
-          ? "border-border/50" 
-          : "border-orange-300 dark:border-orange-600 bg-orange-50/80 dark:bg-orange-950/50", // Paused styling
-        syncMode === 'countdown' || syncMode === 'syncing' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
-        className
-      )}
-      onClick={handleClick}
-      title={
-        syncMode === 'syncing'
-          ? "جاري المزامنة..." 
-          : syncMode === 'countdown'
-            ? `المزامنة خلال ${syncCountdown} ثانية`
-            : lastSyncAt 
-              ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}${autoSyncEnabled ? '' : ' (المزامنة التلقائية معطلة)'}`
-              : `اضغط للمزامنة السريعة${autoSyncEnabled ? '' : ' (المزامنة التلقائية معطلة)'}`
-      }
-    >
+    <>
+      {/* شريط التقدم العائم */}
+      <OrdersSyncProgress 
+        syncing={syncProgress.syncing}
+        current={syncProgress.current}
+        total={syncProgress.total}
+      />
+      
+      <div 
+        className={cn(
+          "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
+          "backdrop-blur-sm bg-white/90 dark:bg-gray-800/90 shadow-lg border",
+          autoSyncEnabled 
+            ? "border-border/50" 
+            : "border-orange-300 dark:border-orange-600 bg-orange-50/80 dark:bg-orange-950/50", // Paused styling
+          syncMode === 'countdown' || syncMode === 'syncing' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
+          className
+        )}
+        onClick={handleClick}
+        title={
+          syncMode === 'syncing'
+            ? "جاري المزامنة..." 
+            : syncMode === 'countdown'
+              ? `المزامنة خلال ${syncCountdown} ثانية`
+              : lastSyncAt 
+                ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}${autoSyncEnabled ? '' : ' (المزامنة التلقائية معطلة)'}`
+                : `اضغط للمزامنة السريعة${autoSyncEnabled ? '' : ' (المزامنة التلقائية معطلة)'}`
+        }
+      >
       {/* Background and Progress circles */}
       <svg className="absolute w-10 h-10 transform -rotate-90" viewBox="0 0 40 40">
         <defs>
@@ -143,7 +171,8 @@ const SyncStatusIndicator = ({ className }) => {
           )} />
         )}
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

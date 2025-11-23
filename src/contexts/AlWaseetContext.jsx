@@ -513,6 +513,18 @@ export const AlWaseetProvider = ({ children }) => {
       // معالجة كل مجموعة على حدة
       for (const [syncKey, groupOrders] of ordersByKey) {
         try {
+          processedGroups++;
+          
+          // ✅ إرسال تحديث التقدم
+          if (onProgress) {
+            onProgress({
+              processed: processedGroups,
+              total: ordersByKey.size,
+              updated: totalUpdated,
+              current: groupOrders.length
+            });
+          }
+          
           // ✅ استخراج البيانات من المفتاح
           const [employeeId, orderPartner, orderAccount] = syncKey.split('|||');
           
