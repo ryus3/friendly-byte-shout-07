@@ -77,27 +77,65 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
     return formatDistanceToNow(date, { addSuffix: true, locale: ar });
   };
 
-  const totalReservedItems = filteredOrders.reduce((total, order) => {
-    return total + (order.items?.length || 0);
-  }, 0);
+  // عدد المنتجات المختلفة المحجوزة فعلياً
+  const totalReservedItems = useMemo(() => {
+    return ordersWithActualReservation.reduce((total, order) => {
+      const actualItems = (order.items || []).filter(item => {
+        if (item.item_status === 'delivered') return false;
+        if (item.item_status === 'returned_in_stock' || item.item_status === 'returned') return false;
+        if (item.item_direction === 'incoming') return false;
+        return true;
+      });
+      return total + actualItems.length;
+    }, 0);
+  }, [ordersWithActualReservation]);
+
+  // حساب المحجوز الفعلي - استثناء delivered و returned_in_stock و returned
+  const calculateOrderReservedQuantity = (order) => {
+    return (order.items || []).reduce((sum, item) => {
+      // ❌ لا تحجز: المنتجات المُسلّمة
+      if (item.item_status === 'delivered') return sum;
+      // ❌ لا تحجز: المنتجات المُرجعة للمخزون
+      if (item.item_status === 'returned_in_stock' || item.item_status === 'returned') return sum;
+      // ❌ لا تحجز: المنتجات الواردة
+      if (item.item_direction === 'incoming') return sum;
+      
+      return sum + (item.quantity || 0);
+    }, 0);
+  };
 
   const totalReservedQuantity = useMemo(() => {
     return filteredOrders.reduce((total, order) => {
-      const orderReserved = (order.items || []).reduce((sum, item) => {
-        // ❌ لا تحجز: المنتجات المُسلّمة في التسليم الجزئي
-        if (item.item_status === 'delivered') return sum;
-        // ❌ لا تحجز: المنتجات الواردة
-        if (item.item_direction === 'incoming') return sum;
-        
-        return sum + (item.quantity || 0);
-      }, 0);
-      return total + orderReserved;
+      return total + calculateOrderReservedQuantity(order);
     }, 0);
   }, [filteredOrders]);
 
-  const totalReservedValue = filteredOrders.reduce((total, order) => {
-    return total + (order.total_amount || 0);
-  }, 0);
+  // فلترة الطلبات التي لها حجز فعلي فقط
+  const ordersWithActualReservation = useMemo(() => {
+    return filteredOrders.filter(order => {
+      const reservedQty = calculateOrderReservedQuantity(order);
+      return reservedQty > 0;
+    });
+  }, [filteredOrders]);
+
+  // القيمة المحجوزة الفعلية - من المنتجات المحجوزة فقط
+  const totalReservedValue = useMemo(() => {
+    return ordersWithActualReservation.reduce((total, order) => {
+      const orderReserved = calculateOrderReservedQuantity(order);
+      if (orderReserved === 0) return total;
+      
+      // حساب قيمة الحجز من العناصر المحجوزة فعلياً
+      const reservedValue = (order.items || []).reduce((sum, item) => {
+        if (item.item_status === 'delivered') return sum;
+        if (item.item_status === 'returned_in_stock' || item.item_status === 'returned') return sum;
+        if (item.item_direction === 'incoming') return sum;
+        
+        return sum + ((item.quantity || 0) * (item.unit_price || 0));
+      }, 0);
+      
+      return total + reservedValue;
+    }, 0);
+  }, [ordersWithActualReservation]);
 
   const getEmployeeName = (employeeId) => {
     const employee = employees?.find(emp => emp.user_id === employeeId);
@@ -169,7 +207,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                     </div>
                   </div>
                   <div className="space-y-0.5 md:space-y-1">
-                    <h3 className="text-lg md:text-2xl font-bold">{filteredOrders.length}</h3>
+                    <h3 className="text-lg md:text-2xl font-bold">{ordersWithActualReservation.length}</h3>
                     <p className="text-white/90 font-medium text-xs md:text-sm">طلب محجوز</p>
                     <p className="text-white/70 text-xs hidden md:block">قيد التجهيز</p>
                   </div>
@@ -272,8 +310,8 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
 
             {/* قائمة الطلبات */}
             <div className="space-y-3 md:space-y-6">
-              {filteredOrders && filteredOrders.length > 0 ? (
-                filteredOrders.map((order, index) => (
+              {ordersWithActualReservation && ordersWithActualReservation.length > 0 ? (
+                ordersWithActualReservation.map((order, index) => (
                   <Card key={order.id} className="group relative overflow-hidden border-2 border-violet-200/60 hover:border-violet-400/80 transition-all duration-500 hover:shadow-2xl hover:shadow-violet-500/20">
                     <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-indigo-500/5"></div>
                     <CardContent className="p-3 md:p-8 relative">
