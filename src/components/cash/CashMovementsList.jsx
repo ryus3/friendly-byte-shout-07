@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,12 +20,26 @@ import {
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
+import SmartPagination from '@/components/ui/SmartPagination';
+import { scrollToTopInstant } from '@/utils/scrollToTop';
 
 const CashMovementsList = ({ movements = [], cashSources = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all'); // all, in, out
   const [filterSource, setFilterSource] = useState('all');
   const [filterReference, setFilterReference] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 20;
+
+  // Scroll to top عند تغيير الصفحة
+  useEffect(() => {
+    scrollToTopInstant();
+  }, [currentPage]);
+
+  // إعادة تعيين currentPage إلى 1 عند تغيير أي فلتر
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterType, filterSource, filterReference]);
 
   // تصفية الحركات
   const filteredMovements = movements.filter(movement => {
@@ -77,6 +91,11 @@ const CashMovementsList = ({ movements = [], cashSources = [] }) => {
   };
 
   const referenceTypes = [...new Set(movements.map(m => m.reference_type))];
+
+  // تطبيق pagination
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedMovements = filteredMovements.slice(startIndex, startIndex + itemsPerPage);
+  const totalPages = Math.ceil(filteredMovements.length / itemsPerPage);
 
   return (
     <Card>
@@ -148,8 +167,9 @@ const CashMovementsList = ({ movements = [], cashSources = [] }) => {
             <p>لا توجد حركات مالية</p>
           </div>
         ) : (
-           <div className="divide-y">
-            {filteredMovements.map((movement) => {
+          <>
+            <div className="divide-y">
+              {paginatedMovements.map((movement) => {
               const MovementIcon = getMovementIcon(movement.reference_type);
               const cashSource = cashSources.find(s => s.id === movement.cash_source_id);
               
@@ -221,8 +241,19 @@ const CashMovementsList = ({ movements = [], cashSources = [] }) => {
                   </div>
                 </div>
               );
-            })}
-          </div>
+              })}
+            </div>
+
+            {/* Pagination */}
+            <SmartPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              totalItems={filteredMovements.length}
+              itemsPerPage={itemsPerPage}
+              className="border-t"
+            />
+          </>
         )}
       </CardContent>
     </Card>
