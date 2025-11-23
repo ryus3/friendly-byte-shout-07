@@ -5,7 +5,6 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { useInventory } from '@/contexts/InventoryContext';
-import { useSmartSync } from '@/hooks/useSmartSync';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useUnifiedAutoSync } from '@/hooks/useUnifiedAutoSync';
 import { UnifiedSyncSettings } from '@/components/delivery/UnifiedSyncSettings';
@@ -38,19 +37,11 @@ const EmployeeFollowUpPage = () => {
   const { allUsers } = useAuth();
   const { hasPermission, isAdmin } = usePermissions();
   
-  // استخدام النظام الذكي الجديد
-  const { 
-    syncing, 
-    syncingEmployee, 
-    smartSync, 
-    syncSpecificEmployee, 
-    syncSpecificEmployeeSmart,
-    comprehensiveSync, 
-    syncOrdersOnly 
-  } = useSmartSync();
-  
   const { syncVisibleOrdersBatch } = useAlWaseet();
   const { autoSyncVisibleOrders } = useUnifiedAutoSync();
+  
+  const [syncing, setSyncing] = useState(false);
+  const [syncingEmployee, setSyncingEmployee] = useState(null);
   
   const { 
     orders, 
@@ -96,33 +87,48 @@ const EmployeeFollowUpPage = () => {
 
   // ربط الدوال بالواجهة القديمة
   const syncEmployeeOrders = async (employeeId, employeeName) => {
-    const result = await syncSpecificEmployee(employeeId, employeeName);
-    if (result.success) {
+    setSyncingEmployee(employeeId);
+    try {
+      const employeeOrders = filteredOrders.filter(o => o.created_by === employeeId);
+      await syncVisibleOrdersBatch(employeeOrders);
       await refreshOrders();
+      toast({
+        title: "✅ تمت المزامنة",
+        description: `تم مزامنة طلبات ${employeeName}`,
+      });
+    } finally {
+      setSyncingEmployee(null);
     }
   };
 
   const syncAllEmployeesOrders = async () => {
     if (!isAdmin) return;
     
-    // الحصول على الطلبات المرئية الحالية
     const currentFilteredOrders = filteredOrders || [];
     
     toast({
       title: "بدء المزامنة الشاملة",
-      description: `مزامنة ${currentFilteredOrders.length} طلب مرئي والفواتير الجديدة...`,
-      variant: "default"
+      description: `مزامنة ${currentFilteredOrders.length} طلب مرئي...`,
     });
     
+    setSyncing(true);
     try {
-      // استخدام المزامنة الشاملة الذكية مع الطلبات الظاهرة
-      const result = await comprehensiveSync(currentFilteredOrders, syncVisibleOrdersBatch);
-      if (result.success) {
-        await refreshOrders();
-        const syncTime = new Date().toISOString();
-        localStorage.setItem('last-comprehensive-sync', syncTime);
-        setLastComprehensiveSync(syncTime);
-      }
+      await syncVisibleOrdersBatch(currentFilteredOrders);
+      await refreshOrders();
+      toast({
+        title: "✅ اكتملت المزامنة",
+        description: "تم تحديث جميع الطلبات",
+      });
+    } catch (error) {
+      toast({
+        title: "خطأ في المزامنة",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setSyncing(false);
+    }
+  };
     } catch (error) {
       console.error('خطأ في المزامنة الشاملة:', error);
       toast({
