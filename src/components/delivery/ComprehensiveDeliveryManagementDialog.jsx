@@ -44,7 +44,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { useSmartSync } from '@/hooks/useSmartSync';
+
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -111,12 +111,6 @@ const ComprehensiveDeliveryManagementDialog = ({ open, onOpenChange }) => {
     isSyncing
   } = useAlWaseet();
   
-  const { 
-    syncing, 
-    smartSync, 
-    comprehensiveSync, 
-    syncOrdersOnly 
-  } = useSmartSync();
 
   // حالات المزامنة اليدوية
   const [manualSyncStates, setManualSyncStates] = useState({
@@ -220,31 +214,29 @@ const ComprehensiveDeliveryManagementDialog = ({ open, onOpenChange }) => {
     setManualSyncStates(prev => ({ ...prev, [type]: true }));
     
     try {
-      let result;
-      switch (type) {
-        case 'smart':
-          result = await smartSync();
-          break;
-        case 'comprehensive':
-          result = await comprehensiveSync();
-          break;
-        case 'orders':
-          result = await syncOrdersOnly();
-          break;
-        case 'invoices':
-          // TODO: إضافة مزامنة الفواتير
-          break;
-        case 'employees':
-          // TODO: إضافة مزامنة الموظفين
-          break;
-      }
+      // جلب الطلبات المرئية
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('delivery_partner', 'alwaseet')
+        .order('created_at', { ascending: false })
+        .limit(100);
       
-      if (result?.success) {
-        await loadStats();
-        await loadSyncLogs();
-      }
+      await syncVisibleOrdersBatch(orders || []);
+      
+      toast({
+        title: "✅ تمت المزامنة",
+        description: "تم تحديث الطلبات بنجاح",
+      });
+      
+      await loadStats();
+      await loadSyncLogs();
     } catch (error) {
-      console.error(`خطأ في المزامنة ${type}:`, error);
+      toast({
+        title: "خطأ في المزامنة",
+        description: error.message,
+        variant: "destructive"
+      });
     } finally {
       setManualSyncStates(prev => ({ ...prev, [type]: false }));
     }
