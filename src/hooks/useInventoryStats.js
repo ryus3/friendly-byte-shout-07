@@ -34,11 +34,13 @@ const useInventoryStats = () => {
         o.status !== 'completed'
       );
       
-      // حساب مجموع الكميات المحجوزة مع استثناء item_status='delivered'
+      // ✅ حساب مجموع الكميات المحجوزة مع استثناء جميع الحالات غير المحجوزة (مطابق لـ ReservedStockDialog)
       const totalReservedQuantity = reservedOrders.reduce((total, order) => {
         const orderReserved = (order.items || []).reduce((sum, item) => {
           // ❌ لا تحجز: المنتجات المُسلّمة في التسليم الجزئي
           if (item.item_status === 'delivered') return sum;
+          // ❌ لا تحجز: المنتجات المُرجعة للمخزون
+          if (item.item_status === 'returned_in_stock' || item.item_status === 'returned') return sum;
           // ❌ لا تحجز: المنتجات الواردة
           if (item.item_direction === 'incoming') return sum;
           
@@ -48,7 +50,7 @@ const useInventoryStats = () => {
         return total + orderReserved;
       }, 0);
       
-      console.log('🔢 [InventoryStats] حساب المخزون المحجوز:', {
+      console.log('🔢 [InventoryStats] حساب المخزون المحجوز (موحد):', {
         reservedOrdersCount: reservedOrders.length,
         totalReservedQuantity
       });
