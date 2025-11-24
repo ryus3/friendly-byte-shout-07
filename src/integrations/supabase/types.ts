@@ -5972,6 +5972,14 @@ export type Database = {
         Args: { p_purchase_id: string; p_shipping_cost: number }
         Returns: undefined
       }
+      fix_incorrect_cash_movements: {
+        Args: never
+        Returns: {
+          deleted_count: number
+          final_balance: number
+          recreated_count: number
+        }[]
+      }
       fix_incorrect_price_increase_v2: { Args: never; Returns: Json }
       fix_partial_delivery_financials_112066293: { Args: never; Returns: Json }
       fix_regions_cities_linking: { Args: never; Returns: Json }
