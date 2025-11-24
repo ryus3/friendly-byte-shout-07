@@ -143,11 +143,13 @@ const CustomerDetailsDialog = ({ customer, open, onOpenChange }) => {
                 </div>
                 
                  <div className="space-y-3">
-                   <div className="flex items-center gap-2">
-                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                     <span className="font-medium">تاريخ الانضمام:</span>
-                     <span>{format(new Date(customer.created_at), 'd MMM yyyy', { locale: ar })}</span>
-                   </div>
+                   {customer.created_at && (
+                     <div className="flex items-center gap-2">
+                       <Calendar className="h-4 w-4 text-muted-foreground" />
+                       <span className="font-medium">تاريخ الانضمام:</span>
+                       <span>{format(new Date(customer.created_at), 'd MMM yyyy', { locale: ar })}</span>
+                     </div>
+                   )}
                    
                    {tier && (
                      <div className="flex items-center gap-2">
@@ -170,7 +172,7 @@ const CustomerDetailsDialog = ({ customer, open, onOpenChange }) => {
                             } border
                           `}
                         >
-                          {pointsExpiryDate 
+                          {pointsExpiryDate && !isNaN(pointsExpiryDate.getTime())
                             ? format(pointsExpiryDate, 'd MMM yyyy', { locale: ar })
                             : 'سنة واحدة من آخر طلب'
                           }
@@ -231,9 +233,11 @@ const CustomerDetailsDialog = ({ customer, open, onOpenChange }) => {
                       <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="space-y-1">
                           <div className="font-medium">طلب #{order.order_number}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {format(new Date(order.created_at), 'd MMM yyyy', { locale: ar })}
-                          </div>
+                          {order.created_at && (
+                            <div className="text-sm text-muted-foreground">
+                              {format(new Date(order.created_at), 'd MMM yyyy', { locale: ar })}
+                            </div>
+                          )}
                           <div className="text-xs text-muted-foreground">
                             {order.order_items?.length || 0} صنف
                           </div>
@@ -282,9 +286,11 @@ const CustomerDetailsDialog = ({ customer, open, onOpenChange }) => {
                       <div key={point.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div className="space-y-1">
                           <div className="text-sm font-medium">{point.description || point.transaction_type}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {format(new Date(point.created_at), 'd MMM yyyy', { locale: ar })}
-                          </div>
+                          {point.created_at && (
+                            <div className="text-xs text-muted-foreground">
+                              {format(new Date(point.created_at), 'd MMM yyyy', { locale: ar })}
+                            </div>
+                          )}
                         </div>
                         <div className="text-right">
                           {point.points_earned > 0 && (
