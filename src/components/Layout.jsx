@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
   Menu, X, Home, Package, Warehouse, ShoppingCart, ShoppingBag, TrendingUp, LogOut, User,
-  Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield, RefreshCw, Bell, Wallet, Heart
+  Settings, PackagePlus, Users, Briefcase, Sun, Moon, Bot, ArrowRight, Zap, DollarSign, Shield, RefreshCw, Bell, Wallet, Heart, Store
 } from 'lucide-react';
 import { Button } from '@/components/ui/button.jsx';
 import { toast } from '@/components/ui/use-toast.js';
