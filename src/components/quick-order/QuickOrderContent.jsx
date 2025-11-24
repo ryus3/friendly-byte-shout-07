@@ -676,14 +676,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // تحميل بيانات التعديل من AI أو البيانات المرسلة
   useEffect(() => {
     if (aiOrderData && aiOrderData.editMode) {
-      console.log('📋 تحميل بيانات التعديل من aiOrderData:', aiOrderData);
-      console.log('🔍 تفاصيل city_id في aiOrderData:', {
-        city_id: aiOrderData.city_id,
-        city_id_type: typeof aiOrderData.city_id,
-        customer_city: aiOrderData.customer_city,
-        region_id: aiOrderData.region_id
-      });
-      
       // التحقق من صحة city_id - الأولوية للـ city_id الصحيح
       const correctCityId = aiOrderData.city_id ? String(aiOrderData.city_id) : null;
       
@@ -705,19 +697,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         type: 'update'
       }));
 
-      console.log('🏙️ ✅ تحديث formData.city_id إلى:', correctCityId);
-
       // تحديد المدينة والمنطقة إذا كانت متوفرة - مع تأكيد إضافي للمناطق
       if (correctCityId) {
         setSelectedCityId(correctCityId);
-        console.log('🏙️ تم تحديد المدينة من بيانات التعديل:', correctCityId);
         
         // حفظ region_id للاستخدام لاحقاً عند تحميل المناطق
         if (aiOrderData.region_id) {
           const correctRegionId = String(aiOrderData.region_id);
           setSelectedRegionId(correctRegionId);
           setPreservedRegionId(correctRegionId);
-          console.log('🗺️ ✅ حفظ region_id للتطبيق عند تحميل المناطق:', correctRegionId);
           
           // تأخير إضافي لضمان تطبيق القيم على الـ dropdowns
           setTimeout(() => {
@@ -726,7 +714,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               city_id: correctCityId, // تأكيد city_id مرة أخرى
               region_id: correctRegionId
             }));
-            console.log('🗺️ تطبيق القيم على النموذج مع تأخير - city_id:', correctCityId, 'region_id:', correctRegionId);
           }, 500);
         }
       }
@@ -759,13 +746,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           }
         });
       }
-
-      console.log('✅ تم تحميل بيانات التعديل بنجاح - معرفات العنوان:', {
-        city_id: aiOrderData.city_id,
-        region_id: aiOrderData.region_id,
-        city: aiOrderData.customer_city,
-        region: aiOrderData.customer_province
-      });
     }
   }, [aiOrderData, clearCart, addToCart]);
 
@@ -907,21 +887,17 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
            setSelectedRegionId('');
            prevCityIdRef.current = formData.city_id;
          }
-        
-        try {
-            console.log('🔍 جلب المناطق للمدينة:', cityIdForRegions, 'من', activePartner);
-            
-            if (!cityIdForRegions || cityIdForRegions === '') {
-              console.warn('⚠️ city_id فارغ، لا يمكن جلب المناطق');
-              return;
-            }
-            
-            const cacheKey = `regions_${activePartner}_${cityIdForRegions}`;
-            const cachedRegions = regionCache.current.get(cacheKey);
-            
-            if (cachedRegions) {
-              console.log('📦 استخدام المناطق المخزنة');
-              setRegions(cachedRegions);
+         
+         try {
+             if (!cityIdForRegions || cityIdForRegions === '') {
+               return;
+             }
+             
+             const cacheKey = `regions_${activePartner}_${cityIdForRegions}`;
+             const cachedRegions = regionCache.current.get(cacheKey);
+             
+             if (cachedRegions) {
+               setRegions(cachedRegions);
               
               if (isEditMode && preservedRegionId) {
                 setTimeout(() => {
@@ -968,9 +944,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                    setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
                  }, 300);
                }
-               
-               console.log('✅ تم جلب', safeRegions.length, 'منطقة من', activePartner);
-            }
+             }
         } catch (error) { 
           console.error('❌ خطأ في جلب المناطق:', error);
           toast({ 
@@ -1134,8 +1108,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const handleSubmit = async (e) => {
     e?.preventDefault();
     
-    console.log('🚀 QuickOrderContent - بدء معالجة الطلب', { isEditMode, type: formData.type });
-    
     // التحقق من متطلبات الاستبدال
     if (formData.type === 'exchange') {
       // ✅ استخدام cart مع item_direction
@@ -1200,7 +1172,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     
     const isFormValid = validateForm();
     if (!isFormValid) {
-      console.log('❌ QuickOrderContent - فشل التحقق من صحة النموذج');
       return;
     }
 
@@ -1238,8 +1209,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // معالجة تحديث الطلب
   const handleUpdateOrder = async () => {
     try {
-      console.log('🔧 Updating existing order:', originalOrder.id);
-      
       const orderData = {
         customer_name: formData.name,
         customer_phone: formData.phone,
@@ -1313,25 +1282,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           replacement: 0
         };
 
-        console.log('🔧 تحديث طلب الوسيط مع البيانات المحسنة:', {
-          qr_id: alwaseetData.qr_id,
-          city_id: alwaseetData.city_id,
-          region_id: alwaseetData.region_id,
-          dataKeys: Object.keys(alwaseetData)
-        });
-        
         try {
           const waseetResponse = await editAlWaseetOrder(alwaseetData, waseetToken);
-          
-          console.log('🔧 استجابة تحديث الوسيط:', waseetResponse);
           
           // التحقق من نجاح الاستجابة بناءً على success flag
           if (!waseetResponse || !waseetResponse.success) {
             throw new Error('فشل تحديث الطلب في شركة التوصيل: ' + 
               (waseetResponse?.error || waseetResponse?.message || 'استجابة غير صحيحة'));
           }
-          
-          console.log('✅ تم تحديث طلب الوسيط بنجاح:', waseetResponse);
         } catch (waseetError) {
           console.error('❌ خطأ في تحديث طلب الوسيط:', waseetError);
           
@@ -1362,11 +1320,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         details: formData.details
       };
       updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
-      console.log('✅ Local order updated:', updateResult);
 
       // تحديث SuperProvider أيضاً لضمان انعكاس التغييرات في صفحة الطلبات
       if (window.superProviderUpdate) {
-        console.log('🔄 تحديث SuperProvider للتزامن:', { orderId: originalOrder.id, updates: completeOrderData });
         window.superProviderUpdate(originalOrder.id, completeOrderData);
       }
 
