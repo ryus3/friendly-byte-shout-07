@@ -339,10 +339,15 @@ const EditProfileDialog = ({ isOpen, onClose, profile }) => {
                         />
                         
                         <Input
-                          placeholder="https://example.com"
+                          placeholder={link.type === 'whatsapp' ? 'https://wa.me/9647XXXXXXXX' : 'https://example.com'}
                           value={link.url}
                           onChange={(e) => handleLinkChange(index, 'url', e.target.value)}
                         />
+                        {link.type === 'whatsapp' && (
+                          <p className="text-xs text-muted-foreground">
+                            استخدم wa.me بدلاً من api.whatsapp.com (مثال: https://wa.me/9647XXXXXXXX)
+                          </p>
+                        )}
                       </div>
                       
                       <Button
