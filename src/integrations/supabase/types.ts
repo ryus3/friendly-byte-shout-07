@@ -1699,6 +1699,48 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_banners: {
+        Row: {
+          banner_image: string
+          banner_link: string | null
+          banner_position: string
+          banner_subtitle: string | null
+          banner_title: string | null
+          created_at: string | null
+          display_order: number | null
+          employee_id: string
+          id: string
+          is_active: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          banner_image: string
+          banner_link?: string | null
+          banner_position?: string
+          banner_subtitle?: string | null
+          banner_title?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          employee_id: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          banner_image?: string
+          banner_link?: string | null
+          banner_position?: string
+          banner_subtitle?: string | null
+          banner_title?: string | null
+          created_at?: string | null
+          display_order?: number | null
+          employee_id?: string
+          id?: string
+          is_active?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       employee_debts: {
         Row: {
           amount: number
@@ -1750,6 +1792,42 @@ export type Database = {
           settled_by?: string | null
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      employee_domains: {
+        Row: {
+          created_at: string | null
+          dns_records: Json | null
+          domain_name: string
+          employee_id: string
+          id: string
+          is_active: boolean | null
+          ssl_status: string
+          updated_at: string | null
+          verification_status: string
+        }
+        Insert: {
+          created_at?: string | null
+          dns_records?: Json | null
+          domain_name: string
+          employee_id: string
+          id?: string
+          is_active?: boolean | null
+          ssl_status?: string
+          updated_at?: string | null
+          verification_status?: string
+        }
+        Update: {
+          created_at?: string | null
+          dns_records?: Json | null
+          domain_name?: string
+          employee_id?: string
+          id?: string
+          is_active?: boolean | null
+          ssl_status?: string
+          updated_at?: string | null
+          verification_status?: string
         }
         Relationships: []
       }
@@ -1819,6 +1897,39 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_marketing_pixels: {
+        Row: {
+          created_at: string | null
+          employee_id: string
+          google_analytics_id: string | null
+          id: string
+          meta_pixel_id: string | null
+          snapchat_pixel_id: string | null
+          tiktok_pixel_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          employee_id: string
+          google_analytics_id?: string | null
+          id?: string
+          meta_pixel_id?: string | null
+          snapchat_pixel_id?: string | null
+          tiktok_pixel_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          employee_id?: string
+          google_analytics_id?: string | null
+          id?: string
+          meta_pixel_id?: string | null
+          snapchat_pixel_id?: string | null
+          tiktok_pixel_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       employee_notification_permissions: {
         Row: {
           can_send_whatsapp: boolean | null
@@ -1842,6 +1953,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      employee_product_descriptions: {
+        Row: {
+          created_at: string | null
+          custom_description: string | null
+          custom_images: string[] | null
+          display_order: number | null
+          employee_id: string
+          id: string
+          is_featured: boolean | null
+          product_id: string
+          size_chart_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          custom_description?: string | null
+          custom_images?: string[] | null
+          display_order?: number | null
+          employee_id: string
+          id?: string
+          is_featured?: boolean | null
+          product_id: string
+          size_chart_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          custom_description?: string | null
+          custom_images?: string[] | null
+          display_order?: number | null
+          employee_id?: string
+          id?: string
+          is_featured?: boolean | null
+          product_id?: string
+          size_chart_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_product_descriptions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       employee_profit_rules: {
         Row: {
@@ -1879,6 +2037,54 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_promotions: {
+        Row: {
+          applicable_categories: string[] | null
+          applicable_products: string[] | null
+          created_at: string | null
+          discount_value: number
+          employee_id: string
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          promotion_code: string | null
+          promotion_name: string
+          promotion_type: string
+          start_date: string
+          updated_at: string | null
+        }
+        Insert: {
+          applicable_categories?: string[] | null
+          applicable_products?: string[] | null
+          created_at?: string | null
+          discount_value?: number
+          employee_id: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          promotion_code?: string | null
+          promotion_name: string
+          promotion_type: string
+          start_date?: string
+          updated_at?: string | null
+        }
+        Update: {
+          applicable_categories?: string[] | null
+          applicable_products?: string[] | null
+          created_at?: string | null
+          discount_value?: number
+          employee_id?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          promotion_code?: string | null
+          promotion_name?: string
+          promotion_type?: string
+          start_date?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       employee_smart_sync_log: {
         Row: {
           created_at: string | null
@@ -1908,6 +2114,66 @@ export type Database = {
           last_invoice_date?: string | null
           last_smart_sync_at?: string
           sync_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      employee_storefront_settings: {
+        Row: {
+          accent_color: string
+          banner_url: string | null
+          created_at: string | null
+          custom_css: string | null
+          employee_id: string
+          font_family: string
+          id: string
+          is_active: boolean | null
+          layout_config: Json | null
+          logo_url: string | null
+          meta_description: string | null
+          meta_title: string | null
+          primary_color: string
+          secondary_color: string
+          slug: string
+          theme_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          accent_color?: string
+          banner_url?: string | null
+          created_at?: string | null
+          custom_css?: string | null
+          employee_id: string
+          font_family?: string
+          id?: string
+          is_active?: boolean | null
+          layout_config?: Json | null
+          logo_url?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          primary_color?: string
+          secondary_color?: string
+          slug: string
+          theme_name?: string
+          updated_at?: string | null
+        }
+        Update: {
+          accent_color?: string
+          banner_url?: string | null
+          created_at?: string | null
+          custom_css?: string | null
+          employee_id?: string
+          font_family?: string
+          id?: string
+          is_active?: boolean | null
+          layout_config?: Json | null
+          logo_url?: string | null
+          meta_description?: string | null
+          meta_title?: string | null
+          primary_color?: string
+          secondary_color?: string
+          slug?: string
+          theme_name?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -3788,6 +4054,7 @@ export type Database = {
           business_links: Json | null
           business_name: string | null
           business_page_name: string | null
+          can_upload_custom_images: boolean | null
           created_at: string
           customer_management_access: boolean | null
           default_ai_order_destination: string | null
@@ -3797,6 +4064,7 @@ export type Database = {
           email: string
           employee_code: string | null
           full_name: string
+          has_storefront_access: boolean | null
           id: string
           is_active: boolean
           order_creation_mode: string | null
@@ -3819,6 +4087,7 @@ export type Database = {
           business_links?: Json | null
           business_name?: string | null
           business_page_name?: string | null
+          can_upload_custom_images?: boolean | null
           created_at?: string
           customer_management_access?: boolean | null
           default_ai_order_destination?: string | null
@@ -3828,6 +4097,7 @@ export type Database = {
           email: string
           employee_code?: string | null
           full_name: string
+          has_storefront_access?: boolean | null
           id?: string
           is_active?: boolean
           order_creation_mode?: string | null
@@ -3850,6 +4120,7 @@ export type Database = {
           business_links?: Json | null
           business_name?: string | null
           business_page_name?: string | null
+          can_upload_custom_images?: boolean | null
           created_at?: string
           customer_management_access?: boolean | null
           default_ai_order_destination?: string | null
@@ -3859,6 +4130,7 @@ export type Database = {
           email?: string
           employee_code?: string | null
           full_name?: string
+          has_storefront_access?: boolean | null
           id?: string
           is_active?: boolean
           order_creation_mode?: string | null
@@ -5212,6 +5484,119 @@ export type Database = {
         }
         Relationships: []
       }
+      storefront_analytics: {
+        Row: {
+          add_to_cart_count: number | null
+          conversion_rate: number | null
+          created_at: string | null
+          date: string
+          employee_id: string
+          id: string
+          orders_placed: number | null
+          page_views: number | null
+          product_views: Json | null
+          total_revenue: number | null
+          traffic_sources: Json | null
+          unique_visitors: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          add_to_cart_count?: number | null
+          conversion_rate?: number | null
+          created_at?: string | null
+          date?: string
+          employee_id: string
+          id?: string
+          orders_placed?: number | null
+          page_views?: number | null
+          product_views?: Json | null
+          total_revenue?: number | null
+          traffic_sources?: Json | null
+          unique_visitors?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          add_to_cart_count?: number | null
+          conversion_rate?: number | null
+          created_at?: string | null
+          date?: string
+          employee_id?: string
+          id?: string
+          orders_placed?: number | null
+          page_views?: number | null
+          product_views?: Json | null
+          total_revenue?: number | null
+          traffic_sources?: Json | null
+          unique_visitors?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      storefront_orders: {
+        Row: {
+          created_at: string | null
+          customer_session_id: string | null
+          id: string
+          order_id: string
+          storefront_source: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_session_id?: string | null
+          id?: string
+          order_id: string
+          storefront_source?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_session_id?: string | null
+          id?: string
+          order_id?: string
+          storefront_source?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "storefront_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storefront_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storefront_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "storefront_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_backups: {
         Row: {
           backup_data: Json
@@ -5784,6 +6169,14 @@ export type Database = {
         Returns: undefined
       }
       calculate_order_profits: { Args: { p_order_id: string }; Returns: Json }
+      calculate_promotion_discount: {
+        Args: {
+          p_employee_id: string
+          p_original_price: number
+          p_product_id: string
+        }
+        Returns: number
+      }
       calculate_real_main_cash_balance: { Args: never; Returns: number }
       calculate_sold_quantity: {
         Args: { p_product_id: string; p_variant_id: string }
@@ -6022,6 +6415,18 @@ export type Database = {
       generate_unified_telegram_code: {
         Args: { p_full_name: string }
         Returns: string
+      }
+      get_active_promotions: {
+        Args: { p_employee_id: string }
+        Returns: {
+          applicable_categories: string[]
+          applicable_products: string[]
+          discount_value: number
+          id: string
+          promotion_code: string
+          promotion_name: string
+          promotion_type: string
+        }[]
       }
       get_all_inventory_simple: {
         Args: never
