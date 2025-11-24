@@ -17,6 +17,10 @@ import devLog from '@/lib/devLogger';
 const CONTEXT_VERSION = '2.9.4';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
+// 🧠 Smart Cache - Module-level: تخزين الطلبات المجلوبة مؤقتاً لمدة 5 دقائق
+const orderCache = new Map();
+const CACHE_TTL = 5 * 60 * 1000; // 5 دقائق
+
 const AlWaseetContext = createContext();
 
 export const useAlWaseet = () => useContext(AlWaseetContext);
@@ -491,6 +495,9 @@ export const AlWaseetProvider = ({ children }) => {
 
     devLog.log(`🚀 بدء مزامنة ${syncableOrders.length} طلب نشط من ${visibleOrders.length} طلب ظاهر...`);
     
+    // ⏱️ قياس وقت المزامنة
+    const syncStartTime = performance.now();
+    
     try {
       // ✅ تجميع مركب: created_by + delivery_partner + delivery_account_used
       const ordersByKey = new Map();
@@ -515,10 +522,6 @@ export const AlWaseetProvider = ({ children }) => {
     // ⚡ Circuit Breaker: إيقاف المزامنة بعد 5 أخطاء rate limiting متتالية
     const MAX_RATE_LIMIT_ERRORS = 5;
     let consecutiveRateLimitErrors = 0;
-    
-    // 🧠 Smart Cache: تخزين الطلبات المجلوبة مؤقتاً لمدة 5 دقائق
-    const orderCacheRef = useRef(new Map());
-    const CACHE_TTL = 5 * 60 * 1000; // 5 دقائق
     
     // إضافة تأخير بين المجموعات
     const DELAY_BETWEEN_GROUPS = 1000; // 1 ثانية
@@ -1260,19 +1263,28 @@ export const AlWaseetProvider = ({ children }) => {
       
       devLog.log(`🎉 انتهت مزامنة الدفعة - ${totalUpdated} طلب محدث من ${processedGroups} مجموعة`);
       
+      // ⏱️ عرض وقت المزامنة الإجمالي
+      const syncDuration = ((performance.now() - syncStartTime) / 1000).toFixed(2);
+      console.log(`✅ [SYNC-PERF] اكتملت المزامنة في ${syncDuration} ثانية (${totalOrders} طلب)`);
+      
       return {
         success: true, 
         updatedCount: totalUpdated,
         processedGroups,
-        totalGroups: ordersByKey.size
+        totalGroups: ordersByKey.size,
+        syncDuration: parseFloat(syncDuration)
       };
 
     } catch (error) {
+      const syncDuration = ((performance.now() - syncStartTime) / 1000).toFixed(2);
+      console.error(`❌ [SYNC-PERF] فشلت المزامنة بعد ${syncDuration} ثانية:`, error);
+      
       console.error('❌ خطأ في مزامنة الطلبات المرئية:', error);
       return { 
         success: false, 
         error: error.message,
-        updatedCount: 0
+        updatedCount: 0,
+        syncDuration: parseFloat(syncDuration)
       };
     }
   }, [getTokenForUser]);
