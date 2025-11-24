@@ -31,3 +31,7 @@ verify_jwt = false
 # Auto sync order updates from delivery partners
 [functions.sync-order-updates]
 verify_jwt = false
+
+# City benefit notifications
+[functions.send-city-benefit-notification]
+verify_jwt = false
