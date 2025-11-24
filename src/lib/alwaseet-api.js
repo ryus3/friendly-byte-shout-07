@@ -3,7 +3,7 @@
 
 import { supabase } from './customSupabaseClient';
 
-const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 3) => {
+const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 2) => {
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
       const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {
@@ -12,13 +12,19 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
 
       if (error) {
         let errorMessage = `فشل الاتصال بالخادم الوكيل: ${error.message}`;
+        let retryAfter = null;
+        
         try {
           const errorBody = await error.context.json();
           errorMessage = errorBody.msg || errorMessage;
+          retryAfter = errorBody.retryAfter; // فحص retryAfter header من السيرفر
         } catch {
           // If we can't parse the error body, use the default message
         }
-        throw new Error(errorMessage);
+        
+        const err = new Error(errorMessage);
+        err.retryAfter = retryAfter;
+        throw err;
       }
       
       if (!data) {
@@ -44,7 +50,7 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
 
       return data.data;
     } catch (error) {
-      // ✅ معالجة ذكية لـ Rate Limiting
+      // ✅ معالجة ذكية لـ Rate Limiting مع Adaptive Delays
       const isRateLimitError = 
         error.message?.includes('تجاوزت الحد المسموح به') || 
         error.message?.includes('rate limit') ||
@@ -52,7 +58,8 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
       
       // إذا كان rate limit وليست آخر محاولة، ننتظر ونعيد
       if (isRateLimitError && attempt < retries) {
-        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+        // استخدام retryAfter من السيرفر إذا كان موجوداً، وإلا linear capped delay
+        const waitTime = error.retryAfter || Math.min(1000 * attempt, 3000); // 1s→2s→3s max
         console.warn(`⚠️ Rate limit مؤقت لـ ${endpoint} - إعادة المحاولة ${attempt}/${retries} بعد ${waitTime/1000}s...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
