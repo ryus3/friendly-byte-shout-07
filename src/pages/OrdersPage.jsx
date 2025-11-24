@@ -9,7 +9,8 @@ import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, DollarSign, RefreshCw, Loader2, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle, FileText, ArrowUp, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ArrowRight, DollarSign, RefreshCw, Loader2, Archive, Users, ShoppingCart, Trash2, Building, Edit, CheckCircle, FileText, ArrowUp } from 'lucide-react';
+import SmartPagination from '@/components/ui/SmartPagination';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -859,91 +860,16 @@ const OrdersPage = () => {
               viewMode={viewMode}
             />
 
-            {/* ✅ Pagination احترافي */}
+            {/* ✅ Pagination احترافي responsive */}
             {totalPages > 1 && (
-              <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-6">
-                {/* أزرار التنقل */}
-                <div className="flex items-center gap-2">
-                  {/* الصفحة الأولى */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(1)}
-                    disabled={currentPage === 1}
-                    title="الصفحة الأولى"
-                  >
-                    <ChevronsRight className="h-4 w-4" />
-                  </Button>
-                  
-                  {/* السابق */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={currentPage === 1}
-                  >
-                    <ChevronRight className="h-4 w-4 sm:ml-1" />
-                    <span className="hidden sm:inline">السابق</span>
-                  </Button>
-                  
-                  {/* أرقام الصفحات */}
-                  <div className="flex items-center gap-1">
-                    {(() => {
-                      const visiblePages = 5;
-                      const pages = [];
-                      let startPage = Math.max(1, currentPage - Math.floor(visiblePages / 2));
-                      let endPage = Math.min(totalPages, startPage + visiblePages - 1);
-                      
-                      if (endPage - startPage + 1 < visiblePages) {
-                        startPage = Math.max(1, endPage - visiblePages + 1);
-                      }
-                      
-                      for (let i = startPage; i <= endPage; i++) {
-                        pages.push(
-                          <Button
-                            key={i}
-                            variant={i === currentPage ? 'default' : 'outline'}
-                            size="sm"
-                            onClick={() => setCurrentPage(i)}
-                            className={`min-w-[40px] ${i === currentPage ? 'bg-primary text-primary-foreground shadow-md' : ''}`}
-                          >
-                            {i}
-                          </Button>
-                        );
-                      }
-                      
-                      return pages;
-                    })()}
-                  </div>
-                  
-                  {/* التالي */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={currentPage === totalPages}
-                  >
-                    <span className="hidden sm:inline">التالي</span>
-                    <ChevronLeft className="h-4 w-4 sm:mr-1" />
-                  </Button>
-                  
-                  {/* الصفحة الأخيرة */}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(totalPages)}
-                    disabled={currentPage === totalPages}
-                    title="الصفحة الأخيرة"
-                  >
-                    <ChevronsLeft className="h-4 w-4" />
-                  </Button>
-                </div>
-                
-                {/* معلومات الصفحة */}
-                <span className="text-sm text-muted-foreground">
-                  صفحة {currentPage} من {totalPages} ({filteredOrders.length} طلب)
-                </span>
-              </div>
+              <SmartPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredOrders.length}
+                itemsPerPage={ORDERS_PER_PAGE}
+                className="mt-6"
+              />
             )}
 
             {/* ✅ زر الصعود للأعلى - تفاعلي */}

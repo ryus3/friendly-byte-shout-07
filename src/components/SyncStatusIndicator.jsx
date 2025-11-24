@@ -27,21 +27,25 @@ const SyncStatusIndicator = ({ className }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, syncing: false });
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (!isSyncing && syncMode === 'standby') {
       setIsSpinning(true);
       setSyncProgress({ current: 0, total: 0, syncing: true });
       
-      // ✅ بدء المزامنة فوراً
-      performSyncWithCountdown((progress) => {
-        // تحديث شريط التقدم بالبيانات الحية - عدد الطلبات
-        setSyncProgress({
-          current: progress?.processedOrders || 0,  // ✅ عدد الطلبات المعالجة
-          total: progress?.totalOrders || 0,        // ✅ إجمالي الطلبات
-          syncing: true
+      try {
+        // ✅ انتظار اكتمال المزامنة
+        await performSyncWithCountdown((progress) => {
+          // تحديث شريط التقدم بالبيانات الحية - عدد الطلبات
+          setSyncProgress({
+            current: progress?.processedOrders || 0,  // ✅ عدد الطلبات المعالجة
+            total: progress?.totalOrders || 0,        // ✅ إجمالي الطلبات
+            syncing: true
+          });
         });
-      });
-      setIsSpinning(false);
+      } finally {
+        // ✅ يتم فقط بعد اكتمال المزامنة
+        setIsSpinning(false);
+      }
     }
   };
 
