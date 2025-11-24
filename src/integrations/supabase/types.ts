@@ -1170,6 +1170,7 @@ export type Database = {
       customer_phone_loyalty: {
         Row: {
           created_at: string | null
+          created_by: string
           current_tier_id: string | null
           customer_city: string | null
           customer_name: string | null
@@ -1188,6 +1189,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          created_by: string
           current_tier_id?: string | null
           customer_city?: string | null
           customer_name?: string | null
@@ -1206,6 +1208,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          created_by?: string
           current_tier_id?: string | null
           customer_city?: string | null
           customer_name?: string | null
@@ -5442,19 +5445,25 @@ export type Database = {
       customers_unified_loyalty: {
         Row: {
           created_at: string | null
+          created_by: string | null
           current_tier_id: string | null
           customer_city: string | null
           customer_name: string | null
           customer_province: string | null
+          discount_percentage: number | null
           first_order_date: string | null
           free_delivery_threshold: number | null
           id: string | null
           last_order_date: string | null
+          last_tier_upgrade: string | null
+          original_phone: string | null
           phone_number: string | null
           points_expiry_date: string | null
           points_expiry_months: number | null
-          tier_discount: number | null
+          tier_color: string | null
+          tier_icon: string | null
           tier_name: string | null
+          tier_name_en: string | null
           total_orders: number | null
           total_points: number | null
           total_spent: number | null

@@ -235,43 +235,11 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     return m;
   }, [eligibleOrdersByUser]);
 
-  // جلب العملاء الموحدين من customer_phone_loyalty مباشرة
-  const [phoneLoyaltyCustomers, setPhoneLoyaltyCustomers] = useState([]);
-  const [loadingPhoneLoyalty, setLoadingPhoneLoyalty] = useState(true);
+  // استخدام العملاء من النظام الموحد (مفلترون تلقائياً حسب created_by من RLS)
+  const phoneLoyaltyCustomers = customers || [];
+  const loadingPhoneLoyalty = loading;
 
-  useEffect(() => {
-    const fetchPhoneLoyaltyCustomers = async () => {
-      try {
-        setLoadingPhoneLoyalty(true);
-        const { data, error } = await supabase
-          .from('customer_phone_loyalty')
-          .select(`
-            *,
-            loyalty_tiers (
-              name,
-              name_en,
-              discount_percentage,
-              free_delivery_threshold,
-              points_expiry_months,
-              icon,
-              color
-            )
-          `)
-          .order('total_points', { ascending: false });
-
-        if (error) throw error;
-        setPhoneLoyaltyCustomers(data || []);
-      } catch (error) {
-        console.error('خطأ في جلب بيانات العملاء الموحدة:', error);
-      } finally {
-        setLoadingPhoneLoyalty(false);
-      }
-    };
-
-    fetchPhoneLoyaltyCustomers();
-  }, []);
-
-  // دمج العملاء من customer_phone_loyalty مع البيانات المحلية
+  // دمج العملاء الموحدين مع البيانات المحلية
   const mergedCustomers = useMemo(() => {
     return phoneLoyaltyCustomers.map((cpl) => {
       const phone = cpl.phone_number;

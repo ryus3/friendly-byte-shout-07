@@ -218,19 +218,10 @@ return this.fetch('all_data', async () => {
       )
     `).order('status_changed_at', { ascending: false }), // ترتيب حسب آخر تغيير في الحالة
     
-    // البيانات الأساسية
-    supabase.from('customers').select(`
-      *,
-      customer_loyalty (
-        *,
-        loyalty_tiers (*)
-      ),
-      customer_gender_segments (
-        gender_type,
-        confidence_score,
-        last_analysis_date
-      )
-    `).order('created_at', { ascending: false }),
+    // العملاء من VIEW الموحد (مع RLS تلقائياً)
+    supabase.from('customers_unified_loyalty')
+      .select('*')
+      .order('total_points', { ascending: false }),
     supabase.from('purchases').select('*').order('created_at', { ascending: false }),
     supabase.from('expenses').select('*').order('created_at', { ascending: false }),
     supabase.from('profits').select('*').order('created_at', { ascending: false }),
