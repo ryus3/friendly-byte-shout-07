@@ -27,43 +27,47 @@ const SyncStatusIndicator = ({ className }) => {
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, syncing: false });
 
   const handleClick = async () => {
-    if (!isSyncing && syncMode === 'standby') {
-      setIsSpinning(true);
-      setSyncProgress({ current: 0, total: 0, syncing: true });
-      
-      try {
-        // ✅ انتظار اكتمال المزامنة مع تمرير onProgress كمعامل ثاني
-        await performSyncWithCountdown(null, (progress) => {
-          setSyncProgress({
-            current: progress?.processedOrders || 0,
-            total: progress?.totalOrders || 0,
-            syncing: true
-          });
-        });
-      } finally {
-        // ✅ يتم فقط بعد اكتمال المزامنة
-        setIsSpinning(false);
-      }
+    if (isSyncing || syncMode === 'countdown') return;
+
+    setSyncProgress({ syncing: true, current: 0, total: 0 });
+
+    try {
+      await performSyncWithCountdown(null, (current, total) => {
+        setSyncProgress({ syncing: true, current, total });
+      });
+    } catch (error) {
+      console.error('[SyncStatusIndicator] خطأ في المزامنة:', error);
     }
+    // لا حاجة لـ finally - useEffect سيتولى إيقاف isSpinning
   };
 
-  // ✅ تتبع الحالة السابقة لـ isSyncing لمنع الإخفاء المبكر
   const prevIsSyncingRef = useRef(isSyncing);
-  
+
+  // ربط isSpinning مباشرة بـ isSyncing لإيقاف فوري
   useEffect(() => {
-    const wasSyncing = prevIsSyncingRef.current;
-    
-    // إخفاء الشريط فقط عند الانتقال من true → false
-    if (wasSyncing && !isSyncing && syncProgress.syncing) {
-      const timeout = setTimeout(() => {
-        setSyncProgress({ current: 0, total: 0, syncing: false });
-      }, 500);
+    if (isSyncing) {
+      setIsSpinning(true);
+    } else if (!isSyncing && isSpinning) {
+      const timer = setTimeout(() => setIsSpinning(false), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isSyncing, isSpinning]);
+
+  // إخفاء شريط التقدم بسرعة عند الانتهاء
+  useEffect(() => {
+    if (prevIsSyncingRef.current && !isSyncing && syncProgress.syncing) {
+      // إخفاء فوري عند 100%
+      const delay = (syncProgress.current === syncProgress.total && syncProgress.total > 0) ? 200 : 300;
+      const timer = setTimeout(() => {
+        setSyncProgress({ syncing: false, current: 0, total: 0 });
+      }, delay);
+      
       prevIsSyncingRef.current = isSyncing;
-      return () => clearTimeout(timeout);
+      return () => clearTimeout(timer);
     }
     
     prevIsSyncingRef.current = isSyncing;
-  }, [isSyncing, syncProgress.syncing]);
+  }, [isSyncing, syncProgress]);
 
   const formatLastSync = (timestamp) => {
     if (!timestamp) return '';

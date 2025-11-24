@@ -4511,9 +4511,10 @@ export const AlWaseetProvider = ({ children }) => {
     }, 1000);
 
     // Wait for countdown then sync
+    const startTime = Date.now();
     setTimeout(async () => {
       try {
-        console.log('🔄 تنفيذ المزامنة الموحدة...');
+        console.log('[SYNC-TIMING] 🚀 بدء المزامنة:', new Date().toISOString());
         // NOW set syncing to true when actual sync starts
         setIsSyncing(true);
         setSyncMode('syncing');
@@ -4550,6 +4551,9 @@ export const AlWaseetProvider = ({ children }) => {
           console.log(`🔄 مزامنة ${ordersToSync.length} طلب...`);
           // ✅ مزامنة باستخدام syncVisibleOrdersBatch مع تمرير onProgress
           await syncVisibleOrdersBatch(ordersToSync, onProgress);
+          
+          const syncEndTime = Date.now();
+          console.log('[SYNC-TIMING] ✅ انتهاء syncVisibleOrdersBatch:', new Date().toISOString(), `(${syncEndTime - startTime}ms)`);
         }
 
         // ✅ الحذف التلقائي الآمن
@@ -4587,6 +4591,9 @@ export const AlWaseetProvider = ({ children }) => {
       } catch (error) {
         console.error('❌ خطأ في المزامنة:', error);
       } finally {
+        const finalEndTime = Date.now();
+        console.log('[SYNC-TIMING] 🏁 تعيين isSyncing=false:', new Date().toISOString(), `(إجمالي: ${finalEndTime - startTime}ms)`);
+        
         setIsSyncing(false);
         setSyncMode('standby');
         setSyncCountdown(0);
