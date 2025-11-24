@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MessageCircle, Send, Instagram, Facebook, Store } from 'lucide-react';
+import { formatWhatsAppLink } from '@/utils/phoneUtils';
 
 const EmployeeContactCard = ({ employee }) => {
   if (!employee) return null;
@@ -27,7 +28,7 @@ const EmployeeContactCard = ({ employee }) => {
           <div className="flex flex-wrap gap-2 justify-center">
             {socialLinks.whatsapp && (
               <a 
-                href={socialLinks.whatsapp} 
+                href={formatWhatsAppLink(socialLinks.whatsapp)} 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:from-green-600 hover:to-emerald-600 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
@@ -78,17 +79,24 @@ const EmployeeContactCard = ({ employee }) => {
             <div className="space-y-2">
               <p className="text-sm font-medium text-muted-foreground">روابط إضافية:</p>
               <div className="flex flex-wrap gap-2">
-                {businessLinks.map((link, index) => (
-                  <a
-                    key={index}
-                    href={link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-3 py-2 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-lg hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors text-sm"
-                  >
-                    {link.label || `رابط ${index + 1}`}
-                  </a>
-                ))}
+                {businessLinks.map((link, index) => {
+                  // Format WhatsApp links, keep others as-is
+                  const href = link.type === 'whatsapp' || link.url?.includes('whatsapp') || link.url?.includes('wa.me')
+                    ? formatWhatsAppLink(link.url)
+                    : link.url;
+                  
+                  return (
+                    <a
+                      key={index}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-2 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 rounded-lg hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors text-sm"
+                    >
+                      {link.label || link.title || `رابط ${index + 1}`}
+                    </a>
+                  );
+                })}
               </div>
             </div>
           )}

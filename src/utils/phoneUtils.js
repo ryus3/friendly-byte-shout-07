@@ -78,6 +78,62 @@ export function formatLocalPhone(phone) {
   return p;
 }
 
+// Format WhatsApp link with proper validation and conversion
+export function formatWhatsAppLink(link) {
+  if (!link) return null;
+  
+  // ✅ WhatsApp shortlinks (wa.me/message/CODE) - remove any extra query params
+  if (link.includes('wa.me/message/')) {
+    // Remove any text or extra query params
+    const cleanLink = link.split('?')[0]; // https://wa.me/message/XXXXX only
+    return cleanLink;
+  }
+  
+  // ✅ api.whatsapp.com/send links - convert to wa.me
+  if (link.includes('api.whatsapp.com/send')) {
+    const phoneMatch = link.match(/phone=(\d+)/);
+    if (phoneMatch) {
+      let phone = phoneMatch[1];
+      
+      // Convert local Iraqi format (07...) to international (9647...)
+      if (phone.startsWith('07') && phone.length === 11) {
+        phone = '964' + phone.slice(1); // 07728020024 -> 9647728020024
+      } else if (phone.startsWith('7') && phone.length === 10) {
+        phone = '964' + phone; // 7728020024 -> 9647728020024
+      }
+      
+      const defaultMessage = encodeURIComponent('مرحباً، أريد الاستفسار عن طلبي');
+      return `https://wa.me/${phone}?text=${defaultMessage}`;
+    }
+  }
+  
+  // ✅ wa.me/{phone} links without message - add default message
+  if (link.includes('wa.me/') && !link.includes('/message/') && !link.includes('text=')) {
+    let cleanUrl = link;
+    
+    // Extract phone number and convert if needed
+    const phoneMatch = link.match(/wa\.me\/(\d+)/);
+    if (phoneMatch) {
+      let phone = phoneMatch[1];
+      
+      // Convert local Iraqi format to international
+      if (phone.startsWith('07') && phone.length === 11) {
+        phone = '964' + phone.slice(1);
+        cleanUrl = link.replace(/wa\.me\/\d+/, `wa.me/${phone}`);
+      } else if (phone.startsWith('7') && phone.length === 10) {
+        phone = '964' + phone;
+        cleanUrl = link.replace(/wa\.me\/\d+/, `wa.me/${phone}`);
+      }
+    }
+    
+    const defaultMessage = encodeURIComponent('مرحباً، أريد الاستفسار');
+    const separator = cleanUrl.includes('?') ? '&' : '?';
+    return `${cleanUrl}${separator}text=${defaultMessage}`;
+  }
+  
+  return link;
+}
+
 // Format phone for Al-Waseet API (requires +9647XXXXXXXXX format)
 export function formatPhoneForAlWaseet(phone) {
   if (!phone) return '';
