@@ -56,11 +56,11 @@ const StorefrontBannersPage = lazy(() => import('@/pages/employee-storefront/Sto
 const StorefrontOrdersPage = lazy(() => import('@/pages/employee-storefront/StorefrontOrdersPage.jsx'));
 
 // Public Storefront Pages
-const StorefrontPage = lazy(() => import('@/pages/storefront/StorefrontPage.jsx'));
-const StorefrontProductsPage = lazy(() => import('@/pages/storefront/StorefrontProductsPage.jsx'));
-const StorefrontProductDetailPage = lazy(() => import('@/pages/storefront/StorefrontProductDetailPage.jsx'));
-const StorefrontCartPage = lazy(() => import('@/pages/storefront/StorefrontCartPage.jsx'));
-const StorefrontCheckoutPage = lazy(() => import('@/pages/storefront/StorefrontCheckoutPage.jsx'));
+const StorefrontPage = lazy(() => import('@/pages/StorefrontPage.jsx'));
+const StorefrontProductsPage = lazy(() => import('@/pages/StorefrontProductsPage.jsx'));
+const StorefrontProductDetailPage = lazy(() => import('@/pages/StorefrontProductDetailPage.jsx'));
+const StorefrontCartPage = lazy(() => import('@/pages/StorefrontCartPage.jsx'));
+const StorefrontCheckoutPage = lazy(() => import('@/pages/StorefrontCheckoutPage.jsx'));
 
 function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
