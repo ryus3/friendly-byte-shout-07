@@ -64,41 +64,68 @@ const StorefrontDashboardPage = () => {
 
   const createStorefront = async () => {
     try {
+      console.log('🏪 بدء إنشاء المتجر...');
+      
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.error('❌ لا يوجد مستخدم مسجل دخول');
+        toast({
+          title: 'خطأ',
+          description: 'يجب تسجيل الدخول أولاً',
+          variant: 'destructive'
+        });
+        return;
+      }
 
-      const { data: profile } = await supabase
+      console.log('✅ المستخدم:', user.id);
+
+      const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('business_page_name, employee_code')
         .eq('user_id', user.id)
         .single();
 
+      if (profileError) {
+        console.error('❌ خطأ في جلب الملف الشخصي:', profileError);
+        throw profileError;
+      }
+
+      console.log('✅ الملف الشخصي:', profile);
+
       const slug = `${profile.employee_code || user.id.substring(0, 8)}-shop`;
+      console.log('📍 Slug:', slug);
 
       const { data, error } = await supabase
         .from('employee_storefront_settings')
         .insert({
           employee_id: user.id,
-          storefront_slug: slug,
-          business_name: profile.business_page_name || 'متجري',
-          theme: 'modern',
+          slug: slug,
+          theme_name: 'modern',
+          primary_color: '#8B5CF6',
+          secondary_color: '#EC4899',
+          accent_color: '#3B82F6',
           is_active: true
         })
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ خطأ في إنشاء المتجر:', error);
+        throw error;
+      }
 
+      console.log('✅ تم إنشاء المتجر بنجاح:', data);
+      
       setSettings(data);
       toast({
-        title: 'تم إنشاء المتجر',
+        title: '🎉 تم إنشاء المتجر بنجاح',
         description: 'يمكنك الآن تخصيص متجرك الإلكتروني'
       });
     } catch (err) {
-      console.error('Error creating storefront:', err);
+      console.error('💥 خطأ في إنشاء المتجر:', err);
       toast({
         title: 'خطأ',
-        description: 'فشل إنشاء المتجر',
+        description: err.message || 'فشل إنشاء المتجر. حاول مرة أخرى',
         variant: 'destructive'
       });
     }
@@ -120,32 +147,36 @@ const StorefrontDashboardPage = () => {
   if (!settings) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-purple-950/20 dark:via-pink-950/20 dark:to-blue-950/20 flex items-center justify-center p-8">
-        <Card className="max-w-2xl w-full shadow-2xl border-2">
-          <CardContent className="text-center space-y-8 p-12">
+        <Card className="max-w-3xl w-full shadow-2xl border-2">
+          <CardContent className="text-center space-y-10 p-16">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 blur-3xl opacity-20 animate-pulse" />
-              <Store className="h-32 w-32 mx-auto text-transparent bg-clip-text relative z-10" style={{ 
-                background: 'linear-gradient(135deg, #8B5CF6, #EC4899)',
+              <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-400 to-purple-500 blur-3xl opacity-20" />
+              <Store className="h-40 w-40 mx-auto relative z-10" style={{ 
+                background: 'linear-gradient(135deg, #D946EF 0%, #8B5CF6 50%, #3B82F6 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent'
               }} />
             </div>
             
-            <div className="space-y-4">
-              <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 animate-gradient">
-                أنشئ متجرك الإلكتروني
+            <div className="space-y-6">
+              <h1 className="text-7xl md:text-8xl font-black bg-gradient-to-br from-fuchsia-600 via-purple-600 to-blue-600 bg-clip-text text-transparent leading-[1.1]">
+                أنشئ متجرك
+                <br />
+                الإلكتروني
               </h1>
-              <p className="text-xl text-muted-foreground max-w-md mx-auto">
-                احصل على متجر احترافي عالمي لعرض منتجاتك واستقبال الطلبات
+              <p className="text-2xl md:text-3xl text-foreground/80 font-semibold max-w-2xl mx-auto leading-relaxed">
+                احصل على متجر احترافي عالمي
+                <br />
+                لعرض منتجاتك واستقبال الطلبات
               </p>
             </div>
             
             <GradientButton
-              gradient="from-purple-500 via-pink-500 to-blue-500"
+              gradient="from-fuchsia-500 via-purple-500 to-blue-500"
               onClick={createStorefront}
-              className="text-lg px-8 py-6 shadow-2xl"
+              className="text-2xl px-12 py-8 shadow-2xl hover:shadow-fuchsia-500/50 transition-all duration-300 hover:scale-105"
             >
-              <Sparkles className="h-6 w-6 ml-2" />
+              <Sparkles className="h-8 w-8 ml-3" />
               إنشاء المتجر الآن
             </GradientButton>
           </CardContent>
@@ -158,10 +189,10 @@ const StorefrontDashboardPage = () => {
     <div className="p-8 bg-gradient-to-br from-background via-background to-purple-50 dark:to-purple-950/20 min-h-screen">
       {/* Header */}
       <div className="mb-8">
-        <GradientText gradient="from-purple-600 via-pink-600 to-blue-600" className="text-5xl mb-2 animate-gradient">
-          {settings.business_name}
-        </GradientText>
-        <p className="text-xl text-muted-foreground">
+        <h1 className="text-6xl font-black bg-gradient-to-br from-fuchsia-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-3 leading-tight">
+          {settings.business_name || 'متجري'}
+        </h1>
+        <p className="text-2xl text-muted-foreground font-medium">
           إدارة متجرك الإلكتروني الاحترافي
         </p>
       </div>
