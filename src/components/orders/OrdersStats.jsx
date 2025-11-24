@@ -70,10 +70,12 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
       ).length;
     }
     if (status === 'partial_delivery') {
-      // ✅ الفلترة بناءً على order_type فقط - لا علاقة بـ status أو delivery_status
+      // ✅ طلبات جزئية نشطة فقط (لم تُستلم فواتيرها ولم تكتمل)
       return filtered.filter(o => 
         o.order_type === 'partial_delivery' && 
-        !o.isarchived
+        !o.isarchived &&
+        o.status !== 'completed' &&
+        o.status !== 'returned_in_stock'
       ).length;
     }
     return filtered.filter(o => o.status === status && !o.isarchived && o.status !== 'completed' && o.status !== 'returned_in_stock').length;
