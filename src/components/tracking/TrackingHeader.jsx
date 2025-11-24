@@ -9,7 +9,14 @@ const TrackingHeader = ({ employee }) => {
   const formatWhatsAppLink = (link) => {
     if (!link) return null;
     
-    // إذا كان رابط api.whatsapp.com خاطئ
+    // ✅ روابط WhatsApp المُختصرة (wa.me/message/CODE) - إزالة أي معامل text زائد
+    if (link.includes('wa.me/message/')) {
+      // إزالة أي معامل text أو query params زائدة
+      const cleanLink = link.split('?')[0]; // https://wa.me/message/XXXXX فقط
+      return cleanLink;
+    }
+    
+    // ✅ روابط api.whatsapp.com/send - تحويل لـ wa.me
     if (link.includes('api.whatsapp.com/send')) {
       const phoneMatch = link.match(/phone=(\d+)/);
       if (phoneMatch) {
@@ -19,10 +26,11 @@ const TrackingHeader = ({ employee }) => {
       }
     }
     
-    // إذا كان wa.me لكن بدون رسالة
-    if (link.includes('wa.me') && !link.includes('text=')) {
+    // ✅ روابط wa.me/{phone} بدون رسالة - إضافة رسالة افتراضية
+    if (link.includes('wa.me/') && !link.includes('/message/') && !link.includes('text=')) {
       const defaultMessage = encodeURIComponent('مرحباً، أريد الاستفسار');
-      return `${link}?text=${defaultMessage}`;
+      const separator = link.includes('?') ? '&' : '?';
+      return `${link}${separator}text=${defaultMessage}`;
     }
     
     return link;
