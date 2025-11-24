@@ -71,6 +71,8 @@ const filterDataByEmployeeCode = (data, user) => {
     purchases: (data.purchases || []).filter(p => matchUser(p.created_by)),
     expenses: (data.expenses || []).filter(e => matchUser(e.created_by)),
     cashSources: (data.cashSources || []).filter(c => matchUser(c.created_by)),
+    // العملاء مفلترون تلقائياً من RLS - لكن نطبق فلترة محلية إضافية للأمان
+    customers: (data.customers || []).filter(c => matchUser(c.created_by)),
     aiOrders: data.aiOrders || [],
   };
 
