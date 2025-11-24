@@ -32,8 +32,12 @@ const SyncStatusIndicator = ({ className }) => {
     setSyncProgress({ syncing: true, current: 0, total: 0 });
 
     try {
-      await performSyncWithCountdown(null, (current, total) => {
-        setSyncProgress({ syncing: true, current, total });
+      await performSyncWithCountdown(null, (progress) => {
+        setSyncProgress({ 
+          syncing: true, 
+          current: progress?.processedOrders || 0, 
+          total: progress?.totalOrders || 0 
+        });
       });
     } catch (error) {
       console.error('[SyncStatusIndicator] خطأ في المزامنة:', error);
