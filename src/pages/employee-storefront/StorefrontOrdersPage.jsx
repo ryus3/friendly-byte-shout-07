@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Eye } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import GradientText from '@/components/storefront/ui/GradientText';
+import FilterButton from '@/components/storefront/dashboard/FilterButton';
+import StorefrontOrderCard from '@/components/storefront/dashboard/StorefrontOrderCard';
+import { ShoppingBag } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
 
 const StorefrontOrdersPage = () => {
   const [orders, setOrders] = useState([]);
+  const [filter, setFilter] = useState('pending');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -32,86 +35,130 @@ const StorefrontOrdersPage = () => {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const variants = {
-      'pending_approval': 'secondary',
-      'approved': 'default',
-      'rejected': 'destructive'
-    };
+  const handleApproveOrder = async (orderId) => {
+    try {
+      const { error } = await supabase
+        .from('storefront_orders')
+        .update({ status: 'approved' })
+        .eq('id', orderId);
 
-    const labels = {
-      'pending_approval': 'بانتظار الموافقة',
-      'approved': 'تمت الموافقة',
-      'rejected': 'مرفوض'
-    };
+      if (error) throw error;
 
-    return <Badge variant={variants[status] || 'secondary'}>{labels[status] || status}</Badge>;
+      toast({
+        title: '✅ تمت الموافقة',
+        description: 'تمت الموافقة على الطلب بنجاح'
+      });
+      
+      await fetchOrders();
+    } catch (err) {
+      console.error('Error approving order:', err);
+      toast({
+        title: 'خطأ',
+        description: 'فشلت الموافقة على الطلب',
+        variant: 'destructive'
+      });
+    }
   };
 
-  if (loading) {
-    return <div className="p-8">جاري التحميل...</div>;
-  }
+  const handleRejectOrder = async (orderId) => {
+    try {
+      const { error } = await supabase
+        .from('storefront_orders')
+        .update({ status: 'rejected' })
+        .eq('id', orderId);
+
+      if (error) throw error;
+
+      toast({
+        title: '❌ تم الرفض',
+        description: 'تم رفض الطلب'
+      });
+      
+      await fetchOrders();
+    } catch (err) {
+      console.error('Error rejecting order:', err);
+      toast({
+        title: 'خطأ',
+        description: 'فشل رفض الطلب',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const filteredOrders = orders.filter(order => {
+    if (filter === 'pending') return order.status === 'pending_approval';
+    if (filter === 'approved') return order.status === 'approved';
+    if (filter === 'completed') return order.status === 'completed';
+    return true;
+  });
+
+  const pendingCount = orders.filter(o => o.status === 'pending_approval').length;
+  const approvedCount = orders.filter(o => o.status === 'approved').length;
+  const completedCount = orders.filter(o => o.status === 'completed').length;
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-6">
-      <h1 className="text-3xl font-bold">طلبات المتجر</h1>
-
-      {orders.length === 0 ? (
-        <Card>
-          <CardContent className="flex items-center justify-center h-96">
-            <p className="text-muted-foreground">لا توجد طلبات حتى الآن</p>
+    <div className="p-8 bg-gradient-to-br from-background via-background to-orange-50 dark:to-orange-950/20 min-h-screen space-y-8">
+      <GradientText gradient="from-purple-600 via-pink-600 to-blue-600" className="text-4xl">
+        طلبات المتجر
+      </GradientText>
+      
+      {/* Filters */}
+      <div className="flex gap-4 flex-wrap">
+        <FilterButton
+          active={filter === 'pending'}
+          onClick={() => setFilter('pending')}
+          gradient="from-orange-500 to-red-500"
+          count={pendingCount}
+        >
+          بانتظار الموافقة
+        </FilterButton>
+        <FilterButton
+          active={filter === 'approved'}
+          onClick={() => setFilter('approved')}
+          gradient="from-blue-500 to-cyan-500"
+          count={approvedCount}
+        >
+          موافق عليها
+        </FilterButton>
+        <FilterButton
+          active={filter === 'completed'}
+          onClick={() => setFilter('completed')}
+          gradient="from-emerald-500 to-teal-500"
+          count={completedCount}
+        >
+          مكتملة
+        </FilterButton>
+      </div>
+      
+      {/* Orders List */}
+      {filteredOrders.length === 0 ? (
+        <Card className="border-2 shadow-xl">
+          <CardContent className="flex flex-col items-center justify-center h-96 space-y-6">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 blur-3xl opacity-20 animate-pulse" />
+              <ShoppingBag className="h-32 w-32 text-muted-foreground relative z-10" />
+            </div>
+            <div className="text-center space-y-2">
+              <GradientText gradient="from-purple-600 to-pink-600" className="text-2xl">
+                لا توجد طلبات
+              </GradientText>
+              <p className="text-muted-foreground">
+                {filter === 'pending' ? 'لا توجد طلبات بانتظار الموافقة' : 
+                 filter === 'approved' ? 'لا توجد طلبات موافق عليها' : 
+                 'لا توجد طلبات مكتملة'}
+              </p>
+            </div>
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-4">
-          {orders.map(order => (
-            <Card key={order.id}>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle>طلب #{order.id.substring(0, 8)}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {new Date(order.created_at).toLocaleString('ar-IQ')}
-                    </p>
-                  </div>
-                  {getStatusBadge(order.status)}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium">معلومات العميل</p>
-                    <p className="text-sm text-muted-foreground">{order.customer_name}</p>
-                    <p className="text-sm text-muted-foreground" dir="ltr">{order.customer_phone}</p>
-                    <p className="text-sm text-muted-foreground">{order.customer_address}</p>
-                  </div>
-
-                  <div>
-                    <p className="text-sm font-medium">تفاصيل الطلب</p>
-                    <p className="text-sm text-muted-foreground">
-                      {order.items?.length || 0} منتج
-                    </p>
-                    <p className="text-lg font-bold text-primary">
-                      {order.total_amount?.toLocaleString('ar-IQ')} IQD
-                    </p>
-                  </div>
-                </div>
-
-                {order.notes && (
-                  <div className="mt-4 p-3 bg-muted rounded-lg">
-                    <p className="text-sm font-medium mb-1">ملاحظات:</p>
-                    <p className="text-sm text-muted-foreground">{order.notes}</p>
-                  </div>
-                )}
-
-                <div className="flex gap-2 mt-4">
-                  <Button variant="outline" size="sm">
-                    <Eye className="h-4 w-4 ml-2" />
-                    عرض التفاصيل
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+        <div className="space-y-6">
+          {filteredOrders.map(order => (
+            <StorefrontOrderCard
+              key={order.id}
+              order={order}
+              onApprove={() => handleApproveOrder(order.id)}
+              onReject={() => handleRejectOrder(order.id)}
+            />
           ))}
         </div>
       )}

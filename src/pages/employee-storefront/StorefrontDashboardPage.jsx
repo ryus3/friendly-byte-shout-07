@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target } from 'lucide-react';
 import StorefrontAnalytics from '@/components/employee-storefront/StorefrontAnalytics';
+import GradientButton from '@/components/storefront/ui/GradientButton';
+import GradientText from '@/components/storefront/ui/GradientText';
+import StatCard from '@/components/storefront/dashboard/StatCard';
 import { toast } from '@/hooks/use-toast';
 
 const StorefrontDashboardPage = () => {
@@ -12,6 +14,7 @@ const StorefrontDashboardPage = () => {
   const [settings, setSettings] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [newOrdersCount, setNewOrdersCount] = useState(0);
 
   useEffect(() => {
     fetchStorefrontData();
@@ -42,6 +45,15 @@ const StorefrontDashboardPage = () => {
           .single();
 
         setStats(statsData);
+        
+        // جلب عدد الطلبات الجديدة
+        const { count } = await supabase
+          .from('storefront_orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('employee_id', user.id)
+          .eq('status', 'pending_approval');
+        
+        setNewOrdersCount(count || 0);
       }
     } catch (err) {
       console.error('Error fetching storefront data:', err);
@@ -55,7 +67,6 @@ const StorefrontDashboardPage = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // جلب معلومات الموظف
       const { data: profile } = await supabase
         .from('profiles')
         .select('business_page_name, employee_code')
@@ -94,138 +105,133 @@ const StorefrontDashboardPage = () => {
   };
 
   if (loading) {
-    return <div className="p-8">جاري التحميل...</div>;
-  }
-
-  if (!settings) {
     return (
-      <div className="container mx-auto p-8">
-        <div className="max-w-2xl mx-auto text-center space-y-6">
-          <Store className="h-24 w-24 mx-auto text-muted-foreground" />
-          <h1 className="text-3xl font-bold">أنشئ متجرك الإلكتروني</h1>
-          <p className="text-muted-foreground text-lg">
-            احصل على متجر احترافي لعرض منتجاتك واستقبال الطلبات عبر الإنترنت
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-purple-950/20 dark:via-pink-950/20 dark:to-blue-950/20">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse" />
+          <p className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
+            جاري التحميل...
           </p>
-          <Button size="lg" onClick={createStorefront}>
-            إنشاء المتجر الآن
-          </Button>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="container mx-auto p-4 md:p-8 space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">لوحة تحكم المتجر</h1>
-          <p className="text-muted-foreground">{settings.business_name}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => window.open(`/storefront/${settings.storefront_slug}`, '_blank')}
-          >
-            <ExternalLink className="h-4 w-4 ml-2" />
-            عرض المتجر
-          </Button>
-          <Button onClick={() => navigate('/dashboard/storefront/settings')}>
-            <Settings className="h-4 w-4 ml-2" />
-            الإعدادات
-          </Button>
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">الزوار اليوم</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.visitors || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.page_views || 0} مشاهدة صفحة
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">الطلبات</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.orders || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.cart_additions || 0} إضافة للسلة
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">الإيرادات</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {(stats?.revenue || 0).toLocaleString('ar-IQ')} IQD
+  if (!settings) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-purple-950/20 dark:via-pink-950/20 dark:to-blue-950/20 flex items-center justify-center p-8">
+        <Card className="max-w-2xl w-full shadow-2xl border-2">
+          <CardContent className="text-center space-y-8 p-12">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-purple-500 to-pink-500 blur-3xl opacity-20 animate-pulse" />
+              <Store className="h-32 w-32 mx-auto text-transparent bg-clip-text relative z-10" style={{ 
+                background: 'linear-gradient(135deg, #8B5CF6, #EC4899)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent'
+              }} />
             </div>
-            <p className="text-xs text-muted-foreground">
-              {stats?.conversion_rate || 0}% معدل التحويل
-            </p>
+            
+            <div className="space-y-4">
+              <h1 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 animate-gradient">
+                أنشئ متجرك الإلكتروني
+              </h1>
+              <p className="text-xl text-muted-foreground max-w-md mx-auto">
+                احصل على متجر احترافي عالمي لعرض منتجاتك واستقبال الطلبات
+              </p>
+            </div>
+            
+            <GradientButton
+              gradient="from-purple-500 via-pink-500 to-blue-500"
+              onClick={createStorefront}
+              className="text-lg px-8 py-6 shadow-2xl"
+            >
+              <Sparkles className="h-6 w-6 ml-2" />
+              إنشاء المتجر الآن
+            </GradientButton>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">المنتجات المعروضة</CardTitle>
-            <Store className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.product_views || 0}</div>
-            <p className="text-xs text-muted-foreground">مشاهدة منتج</p>
-          </CardContent>
-        </Card>
+  return (
+    <div className="p-8 bg-gradient-to-br from-background via-background to-purple-50 dark:to-purple-950/20 min-h-screen">
+      {/* Header */}
+      <div className="mb-8">
+        <GradientText gradient="from-purple-600 via-pink-600 to-blue-600" className="text-5xl mb-2 animate-gradient">
+          {settings.business_name}
+        </GradientText>
+        <p className="text-xl text-muted-foreground">
+          إدارة متجرك الإلكتروني الاحترافي
+        </p>
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="cursor-pointer hover:bg-accent" onClick={() => navigate('/dashboard/storefront/products')}>
-          <CardHeader>
-            <CardTitle>إدارة المنتجات</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              اختر المنتجات المميزة وأضف أوصافاً مخصصة
-            </p>
-          </CardContent>
-        </Card>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <GradientButton 
+          gradient="from-blue-500 to-cyan-500"
+          onClick={() => window.open(`/storefront/${settings.storefront_slug}`, '_blank')}
+        >
+          <ExternalLink className="w-5 h-5 ml-2" />
+          معاينة المتجر
+        </GradientButton>
+        
+        <GradientButton 
+          gradient="from-purple-500 to-pink-500"
+          onClick={() => navigate('/dashboard/storefront/settings')}
+        >
+          <Settings className="w-5 h-5 ml-2" />
+          الإعدادات
+        </GradientButton>
+        
+        <GradientButton 
+          gradient="from-emerald-500 to-teal-500"
+          onClick={() => navigate('/dashboard/storefront/products')}
+        >
+          <Package className="w-5 h-5 ml-2" />
+          المنتجات
+        </GradientButton>
+        
+        <GradientButton 
+          gradient="from-orange-500 to-red-500"
+          onClick={() => navigate('/dashboard/storefront/promotions')}
+        >
+          <Sparkles className="w-5 h-5 ml-2" />
+          العروض
+        </GradientButton>
+      </div>
 
-        <Card className="cursor-pointer hover:bg-accent" onClick={() => navigate('/dashboard/storefront/promotions')}>
-          <CardHeader>
-            <CardTitle>العروض والخصومات</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              أنشئ عروضاً ترويجية لزيادة المبيعات
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="cursor-pointer hover:bg-accent" onClick={() => navigate('/dashboard/storefront/banners')}>
-          <CardHeader>
-            <CardTitle>البانرات الإعلانية</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              أضف صوراً جذابة للصفحة الرئيسية
-            </p>
-          </CardContent>
-        </Card>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <StatCard
+          title="زوار اليوم"
+          value={stats?.visitors || 0}
+          icon={<Users className="h-6 w-6" />}
+          gradient="from-blue-500 to-cyan-500"
+          shadowColor="blue"
+        />
+        <StatCard
+          title="طلبات جديدة"
+          value={newOrdersCount}
+          icon={<ShoppingCart className="h-6 w-6" />}
+          gradient="from-purple-500 to-pink-500"
+          shadowColor="purple"
+          badge={newOrdersCount > 0}
+        />
+        <StatCard
+          title="مبيعات اليوم"
+          value={`${(stats?.revenue || 0).toLocaleString('ar-IQ')} IQD`}
+          icon={<TrendingUp className="h-6 w-6" />}
+          gradient="from-emerald-500 to-teal-500"
+          shadowColor="emerald"
+        />
+        <StatCard
+          title="معدل التحويل"
+          value={`${stats?.conversion_rate || 0}%`}
+          icon={<Target className="h-6 w-6" />}
+          gradient="from-orange-500 to-red-500"
+          shadowColor="orange"
+        />
       </div>
 
       {/* Analytics */}
