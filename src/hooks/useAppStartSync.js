@@ -100,36 +100,10 @@ export const useAppStartSync = () => {
   }, [syncing, setLastAppStartSync, setSessionSynced]);
 
   useEffect(() => {
-    const checkAndPerformSync = async () => {
-      // التحقق من إعدادات المزامنة
-      if (
-        !syncSettings.enabled || 
-        !syncSettings.autoSyncOnAppStart ||
-        !token || 
-        !isLoggedIn || 
-        activePartner !== 'alwaseet' ||
-        sessionSynced
-      ) {
-        return;
-      }
-
-      // التحقق من آخر مزامنة (مرة واحدة يومياً)
-      const today = new Date().toDateString();
-      const lastSyncDate = lastAppStartSync ? new Date(lastAppStartSync).toDateString() : null;
-      
-      if (lastSyncDate === today) {
-        setSessionSynced(true);
-        return;
-      }
-
-      // تأخير قصير للتأكد من جاهزية النظام - مع تمرير true للمزامنة التلقائية
-      const timeoutId = setTimeout(() => performComprehensiveSync(null, null, true), 2000);
-      
-      return () => clearTimeout(timeoutId);
-    };
-
-    checkAndPerformSync();
-  }, [token, isLoggedIn, activePartner, syncSettings, lastAppStartSync, sessionSynced, performComprehensiveSync]);
+    // ⛔ تعطيل المزامنة الشاملة - AlWaseetContext يتولى المزامنة الأولية
+    console.log('ℹ️ مزامنة AppStartSync معطلة - AlWaseetContext يتولى المزامنة');
+    return;
+  }, []);
 
   // إعادة تعيين علامة الجلسة عند إعادة تحميل التطبيق
   useEffect(() => {
