@@ -248,7 +248,19 @@
   .gradient-text-holographic {
     background: linear-gradient(135deg, hsl(207, 90%, 61%) 0%, hsl(271, 48%, 55%) 50%, hsl(330, 81%, 60%) 100%);
     background-size: 200% 200%;
+    /* animation: gradient-flow 3s ease infinite; */ /* معطل للأداء - يتفعل فقط عند hover */
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  .gradient-text-holographic:hover {
     animation: gradient-flow 3s ease infinite;
+  }
+  
+  /* تدرج ثابت احترافي بدون animations */
+  .gradient-text-static {
+    background: linear-gradient(135deg, #EC4899 0%, #8B5CF6 50%, #3B82F6 100%);
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;

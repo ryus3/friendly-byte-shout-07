@@ -34,7 +34,14 @@ const SidebarContent = ({ onClose, isMobile }) => {
   const menuItems = [
     { path: '/', icon: Home, label: 'لوحة التحكم', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-blue-500' },
     { path: '/quick-order', icon: Zap, label: 'طلب سريع', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'cashier'], color: 'text-yellow-500' },
-    { path: '/dashboard/storefront', icon: Store, label: 'المتجر', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee'], requiresStorefrontAccess: true, color: 'text-fuchsia-500' },
+    { 
+      path: '/dashboard/storefront', 
+      icon: Store, 
+      label: (user?.roles?.includes('super_admin') || user?.roles?.includes('admin')) ? 'المتجر' : 'متجري',
+      roles: ['super_admin', 'admin', 'department_manager', 'sales_employee'], 
+      requiresStorefrontAccess: true, 
+      color: 'text-fuchsia-500' 
+    },
     { path: '/my-orders', icon: ShoppingCart, label: user?.roles?.includes('super_admin') || user?.roles?.includes('admin') ? 'متابعة الطلبات' : 'طلباتي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-green-500' },
     { path: '/profits-summary', icon: Wallet, label: 'أرباحي', roles: ['department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-emerald-600' },
     { path: '/sales', icon: TrendingUp, label: 'المبيعات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-cyan-600' },
