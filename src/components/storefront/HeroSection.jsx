@@ -1,123 +1,201 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useStorefront } from '@/contexts/StorefrontContext';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Autoplay, Pagination, EffectFade } from 'swiper/modules';
+import { ArrowLeft, Zap, Gift } from 'lucide-react';
+import GradientButton from './ui/GradientButton';
+import GradientText from './ui/GradientText';
 
-const HeroSection = () => {
-  const { settings } = useStorefront();
-  const [banners, setBanners] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
+import 'swiper/css';
+import 'swiper/css/pagination';
+import 'swiper/css/effect-fade';
 
-  useEffect(() => {
-    if (!settings?.employee_id) return;
+const HeroSection = ({ slug, banners = [] }) => {
+  const heroBanners = banners.filter(b => b.banner_position === 'hero' && b.is_active);
+  const sidebarBanners = banners.filter(b => b.banner_position === 'sidebar' && b.is_active);
 
-    const fetchBanners = async () => {
-      const { data } = await supabase
-        .from('employee_banners')
-        .select('*')
-        .eq('employee_id', settings.employee_id)
-        .eq('banner_position', 'hero')
-        .eq('is_active', true)
-        .order('display_order', { ascending: true });
-
-      if (data && data.length > 0) {
-        setBanners(data);
-      }
-    };
-
-    fetchBanners();
-  }, [settings?.employee_id]);
-
-  useEffect(() => {
-    if (banners.length <= 1) return;
-
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % banners.length);
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [banners.length]);
-
-  if (banners.length === 0) {
-    // عرض banner افتراضي
-    return (
-      <div className="relative h-[400px] md:h-[500px] bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center">
-        <div className="text-center space-y-4 px-4">
-          <h1 className="text-4xl md:text-6xl font-bold text-foreground">
-            {settings?.business_name || 'مرحباً بك'}
-          </h1>
-          <p className="text-lg md:text-xl text-muted-foreground max-w-2xl">
-            {settings?.meta_description || 'اكتشف مجموعتنا الحصرية من المنتجات'}
-          </p>
-        </div>
-      </div>
-    );
+  if (heroBanners.length === 0) {
+    return <DefaultHero slug={slug} />;
   }
 
-  const currentBanner = banners[currentIndex];
-
   return (
-    <div className="relative h-[400px] md:h-[500px] overflow-hidden group">
-      {/* الصورة */}
-      <img
-        src={currentBanner.banner_image}
-        alt={currentBanner.banner_title || ''}
-        className="w-full h-full object-cover"
-      />
+    <section className="relative">
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Main Hero Slider - 2 columns */}
+          <div className="lg:col-span-2">
+            <Swiper
+              modules={[Autoplay, Pagination, EffectFade]}
+              effect="fade"
+              autoplay={{ delay: 5000, disableOnInteraction: false }}
+              pagination={{ clickable: true }}
+              loop={true}
+              className="rounded-3xl overflow-hidden shadow-2xl h-[500px]"
+            >
+              {heroBanners.map((banner) => (
+                <SwiperSlide key={banner.id}>
+                  <div className="relative h-full">
+                    {/* Background Image */}
+                    <img
+                      src={banner.banner_image}
+                      alt={banner.banner_title}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
 
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end">
-        <div className="container mx-auto px-4 pb-12">
-          {currentBanner.banner_title && (
-            <h2 className="text-3xl md:text-5xl font-bold text-white mb-2">
-              {currentBanner.banner_title}
-            </h2>
-          )}
-          {currentBanner.banner_subtitle && (
-            <p className="text-lg md:text-xl text-white/90 mb-4">
-              {currentBanner.banner_subtitle}
-            </p>
-          )}
-          {currentBanner.banner_link && (
-            <a href={currentBanner.banner_link}>
-              <Button size="lg">اكتشف المزيد</Button>
-            </a>
-          )}
+                    {/* Gradient Overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-900/70 via-pink-800/60 to-blue-900/70" />
+
+                    {/* Content */}
+                    <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-8">
+                      <GradientText
+                        variant="gold"
+                        className="text-5xl md:text-7xl font-black mb-6"
+                        as="h1"
+                        animate
+                      >
+                        {banner.banner_title || 'عروض حصرية'}
+                      </GradientText>
+
+                      <p className="text-2xl text-white/90 mb-8 max-w-2xl">
+                        {banner.banner_subtitle || 'أحدث صيحات الموضة 2024 بجودة استثنائية'}
+                      </p>
+
+                      <div className="flex gap-4 flex-wrap justify-center">
+                        <Link to={banner.banner_link || `/storefront/${slug}/products`}>
+                          <GradientButton variant="primary" size="lg" shimmer>
+                            تسوق الآن <Zap className="w-5 h-5 mr-2 inline" />
+                          </GradientButton>
+                        </Link>
+                        <Link to={`/storefront/${slug}/products`}>
+                          <GradientButton variant="warning" size="lg">
+                            اكتشف العروض <Gift className="w-5 h-5 mr-2 inline" />
+                          </GradientButton>
+                        </Link>
+                      </div>
+                    </div>
+
+                    {/* Floating Animation Particles */}
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                      {[...Array(20)].map((_, i) => (
+                        <div
+                          key={i}
+                          className="absolute w-2 h-2 bg-white/30 rounded-full animate-float"
+                          style={{
+                            left: `${Math.random() * 100}%`,
+                            top: `${Math.random() * 100}%`,
+                            animationDelay: `${Math.random() * 5}s`,
+                            animationDuration: `${5 + Math.random() * 10}s`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          </div>
+
+          {/* Sidebar Mini Banners - 1 column */}
+          <div className="hidden lg:flex flex-col gap-6">
+            {sidebarBanners.slice(0, 2).map((banner) => (
+              <Link
+                key={banner.id}
+                to={banner.banner_link || `/storefront/${slug}/products`}
+                className="group relative overflow-hidden rounded-2xl h-[242px] shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2"
+              >
+                <img
+                  src={banner.banner_image}
+                  alt={banner.banner_title}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                />
+                <div className="absolute inset-0 bg-gradient-to-br from-black/50 to-transparent" />
+                <div className="relative z-10 p-6 h-full flex flex-col justify-end">
+                  <h3 className="text-2xl font-black text-white mb-2">
+                    {banner.banner_title}
+                  </h3>
+                  <p className="text-white/90 text-sm mb-3">
+                    {banner.banner_subtitle}
+                  </p>
+                  <span className="inline-flex items-center gap-2 text-white font-bold group-hover:gap-4 transition-all">
+                    تسوق الآن <ArrowLeft className="w-4 h-4" />
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* أزرار التنقل */}
-      {banners.length > 1 && (
-        <>
-          <button
-            onClick={() => setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length)}
-            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-          <button
-            onClick={() => setCurrentIndex((prev) => (prev + 1) % banners.length)}
-            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </button>
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% {
+            transform: translateY(0) translateX(0);
+            opacity: 0;
+          }
+          10% {
+            opacity: 1;
+          }
+          90% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(-100vh) translateX(${Math.random() * 100 - 50}px);
+            opacity: 0;
+          }
+        }
+        .animate-float {
+          animation: float linear infinite;
+        }
+      `}</style>
+    </section>
+  );
+};
 
-          {/* المؤشرات */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-            {banners.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentIndex(idx)}
-                className={`h-2 rounded-full transition-all ${
-                  idx === currentIndex ? 'w-8 bg-white' : 'w-2 bg-white/50'
-                }`}
-              />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+// Default Hero when no banners
+const DefaultHero = ({ slug }) => {
+  return (
+    <section className="h-screen relative overflow-hidden">
+      {/* Background Image */}
+      <div className="absolute inset-0">
+        <img
+          src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920"
+          alt="Hero"
+          className="w-full h-full object-cover"
+        />
+      </div>
+
+      {/* Gradient Overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/70 via-pink-800/60 to-blue-900/70" />
+
+      {/* Content */}
+      <div className="relative z-10 h-full flex flex-col items-center justify-center text-center container mx-auto px-4">
+        <GradientText
+          variant="gold"
+          className="text-6xl md:text-8xl font-black mb-6"
+          as="h1"
+          animate
+        >
+          اكتشف الموضة العالمية
+        </GradientText>
+
+        <p className="text-2xl md:text-3xl text-white/90 mb-8 max-w-3xl">
+          أحدث صيحات الموضة 2024 بجودة استثنائية وأسعار لا تُقاوم
+        </p>
+
+        <div className="flex flex-wrap gap-4 justify-center">
+          <Link to={`/storefront/${slug}/products`}>
+            <GradientButton variant="primary" size="xl" shimmer>
+              تسوق الآن <Zap className="w-6 h-6 mr-2 inline" />
+            </GradientButton>
+          </Link>
+          <Link to={`/storefront/${slug}/products`}>
+            <GradientButton variant="premium" size="xl">
+              اكتشف العروض <Gift className="w-6 h-6 mr-2 inline" />
+            </GradientButton>
+          </Link>
+        </div>
+      </div>
+    </section>
   );
 };
 

@@ -2,11 +2,10 @@ import React from 'react';
 import { Outlet } from 'react-router-dom';
 import StorefrontHeader from './StorefrontHeader';
 import StorefrontFooter from './StorefrontFooter';
-import AnnouncementBar from './AnnouncementBar';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const StorefrontLayout = () => {
+const StorefrontLayout = ({ products = [] }) => {
   const { settings, settingsLoading, error } = useStorefront();
 
   if (settingsLoading) {
@@ -35,14 +34,13 @@ const StorefrontLayout = () => {
 
   // تطبيق الألوان المخصصة من إعدادات المتجر
   const customColors = {
-    '--storefront-primary': settings.primary_color || 'hsl(var(--primary))',
-    '--storefront-accent': settings.accent_color || 'hsl(var(--accent))',
+    '--storefront-primary': settings.primary_color || 'hsl(221, 83%, 53%)',
+    '--storefront-accent': settings.accent_color || 'hsl(271, 48%, 55%)',
   };
 
   return (
-    <div className="min-h-screen bg-background" style={customColors}>
-      <AnnouncementBar />
-      <StorefrontHeader />
+    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" style={customColors}>
+      <StorefrontHeader products={products} />
       <main className="min-h-[calc(100vh-200px)]">
         <Outlet />
       </main>
