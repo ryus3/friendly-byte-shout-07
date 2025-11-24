@@ -61,7 +61,7 @@ const SyncStatusIndicator = ({ className }) => {
   useEffect(() => {
     if (prevIsSyncingRef.current && !isSyncing && syncProgress.syncing) {
       // إخفاء فوري عند 100%
-      const delay = (syncProgress.current === syncProgress.total && syncProgress.total > 0) ? 200 : 300;
+      const delay = (syncProgress.current === syncProgress.total && syncProgress.total > 0) ? 150 : 250;
       const timer = setTimeout(() => {
         setSyncProgress({ syncing: false, current: 0, total: 0 });
       }, delay);
