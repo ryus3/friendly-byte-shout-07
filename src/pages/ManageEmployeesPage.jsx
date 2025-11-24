@@ -12,8 +12,9 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Search, UserPlus, ArrowRight, Shield, LayoutGrid, List, 
-  Eye, Edit2, Hash, Send, Mail, User, TrendingUp, Target, ShoppingCart
+  Eye, Edit2, Hash, Send, Mail, User, TrendingUp, Target, ShoppingCart, Store, ExternalLink
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import UnifiedEmployeeDialog from '@/components/manage-employees/UnifiedEmployeeDialog';
 import UpdateRolePermissionsDialog from '@/components/manage-employees/UpdateRolePermissionsDialog';
 import { motion } from 'framer-motion';
@@ -75,6 +76,56 @@ const ManageEmployeesPage = () => {
       title: "لإضافة موظف جديد",
       description: "اطلب منه التسجيل في النظام ثم قم بالموافقة عليه من لوحة التحكم.",
     });
+  };
+
+  const handleToggleStorefront = async (employeeId, currentValue) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ has_storefront_access: !currentValue })
+        .eq('user_id', employeeId);
+
+      if (error) throw error;
+
+      toast({
+        title: !currentValue ? "تم تفعيل المتجر" : "تم تعطيل المتجر",
+        description: !currentValue ? "الآن يمكن للموظف إدارة متجره الإلكتروني" : "تم إلغاء صلاحية المتجر",
+      });
+      
+      window.location.reload();
+    } catch (err) {
+      console.error('Error toggling storefront:', err);
+      toast({
+        title: "خطأ",
+        description: "فشل تحديث صلاحية المتجر",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleToggleCustomImages = async (employeeId, currentValue) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ can_upload_custom_images: !currentValue })
+        .eq('user_id', employeeId);
+
+      if (error) throw error;
+
+      toast({
+        title: !currentValue ? "تم السماح برفع الصور" : "تم إلغاء السماح",
+        description: !currentValue ? "الآن يمكن للموظف رفع صور مخصصة للمنتجات" : "تم إلغاء صلاحية رفع الصور",
+      });
+      
+      window.location.reload();
+    } catch (err) {
+      console.error('Error toggling custom images:', err);
+      toast({
+        title: "خطأ",
+        description: "فشل تحديث صلاحية الصور",
+        variant: "destructive"
+      });
+    }
   };
 
   const getInitials = (name) => {
@@ -298,6 +349,49 @@ const ManageEmployeesPage = () => {
                         </div>
                       </div>
                     </div>
+                    
+                    {/* Storefront Controls - جديد */}
+                    {employee.status === 'active' && (
+                      <div className="mb-4 p-3 bg-gradient-to-r from-purple-50/50 to-blue-50/50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200/30 dark:border-purple-800/30 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Store className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                            <span className="text-sm font-medium">المتجر الإلكتروني</span>
+                            {employee.has_storefront_access && (
+                              <Badge variant="default" className="bg-purple-500 text-white text-xs">نشط</Badge>
+                            )}
+                          </div>
+                          <Switch
+                            checked={employee.has_storefront_access || false}
+                            onCheckedChange={() => handleToggleStorefront(employee.user_id, employee.has_storefront_access)}
+                          />
+                        </div>
+                        
+                        {employee.has_storefront_access && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-muted-foreground">رفع صور مخصصة</span>
+                              <Switch
+                                checked={employee.can_upload_custom_images || false}
+                                onCheckedChange={() => handleToggleCustomImages(employee.user_id, employee.can_upload_custom_images)}
+                              />
+                            </div>
+                            
+                            {employee.storefront_slug && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full mt-2"
+                                onClick={() => window.open(`/storefront/${employee.storefront_slug}`, '_blank')}
+                              >
+                                <ExternalLink className="w-3 h-3 ml-2" />
+                                عرض المتجر
+                              </Button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )}
                     
                     {/* Actions */}
                     <div className="flex gap-2">
