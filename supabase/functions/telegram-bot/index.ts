@@ -1964,9 +1964,54 @@ serve(async (req) => {
             });
           }
           
-          // ❌ تم تعطيل استدعاء process_telegram_order بالكامل
-          // النظام المحلي فقط هو المسؤول عن معالجة الطلبات
-          console.log('✅ النظام المحلي يعمل بشكل كامل - لا حاجة للنظام القديم');
+          // ⚠️⚠️⚠️ CRITICAL WARNING - DO NOT DISABLE THIS CALL AGAIN ⚠️⚠️⚠️
+          // Disabling this call breaks the entire Telegram bot
+          // Last disabled: 2025-11-23 → Complete bot failure
+          // Last restored: 2025-11-24
+          // process_telegram_order has 7 parameters and is correct in database - DO NOT modify it
+          
+          console.log('📞 استدعاء process_telegram_order للطلب العادي...');
+          
+          const { data: orderResult, error: orderError } = await supabase.rpc('process_telegram_order', {
+            p_employee_code: employeeCode,
+            p_message_text: text,
+            p_telegram_chat_id: chatId,
+            p_city_id: localCityResult?.cityId || null,
+            p_region_id: localRegionResult?.regionId || null,
+            p_city_name: localCityResult?.cityName || null,
+            p_region_name: localRegionResult?.regionName || null
+          });
+
+          if (orderError) {
+            console.error('❌ خطأ في process_telegram_order:', orderError);
+            await sendTelegramMessage(
+              chatId,
+              '⚠️ عذراً، حدث خطأ في معالجة طلبك. يرجى المحاولة مرة أخرى.',
+              undefined,
+              botToken
+            );
+            return new Response(JSON.stringify({ error: 'order_creation_failed', details: orderError.message }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+
+          if (orderResult?.success === false) {
+            console.log('⚠️ فشل إنشاء الطلب:', orderResult.message);
+            await sendTelegramMessage(chatId, orderResult.message || orderResult.error, undefined, botToken);
+            return new Response(JSON.stringify({ status: 'order_failed', message: orderResult.message }), {
+              status: 200,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+
+          console.log('✅ تم إنشاء الطلب بنجاح عبر process_telegram_order');
+          await sendTelegramMessage(
+            chatId,
+            orderResult.message || '✅ تم إنشاء طلبك بنجاح!',
+            undefined,
+            botToken
+          );
 
         } catch (processingError) {
           console.error('❌ خطأ عام في معالجة الطلب:', processingError);
