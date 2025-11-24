@@ -39,25 +39,13 @@ const OrderDetailsForm = ({
   // حساب رسوم التوصيل مع إعفاء الولاء
   const baseDeliveryFee = settings?.deliveryFee || 0;
   const deliveryFee = (applyLoyaltyDelivery && customerData?.currentTier?.free_delivery) ? 0 : baseDeliveryFee;
-  
-  // إضافة logging للتشخيص
-  console.log('📊 OrderDetailsForm - معلومات التوصيل:', {
-    settings: settings,
-    deliveryFee: deliveryFee,
-    activePartner: activePartner,
-    settingsDeliveryFee: settings?.deliveryFee
-  });
-  
   const finalTotal = total + deliveryFee;
 
   // ضمان تعيين القيمة الافتراضية لحجم الطلب
   useEffect(() => {
-    console.log('🔄 Setting default size - activePartner:', activePartner, 'current size:', formData.size);
-    
     // للتوصيل المحلي: ضمان "عادي" دائماً
     if (activePartner === 'local' || !activePartner) {
       if (formData.size !== 'عادي') {
-        console.log('📦 Setting default size to "عادي" for local delivery');
         handleSelectChange('size', 'عادي');
       }
     }
@@ -65,7 +53,6 @@ const OrderDetailsForm = ({
     else if (activePartner === 'alwaseet' && packageSizes && packageSizes.length > 0) {
       const firstPackageId = String(packageSizes[0]?.id || '');
       if (formData.size !== firstPackageId) {
-        console.log('📦 Setting default size to:', firstPackageId, 'for alwaseet');
         handleSelectChange('size', firstPackageId);
       }
     }

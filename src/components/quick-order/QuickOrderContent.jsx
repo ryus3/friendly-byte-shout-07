@@ -45,15 +45,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
-      console.log('🧹 QuickOrderContent - تنظيف نهائي');
     };
   }, [isDialog]);
   
   // ذاكرة تخزينية للمناطق لتقليل استدعاءات API
   const regionCache = useRef(new Map());
   
-  // حماية من البيانات غير الصحيحة في cart
-  console.log('🛒 QuickOrderContent - Cart state debug:', { cart: Array.isArray(cart) ? cart.length : 'not array', aiOrderData: !!aiOrderData });
   // حالة التعديل
   
   const { user } = useAuth();
@@ -96,7 +93,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // ملء البيانات من الطلب الذكي أو وضع التعديل عند وجوده
   useEffect(() => {
-    console.log('🚀 QuickOrderContent - AI/Edit Order Data received:', aiOrderData, { isEditMode });
     if (aiOrderData) {
       // Parse city and address intelligently
       const parseLocationData = (address, city) => {
@@ -142,7 +138,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       // في وضع التعديل، استخدم البيانات الأصلية مباشرة
       if (isEditMode) {
-        console.log('🔧 Setting form data for edit mode:', aiOrderData);
         setFormData(prev => ({
           ...prev,
           name: aiOrderData.customer_name || '',
@@ -167,15 +162,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           type: 'new'
         }));
         
-        console.log('✅ Form data set for edit mode');
-        console.log('📍 Address data:', {
-          city: aiOrderData.customer_city,
-          city_id: aiOrderData.city_id,
-          province: aiOrderData.customer_province,
-          region_id: aiOrderData.region_id,
-          address: aiOrderData.customer_address
-        });
-        
         // إضافة useEffect منفصل لضمان تطبيق نوع الطلب الافتراضي
         setTimeout(() => {
           setFormData(prev => ({
@@ -190,37 +176,27 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           
           // في وضع التعديل، تحديد المدينة والمنطقة من المعرفات الأصلية
           if (aiOrderData.city_id) {
-            console.log('🔧 Setting city ID for edit mode:', aiOrderData.city_id);
             setSelectedCityId(aiOrderData.city_id);
             // تحديث formData مباشرة لضمان ظهور القيمة في dropdown
             setFormData(prev => ({ ...prev, city_id: aiOrderData.city_id }));
           }
           if (aiOrderData.region_id) {
-            console.log('🔧 Setting region ID for edit mode:', aiOrderData.region_id);
             // تأخير تحديد المنطقة لضمان تحميل البيانات أولاً
             setTimeout(() => {
               setSelectedRegionId(aiOrderData.region_id);
               setFormData(prev => ({ ...prev, region_id: aiOrderData.region_id }));
-              console.log('✅ تم تحديد المنطقة في وضع التعديل:', aiOrderData.region_id);
             }, 500);
           }
-          
-          console.log('✅ تحديد المدينة والمنطقة الأصلية:', {
-            city_id: aiOrderData.city_id,
-            region_id: aiOrderData.region_id
-          });
         } else {
           setActivePartner('local');
         }
         
          // تحميل المنتجات الحقيقية من النظام الموحد في وضع التعديل
          if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
-           console.log('🛒 QuickOrderContent - Loading real products for edit mode:', aiOrderData.items);
            clearCart();
            
            (aiOrderData.items || []).filter(item => item != null).forEach((item, index) => {
              if (item && item.product_id && item.variant_id) {
-               console.log(`🔍 Loading real product ${index + 1}:`, item);
                
                // التحقق من صحة البيانات قبل المعالجة
                const safeItem = {
@@ -252,15 +228,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                  barcode: safeItem.barcode || ''
                };
                
-               console.log(`✅ Adding product ${index + 1} to cart for edit mode:`, { tempProduct, tempVariant, quantity: safeItem.quantity });
                addToCart(tempProduct, tempVariant, safeItem.quantity, false, true); // تجاهل فحص المخزون في وضع التعديل
-             } else {
-               console.warn(`⚠️ Skipping invalid item ${index + 1}:`, item);
              }
            });
-           console.log('✅ Cart loaded successfully for edit mode');
-         } else {
-           console.log('⚠️ No items found in aiOrderData for edit mode');
          }
         
         return; // انتهاء وضع التعديل

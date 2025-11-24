@@ -15,7 +15,6 @@ import devLog from '@/lib/devLogger';
 
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
 const CONTEXT_VERSION = '2.9.4';
-console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 // 🧠 Smart Cache - Module-level: تخزين الطلبات المجلوبة مؤقتاً لمدة 5 دقائق
 const CACHE_TTL = 5 * 60 * 1000; // 5 دقائق
