@@ -5,6 +5,29 @@ const TrackingHeader = ({ employee }) => {
   const socialMedia = employee?.social_media || {};
   const businessName = employee?.business_page_name || 'RYUS BRAND';
 
+  // دالة لتصحيح روابط WhatsApp الخاطئة تلقائياً
+  const formatWhatsAppLink = (link) => {
+    if (!link) return null;
+    
+    // إذا كان رابط api.whatsapp.com خاطئ
+    if (link.includes('api.whatsapp.com/send')) {
+      const phoneMatch = link.match(/phone=(\d+)/);
+      if (phoneMatch) {
+        const phone = phoneMatch[1];
+        const defaultMessage = encodeURIComponent('مرحباً، أريد الاستفسار عن طلبي');
+        return `https://wa.me/${phone}?text=${defaultMessage}`;
+      }
+    }
+    
+    // إذا كان wa.me لكن بدون رسالة
+    if (link.includes('wa.me') && !link.includes('text=')) {
+      const defaultMessage = encodeURIComponent('مرحباً، أريد الاستفسار');
+      return `${link}?text=${defaultMessage}`;
+    }
+    
+    return link;
+  };
+
   return (
     <header className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 border-b-4 border-violet-400/50 dark:border-violet-700/50 shadow-2xl">
       <div className="max-w-3xl mx-auto px-4 py-6">
@@ -31,7 +54,7 @@ const TrackingHeader = ({ employee }) => {
             <div className="flex items-center gap-3 mt-2">
               {socialMedia.whatsapp && (
                 <a
-                  href={socialMedia.whatsapp}
+                  href={formatWhatsAppLink(socialMedia.whatsapp)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-11 h-11 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-all flex items-center justify-center text-white shadow-lg hover:scale-110 border-2 border-white/30"
