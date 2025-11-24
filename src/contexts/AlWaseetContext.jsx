@@ -4490,9 +4490,9 @@ export const AlWaseetProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  // ✅ المرحلة 4: تحسين الزر الدائري - يقبل الطلبات الظاهرة
+  // ✅ المرحلة 4: تحسين الزر الدائري - يقبل الطلبات الظاهرة و onProgress
   // Perform sync with countdown - can be triggered manually even if autoSync is disabled
-  const performSyncWithCountdown = useCallback(async (visibleOrders = null) => {
+  const performSyncWithCountdown = useCallback(async (visibleOrders = null, onProgress) => {
     if (activePartner === 'local' || !isLoggedIn || isSyncing) return;
 
     // Start countdown mode WITHOUT setting isSyncing to true yet
@@ -4548,8 +4548,8 @@ export const AlWaseetProvider = ({ children }) => {
 
         if (ordersToSync && ordersToSync.length > 0) {
           console.log(`🔄 مزامنة ${ordersToSync.length} طلب...`);
-          // ✅ مزامنة باستخدام syncVisibleOrdersBatch
-          await syncVisibleOrdersBatch(ordersToSync);
+          // ✅ مزامنة باستخدام syncVisibleOrdersBatch مع تمرير onProgress
+          await syncVisibleOrdersBatch(ordersToSync, onProgress);
         }
 
         // ✅ الحذف التلقائي الآمن

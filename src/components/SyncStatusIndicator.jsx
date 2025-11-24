@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useTheme } from '@/contexts/ThemeContext';
-import { cn } from '@/lib/utils';
-import { Loader2, RefreshCw } from 'lucide-react';
-import { OrdersSyncProgress } from '@/components/orders/OrdersSyncProgress';
+import { RefreshCw, Loader2 } from 'lucide-react';
+import OrdersSyncProgress from '@/components/orders/OrdersSyncProgress';
 
 const SyncStatusIndicator = ({ className }) => {
   const {
@@ -33,12 +32,11 @@ const SyncStatusIndicator = ({ className }) => {
       setSyncProgress({ current: 0, total: 0, syncing: true });
       
       try {
-        // ✅ انتظار اكتمال المزامنة
-        await performSyncWithCountdown((progress) => {
-          // تحديث شريط التقدم بالبيانات الحية - عدد الطلبات
+        // ✅ انتظار اكتمال المزامنة مع تمرير onProgress كمعامل ثاني
+        await performSyncWithCountdown(null, (progress) => {
           setSyncProgress({
-            current: progress?.processedOrders || 0,  // ✅ عدد الطلبات المعالجة
-            total: progress?.totalOrders || 0,        // ✅ إجمالي الطلبات
+            current: progress?.processedOrders || 0,
+            total: progress?.totalOrders || 0,
             syncing: true
           });
         });
@@ -49,14 +47,22 @@ const SyncStatusIndicator = ({ className }) => {
     }
   };
 
-  // إخفاء شريط التقدم عند انتهاء المزامنة
+  // ✅ تتبع الحالة السابقة لـ isSyncing لمنع الإخفاء المبكر
+  const prevIsSyncingRef = useRef(isSyncing);
+  
   useEffect(() => {
-    if (!isSyncing && syncProgress.syncing) {
-      // ✅ تأخير مخفض: 500ms بدلاً من 1500ms
-      setTimeout(() => {
+    const wasSyncing = prevIsSyncingRef.current;
+    
+    // إخفاء الشريط فقط عند الانتقال من true → false
+    if (wasSyncing && !isSyncing && syncProgress.syncing) {
+      const timeout = setTimeout(() => {
         setSyncProgress({ current: 0, total: 0, syncing: false });
       }, 500);
+      prevIsSyncingRef.current = isSyncing;
+      return () => clearTimeout(timeout);
     }
+    
+    prevIsSyncingRef.current = isSyncing;
   }, [isSyncing, syncProgress.syncing]);
 
   const formatLastSync = (timestamp) => {
@@ -97,15 +103,13 @@ const SyncStatusIndicator = ({ className }) => {
       />
       
       <div 
-        className={cn(
-          "relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300",
-          "backdrop-blur-sm bg-white/90 dark:bg-gray-800/90 shadow-lg border",
+        className={`relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 backdrop-blur-sm bg-white/90 dark:bg-gray-800/90 shadow-lg border ${
           autoSyncEnabled 
             ? "border-border/50" 
-            : "border-orange-300 dark:border-orange-600 bg-orange-50/80 dark:bg-orange-950/50", // Paused styling
-          syncMode === 'countdown' || syncMode === 'syncing' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105",
-          className
-        )}
+            : "border-orange-300 dark:border-orange-600 bg-orange-50/80 dark:bg-orange-950/50"
+        } ${
+          syncMode === 'countdown' || syncMode === 'syncing' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105"
+        } ${className}`}
         onClick={handleClick}
         title={
           syncMode === 'syncing'
@@ -160,17 +164,15 @@ const SyncStatusIndicator = ({ className }) => {
         {syncMode === 'syncing' ? (
           <Loader2 className="w-4 h-4 animate-spin text-primary" />
         ) : syncMode === 'countdown' && syncCountdown > 0 ? (
-          <span className={cn("text-sm font-medium", getNumberColor())}>
+          <span className={`text-sm font-medium ${getNumberColor()}`}>
             {syncCountdown}
           </span>
         ) : (
-          <RefreshCw className={cn(
-            "w-4 h-4 transition-all duration-500",
+          <RefreshCw className={`w-4 h-4 transition-all duration-500 ${
             autoSyncEnabled 
               ? "text-muted-foreground" 
-              : "text-orange-500 dark:text-orange-400", // Paused state
-            isSpinning && "animate-[spin_1.5s_ease-in-out]"
-          )} />
+              : "text-orange-500 dark:text-orange-400"
+          } ${isSpinning && "animate-[spin_1.5s_ease-in-out]"}`} />
         )}
       </div>
       </div>
