@@ -57,8 +57,7 @@ const CustomersManagementPage = () => {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
-  const [showExportDialog, setShowExportDialog] = useState(false);
-const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
+const [showExportDialog, setShowExportDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('customers');
   const [cityDiscountsData, setCityDiscountsData] = useState({ cityDiscounts: [], monthlyBenefits: [], topCities: [] });
   const [currentPage, setCurrentPage] = useState(1);
@@ -954,15 +953,6 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
                       monthlyBenefits={cityDiscountsData.monthlyBenefits}
                       topCities={cityDiscountsData.topCities}
                     />
-                    <div className="text-center mt-6">
-                      <Button 
-                        variant="outline"
-                        className="gap-2"
-                        onClick={() => setShowTopProvincesDialog(true)}
-                      >
-                        <Trophy className="h-4 w-4" /> اختيار الفائزين الشهري
-                      </Button>
-                    </div>
                   </motion.div>
                 )}
 
