@@ -1,76 +1,80 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import StorefrontLayout from '@/components/storefront/StorefrontLayout';
 import HeroSection from '@/components/storefront/HeroSection';
 import PremiumProductCard from '@/components/storefront/PremiumProductCard';
 import GradientText from '@/components/storefront/ui/GradientText';
-import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 const StorefrontHome = () => {
   const { settings, trackPageView } = useStorefront();
+  const [banners, setBanners] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  React.useEffect(() => {
+  useEffect(() => {
     trackPageView();
   }, [trackPageView]);
 
-  // جلب البانرات
-  const { data: banners = [] } = useQuery({
-    queryKey: ['storefront-banners', settings?.employee_id],
-    queryFn: async () => {
-      if (!settings?.employee_id) return [];
-      const { data } = await supabase
-        .from('employee_banners')
-        .select('*')
-        .eq('employee_id', settings.employee_id)
-        .eq('is_active', true)
-        .order('display_order');
-      return data || [];
-    },
-    enabled: !!settings?.employee_id,
-  });
+  useEffect(() => {
+    if (!settings?.employee_id) return;
 
-  // جلب المنتجات المميزة
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ['storefront-featured-products', settings?.employee_id],
-    queryFn: async () => {
-      if (!settings?.employee_id) return [];
-      
-      const { data: customProducts } = await supabase
-        .from('employee_product_descriptions')
-        .select('product_id')
-        .eq('employee_id', settings.employee_id)
-        .eq('is_featured', true)
-        .order('display_order');
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
 
-      if (!customProducts || customProducts.length === 0) return [];
+        // جلب البانرات
+        const { data: bannersData } = await supabase
+          .from('employee_banners')
+          .select('*')
+          .eq('employee_id', settings.employee_id)
+          .eq('is_active', true)
+          .order('display_order');
 
-      const productIds = customProducts.map(p => p.product_id);
+        setBanners(bannersData || []);
 
-      const { data } = await supabase
-        .from('products')
-        .select(`
-          *,
-          variants:product_variants(
-            id,
-            color,
-            size,
-            quantity,
-            reserved_quantity,
-            price,
-            images
-          ),
-          category:categories(name),
-          department:departments(name)
-        `)
-        .in('id', productIds)
-        .eq('is_active', true);
+        // جلب المنتجات المميزة
+        const { data: customProducts } = await supabase
+          .from('employee_product_descriptions')
+          .select('product_id')
+          .eq('employee_id', settings.employee_id)
+          .eq('is_featured', true)
+          .order('display_order');
 
-      return data || [];
-    },
-    enabled: !!settings?.employee_id,
-  });
+        if (customProducts && customProducts.length > 0) {
+          const productIds = customProducts.map(p => p.product_id);
+
+          const { data: productsData } = await supabase
+            .from('products')
+            .select(`
+              *,
+              variants:product_variants(
+                id,
+                color,
+                size,
+                quantity,
+                reserved_quantity,
+                price,
+                images
+              ),
+              category:categories(name),
+              department:departments(name)
+            `)
+            .in('id', productIds)
+            .eq('is_active', true);
+
+          setProducts(productsData || []);
+        }
+      } catch (err) {
+        console.error('Error fetching storefront data:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [settings?.employee_id]);
 
   return (
     <div className="min-h-screen">
@@ -120,9 +124,9 @@ const StorefrontHome = () => {
 
 const StorefrontPageWrapper = () => {
   const { slug } = useParams();
-  const [products, setProducts] = React.useState([]);
+  const [allProducts, setAllProducts] = useState([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchProducts = async () => {
       const { data } = await supabase
         .from('products')
@@ -132,14 +136,14 @@ const StorefrontPageWrapper = () => {
         `)
         .eq('is_active', true)
         .limit(50);
-      setProducts(data || []);
+      setAllProducts(data || []);
     };
     fetchProducts();
   }, []);
 
   return (
     <StorefrontProvider slug={slug}>
-      <StorefrontLayout products={products}>
+      <StorefrontLayout products={allProducts}>
         <StorefrontHome />
       </StorefrontLayout>
     </StorefrontProvider>
