@@ -284,7 +284,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   .maybeSingle();
 
                 if (productData && productData.product_variants && productData.product_variants[0]) {
-                  console.log('Found product data for AI order:', productData);
                   const variant = productData.product_variants[0];
                   const product = {
                     id: productData.id,
@@ -302,7 +301,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                     quantity: 100 // افتراضي للمخزون
                   };
                   addToCart(product, variantData, item.quantity || 1, false);
-                  console.log('Added product to cart:', product, variantData);
                 } else {
                   // fallback للطريقة القديمة
                   fallbackAddToCart(item);
@@ -311,9 +309,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 console.error('Error fetching product data:', error);
                 fallbackAddToCart(item);
               }
-            } else {
-              console.log('Product data not found, using fallback for:', item);
-              fallbackAddToCart(item);
+              } else {
+                fallbackAddToCart(item);
             }
           }
         };
@@ -344,7 +341,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // useEffect منفصل لضمان تطبيق نوع الطلب الافتراضي في وضع التعديل
   useEffect(() => {
     if (aiOrderData?.editMode && formData.type !== 'new') {
-      console.log('🔧 Forcing order type to "new" in edit mode');
       setFormData(prev => ({
         ...prev,
         type: 'new'
@@ -369,20 +365,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         return;
       }
       
-      console.log('🔍 البحث عن العميل برقم:', formData.phone);
-      
-      // استخدام دالة تطبيع الهاتف الموحدة
       const normalizedPhone = normalizePhone(formData.phone);
       
       if (!normalizedPhone) {
-        console.log('❌ رقم هاتف غير صالح');
         setCustomerData(null);
         setLoyaltyDiscount(0);
         setDiscount(0);
         return;
       }
-      
-      console.log('📱 الرقم المطبع:', normalizedPhone);
       
       try {
         // حساب النقاط مباشرة من الطلبات المكتملة للحساب الحالي
@@ -438,7 +428,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           last_order_date: completedOrders[completedOrders.length - 1]?.created_at
         };
         
-        console.log('✅ تم حساب بيانات العميل من الطلبات:', customerInfo);
         setCustomerData(customerInfo);
         
         // حساب خصم الولاء المقرب لأقرب 500
@@ -450,7 +439,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setLoyaltyDiscount(roundedDiscount);
           setApplyLoyaltyDiscount(true); // تفعيل تلقائياً
           setDiscount(roundedDiscount); // تطبيق الخصم تلقائياً
-          console.log(`💰 خصم الولاء: ${discountPercentage}% = ${rawDiscount} -> ${roundedDiscount}`);
         } else {
           setLoyaltyDiscount(0);
           setApplyLoyaltyDiscount(false);
@@ -497,8 +485,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         const manualDiscount = Math.max(0, discount - loyaltyDiscount);
         setDiscount(roundedDiscountAmount + manualDiscount);
       }
-      
-      console.log(`🔄 تحديث الخصم: ${baseDiscountAmount} → ${roundedDiscountAmount} د.ع`);
     } else if (cart.length === 0) {
       setLoyaltyDiscount(0);
       setDiscount(0);
@@ -551,11 +537,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // في وضع التعديل، أولوية مطلقة للقيم المحفوظة
       if (isEditMode) {
         const editCityId = selectedCityId || formData.city_id;
-        console.log('🏙️ effectiveCityId في وضع التعديل:', {
-          selectedCityId,
-          formDataCityId: formData.city_id,
-          result: editCityId
-        });
         return editCityId;
       }
       return formData.city_id;
@@ -568,11 +549,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // في وضع التعديل، أولوية مطلقة للقيم المحفوظة
       if (isEditMode) {
         const editRegionId = selectedRegionId || formData.region_id;
-        console.log('🗺️ effectiveRegionId في وضع التعديل:', {
-          selectedRegionId,
-          formDataRegionId: formData.region_id,
-          result: editRegionId
-        });
         return editRegionId;
       }
       return formData.region_id;
@@ -592,34 +568,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
   }, [activePartner, formData.size]);
 
-  // إضافة logging للتشخيص
-  console.log('🔍 QuickOrderContent - حالة النموذج:', {
-    formDataSize: formData.size,
-    activePartner: activePartner,
-    settings: settings,
-    deliveryFee: settings?.deliveryFee
-  });
-
   // حساب المجاميع
    const subtotal = useMemo(() => {
-     // أضافة logging مفصل لتشخيص الخطأ
-     console.log('🔍 Calculating subtotal - Cart debug:', {
-       cart,
-       isArray: Array.isArray(cart),
-       length: cart?.length,
-       items: cart?.map((item, index) => ({
-         index,
-         hasQuantity: 'quantity' in (item || {}),
-         hasTotal: 'total' in (item || {}),
-         quantity: item?.quantity,
-         total: item?.total,
-         isValid: item && typeof item.total === 'number'
-       }))
-     });
-     
      const safeCart = Array.isArray(cart) ? cart.filter(item => item && typeof item.total === 'number') : [];
      const result = safeCart.reduce((sum, item) => sum + (item.total || 0), 0);
-     console.log('✅ Subtotal calculated:', result);
      return result;
    }, [cart]);
   const deliveryFee = useMemo(() => {
@@ -632,8 +584,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const resetForm = useCallback(() => {
     // تفعيل حالة المسح
     setIsResetting(true);
-    
-    console.log('🔄 مسح النموذج - بدء العملية');
     
     // مسح البيانات بشكل فوري ومنظم
     clearCart();
@@ -678,8 +628,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     
     // إنهاء حالة المسح فوراً
     setIsResetting(false);
-    
-    console.log('✅ مسح النموذج - تم بنجاح');
   }, [clearCart, defaultCustomerName, user?.default_customer_name, cities]);
 
   // إصلاح جذري: إعادة تعيين المدينة الافتراضية بعد resetForm
@@ -694,8 +642,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         city.name?.toLowerCase().includes('baghdad')
       );
       const defaultCity = baghdadCity || cities[0];
-      
-      console.log('🔄 إعادة تعيين المدينة الافتراضية بعد مسح النموذج:', defaultCity.name);
       
       // تأخير قصير لضمان اكتمال عملية resetForm
       setTimeout(() => {
