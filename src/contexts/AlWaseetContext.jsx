@@ -813,7 +813,6 @@ export const AlWaseetProvider = ({ children }) => {
             
             if (isRateLimitError) {
               consecutiveRateLimitErrors++;
-              console.warn(`⚠️ خطأ Rate Limiting #${consecutiveRateLimitErrors}/${MAX_RATE_LIMIT_ERRORS}`);
               
               // ✅ Circuit Breaker: إيقاف المزامنة بعد 5 أخطاء متتالية
               if (consecutiveRateLimitErrors >= MAX_RATE_LIMIT_ERRORS) {
@@ -1693,7 +1692,6 @@ export const AlWaseetProvider = ({ children }) => {
             parsedValue = JSON.parse(storedValue);
           } catch (e) {
             // فشل parse - القيمة فاسدة (مثل "modon" بدون JSON)
-            console.warn('🧹 تنظيف localStorage: قيمة فاسدة:', storedValue);
             localStorage.removeItem('active_delivery_partner');
             
             // استخراج القيمة الفعلية إذا كانت محاطة بـ quotes
@@ -1708,7 +1706,6 @@ export const AlWaseetProvider = ({ children }) => {
           
           // تم parse بنجاح - تحقق من القيمة
           if (parsedValue === 'local') {
-            console.warn('🧹 تنظيف localStorage: إزالة local');
             localStorage.removeItem('active_delivery_partner');
             setActivePartner('alwaseet');
           }
