@@ -18,8 +18,43 @@ const CONTEXT_VERSION = '2.9.4';
 console.log('🔄 AlWaseet Context Version:', CONTEXT_VERSION);
 
 // 🧠 Smart Cache - Module-level: تخزين الطلبات المجلوبة مؤقتاً لمدة 5 دقائق
-const orderCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 دقائق
+
+// ✅ Smart Cache باستخدام sessionStorage للاستمرارية
+const getCachedOrder = (trackingNumber) => {
+  try {
+    const cached = sessionStorage.getItem(`order_${trackingNumber}`);
+    if (!cached) return null;
+    
+    const { data, timestamp } = JSON.parse(cached);
+    if (Date.now() - timestamp > CACHE_TTL) {
+      sessionStorage.removeItem(`order_${trackingNumber}`);
+      return null;
+    }
+    return data;
+  } catch {
+    return null;
+  }
+};
+
+const setCachedOrder = (trackingNumber, data) => {
+  try {
+    sessionStorage.setItem(`order_${trackingNumber}`, JSON.stringify({
+      data,
+      timestamp: Date.now()
+    }));
+  } catch {
+    // Session storage full - ignore
+  }
+};
+
+// 🔒 Global Sync Mutex - منع المزامنات المتزامنة
+let globalSyncLock = false;
+let globalSyncPromise = null;
+
+// ⚡ Circuit Breaker Variables - Module-level
+let consecutiveRateLimitErrors = 0;
+const MAX_RATE_LIMIT_ERRORS = 5;
 
 const AlWaseetContext = createContext();
 
@@ -460,10 +495,27 @@ export const AlWaseetProvider = ({ children }) => {
   }, [toast]);
 
   const syncVisibleOrdersBatch = useCallback(async (visibleOrders, onProgress) => {
+    // ✅ فحص الـ lock العالمي - منع المزامنات المتزامنة
+    if (globalSyncLock) {
+      console.log('⏸️ مزامنة قيد التقدم - انتظار...');
+      // انتظار انتهاء المزامنة الحالية
+      if (globalSyncPromise) {
+        await globalSyncPromise;
+      }
+      return { success: true, message: 'تم التخطي - مزامنة أخرى قيد التقدم', updatedCount: 0 };
+    }
+    
     if (!visibleOrders || visibleOrders.length === 0) {
       devLog.log('لا توجد طلبات مرئية للمزامنة');
       return { success: true, updatedCount: 0 };
     }
+    
+    // ✅ قفل المزامنة
+    globalSyncLock = true;
+    const syncStartTime = performance.now();
+    
+    const syncPromise = (async () => {
+      try {
 
     // ✅ فلترة ذكية - استبعاد الحالات النهائية فقط
     const syncableOrders = visibleOrders.filter(order => {
@@ -519,12 +571,8 @@ export const AlWaseetProvider = ({ children }) => {
     let totalUpdated = 0;
     let processedGroups = 0;
     
-    // ⚡ Circuit Breaker: إيقاف المزامنة بعد 5 أخطاء rate limiting متتالية
-    const MAX_RATE_LIMIT_ERRORS = 5;
-    let consecutiveRateLimitErrors = 0;
-    
-    // إضافة تأخير بين المجموعات
-    const DELAY_BETWEEN_GROUPS = 1000; // 1 ثانية
+    // إضافة تأخير بين المجموعات - زيادة من 1s إلى 2s
+    const DELAY_BETWEEN_GROUPS = 2000; // 2 ثانية
     
     // معالجة كل مجموعة على حدة
     for (const [syncKey, groupOrders] of ordersByKey) {
@@ -665,8 +713,8 @@ export const AlWaseetProvider = ({ children }) => {
               if (orderIds.length > 0) {
                 // ⚡ حد API الوسيط الصحيح = 25 طلب لكل دفعة
                 const ALWASEET_BULK_LIMIT = 25;
-                const PARALLEL_LIMIT = 2; // حد التوازي = 2 طلبات متزامنة
-                const DELAY_BETWEEN_BATCHES = 200; // تأخير 200ms بين الدفعات
+                const PARALLEL_LIMIT = 1; // ✅ طلب واحد فقط في كل مرة (تقليل من 2)
+                const DELAY_BETWEEN_BATCHES = 500; // ✅ زيادة التأخير من 200ms إلى 500ms
                 
                 const chunks = [];
                 for (let i = 0; i < orderIds.length; i += ALWASEET_BULK_LIMIT) {
@@ -769,6 +817,25 @@ export const AlWaseetProvider = ({ children }) => {
             if (isRateLimitError) {
               consecutiveRateLimitErrors++;
               console.warn(`⚠️ خطأ Rate Limiting #${consecutiveRateLimitErrors}/${MAX_RATE_LIMIT_ERRORS}`);
+              
+              // ✅ Circuit Breaker: إيقاف المزامنة بعد 5 أخطاء متتالية
+              if (consecutiveRateLimitErrors >= MAX_RATE_LIMIT_ERRORS) {
+                console.error(`🛑 تم إيقاف المزامنة - تجاوز الحد الأقصى لأخطاء Rate Limiting (${MAX_RATE_LIMIT_ERRORS})`);
+                toast({
+                  title: "⚠️ تم إيقاف المزامنة مؤقتاً",
+                  description: "تم تجاوز الحد المسموح به. يُرجى الانتظار 5 دقائق قبل المزامنة مجدداً.",
+                  variant: "destructive",
+                  duration: 10000
+                });
+                
+                // إعادة تعيين بعد 5 دقائق
+                setTimeout(() => {
+                  consecutiveRateLimitErrors = 0;
+                  console.log('✅ تم إعادة تعيين Circuit Breaker');
+                }, 5 * 60 * 1000);
+                
+                break; // الخروج من المزامنة
+              }
             } else {
               consecutiveRateLimitErrors = 0; // إعادة تعيين إذا لم يكن rate limit
             }
@@ -1286,7 +1353,15 @@ export const AlWaseetProvider = ({ children }) => {
         updatedCount: 0,
         syncDuration: parseFloat(syncDuration)
       };
+    } finally {
+      // ✅ إلغاء قفل المزامنة دائماً
+      globalSyncLock = false;
+      globalSyncPromise = null;
     }
+    })();
+    
+    globalSyncPromise = syncPromise;
+    return await syncPromise;
   }, [getTokenForUser]);
   
   // دالة للتحقق من ملكية الطلب

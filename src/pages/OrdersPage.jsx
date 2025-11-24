@@ -117,86 +117,11 @@ const OrdersPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
-  // ✅ مزامنة تلقائية للطلبات المعلقة عند الدخول - مرة واحدة فقط
-  const hasSyncedRef = useRef(false);
-  
+  // ⛔ تعطيل المزامنة التلقائية - المستخدم يزامن يدوياً عند الحاجة
   useEffect(() => {
-    // منع التكرار - المزامنة مرة واحدة فقط
-    if (hasSyncedRef.current) {
-      devLog.log('⏭️ تم تخطي المزامنة - تمت بالفعل');
-      return;
-    }
-    
-    const performInitialSync = async () => {
-      // انتظار تحميل الطلبات أولاً
-      if (inventoryLoading || !orders || orders.length === 0) {
-        devLog.log('⏳ انتظار تحميل الطلبات في OrdersPage...');
-        return;
-      }
-      
-      // تأكيد أن المزامنة تمت
-      hasSyncedRef.current = true;
-      
-      // ✅ جلب جميع الطلبات النشطة من DB مباشرة (وليس من الذاكرة/الفلترة)
-      // هذا يضمن مزامنة الطلبات حتى لو كانت في صفحة pagination أخرى أو مخفية
-      const { data: allActiveOrders, error: ordersError } = await supabase
-        .from('orders')
-        .select('*')
-        .in('status', ['pending', 'shipped', 'delivery', 'delivered'])
-        .in('delivery_partner', ['alwaseet', 'modon'])
-        .neq('delivery_status', '17')
-        .neq('status', 'completed')
-        .neq('status', 'returned_in_stock');
-      
-      if (ordersError) {
-        console.error('❌ خطأ في جلب الطلبات النشطة:', ordersError);
-        return;
-      }
-      
-      const activeExternalOrders = allActiveOrders || [];
-      
-      if (activeExternalOrders.length === 0) {
-        devLog.log('ℹ️ لا توجد طلبات خارجية نشطة للمزامنة');
-        return;
-      }
-      
-      devLog.log(`🔄 [OrdersPage] مزامنة شاملة لـ ${activeExternalOrders.length} طلب نشط من DB (جميع الطلبات وليس الظاهرة فقط)...`);
-      
-      
-      try {
-        const result = await syncVisibleOrdersBatch(activeExternalOrders);
-        
-        if (result && result.updatedCount > 0) {
-          await refreshOrders();
-        }
-
-        // ✅ مزامنة الفواتير المستلمة تلقائياً
-        try {
-          const { data: syncRes, error: syncErr } = await supabase.rpc('sync_recent_received_invoices');
-          if (syncRes?.updated_orders_count > 0) {
-            devLog.log(`✅ تم تحديث ${syncRes.updated_orders_count} طلب من الفواتير`);
-          }
-        } catch (e) {
-          console.warn('⚠️ خطأ في مزامنة الفواتير:', e);
-        }
-
-        // ✅ الحذف التلقائي الآمن بعد مزامنة الحالات
-        await performDeletionPassAfterStatusSync();
-
-      } catch (error) {
-        console.warn('⚠️ فشلت المزامنة التلقائية للطلبات:', error.message || error);
-        // السماح بإعادة المحاولة عند الفشل
-        hasSyncedRef.current = false;
-      }
-    };
-
-    // ⚡ تقليل التأخير من 3s إلى 500ms لسرعة فائقة
-    const timer = setTimeout(() => {
-      performInitialSync();
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, []); // ✅ dependencies فارغة = مرة واحدة فقط عند تحميل الصفحة
+    console.log('ℹ️ مزامنة OrdersPage معطلة - استخدم زر المزامنة اليدوي');
+    return;
+  }, []);
 
   // ❌ تعطيل Fast Sync مؤقتاً للاختبار - الاعتماد فقط على Smart Sync
   /*
