@@ -235,40 +235,49 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
     return m;
   }, [eligibleOrdersByUser]);
 
-  // دمج العملاء على مستوى رقم الهاتف + حساب المشتريات بدون التوصيل + قراءة الجنس من قاعدة البيانات
+  // جلب العملاء الموحدين من customer_phone_loyalty مباشرة
+  const [phoneLoyaltyCustomers, setPhoneLoyaltyCustomers] = useState([]);
+  const [loadingPhoneLoyalty, setLoadingPhoneLoyalty] = useState(true);
+
+  useEffect(() => {
+    const fetchPhoneLoyaltyCustomers = async () => {
+      try {
+        setLoadingPhoneLoyalty(true);
+        const { data, error } = await supabase
+          .from('customer_phone_loyalty')
+          .select(`
+            *,
+            loyalty_tiers (
+              name,
+              name_en,
+              discount_percentage,
+              free_delivery_threshold,
+              points_expiry_months,
+              icon,
+              color
+            )
+          `)
+          .order('total_points', { ascending: false });
+
+        if (error) throw error;
+        setPhoneLoyaltyCustomers(data || []);
+      } catch (error) {
+        console.error('خطأ في جلب بيانات العملاء الموحدة:', error);
+      } finally {
+        setLoadingPhoneLoyalty(false);
+      }
+    };
+
+    fetchPhoneLoyaltyCustomers();
+  }, []);
+
+  // دمج العملاء من customer_phone_loyalty مع البيانات المحلية
   const mergedCustomers = useMemo(() => {
-    const map = new Map();
+    return phoneLoyaltyCustomers.map((cpl) => {
+      const phone = cpl.phone_number;
+      const relatedOrders = phone ? ordersByPhone.get(normalizePhone(phone)) || [] : [];
 
-    (displayCustomers || []).forEach((c) => {
-      const phone = normalizePhone(c.phone);
-      const key = phone || c.id;
-      const base = map.get(key) || {
-        ...c,
-        phone: phone || c.phone,
-        customer_loyalty: {
-          total_points: 0,
-          total_spent: 0,
-          total_orders: 0,
-          points_expiry_date: c.customer_loyalty?.points_expiry_date || null,
-        },
-      };
-
-      base.customer_loyalty.total_points += c.customer_loyalty?.total_points || 0;
-      base.customer_loyalty.total_spent += c.customer_loyalty?.total_spent || 0;
-      base.customer_loyalty.total_orders += c.customer_loyalty?.total_orders || 0;
-
-      if (!base.name && c.name) base.name = c.name;
-      if (!base.city && c.city) base.city = c.city;
-      if (!base.province && c.province) base.province = c.province;
-      if (!base.created_by && c.created_by) base.created_by = c.created_by;
-
-      map.set(key, base);
-    });
-
-    const result = Array.from(map.values()).map((c) => {
-      const phone = normalizePhone(c.phone);
-      const relatedOrders = phone ? ordersByPhone.get(phone) || [] : [];
-
+      // حساب المشتريات بدون التوصيل من الطلبات الحقيقية
       let ordersCount = 0;
       let spentNoDelivery = 0;
 
@@ -286,37 +295,29 @@ const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
         spentNoDelivery += revenueNoDelivery;
       });
 
-      const merged = {
-        ...c,
+      // توليد بروموكود ثابت بناءً على الهاتف والمستوى
+      const tierNameEn = cpl.loyalty_tiers?.name_en || 'BR';
+      const promoCode = `RY${phone.slice(-4)}${tierNameEn.slice(0, 2).toUpperCase()}`;
+
+      return {
+        id: cpl.id,
+        name: cpl.customer_name,
+        phone: cpl.phone_number,
+        city: cpl.customer_city,
+        province: cpl.customer_province,
+        created_by: currentUserId, // سيتم فلترته لاحقاً
         customer_loyalty: {
-          ...c.customer_loyalty,
-          total_points: c.customer_loyalty?.total_points || 0,
+          total_points: cpl.total_points || 0,
           total_orders: ordersCount,
           total_spent: spentNoDelivery,
+          points_expiry_date: cpl.points_expiry_date,
+          loyalty_tiers: cpl.loyalty_tiers,
         },
+        promoCode,
+        gender_type: null, // سيتم جلبه من customer_gender_segments إذا لزم
       };
-
-      const tier = getLoyaltyLevel(merged.customer_loyalty.total_points || 0);
-      merged.customer_loyalty.loyalty_tiers = merged.customer_loyalty.loyalty_tiers || { name: tier.name };
-
-      // توليد بروموكود ثابت بناءً على الهاتف والمستوى
-      if (phone) {
-        const abbrMap = { 'برونزي': 'BR', 'فضي': 'SL', 'ذهبي': 'GD', 'ماسي': 'DM' };
-        const abbr = abbrMap[merged.customer_loyalty.loyalty_tiers.name] || 'BR';
-        merged.promoCode = `RY${phone.slice(-4)}${abbr}`;
-      }
-
-      // قراءة الجنس من جدول تصنيف الجنس في قاعدة البيانات
-      merged.gender_type = c.customer_gender_segments?.[0]?.gender_type || 
-                          c.customer_gender_segments?.gender_type ||
-                          c.gender_type ||
-                          null;
-
-      return merged;
     });
-
-    return result;
-  }, [displayCustomers, ordersByPhone]);
+  }, [phoneLoyaltyCustomers, ordersByPhone, currentUserId]);
 
   // فصل العملاء لكل مستخدم (حتى المدير) بالاعتماد على منشئ الطلبات/العميل
   const myCustomers = useMemo(() => {

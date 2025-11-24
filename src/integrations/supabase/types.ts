@@ -5439,6 +5439,37 @@ export type Database = {
       }
     }
     Views: {
+      customers_unified_loyalty: {
+        Row: {
+          created_at: string | null
+          current_tier_id: string | null
+          customer_city: string | null
+          customer_name: string | null
+          customer_province: string | null
+          first_order_date: string | null
+          free_delivery_threshold: number | null
+          id: string | null
+          last_order_date: string | null
+          phone_number: string | null
+          points_expiry_date: string | null
+          points_expiry_months: number | null
+          tier_discount: number | null
+          tier_name: string | null
+          total_orders: number | null
+          total_points: number | null
+          total_spent: number | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_phone_loyalty_current_tier_id_fkey"
+            columns: ["current_tier_id"]
+            isOneToOne: false
+            referencedRelation: "loyalty_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       delivery_invoices_needing_sync: {
         Row: {
           external_id: string | null
