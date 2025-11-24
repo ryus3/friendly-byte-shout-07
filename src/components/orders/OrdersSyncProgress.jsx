@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 /**
  * مؤشر تقدم احترافي عالمي للمزامنة - مطابق للسبلاش
- * يظهر في المنتصف أعلى الصفحة بتصميم أنيق وشفاف
+ * يظهر في أعلى يمين الصفحة بتصميم أنيق وشفاف
  */
 export const OrdersSyncProgress = ({ syncing, current, total }) => {
   const progressPercentage = total > 0 ? Math.round((current / total) * 100) : 0;
@@ -18,7 +18,7 @@ export const OrdersSyncProgress = ({ syncing, current, total }) => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -20, scale: 0.95 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
-          className="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-72 md:w-80"
+          className="fixed top-4 right-4 z-50 w-80"
         >
           <Card className="border-primary/20 bg-background/95 backdrop-blur-sm shadow-lg">
             <CardContent className="p-3">

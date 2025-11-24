@@ -4495,12 +4495,9 @@ export const AlWaseetProvider = ({ children }) => {
   const performSyncWithCountdown = useCallback(async (visibleOrders = null, onProgress) => {
     if (activePartner === 'local' || !isLoggedIn || isSyncing) return;
 
-    // التحقق من المزامنة الأولية
-    const isInitialSync = !lastSyncAt;
-
     // Start countdown mode WITHOUT setting isSyncing to true yet
     setSyncMode('countdown');
-    setSyncCountdown(isInitialSync ? 2 : 5); // ✅ 2 ثانية للمزامنة الأولية، 5 للمزامنة اليدوية
+    setSyncCountdown(5); // ✅ تقليل من 10 إلى 5 ثواني
 
     // Countdown timer
     const countdownInterval = setInterval(() => {
@@ -4515,10 +4512,9 @@ export const AlWaseetProvider = ({ children }) => {
 
     // Wait for countdown then sync
     const startTime = Date.now();
-    const syncStartTime = performance.now();
     setTimeout(async () => {
       try {
-        console.log('[SYNC-TIMING] 🚀 بدء المزامنة:', new Date().toISOString(), `(مزامنة ${isInitialSync ? 'أولية' : 'يدوية'})`);
+        console.log('[SYNC-TIMING] 🚀 بدء المزامنة:', new Date().toISOString());
         // NOW set syncing to true when actual sync starts
         setIsSyncing(true);
         setSyncMode('syncing');
@@ -4556,69 +4552,53 @@ export const AlWaseetProvider = ({ children }) => {
           // ✅ مزامنة باستخدام syncVisibleOrdersBatch مع تمرير onProgress
           await syncVisibleOrdersBatch(ordersToSync, onProgress);
           
-          const batchEndTime = performance.now();
-          console.log(`[SYNC-TIMING] ✅ انتهاء syncVisibleOrdersBatch: ${(batchEndTime - syncStartTime).toFixed(0)}ms`);
+          const syncEndTime = Date.now();
+          console.log('[SYNC-TIMING] ✅ انتهاء syncVisibleOrdersBatch:', new Date().toISOString(), `(${syncEndTime - startTime}ms)`);
         }
 
-        // ✅ الحذف التلقائي الآمن - يُنفّذ دائماً (أولية + يدوية)
+        // ✅ الحذف التلقائي الآمن
         console.log('🧹 تمرير الحذف التلقائي الآمن...');
-        const deleteStartTime = performance.now();
         await performDeletionPassAfterStatusSync();
-        const deleteEndTime = performance.now();
-        console.log(`[SYNC-TIMING] ✅ انتهاء الحذف التلقائي: ${(deleteEndTime - syncStartTime).toFixed(0)}ms (استغرق ${(deleteEndTime - deleteStartTime).toFixed(0)}ms)`);
         
-        // ✅ إخفاء الشريط والدائرة فوراً بعد العمليات الأساسية
-        setIsSyncing(false);
-        setSyncMode('standby');
-        setSyncCountdown(0);
-        console.log(`[SYNC-TIMING] 🏁 إخفاء UI: ${(performance.now() - syncStartTime).toFixed(0)}ms`);
+        // ✅ ربط الفواتير بالطلبات أولاً (المرحلة 1)
+        console.log('🔗 ربط الفواتير بالطلبات...');
+        await linkInvoiceOrdersToOrders();
         
-        // ✅ العمليات الإضافية - فقط للمزامنة اليدوية (في الخلفية)
-        if (!isInitialSync) {
-          // تنفيذ العمليات الإضافية بدون await (في الخلفية)
-          (async () => {
-            try {
-              const bgStartTime = performance.now();
-              console.log('🔗 [خلفية] ربط الفواتير بالطلبات...');
-              await linkInvoiceOrdersToOrders();
-              console.log(`[SYNC-TIMING] ✅ [خلفية] انتهاء ربط الفواتير: ${(performance.now() - bgStartTime).toFixed(0)}ms`);
-              
-              console.log('📧 [خلفية] مزامنة الفواتير المستلمة تلقائياً...');
-              const syncInvStartTime = performance.now();
-              const { data: syncRes, error: syncErr } = await supabase.rpc('sync_recent_received_invoices');
-              if (syncErr) {
-                console.warn('⚠️ فشل في مزامنة الفواتير المستلمة:', syncErr.message);
-              } else if (syncRes?.updated_orders_count > 0) {
-                console.log(`✅ [خلفية] تمت مزامنة ${syncRes.updated_orders_count} طلب من الفواتير المستلمة`);
-              } else {
-                console.log('ℹ️ [خلفية] لا توجد فواتير جديدة للمزامنة');
-              }
-              console.log(`[SYNC-TIMING] ✅ [خلفية] انتهاء مزامنة الفواتير: ${(performance.now() - syncInvStartTime).toFixed(0)}ms`);
-              
-              console.log('🔧 [خلفية] فحص وإصلاح تعارضات الحالات...');
-              const fixStartTime = performance.now();
-              const fixResult = await fixStatusMismatches();
-              if (fixResult?.fixed > 0) {
-                console.log(`✅ [خلفية] تم إصلاح ${fixResult.fixed} طلب تلقائياً`);
-              }
-              console.log(`[SYNC-TIMING] ✅ [خلفية] انتهاء إصلاح التعارضات: ${(performance.now() - fixStartTime).toFixed(0)}ms`);
-              
-              console.log(`[SYNC-TIMING] 🎯 العمليات الإضافية انتهت: ${(performance.now() - bgStartTime).toFixed(0)}ms`);
-            } catch (err) {
-              console.error('⚠️ خطأ في العمليات الإضافية:', err);
-            }
-          })();
+        // ✅ مزامنة الفواتير المستلمة تلقائياً
+        console.log('📧 مزامنة الفواتير المستلمة تلقائياً...');
+        try {
+          const { data: syncRes, error: syncErr } = await supabase.rpc('sync_recent_received_invoices');
+          if (syncErr) {
+            console.warn('⚠️ فشل في مزامنة الفواتير المستلمة:', syncErr.message);
+          } else if (syncRes?.updated_orders_count > 0) {
+            console.log(`✅ تمت مزامنة ${syncRes.updated_orders_count} طلب من الفواتير المستلمة`);
+          } else {
+            console.log('ℹ️ لا توجد فواتير جديدة للمزامنة');
+          }
+        } catch (e) {
+          console.warn('⚠️ خطأ في مزامنة الفواتير المستلمة:', e?.message || e);
+        }
+        
+        // ✅ إصلاح تعارضات الحالات التلقائي بعد كل مزامنة
+        console.log('🔧 فحص وإصلاح تعارضات الحالات...');
+        const fixResult = await fixStatusMismatches();
+        if (fixResult?.fixed > 0) {
+          console.log(`✅ تم إصلاح ${fixResult.fixed} طلب تلقائياً`);
         }
         
         setLastSyncAt(new Date());
         console.log('✅ تمت المزامنة بنجاح');
       } catch (error) {
         console.error('❌ خطأ في المزامنة:', error);
+      } finally {
+        const finalEndTime = Date.now();
+        console.log('[SYNC-TIMING] 🏁 تعيين isSyncing=false:', new Date().toISOString(), `(إجمالي: ${finalEndTime - startTime}ms)`);
+        
         setIsSyncing(false);
         setSyncMode('standby');
         setSyncCountdown(0);
       }
-    }, isInitialSync ? 2000 : 5000); // ✅ 2 ثانية للمزامنة الأولية، 5 للمزامنة اليدوية
+    }, 5000); // ✅ تقليل من 10000 إلى 5000
     // ✅ لا نضيف الدوال useCallback في dependencies لأنها مستقرة
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activePartner, isLoggedIn, isSyncing]);
