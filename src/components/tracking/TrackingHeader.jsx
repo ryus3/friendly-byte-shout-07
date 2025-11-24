@@ -1,40 +1,10 @@
 import { MessageCircle, Send, Instagram, Facebook } from 'lucide-react';
 import ryusLogo from '@/assets/ryus-logo.png';
+import { formatWhatsAppLink } from '@/utils/phoneUtils';
 
 const TrackingHeader = ({ employee }) => {
   const socialMedia = employee?.social_media || {};
   const businessName = employee?.business_page_name || 'RYUS BRAND';
-
-  // دالة لتصحيح روابط WhatsApp الخاطئة تلقائياً
-  const formatWhatsAppLink = (link) => {
-    if (!link) return null;
-    
-    // ✅ روابط WhatsApp المُختصرة (wa.me/message/CODE) - إزالة أي معامل text زائد
-    if (link.includes('wa.me/message/')) {
-      // إزالة أي معامل text أو query params زائدة
-      const cleanLink = link.split('?')[0]; // https://wa.me/message/XXXXX فقط
-      return cleanLink;
-    }
-    
-    // ✅ روابط api.whatsapp.com/send - تحويل لـ wa.me
-    if (link.includes('api.whatsapp.com/send')) {
-      const phoneMatch = link.match(/phone=(\d+)/);
-      if (phoneMatch) {
-        const phone = phoneMatch[1];
-        const defaultMessage = encodeURIComponent('مرحباً، أريد الاستفسار عن طلبي');
-        return `https://wa.me/${phone}?text=${defaultMessage}`;
-      }
-    }
-    
-    // ✅ روابط wa.me/{phone} بدون رسالة - إضافة رسالة افتراضية
-    if (link.includes('wa.me/') && !link.includes('/message/') && !link.includes('text=')) {
-      const defaultMessage = encodeURIComponent('مرحباً، أريد الاستفسار');
-      const separator = link.includes('?') ? '&' : '?';
-      return `${link}${separator}text=${defaultMessage}`;
-    }
-    
-    return link;
-  };
 
   return (
     <header className="bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 border-b-4 border-violet-400/50 dark:border-violet-700/50 shadow-2xl">
