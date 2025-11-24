@@ -345,7 +345,7 @@ const EditProfileDialog = ({ isOpen, onClose, profile }) => {
                         />
                         {link.type === 'whatsapp' && (
                           <p className="text-xs text-muted-foreground">
-                            استخدم wa.me بدلاً من api.whatsapp.com (مثال: https://wa.me/9647XXXXXXXX)
+                            ⚠️ استخدم wa.me بدلاً من api.whatsapp.com • رقم الهاتف يجب أن يبدأ بـ 964 (مثال: https://wa.me/9647XXXXXXXX)
                           </p>
                         )}
                       </div>
