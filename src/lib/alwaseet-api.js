@@ -14,16 +14,22 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         let errorMessage = `فشل الاتصال بالخادم الوكيل: ${error.message}`;
         let retryAfter = null;
         
+        // ✅ تحسين معالجة أخطاء الشبكة
+        const isNetworkError = error.message?.includes('Failed to fetch') || 
+                              error.message?.includes('Network') ||
+                              error.message?.includes('ECONNREFUSED');
+        
         try {
           const errorBody = await error.context.json();
           errorMessage = errorBody.msg || errorMessage;
-          retryAfter = errorBody.retryAfter; // فحص retryAfter header من السيرفر
+          retryAfter = errorBody.retryAfter;
         } catch {
           // If we can't parse the error body, use the default message
         }
         
         const err = new Error(errorMessage);
         err.retryAfter = retryAfter;
+        err.isNetworkError = isNetworkError;
         throw err;
       }
       
@@ -56,19 +62,29 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         error.message?.includes('rate limit') ||
         error.message?.includes('429');
       
+      const isNetworkError = error.isNetworkError || 
+                            error.message?.includes('Failed to fetch') ||
+                            error.message?.includes('Network');
+      
       // إذا كان rate limit وليست آخر محاولة، ننتظر ونعيد
       if (isRateLimitError && attempt < retries) {
-        // استخدام retryAfter من السيرفر إذا كان موجوداً، وإلا linear capped delay
-        const waitTime = error.retryAfter || Math.min(1000 * attempt, 3000); // 1s→2s→3s max
+        const waitTime = error.retryAfter || Math.min(1000 * attempt, 3000);
         console.warn(`⚠️ Rate limit مؤقت لـ ${endpoint} - إعادة المحاولة ${attempt}/${retries} بعد ${waitTime/1000}s...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
       }
       
+      // ✅ معالجة هادئة لأخطاء الشبكة الخارجية
+      if (isNetworkError && attempt === retries) {
+        // آخر محاولة وخطأ شبكة - تسجيل مُختصر بدون spam
+        console.warn(`⚠️ خطأ شبكة لـ ${endpoint} - API خارجي غير متاح`);
+        throw error;
+      }
+      
       // معالجة الخطأ النهائية
       if (isRateLimitError) {
         console.warn(`⚠️ Rate limit مؤقت لـ ${endpoint} - تم تجاوز عدد المحاولات`);
-      } else {
+      } else if (!isNetworkError) {
         console.error(`API call failed for ${endpoint}:`, error);
       }
       
@@ -319,39 +335,39 @@ export const receiveInvoice = async (token, invoiceId) => {
   return handleApiCall('receive_merchant_invoice', 'GET', token, null, { token, invoice_id: invoiceId });
 };
 
-// Get specific order by QR/tracking number - طريقة موثوقة لحماية نظام الحذف التلقائي
+// ✅ Get specific order by QR/tracking number - استخدام bulk API بدلاً من merchant-orders
 export const getOrderByQR = async (token, qrId) => {
   try {
-    // ✅ **الطريقة الموثوقة**: جلب كل الطلبات والبحث فيها
-    // هذه الطريقة **لا** تُرجع بيانات cached للطلبات المحذوفة
-    const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
+    // ✅ استخدام getOrdersByIdsBulk بدلاً من جلب كل الطلبات
+    // هذا يرسل استدعاء واحد فقط بـ ID محدد بدلاً من جلب آلاف الطلبات
+    const orders = await getOrdersByIdsBulk(token, [qrId]);
     
-    if (!orders || !Array.isArray(orders)) {
-      console.warn(`⚠️ لم يتم استلام قائمة طلبات صالحة من API`);
+    if (!orders || !Array.isArray(orders) || orders.length === 0) {
       return null;
     }
     
-    const found = orders.find(order => 
-      order.qr_id === String(qrId) || 
-      order.id === String(qrId) ||
-      order.tracking_number === String(qrId)
-    );
+    const found = orders[0];
     
-    if (found) {
-      // ✅ إضافة timestamp للتحقق من حداثة البيانات
-      found._fetched_at = new Date().toISOString();
-      // ✅ توحيد: ضمان وجود qr_id دائماً
-      if (!found.qr_id && found.id) {
-        found.qr_id = found.id;
-      }
-      console.log(`✅ تم العثور على الطلب ${qrId} في القائمة (${orders.length} طلب)`);
-    } else {
-      console.log(`🗑️ الطلب ${qrId} غير موجود في قائمة الطلبات (${orders.length} طلب) - محذوف أو غير موجود`);
+    // ✅ إضافة timestamp للتحقق من حداثة البيانات
+    found._fetched_at = new Date().toISOString();
+    // ✅ توحيد: ضمان وجود qr_id دائماً
+    if (!found.qr_id && found.id) {
+      found.qr_id = found.id;
     }
     
-    return found || null;
+    return found;
   } catch (error) {
-    console.error(`❌ فشل جلب قائمة الطلبات:`, error);
+    // ✅ معالجة هادئة للأخطاء - خاصة أخطاء الشبكة
+    const isNetworkError = error.message?.includes('Failed to fetch') || 
+                          error.message?.includes('Network');
+    
+    if (isNetworkError) {
+      // تسجيل واحد هادئ بدون spam
+      console.warn(`⚠️ getOrderByQR: API خارجي غير متاح (${qrId})`);
+    } else {
+      console.warn(`⚠️ getOrderByQR failed for ${qrId}:`, error.message);
+    }
+    
     return null;
   }
 };

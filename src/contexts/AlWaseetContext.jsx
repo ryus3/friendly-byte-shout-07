@@ -498,7 +498,6 @@ export const AlWaseetProvider = ({ children }) => {
     // ✅ فحص الـ lock العالمي - منع المزامنات المتزامنة
     if (globalSyncLock) {
       console.log('⏸️ مزامنة قيد التقدم - انتظار...');
-      // انتظار انتهاء المزامنة الحالية
       if (globalSyncPromise) {
         await globalSyncPromise;
       }
@@ -513,6 +512,9 @@ export const AlWaseetProvider = ({ children }) => {
     // ✅ قفل المزامنة
     globalSyncLock = true;
     const syncStartTime = performance.now();
+    
+    // 📊 إحصائيات API - عداد الاستدعاءات
+    let apiCallsCount = 0;
     
     const syncPromise = (async () => {
       try {
@@ -719,12 +721,13 @@ export const AlWaseetProvider = ({ children }) => {
                 merchantOrders = [];
                 console.log(`📦 سيتم جلب ${orderIds.length} طلب في ${chunks.length} دفعة(s) بالتوازي (حد=${PARALLEL_LIMIT})`);
                 
-                // معالجة بالتوازي مع حد = 2 طلبات متزامنة
+                // معالجة بالتوازي مع حد = 1 طلب متزامن فقط
                 for (let i = 0; i < chunks.length; i += PARALLEL_LIMIT) {
                   const parallelChunks = chunks.slice(i, i + PARALLEL_LIMIT);
                   
                   const batchPromises = parallelChunks.map(async (chunk) => {
                     try {
+                      apiCallsCount++; // ✅ زيادة عداد الاستدعاءات
                       const batchOrders = await AlWaseetAPI.getOrdersByIdsBulk(
                         employeeTokenData.token,
                         chunk
@@ -1325,16 +1328,28 @@ export const AlWaseetProvider = ({ children }) => {
         
         devLog.log(`🎉 انتهت مزامنة الدفعة - ${totalUpdated} طلب محدث من ${processedGroups} مجموعة`);
         
-        // ⏱️ عرض وقت المزامنة الإجمالي
+        // ⏱️ عرض إحصائيات المزامنة الدقيقة
         const syncDuration = ((performance.now() - syncStartTime) / 1000).toFixed(2);
-        console.log(`✅ [SYNC-PERF] اكتملت المزامنة في ${syncDuration} ثانية (${totalOrders} طلب)`);
+        console.log(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 [SYNC-STATS] إحصائيات المزامنة النهائية
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ تمت مزامنة: ${totalOrders} طلب
+🔄 تم تحديث: ${totalUpdated} طلب
+📞 استدعاءات API: ${apiCallsCount}
+⏱️  المدة الإجمالية: ${syncDuration} ثانية
+📈 المعدل: ${(totalOrders / parseFloat(syncDuration)).toFixed(1)} طلب/ثانية
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        `);
         
         return {
           success: true, 
           updatedCount: totalUpdated,
           processedGroups,
           totalGroups: ordersByKey.size,
-          syncDuration: parseFloat(syncDuration)
+          syncDuration: parseFloat(syncDuration),
+          apiCallsCount,
+          totalOrders
         };
 
       } catch (error) {
