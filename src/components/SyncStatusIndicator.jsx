@@ -32,30 +32,28 @@ const SyncStatusIndicator = ({ className }) => {
       setIsSpinning(true);
       setSyncProgress({ current: 0, total: 0, syncing: true });
       
-      // Start sync after animation completes
-      setTimeout(() => {
-        performSyncWithCountdown((progress) => {
-          // تحديث شريط التقدم بالبيانات الحية - عدد الطلبات
-          setSyncProgress({
-            current: progress?.processedOrders || 0,  // ✅ عدد الطلبات المعالجة
-            total: progress?.totalOrders || 0,        // ✅ إجمالي الطلبات
-            syncing: true
-          });
+      // ✅ بدء المزامنة فوراً
+      performSyncWithCountdown((progress) => {
+        // تحديث شريط التقدم بالبيانات الحية - عدد الطلبات
+        setSyncProgress({
+          current: progress?.processedOrders || 0,  // ✅ عدد الطلبات المعالجة
+          total: progress?.totalOrders || 0,        // ✅ إجمالي الطلبات
+          syncing: true
         });
-        setIsSpinning(false);
-      }, 1500);
+      });
+      setIsSpinning(false);
     }
   };
 
   // إخفاء شريط التقدم عند انتهاء المزامنة
   useEffect(() => {
     if (!isSyncing && syncProgress.syncing) {
-      // تأخير بسيط لعرض 100% قبل الإخفاء
+      // ✅ تأخير مخفض: 500ms بدلاً من 1500ms
       setTimeout(() => {
         setSyncProgress({ current: 0, total: 0, syncing: false });
-      }, 1500);
+      }, 500);
     }
-  }, [isSyncing]);
+  }, [isSyncing, syncProgress.syncing]);
 
   const formatLastSync = (timestamp) => {
     if (!timestamp) return '';

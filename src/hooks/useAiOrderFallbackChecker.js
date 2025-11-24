@@ -27,7 +27,7 @@ export const useAiOrderFallbackChecker = (user) => {
           .select('id, created_at, customer_name, source, created_by')
           .order('created_at', { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (error && error.code !== 'PGRST116') { // PGRST116 = No rows returned
           console.error('❌ FALLBACK: Error fetching latest AI order:', error);
