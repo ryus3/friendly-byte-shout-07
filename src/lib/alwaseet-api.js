@@ -52,8 +52,7 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
       
       // إذا كان rate limit وليست آخر محاولة، ننتظر ونعيد
       if (isRateLimitError && attempt < retries) {
-        // ✅ Adaptive delays بدلاً من exponential backoff
-        const waitTime = Math.min(1000 * attempt, 3000); // 1s, 2s, 3s max
+        const waitTime = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
         console.warn(`⚠️ Rate limit مؤقت لـ ${endpoint} - إعادة المحاولة ${attempt}/${retries} بعد ${waitTime/1000}s...`);
         await new Promise(resolve => setTimeout(resolve, waitTime));
         continue;
