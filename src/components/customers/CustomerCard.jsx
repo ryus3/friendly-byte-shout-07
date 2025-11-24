@@ -263,7 +263,7 @@ const CustomerCard = React.memo(({
               </motion.div>
 
               {/* صلاحية النقاط */}
-              {pointsExpiryDate && hasPoints && (
+              {pointsExpiryDate && hasPoints && !isNaN(pointsExpiryDate.getTime()) && (
                 <motion.div 
                   className="flex items-center justify-between"
                   whileHover={{ scale: 1.02 }}
