@@ -516,68 +516,63 @@ export const AlWaseetProvider = ({ children }) => {
     
     const syncPromise = (async () => {
       try {
+        // ✅ فلترة ذكية - استبعاد الحالات النهائية فقط
+        const syncableOrders = visibleOrders.filter(order => {
+          if (!order.created_by || !order.delivery_partner || order.delivery_partner === 'local') return false;
+          
+          // ✅ استبعاد الحالات النهائية والطلبات المستلمة فواتيرها:
+          // 1. delivery_status = '17' (راجع للتاجر) - نهائية
+          // 2. status = 'completed' (مكتمل) - نهائية
+          // 3. status = 'returned_in_stock' (راجع للمخزن) - نهائية
+          // 4. receipt_received = true (استلمت الفاتورة) - نهائية
+          // 5. delivery_partner_invoice_id موجود (له فاتورة) - نهائية
+          
+          if (order.delivery_status === '17') return false;
+          if (order.status === 'completed') return false;
+          if (order.status === 'returned_in_stock') return false;
+          if (order.receipt_received === true) return false;
+          if (order.delivery_partner_invoice_id) return false;
+          
+          // ✅ السماح بمزامنة جميع الحالات الأخرى بما فيها:
+          // - delivery_status = '4' (مسلّم) ← ليست نهائية، قد يحدث تحديثات
+          // - delivery_status = '1','2','3' (معلق، جاري التوصيل، في المستودع)
+          return true;
+        });
 
-    // ✅ فلترة ذكية - استبعاد الحالات النهائية فقط
-    const syncableOrders = visibleOrders.filter(order => {
-      if (!order.created_by || !order.delivery_partner || order.delivery_partner === 'local') return false;
-      
-      // ✅ استبعاد الحالات النهائية والطلبات المستلمة فواتيرها:
-      // 1. delivery_status = '17' (راجع للتاجر) - نهائية
-      // 2. status = 'completed' (مكتمل) - نهائية
-      // 3. status = 'returned_in_stock' (راجع للمخزن) - نهائية
-      // 4. receipt_received = true (استلمت الفاتورة) - نهائية
-      // 5. delivery_partner_invoice_id موجود (له فاتورة) - نهائية
-      
-      if (order.delivery_status === '17') return false;
-      if (order.status === 'completed') return false;
-      if (order.status === 'returned_in_stock') return false;
-      if (order.receipt_received === true) return false;
-      if (order.delivery_partner_invoice_id) return false;
-      
-      // ✅ السماح بمزامنة جميع الحالات الأخرى بما فيها:
-      // - delivery_status = '4' (مسلّم) ← ليست نهائية، قد يحدث تحديثات
-      // - delivery_status = '1','2','3' (معلق، جاري التوصيل، في المستودع)
-      return true;
-    });
-
-    if (syncableOrders.length === 0) {
-      devLog.log('لا توجد طلبات نشطة للمزامنة (تم استبعاد المكتملة والمرجعة)');
-      return { success: true, updatedCount: 0 };
-    }
-
-    devLog.log(`🚀 بدء مزامنة ${syncableOrders.length} طلب نشط من ${visibleOrders.length} طلب ظاهر...`);
-    
-    // ⏱️ قياس وقت المزامنة
-    const syncStartTime = performance.now();
-    
-    try {
-      // ✅ تجميع مركب: created_by + delivery_partner + delivery_account_used
-      const ordersByKey = new Map();
-      
-      for (const order of syncableOrders) {
-        // ✅ مفتاح مركب: employeeId|||partner|||account
-        const syncKey = `${order.created_by}|||${order.delivery_partner}|||${order.delivery_account_used || 'افتراضي'}`;
-        
-        if (!ordersByKey.has(syncKey)) {
-          ordersByKey.set(syncKey, []);
+        if (syncableOrders.length === 0) {
+          devLog.log('لا توجد طلبات نشطة للمزامنة (تم استبعاد المكتملة والمرجعة)');
+          return { success: true, updatedCount: 0 };
         }
-        ordersByKey.get(syncKey).push(order);
-      }
 
-    devLog.log(`📊 تم تجميع الطلبات: ${ordersByKey.size} مجموعة مستقلة (موظف+شركة+حساب)`);
-    
-    const totalOrders = syncableOrders.length;  // إجمالي الطلبات القابلة للمزامنة
-    let processedOrders = 0;  // عداد الطلبات التي تمت معالجتها
-    let totalUpdated = 0;
-    let processedGroups = 0;
-    
-    // إضافة تأخير بين المجموعات - زيادة من 1s إلى 2s
-    const DELAY_BETWEEN_GROUPS = 2000; // 2 ثانية
-    
-    // معالجة كل مجموعة على حدة
-    for (const [syncKey, groupOrders] of ordersByKey) {
-      try {
-        // ⚠️ فحص Circuit Breaker
+        devLog.log(`🚀 بدء مزامنة ${syncableOrders.length} طلب نشط من ${visibleOrders.length} طلب ظاهر...`);
+        
+        // ✅ تجميع مركب: created_by + delivery_partner + delivery_account_used
+        const ordersByKey = new Map();
+        
+        for (const order of syncableOrders) {
+          // ✅ مفتاح مركب: employeeId|||partner|||account
+          const syncKey = `${order.created_by}|||${order.delivery_partner}|||${order.delivery_account_used || 'افتراضي'}`;
+          
+          if (!ordersByKey.has(syncKey)) {
+            ordersByKey.set(syncKey, []);
+          }
+          ordersByKey.get(syncKey).push(order);
+        }
+
+        devLog.log(`📊 تم تجميع الطلبات: ${ordersByKey.size} مجموعة مستقلة (موظف+شركة+حساب)`);
+        
+        const totalOrders = syncableOrders.length;  // إجمالي الطلبات القابلة للمزامنة
+        let processedOrders = 0;  // عداد الطلبات التي تمت معالجتها
+        let totalUpdated = 0;
+        let processedGroups = 0;
+        
+        // إضافة تأخير بين المجموعات - زيادة من 1s إلى 2s
+        const DELAY_BETWEEN_GROUPS = 2000; // 2 ثانية
+        
+        // معالجة كل مجموعة على حدة
+        for (const [syncKey, groupOrders] of ordersByKey) {
+          try {
+            // ⚠️ فحص Circuit Breaker
         if (consecutiveRateLimitErrors >= MAX_RATE_LIMIT_ERRORS) {
           console.error(`🛑 تم إيقاف المزامنة - تجاوز الحد الأقصى لأخطاء Rate Limiting (${MAX_RATE_LIMIT_ERRORS})`);
           toast({
@@ -1312,52 +1307,52 @@ export const AlWaseetProvider = ({ children }) => {
             }
           }
 
-          processedGroups++;
-          devLog.log(`✅ تمت معالجة المجموعة ${processedGroups}/${ordersByKey.size} - تم تحديث ${groupUpdated} طلب`);
+            processedGroups++;
+            devLog.log(`✅ تمت معالجة المجموعة ${processedGroups}/${ordersByKey.size} - تم تحديث ${groupUpdated} طلب`);
+            
+          } catch (groupError) {
+            console.error(`❌ خطأ في معالجة المجموعة ${syncKey}:`, groupError);
+          }
           
-        } catch (groupError) {
-          console.error(`❌ خطأ في معالجة المجموعة ${syncKey}:`, groupError);
+          // ✅ تأخير بين المجموعات للحفاظ على استقرار API
+          if (processedGroups < ordersByKey.size) {
+            await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_GROUPS));
+          }
         }
         
-        // ✅ تأخير بين المجموعات للحفاظ على استقرار API
-        if (processedGroups < ordersByKey.size) {
-          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_GROUPS));
-        }
-      }
-      
-      // ✅ إعادة تعيين Circuit Breaker عند النجاح
-      consecutiveRateLimitErrors = 0;
-      
-      devLog.log(`🎉 انتهت مزامنة الدفعة - ${totalUpdated} طلب محدث من ${processedGroups} مجموعة`);
-      
-      // ⏱️ عرض وقت المزامنة الإجمالي
-      const syncDuration = ((performance.now() - syncStartTime) / 1000).toFixed(2);
-      console.log(`✅ [SYNC-PERF] اكتملت المزامنة في ${syncDuration} ثانية (${totalOrders} طلب)`);
-      
-      return {
-        success: true, 
-        updatedCount: totalUpdated,
-        processedGroups,
-        totalGroups: ordersByKey.size,
-        syncDuration: parseFloat(syncDuration)
-      };
+        // ✅ إعادة تعيين Circuit Breaker عند النجاح
+        consecutiveRateLimitErrors = 0;
+        
+        devLog.log(`🎉 انتهت مزامنة الدفعة - ${totalUpdated} طلب محدث من ${processedGroups} مجموعة`);
+        
+        // ⏱️ عرض وقت المزامنة الإجمالي
+        const syncDuration = ((performance.now() - syncStartTime) / 1000).toFixed(2);
+        console.log(`✅ [SYNC-PERF] اكتملت المزامنة في ${syncDuration} ثانية (${totalOrders} طلب)`);
+        
+        return {
+          success: true, 
+          updatedCount: totalUpdated,
+          processedGroups,
+          totalGroups: ordersByKey.size,
+          syncDuration: parseFloat(syncDuration)
+        };
 
-    } catch (error) {
-      const syncDuration = ((performance.now() - syncStartTime) / 1000).toFixed(2);
-      console.error(`❌ [SYNC-PERF] فشلت المزامنة بعد ${syncDuration} ثانية:`, error);
-      
-      console.error('❌ خطأ في مزامنة الطلبات المرئية:', error);
-      return { 
-        success: false, 
-        error: error.message,
-        updatedCount: 0,
-        syncDuration: parseFloat(syncDuration)
-      };
-    } finally {
-      // ✅ إلغاء قفل المزامنة دائماً
-      globalSyncLock = false;
-      globalSyncPromise = null;
-    }
+      } catch (error) {
+        const syncDuration = ((performance.now() - syncStartTime) / 1000).toFixed(2);
+        console.error(`❌ [SYNC-PERF] فشلت المزامنة بعد ${syncDuration} ثانية:`, error);
+        
+        console.error('❌ خطأ في مزامنة الطلبات المرئية:', error);
+        return { 
+          success: false, 
+          error: error.message,
+          updatedCount: 0,
+          syncDuration: parseFloat(syncDuration)
+        };
+      } finally {
+        // ✅ إلغاء قفل المزامنة دائماً
+        globalSyncLock = false;
+        globalSyncPromise = null;
+      }
     })();
     
     globalSyncPromise = syncPromise;
