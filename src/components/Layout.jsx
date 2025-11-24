@@ -34,6 +34,7 @@ const SidebarContent = ({ onClose, isMobile }) => {
   const menuItems = [
     { path: '/', icon: Home, label: 'لوحة التحكم', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-blue-500' },
     { path: '/quick-order', icon: Zap, label: 'طلب سريع', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'cashier'], color: 'text-yellow-500' },
+    { path: '/dashboard/storefront', icon: Store, label: 'المتجر', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee'], requiresStorefrontAccess: true, color: 'text-fuchsia-500' },
     { path: '/my-orders', icon: ShoppingCart, label: user?.roles?.includes('super_admin') || user?.roles?.includes('admin') ? 'متابعة الطلبات' : 'طلباتي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-green-500' },
     { path: '/profits-summary', icon: Wallet, label: 'أرباحي', roles: ['department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-emerald-600' },
     { path: '/sales', icon: TrendingUp, label: 'المبيعات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-cyan-600' },
@@ -62,9 +63,14 @@ const SidebarContent = ({ onClose, isMobile }) => {
         return hasRole && hasCustomerPermission;
       }
       
+      // فحص الصلاحيات الخاصة - التحقق من صلاحية المتجر الإلكتروني
+      if (item.requiresStorefrontAccess) {
+        return hasRole && user?.has_storefront_access === true;
+      }
+      
       return hasRole;
     });
-  }, [menuItems, user?.roles, user?.customer_management_access]);
+  }, [menuItems, user?.roles, user?.customer_management_access, user?.has_storefront_access]);
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {
