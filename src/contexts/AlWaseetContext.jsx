@@ -512,9 +512,32 @@ export const AlWaseetProvider = ({ children }) => {
     let totalUpdated = 0;
     let processedGroups = 0;
     
+    // ⚡ Circuit Breaker: إيقاف المزامنة بعد 5 أخطاء rate limiting متتالية
+    const MAX_RATE_LIMIT_ERRORS = 5;
+    let consecutiveRateLimitErrors = 0;
+    
+    // 🧠 Smart Cache: تخزين الطلبات المجلوبة مؤقتاً لمدة 5 دقائق
+    const orderCacheRef = useRef(new Map());
+    const CACHE_TTL = 5 * 60 * 1000; // 5 دقائق
+    
+    // إضافة تأخير بين المجموعات
+    const DELAY_BETWEEN_GROUPS = 1000; // 1 ثانية
+    
     // معالجة كل مجموعة على حدة
     for (const [syncKey, groupOrders] of ordersByKey) {
       try {
+        // ⚠️ فحص Circuit Breaker
+        if (consecutiveRateLimitErrors >= MAX_RATE_LIMIT_ERRORS) {
+          console.error(`🛑 تم إيقاف المزامنة - تجاوز الحد الأقصى لأخطاء Rate Limiting (${MAX_RATE_LIMIT_ERRORS})`);
+          toast({
+            title: "⚠️ تم إيقاف المزامنة مؤقتاً",
+            description: "تم تجاوز الحد المسموح به. يُرجى الانتظار 5 دقائق.",
+            variant: "destructive",
+            duration: 10000
+          });
+          break;
+        }
+        
         processedGroups++;
         processedOrders += groupOrders.length;  // ✅ زيادة العداد بعدد طلبات المجموعة
         
@@ -637,26 +660,47 @@ export const AlWaseetProvider = ({ children }) => {
                 .filter(Boolean);
 
               if (orderIds.length > 0) {
-                // ⚡ زيادة batch size من 25 إلى 100 لسرعة فائقة
+                // ⚡ حد API الوسيط الصحيح = 25 طلب لكل دفعة
+                const ALWASEET_BULK_LIMIT = 25;
+                const PARALLEL_LIMIT = 2; // حد التوازي = 2 طلبات متزامنة
+                const DELAY_BETWEEN_BATCHES = 200; // تأخير 200ms بين الدفعات
+                
                 const chunks = [];
-                for (let i = 0; i < orderIds.length; i += 100) {
-                  chunks.push(orderIds.slice(i, i + 100));
+                for (let i = 0; i < orderIds.length; i += ALWASEET_BULK_LIMIT) {
+                  chunks.push(orderIds.slice(i, i + ALWASEET_BULK_LIMIT));
                 }
                 
                 merchantOrders = [];
-                console.log(`📦 سيتم جلب ${orderIds.length} طلب في ${chunks.length} دفعة(s)`);
+                console.log(`📦 سيتم جلب ${orderIds.length} طلب في ${chunks.length} دفعة(s) بالتوازي (حد=${PARALLEL_LIMIT})`);
                 
-                for (const chunk of chunks) {
-                  try {
-                    const batchOrders = await AlWaseetAPI.getOrdersByIdsBulk(
-                      employeeTokenData.token,
-                      chunk
-                    );
-                    merchantOrders.push(...(batchOrders || []));
-                    
-                    console.log(`✅ [Bulk] جلب ${batchOrders?.length || 0} طلب من ${chunk.length} مطلوب`);
-                  } catch (err) {
-                    console.error(`❌ خطأ في جلب دفعة:`, err);
+                // معالجة بالتوازي مع حد = 2 طلبات متزامنة
+                for (let i = 0; i < chunks.length; i += PARALLEL_LIMIT) {
+                  const parallelChunks = chunks.slice(i, i + PARALLEL_LIMIT);
+                  
+                  const batchPromises = parallelChunks.map(async (chunk) => {
+                    try {
+                      const batchOrders = await AlWaseetAPI.getOrdersByIdsBulk(
+                        employeeTokenData.token,
+                        chunk
+                      );
+                      console.log(`✅ [Bulk] جلب ${batchOrders?.length || 0} طلب من ${chunk.length} مطلوب`);
+                      return batchOrders || [];
+                    } catch (err) {
+                      console.error(`❌ خطأ في جلب دفعة:`, err);
+                      return [];
+                    }
+                  });
+                  
+                  const results = await Promise.allSettled(batchPromises);
+                  results.forEach(result => {
+                    if (result.status === 'fulfilled') {
+                      merchantOrders.push(...result.value);
+                    }
+                  });
+                  
+                  // تأخير بين مجموعات التوازي
+                  if (i + PARALLEL_LIMIT < chunks.length) {
+                    await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
                   }
                 }
                 
@@ -712,6 +756,19 @@ export const AlWaseetProvider = ({ children }) => {
             console.error(`❌ ===== [${partnerName}] خطأ في getMerchantOrders =====`);
             console.error('الخطأ:', apiError.message);
             console.error('Stack:', apiError.stack);
+            
+            // ⚡ تتبع أخطاء Rate Limiting للCircuit Breaker
+            const isRateLimitError = 
+              apiError.message?.includes('تجاوزت الحد المسموح به') || 
+              apiError.message?.includes('rate limit') ||
+              apiError.message?.includes('429');
+            
+            if (isRateLimitError) {
+              consecutiveRateLimitErrors++;
+              console.warn(`⚠️ خطأ Rate Limiting #${consecutiveRateLimitErrors}/${MAX_RATE_LIMIT_ERRORS}`);
+            } else {
+              consecutiveRateLimitErrors = 0; // إعادة تعيين إذا لم يكن rate limit
+            }
             
             toast({
               title: `❌ خطأ في مزامنة ${partnerName}`,
@@ -1191,7 +1248,15 @@ export const AlWaseetProvider = ({ children }) => {
         } catch (groupError) {
           console.error(`❌ خطأ في معالجة المجموعة ${syncKey}:`, groupError);
         }
+        
+        // ✅ تأخير بين المجموعات للحفاظ على استقرار API
+        if (processedGroups < ordersByKey.size) {
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_GROUPS));
+        }
       }
+      
+      // ✅ إعادة تعيين Circuit Breaker عند النجاح
+      consecutiveRateLimitErrors = 0;
       
       devLog.log(`🎉 انتهت مزامنة الدفعة - ${totalUpdated} طلب محدث من ${processedGroups} مجموعة`);
       
