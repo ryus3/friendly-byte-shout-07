@@ -98,6 +98,28 @@
     --secondary-foreground: 222.2 47.4% 11.2%;
     --muted: 220 14% 96%;
     --muted-foreground: 220 9% 46%;
+
+    /* 🎨 Professional Storefront Gradients - Cosmic Premium */
+    --gradient-cosmic-dawn: linear-gradient(135deg, hsl(248, 80%, 67%) 0%, hsl(271, 48%, 55%) 25%, hsl(305, 93%, 84%) 50%, hsl(348, 87%, 62%) 75%, hsl(191, 100%, 50%) 100%);
+    --gradient-ocean-breeze: linear-gradient(120deg, hsl(191, 100%, 50%) 0%, hsl(215, 64%, 52%) 50%, hsl(191, 100%, 50%) 100%);
+    --gradient-sunset-glow: linear-gradient(135deg, hsl(340, 92%, 63%) 0%, hsl(48, 98%, 63%) 100%);
+    --gradient-purple-dream: linear-gradient(120deg, hsl(259, 41%, 70%) 0%, hsl(325, 80%, 86%) 100%);
+    --gradient-cyber-neon: linear-gradient(45deg, hsl(305, 93%, 84%) 0%, hsl(348, 87%, 62%) 50%, hsl(207, 99%, 64%) 100%);
+    --gradient-emerald-fresh: linear-gradient(135deg, hsl(158, 64%, 52%) 0%, hsl(178, 78%, 57%) 100%);
+    --gradient-fire-blaze: linear-gradient(135deg, hsl(27, 98%, 54%) 0%, hsl(348, 83%, 47%) 50%, hsl(330, 81%, 60%) 100%);
+    --gradient-royal-gold: linear-gradient(120deg, hsl(48, 89%, 50%) 0%, hsl(36, 100%, 50%) 50%, hsl(27, 98%, 54%) 100%);
+    
+    /* Glass Morphism Effects */
+    --glass-ultra-bg: rgba(255, 255, 255, 0.75);
+    --glass-ultra-border: rgba(255, 255, 255, 0.3);
+    --glass-shadow: rgba(31, 38, 135, 0.15);
+    
+    /* Storefront Specific Colors */
+    --storefront-primary: hsl(221, 83%, 53%);
+    --storefront-accent: hsl(271, 48%, 55%);
+    --storefront-success: hsl(158, 64%, 52%);
+    --storefront-warning: hsl(36, 100%, 50%);
+    --storefront-danger: hsl(348, 83%, 47%);
     --accent: 220 14% 92%;
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
@@ -218,8 +240,55 @@
     @apply backdrop-blur-lg bg-card/90 dark:bg-card/80 border border-border/50 dark:border-border/60 shadow-lg;
   }
 
+  /* 🎨 Professional Gradient Text Classes */
   .gradient-text {
     @apply bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent;
+  }
+
+  .gradient-text-holographic {
+    background: linear-gradient(135deg, hsl(207, 90%, 61%) 0%, hsl(271, 48%, 55%) 50%, hsl(330, 81%, 60%) 100%);
+    background-size: 200% 200%;
+    animation: gradient-flow 3s ease infinite;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .gradient-text-gold {
+    @apply bg-gradient-to-r from-amber-200 via-yellow-400 to-amber-200 bg-clip-text text-transparent;
+  }
+
+  .gradient-text-emerald {
+    @apply bg-gradient-to-r from-emerald-300 via-teal-400 to-cyan-400 bg-clip-text text-transparent;
+  }
+
+  .gradient-text-fire {
+    @apply bg-gradient-to-r from-orange-400 via-red-500 to-pink-500 bg-clip-text text-transparent;
+  }
+  
+  /* 🎨 Professional Button Gradients */
+  .btn-gradient-primary {
+    @apply bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 text-white font-bold shadow-lg shadow-purple-500/50 hover:shadow-xl hover:shadow-purple-500/70 transition-all duration-300;
+  }
+
+  .btn-gradient-success {
+    @apply bg-gradient-to-r from-emerald-400 to-cyan-500 hover:from-emerald-500 hover:to-cyan-600 text-white font-bold shadow-lg shadow-emerald-500/50 transition-all duration-300;
+  }
+
+  .btn-gradient-warning {
+    @apply bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-bold shadow-lg shadow-orange-500/50 transition-all duration-300;
+  }
+
+  .btn-gradient-premium {
+    @apply bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500 hover:from-yellow-500 hover:via-amber-600 hover:to-orange-600 text-white font-bold shadow-2xl shadow-amber-500/60 hover:shadow-amber-500/80 transition-all duration-300;
+  }
+
+  /* Glass Ultra Premium */
+  .glass-ultra {
+    backdrop-filter: blur(20px) saturate(180%);
+    background: var(--glass-ultra-bg);
+    border: 1px solid var(--glass-ultra-border);
+    box-shadow: 0 8px 32px 0 var(--glass-shadow);
   }
   
   .gradient-primary {

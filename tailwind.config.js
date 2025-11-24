@@ -20,6 +20,20 @@ module.exports = {
         cairo: ['Cairo', 'sans-serif'],
         tajawal: ['Tajawal', 'sans-serif'],
       },
+      animation: {
+        'gradient': 'gradient-flow 3s ease infinite',
+        'shimmer': 'shimmer 2s linear infinite',
+      },
+      keyframes: {
+        'gradient-flow': {
+          '0%, 100%': { backgroundPosition: '0% 50%' },
+          '50%': { backgroundPosition: '100% 50%' },
+        },
+        'shimmer': {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(100%)' },
+        },
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
