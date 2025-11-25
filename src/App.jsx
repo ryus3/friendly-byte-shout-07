@@ -55,6 +55,7 @@ const StorefrontPromotionsPage = lazy(() => import('@/pages/employee-storefront/
 const StorefrontBannersPage = lazy(() => import('@/pages/employee-storefront/StorefrontBannersPage.jsx'));
 const StorefrontOrdersPage = lazy(() => import('@/pages/employee-storefront/StorefrontOrdersPage.jsx'));
 const StorefrontSetupWizard = lazy(() => import('@/pages/employee-storefront/StorefrontSetupWizard.jsx'));
+const AdvancedSettingsPage = lazy(() => import('@/pages/employee-storefront/AdvancedSettingsPage.jsx'));
 
 // Public Storefront Pages
 const StorefrontPage = lazy(() => import('@/pages/StorefrontPage.jsx'));
@@ -212,6 +213,7 @@ function AppContent() {
           <Route path="/dashboard/storefront" element={<ProtectedRoute>{childrenWithProps(StorefrontDashboardPage)}</ProtectedRoute>} />
           <Route path="/dashboard/storefront/setup-wizard" element={<ProtectedRoute>{childrenWithProps(StorefrontSetupWizard)}</ProtectedRoute>} />
           <Route path="/dashboard/storefront/settings" element={<ProtectedRoute>{childrenWithProps(StorefrontSettingsPage)}</ProtectedRoute>} />
+          <Route path="/dashboard/storefront/advanced-settings" element={<ProtectedRoute>{childrenWithProps(AdvancedSettingsPage)}</ProtectedRoute>} />
           <Route path="/dashboard/storefront/products" element={<ProtectedRoute>{childrenWithProps(StorefrontProductsManagePage)}</ProtectedRoute>} />
           <Route path="/dashboard/storefront/promotions" element={<ProtectedRoute>{childrenWithProps(StorefrontPromotionsPage)}</ProtectedRoute>} />
           <Route path="/dashboard/storefront/banners" element={<ProtectedRoute>{childrenWithProps(StorefrontBannersPage)}</ProtectedRoute>} />

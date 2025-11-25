@@ -1741,6 +1741,65 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_custom_products: {
+        Row: {
+          brand: string | null
+          category: string | null
+          colors: Json | null
+          created_at: string | null
+          description: string | null
+          employee_id: string | null
+          id: string
+          images: Json | null
+          is_active: boolean | null
+          name: string
+          price: number
+          sizes: Json | null
+          stock_quantity: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          brand?: string | null
+          category?: string | null
+          colors?: Json | null
+          created_at?: string | null
+          description?: string | null
+          employee_id?: string | null
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          name: string
+          price: number
+          sizes?: Json | null
+          stock_quantity?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          brand?: string | null
+          category?: string | null
+          colors?: Json | null
+          created_at?: string | null
+          description?: string | null
+          employee_id?: string | null
+          id?: string
+          images?: Json | null
+          is_active?: boolean | null
+          name?: string
+          price?: number
+          sizes?: Json | null
+          stock_quantity?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_custom_products_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       employee_debts: {
         Row: {
           amount: number
@@ -1957,11 +2016,18 @@ export type Database = {
       employee_product_descriptions: {
         Row: {
           created_at: string | null
+          custom_colors: Json | null
           custom_description: string | null
           custom_images: string[] | null
+          custom_price: number | null
+          custom_sizes: Json | null
+          discount_end_date: string | null
+          discount_percentage: number | null
+          discount_start_date: string | null
           display_order: number | null
           employee_id: string
           id: string
+          is_custom_product: boolean | null
           is_featured: boolean | null
           product_id: string
           size_chart_url: string | null
@@ -1969,11 +2035,18 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          custom_colors?: Json | null
           custom_description?: string | null
           custom_images?: string[] | null
+          custom_price?: number | null
+          custom_sizes?: Json | null
+          discount_end_date?: string | null
+          discount_percentage?: number | null
+          discount_start_date?: string | null
           display_order?: number | null
           employee_id: string
           id?: string
+          is_custom_product?: boolean | null
           is_featured?: boolean | null
           product_id: string
           size_chart_url?: string | null
@@ -1981,11 +2054,18 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          custom_colors?: Json | null
           custom_description?: string | null
           custom_images?: string[] | null
+          custom_price?: number | null
+          custom_sizes?: Json | null
+          discount_end_date?: string | null
+          discount_percentage?: number | null
+          discount_start_date?: string | null
           display_order?: number | null
           employee_id?: string
           id?: string
+          is_custom_product?: boolean | null
           is_featured?: boolean | null
           product_id?: string
           size_chart_url?: string | null
@@ -2036,6 +2116,59 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      employee_promo_codes: {
+        Row: {
+          code: string
+          created_at: string | null
+          current_uses: number | null
+          discount_type: string
+          discount_value: number
+          employee_id: string | null
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          max_uses: number | null
+          min_purchase_amount: number | null
+          start_date: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          current_uses?: number | null
+          discount_type: string
+          discount_value: number
+          employee_id?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_purchase_amount?: number | null
+          start_date?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          current_uses?: number | null
+          discount_type?: string
+          discount_value?: number
+          employee_id?: string | null
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_uses?: number | null
+          min_purchase_amount?: number | null
+          start_date?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_promo_codes_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       employee_promotions: {
         Row: {
@@ -2118,15 +2251,109 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_storefront_popups: {
+        Row: {
+          content: string | null
+          created_at: string | null
+          cta_link: string | null
+          cta_text: string | null
+          display_delay: number | null
+          employee_id: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          title: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string | null
+          cta_link?: string | null
+          cta_text?: string | null
+          display_delay?: number | null
+          employee_id?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          title: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string | null
+          cta_link?: string | null
+          cta_text?: string | null
+          display_delay?: number | null
+          employee_id?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_storefront_popups_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      employee_storefront_sections: {
+        Row: {
+          content: Json | null
+          created_at: string | null
+          display_order: number | null
+          employee_id: string | null
+          id: string
+          is_enabled: boolean | null
+          section_type: string
+          subtitle: string | null
+          title: string | null
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string | null
+          display_order?: number | null
+          employee_id?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          section_type: string
+          subtitle?: string | null
+          title?: string | null
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string | null
+          display_order?: number | null
+          employee_id?: string | null
+          id?: string
+          is_enabled?: boolean | null
+          section_type?: string
+          subtitle?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_storefront_sections_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       employee_storefront_settings: {
         Row: {
           about_us: string | null
           accent_color: string
+          announcement_bar_enabled: boolean | null
+          announcement_bar_text: string | null
           banner_url: string | null
           created_at: string | null
           custom_css: string | null
           employee_id: string
           font_family: string
+          header_style: string | null
           id: string
           is_active: boolean | null
           layout_config: Json | null
@@ -2137,6 +2364,8 @@ export type Database = {
           privacy_policy: string | null
           return_policy: string | null
           secondary_color: string
+          show_categories: boolean | null
+          show_search: boolean | null
           slug: string
           terms_conditions: string | null
           theme_name: string
@@ -2145,11 +2374,14 @@ export type Database = {
         Insert: {
           about_us?: string | null
           accent_color?: string
+          announcement_bar_enabled?: boolean | null
+          announcement_bar_text?: string | null
           banner_url?: string | null
           created_at?: string | null
           custom_css?: string | null
           employee_id: string
           font_family?: string
+          header_style?: string | null
           id?: string
           is_active?: boolean | null
           layout_config?: Json | null
@@ -2160,6 +2392,8 @@ export type Database = {
           privacy_policy?: string | null
           return_policy?: string | null
           secondary_color?: string
+          show_categories?: boolean | null
+          show_search?: boolean | null
           slug: string
           terms_conditions?: string | null
           theme_name?: string
@@ -2168,11 +2402,14 @@ export type Database = {
         Update: {
           about_us?: string | null
           accent_color?: string
+          announcement_bar_enabled?: boolean | null
+          announcement_bar_text?: string | null
           banner_url?: string | null
           created_at?: string | null
           custom_css?: string | null
           employee_id?: string
           font_family?: string
+          header_style?: string | null
           id?: string
           is_active?: boolean | null
           layout_config?: Json | null
@@ -2183,6 +2420,8 @@ export type Database = {
           privacy_policy?: string | null
           return_policy?: string | null
           secondary_color?: string
+          show_categories?: boolean | null
+          show_search?: boolean | null
           slug?: string
           terms_conditions?: string | null
           theme_name?: string
@@ -5555,6 +5794,7 @@ export type Database = {
       storefront_orders: {
         Row: {
           created_at: string | null
+          customer_phone_id: string | null
           customer_session_id: string | null
           id: string
           order_id: string
@@ -5566,6 +5806,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          customer_phone_id?: string | null
           customer_session_id?: string | null
           id?: string
           order_id: string
@@ -5577,6 +5818,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          customer_phone_id?: string | null
           customer_session_id?: string | null
           id?: string
           order_id?: string
@@ -5587,6 +5829,20 @@ export type Database = {
           utm_source?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "storefront_orders_customer_phone_id_fkey"
+            columns: ["customer_phone_id"]
+            isOneToOne: false
+            referencedRelation: "customer_phone_loyalty"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "storefront_orders_customer_phone_id_fkey"
+            columns: ["customer_phone_id"]
+            isOneToOne: false
+            referencedRelation: "customers_unified_loyalty"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "storefront_orders_order_id_fkey"
             columns: ["order_id"]

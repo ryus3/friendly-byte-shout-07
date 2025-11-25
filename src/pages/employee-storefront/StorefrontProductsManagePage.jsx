@@ -2,11 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import ProductSelector from '@/components/employee-storefront/ProductSelector';
-import CustomDescriptionEditor from '@/components/employee-storefront/CustomDescriptionEditor';
+import ProductCustomizationPanel from '@/components/employee-storefront/ProductCustomizationPanel';
 import ProductManagementCard from '@/components/storefront/dashboard/ProductManagementCard';
 import GradientText from '@/components/storefront/ui/GradientText';
-import GradientButton from '@/components/storefront/ui/GradientButton';
 import { Search, Star, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -249,26 +247,26 @@ const StorefrontProductsManagePage = () => {
         </div>
       </div>
 
-      {/* Description Editor Modal */}
+      {/* Product Customization Modal */}
       {selectedProduct && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-background rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <CustomDescriptionEditor
+          <div className="bg-background rounded-3xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <ProductCustomizationPanel
               product={selectedProduct}
               customDescription={customDescriptions[selectedProduct.id]}
+              canUploadImages={user?.can_upload_custom_images}
               onSave={() => {
                 fetchCustomDescriptions();
                 setSelectedProduct(null);
               }}
             />
-            <div className="p-6 border-t">
-              <GradientButton
-                gradient="from-gray-500 to-gray-600"
+            <div className="p-6 border-t flex gap-4">
+              <button
                 onClick={() => setSelectedProduct(null)}
-                className="w-full"
+                className="flex-1 px-6 py-3 rounded-xl bg-gray-200 dark:bg-gray-800 hover:bg-gray-300 dark:hover:bg-gray-700 transition-colors"
               >
                 إغلاق
-              </GradientButton>
+              </button>
             </div>
           </div>
         </div>
