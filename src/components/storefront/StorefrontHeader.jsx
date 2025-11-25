@@ -14,7 +14,7 @@ const StorefrontHeader = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to={`/storefront/${settings.storefront_slug}`} className="flex items-center gap-3">
+          <Link to={`/storefront/${settings.slug}`} className="flex items-center gap-3">
             {settings.logo_url && (
               <img 
                 src={settings.logo_url} 
@@ -43,7 +43,7 @@ const StorefrontHeader = () => {
           {/* Actions */}
           <div className="flex items-center gap-4">
             {/* Cart */}
-            <Link to={`/storefront/${settings.storefront_slug}/cart`}>
+            <Link to={`/storefront/${settings.slug}/cart`}>
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="h-5 w-5" />
                 {itemCount > 0 && (
@@ -63,12 +63,12 @@ const StorefrontHeader = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-80">
                 <nav className="flex flex-col gap-4 mt-8">
-                  <Link to={`/storefront/${settings.storefront_slug}`}>
+                  <Link to={`/storefront/${settings.slug}`}>
                     <Button variant="ghost" className="w-full justify-start">
                       الرئيسية
                     </Button>
                   </Link>
-                  <Link to={`/storefront/${settings.storefront_slug}/products`}>
+                  <Link to={`/storefront/${settings.slug}/products`}>
                     <Button variant="ghost" className="w-full justify-start">
                       المنتجات
                     </Button>
@@ -88,10 +88,10 @@ const StorefrontHeader = () => {
 
         {/* Navigation - Desktop */}
         <nav className="hidden md:flex items-center gap-6 py-3 border-t border-border">
-          <Link to={`/storefront/${settings.storefront_slug}`}>
+          <Link to={`/storefront/${settings.slug}`}>
             <Button variant="ghost">الرئيسية</Button>
           </Link>
-          <Link to={`/storefront/${settings.storefront_slug}/products`}>
+          <Link to={`/storefront/${settings.slug}/products`}>
             <Button variant="ghost">جميع المنتجات</Button>
           </Link>
         </nav>

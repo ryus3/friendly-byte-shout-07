@@ -213,7 +213,7 @@ const StorefrontSettingsPage = () => {
   };
 
   if (loading) {
-    return <PremiumLoader />;
+    return <PremiumLoader message="جاري تحميل إعدادات المتجر..." />;
   }
 
   if (!settings) {

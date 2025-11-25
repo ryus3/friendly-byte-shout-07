@@ -60,7 +60,7 @@ const CheckoutPage = () => {
         .from('storefront_orders')
         .insert({
           employee_id: settings.employee_id,
-          storefront_slug: settings.storefront_slug,
+          storefront_slug: settings.slug,
           customer_name: formData.customer_name,
           customer_phone: formData.customer_phone,
           customer_phone2: formData.customer_phone2 || null,
@@ -87,7 +87,7 @@ const CheckoutPage = () => {
         description: 'سيتم مراجعة طلبك والتواصل معك قريباً'
       });
 
-      navigate(`/storefront/${settings.storefront_slug}/order-success/${order.id}`);
+      navigate(`/storefront/${settings.slug}/order-success/${order.id}`);
     } catch (err) {
       console.error('Error creating order:', err);
       toast({
@@ -111,7 +111,7 @@ const CheckoutPage = () => {
           <p className="text-muted-foreground mb-8">يرجى إضافة منتجات للمتابعة</p>
           <GradientButton
             gradient="from-blue-600 via-purple-600 to-pink-600"
-            onClick={() => navigate(`/storefront/${settings.storefront_slug}/products`)}
+            onClick={() => navigate(`/storefront/${settings.slug}/products`)}
           >
             العودة للتسوق
           </GradientButton>
