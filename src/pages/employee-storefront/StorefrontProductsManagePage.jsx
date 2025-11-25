@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import ProductCustomizationPanel from '@/components/employee-storefront/ProductCustomizationPanel';
 import ProductManagementCard from '@/components/storefront/dashboard/ProductManagementCard';
 import GradientText from '@/components/storefront/ui/GradientText';
+import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
 import { Search, Star, Package } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -154,22 +155,26 @@ const StorefrontProductsManagePage = () => {
 
   const featuredProductsList = filteredProducts.filter(p => featuredProducts.includes(p.id));
 
+  if (loading) {
+    return <PremiumLoader message="جاري تحميل المنتجات..." />;
+  }
+
   return (
-    <div className="p-8 bg-gradient-to-br from-background via-background to-purple-50 dark:to-purple-950/20 min-h-screen space-y-8">
+    <div className="p-4 sm:p-6 md:p-8 bg-gradient-to-br from-background via-background to-purple-50 dark:to-purple-950/20 min-h-screen space-y-6 sm:space-y-8">
       {/* Header */}
-      <GradientText gradient="from-purple-600 via-pink-600 to-blue-600" className="text-4xl">
+      <GradientText gradient="from-purple-600 via-pink-600 to-blue-600" className="text-2xl sm:text-3xl md:text-4xl">
         إدارة المنتجات
       </GradientText>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
         {/* Products List */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center justify-between">
-            <GradientText gradient="from-purple-600 to-pink-600" className="text-2xl">
-              منتجات المتجر
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+            <GradientText gradient="from-purple-600 to-pink-600" className="text-xl sm:text-2xl">
+              منتجات المتجر ({filteredProducts.length})
             </GradientText>
             
-            <div className="relative w-72">
+            <div className="relative w-full sm:w-72">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="ابحث عن منتج..."

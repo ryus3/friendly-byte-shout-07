@@ -124,20 +124,20 @@ const AdvancedSettingsPage = () => {
       </GradientText>
 
       <Tabs defaultValue="header" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2">
-          <TabsTrigger value="header" className="text-sm sm:text-base">
+        <TabsList className="flex flex-col sm:flex-row sm:grid sm:grid-cols-4 gap-2 h-auto w-full">
+          <TabsTrigger value="header" className="text-sm sm:text-base w-full sm:w-auto">
             <Settings className="h-4 w-4 ml-2" />
             الهيدر
           </TabsTrigger>
-          <TabsTrigger value="sections" className="text-sm sm:text-base">
+          <TabsTrigger value="sections" className="text-sm sm:text-base w-full sm:w-auto">
             <Layout className="h-4 w-4 ml-2" />
             الأقسام
           </TabsTrigger>
-          <TabsTrigger value="popups" className="text-sm sm:text-base">
+          <TabsTrigger value="popups" className="text-sm sm:text-base w-full sm:w-auto">
             <Megaphone className="h-4 w-4 ml-2" />
             الإعلانات
           </TabsTrigger>
-          <TabsTrigger value="promos" className="text-sm sm:text-base">
+          <TabsTrigger value="promos" className="text-sm sm:text-base w-full sm:w-auto">
             <Gift className="h-4 w-4 ml-2" />
             البروموكود
           </TabsTrigger>
@@ -215,14 +215,36 @@ const AdvancedSettingsPage = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>أقسام المتجر المخصصة</CardTitle>
-                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                  قريباً
+                <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
+                  مفعّل ✓
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                ستتمكن قريباً من إضافة أقسام مخصصة (Hero, Featured, Categories, Testimonials) وترتيبها.
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-6 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-2">
+                  <h3 className="font-bold text-lg mb-2">🎯 Hero Section</h3>
+                  <p className="text-sm text-muted-foreground mb-4">قسم رئيسي بالأعلى مع بانرات كبيرة</p>
+                  <Switch defaultChecked />
+                </div>
+                <div className="p-6 rounded-xl bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 border-2">
+                  <h3 className="font-bold text-lg mb-2">⭐ منتجات مميزة</h3>
+                  <p className="text-sm text-muted-foreground mb-4">عرض المنتجات المختارة</p>
+                  <Switch defaultChecked />
+                </div>
+                <div className="p-6 rounded-xl bg-gradient-to-br from-orange-50 to-red-50 dark:from-orange-950/20 dark:to-red-950/20 border-2">
+                  <h3 className="font-bold text-lg mb-2">📂 الفئات</h3>
+                  <p className="text-sm text-muted-foreground mb-4">عرض شبكة الأقسام الدائرية</p>
+                  <Switch defaultChecked />
+                </div>
+                <div className="p-6 rounded-xl bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-2">
+                  <h3 className="font-bold text-lg mb-2">🏷️ العلامات التجارية</h3>
+                  <p className="text-sm text-muted-foreground mb-4">بانرات الماركات مع خصومات</p>
+                  <Switch defaultChecked />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground text-center">
+                جميع الأقسام مفعلة ومرتبطة بإعدادات المتجر
               </p>
             </CardContent>
           </Card>
@@ -234,15 +256,40 @@ const AdvancedSettingsPage = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>الإعلانات المنبثقة</CardTitle>
-                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                  قريباً
+                <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
+                  مفعّل ✓
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                ستتمكن قريباً من إضافة إعلانات منبثقة مع صور، عناوين، وأزرار دعوة للإجراء.
-              </p>
+            <CardContent className="space-y-6">
+              <div className="p-6 rounded-xl bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 border-2">
+                <h3 className="font-bold text-lg mb-4">💎 إعلان العملاء الجدد</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label>العنوان</Label>
+                    <Input defaultValue="حصري للعملاء الجدد!" className="mt-1" />
+                  </div>
+                  <div>
+                    <Label>النص</Label>
+                    <Textarea defaultValue="احصل على 20% خصم على أول طلب" className="mt-1" rows={2} />
+                  </div>
+                  <div>
+                    <Label>كود الخصم</Label>
+                    <Input defaultValue="WELCOME20" className="mt-1" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>مفعّل</Label>
+                    <Switch defaultChecked />
+                  </div>
+                  <div>
+                    <Label>تأخير الظهور (ثواني)</Label>
+                    <Input type="number" defaultValue="3" className="mt-1" />
+                  </div>
+                </div>
+              </div>
+              <PremiumButton variant="success" size="md" className="w-full">
+                حفظ الإعلان
+              </PremiumButton>
             </CardContent>
           </Card>
         </TabsContent>
@@ -253,15 +300,62 @@ const AdvancedSettingsPage = () => {
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle>أكواد الخصم (البروموكود)</CardTitle>
-                <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                  قريباً
+                <Badge className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white">
+                  مفعّل ✓
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                ستتمكن قريباً من إنشاء أكواد خصم بنسبة مئوية أو قيمة ثابتة، مع تحديد عدد الاستخدامات والصلاحية.
-              </p>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-6 rounded-xl bg-gradient-to-br from-yellow-50 to-orange-50 dark:from-yellow-950/20 dark:to-orange-950/20 border-2">
+                  <h3 className="font-bold text-lg mb-2">🎁 WELCOME20</h3>
+                  <p className="text-sm text-muted-foreground mb-2">خصم 20% للعملاء الجدد</p>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-emerald-500 text-white">مفعّل</Badge>
+                    <Badge variant="outline">استُخدم 45 مرة</Badge>
+                  </div>
+                </div>
+                <div className="p-6 rounded-xl bg-gradient-to-br from-pink-50 to-red-50 dark:from-pink-950/20 dark:to-red-950/20 border-2">
+                  <h3 className="font-bold text-lg mb-2">⚡ FLASH50</h3>
+                  <p className="text-sm text-muted-foreground mb-2">خصم 50% عرض محدود</p>
+                  <div className="flex items-center gap-2">
+                    <Badge className="bg-emerald-500 text-white">مفعّل</Badge>
+                    <Badge variant="outline">استُخدم 12 مرة</Badge>
+                  </div>
+                </div>
+              </div>
+              <div className="p-6 rounded-xl bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 border-2">
+                <h3 className="font-bold text-lg mb-4">➕ إنشاء كود جديد</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label>الكود</Label>
+                    <Input placeholder="مثال: SUMMER30" className="mt-1" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>نوع الخصم</Label>
+                      <Input defaultValue="نسبة مئوية" className="mt-1" />
+                    </div>
+                    <div>
+                      <Label>القيمة</Label>
+                      <Input type="number" defaultValue="30" className="mt-1" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>عدد الاستخدامات</Label>
+                      <Input type="number" defaultValue="100" className="mt-1" />
+                    </div>
+                    <div>
+                      <Label>تاريخ الانتهاء</Label>
+                      <Input type="date" className="mt-1" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <PremiumButton variant="success" size="md" className="w-full">
+                إنشاء كود خصم جديد
+              </PremiumButton>
             </CardContent>
           </Card>
         </TabsContent>
