@@ -3,20 +3,13 @@ import { Outlet } from 'react-router-dom';
 import StorefrontHeader from './StorefrontHeader';
 import StorefrontFooter from './StorefrontFooter';
 import { useStorefront } from '@/contexts/StorefrontContext';
-import { Skeleton } from '@/components/ui/skeleton';
+import PremiumLoader from './ui/PremiumLoader';
 
 const StorefrontLayout = ({ products = [] }) => {
   const { settings, settingsLoading, error } = useStorefront();
 
   if (settingsLoading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <Skeleton className="h-16 w-full" />
-        <div className="container mx-auto p-8">
-          <Skeleton className="h-96 w-full" />
-        </div>
-      </div>
-    );
+    return <PremiumLoader message="جاري تحميل المتجر..." />;
   }
 
   if (error || !settings) {

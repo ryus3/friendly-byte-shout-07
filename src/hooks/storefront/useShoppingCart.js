@@ -3,8 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 /**
  * Custom hook لإدارة سلة التسوق (localStorage-based)
  */
-export const useShoppingCart = (storefront_slug) => {
-  const CART_KEY = `cart_${storefront_slug}`;
+export const useShoppingCart = (slug) => {
+  const CART_KEY = `cart_${slug}`;
   
   const [cart, setCart] = useState([]);
   const [cartTotal, setCartTotal] = useState(0);

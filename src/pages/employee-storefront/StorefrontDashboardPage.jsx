@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target } from 'lucide-react';
 import StorefrontAnalytics from '@/components/employee-storefront/StorefrontAnalytics';
 import PremiumButton from '@/components/storefront/ui/PremiumButton';
+import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
 import GradientText from '@/components/storefront/ui/GradientText';
 import StatCard from '@/components/storefront/dashboard/StatCard';
 import { toast } from '@/hooks/use-toast';
@@ -85,16 +86,7 @@ const StorefrontDashboardPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-purple-950/20 dark:via-pink-950/20 dark:to-blue-950/20">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-pulse" />
-          <p className="text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">
-            جاري التحميل...
-          </p>
-        </div>
-      </div>
-    );
+    return <PremiumLoader message="جاري تحميل لوحة التحكم..." />;
   }
 
   if (!settings) {
@@ -161,49 +153,71 @@ const StorefrontDashboardPage = () => {
         </p>
       </div>
 
-      {/* Quick Actions - ترتيب 2x2 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        {/* السطر الأول */}
-        <PremiumButton 
-          variant="primary"
-          size="lg"
-          onClick={() => window.open(`/storefront/${settings.storefront_slug}`, '_blank')}
-          className="min-h-[120px] text-xl"
+      {/* Quick Actions - تصميم كروت احترافية 2x2 */}
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        {/* المتجر */}
+        <Card 
+          className="relative overflow-hidden border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-blue/20 cursor-pointer group min-h-[100px] sm:min-h-[120px]"
+          onClick={() => window.open(`/storefront/${settings.slug}`, '_blank')}
         >
-          <ExternalLink className="w-8 h-8 ml-3" />
-          المتجر
-        </PremiumButton>
-        
-        <PremiumButton 
-          variant="settings"
-          size="lg"
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 opacity-5" />
+          <CardContent className="p-3 sm:p-4 md:p-6 relative z-10 flex flex-col items-center justify-center h-full">
+            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg mb-2 sm:mb-3">
+              <ExternalLink className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8" />
+            </div>
+            <div className="text-base sm:text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-500 text-center">
+              المتجر
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* الإعدادات */}
+        <Card 
+          className="relative overflow-hidden border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-indigo/20 cursor-pointer group min-h-[100px] sm:min-h-[120px]"
           onClick={() => navigate('/dashboard/storefront/settings')}
-          className="min-h-[120px] text-xl"
         >
-          <Settings className="w-8 h-8 ml-3" />
-          الإعدادات
-        </PremiumButton>
-        
-        {/* السطر الثاني */}
-        <PremiumButton 
-          variant="success"
-          size="lg"
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-500 opacity-5" />
+          <CardContent className="p-3 sm:p-4 md:p-6 relative z-10 flex flex-col items-center justify-center h-full">
+            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white shadow-lg mb-2 sm:mb-3">
+              <Settings className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8" />
+            </div>
+            <div className="text-base sm:text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500 text-center">
+              الإعدادات
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* المنتجات */}
+        <Card 
+          className="relative overflow-hidden border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-emerald/20 cursor-pointer group min-h-[100px] sm:min-h-[120px]"
           onClick={() => navigate('/dashboard/storefront/products')}
-          className="min-h-[120px] text-xl"
         >
-          <Package className="w-8 h-8 ml-3" />
-          المنتجات
-        </PremiumButton>
-        
-        <PremiumButton 
-          variant="promotions"
-          size="lg"
-          onClick={() => navigate('/dashboard/storefront/promotions')}
-          className="min-h-[120px] text-xl"
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-500 opacity-5" />
+          <CardContent className="p-3 sm:p-4 md:p-6 relative z-10 flex flex-col items-center justify-center h-full">
+            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg mb-2 sm:mb-3">
+              <Package className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8" />
+            </div>
+            <div className="text-base sm:text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500 text-center">
+              المنتجات
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* إعدادات متقدمة */}
+        <Card 
+          className="relative overflow-hidden border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-orange/20 cursor-pointer group min-h-[100px] sm:min-h-[120px]"
+          onClick={() => navigate('/dashboard/storefront/advanced-settings')}
         >
-          <Sparkles className="w-8 h-8 ml-3" />
-          العروض
-        </PremiumButton>
+          <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-red-500 opacity-5" />
+          <CardContent className="p-3 sm:p-4 md:p-6 relative z-10 flex flex-col items-center justify-center h-full">
+            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-lg mb-2 sm:mb-3">
+              <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8" />
+            </div>
+            <div className="text-base sm:text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500 text-center">
+              متقدم
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Stats Cards */}

@@ -43,7 +43,7 @@ const ShoppingCartPage = () => {
             hoverGradient="from-blue-700 via-purple-700 to-pink-700"
             shadowColor="purple-500"
             shimmer={true}
-            onClick={() => navigate(`/storefront/${settings.storefront_slug}/products`)}
+            onClick={() => navigate(`/storefront/${settings.slug}/products`)}
           >
             <ShoppingBag className="ml-2 h-5 w-5" />
             تصفح المنتجات
@@ -163,7 +163,7 @@ const ShoppingCartPage = () => {
                 hoverGradient="from-blue-700 via-purple-700 to-pink-700"
                 shadowColor="purple-500"
                 shimmer={true}
-                onClick={() => navigate(`/storefront/${settings.storefront_slug}/checkout`)}
+                onClick={() => navigate(`/storefront/${settings.slug}/checkout`)}
                 className="w-full py-5 text-xl mb-4"
               >
                 إتمام الطلب
@@ -171,7 +171,7 @@ const ShoppingCartPage = () => {
               </GradientButton>
 
               <button
-                onClick={() => navigate(`/storefront/${settings.storefront_slug}/products`)}
+                onClick={() => navigate(`/storefront/${settings.slug}/products`)}
                 className="w-full p-4 bg-gradient-to-r from-purple-100 to-pink-100 dark:from-purple-900/30 dark:to-pink-900/30 text-purple-600 dark:text-purple-400 rounded-xl font-bold hover:from-purple-200 hover:to-pink-200 dark:hover:from-purple-900/50 dark:hover:to-pink-900/50 transition-all"
               >
                 مواصلة التسوق
