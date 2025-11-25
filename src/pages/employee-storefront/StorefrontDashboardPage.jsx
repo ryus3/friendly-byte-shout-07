@@ -161,41 +161,47 @@ const StorefrontDashboardPage = () => {
         </p>
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
+      {/* Quick Actions - ترتيب 2x2 */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 mb-6 sm:mb-8">
+        {/* السطر الأول */}
         <PremiumButton 
           variant="primary"
-          size="md"
+          size="lg"
           onClick={() => window.open(`/storefront/${settings.storefront_slug}`, '_blank')}
+          className="min-h-[120px] text-xl"
         >
-          <ExternalLink className="w-5 h-5 ml-2" />
-          معاينة المتجر
+          <ExternalLink className="w-8 h-8 ml-3" />
+          المتجر
         </PremiumButton>
         
         <PremiumButton 
           variant="settings"
-          size="md"
+          size="lg"
           onClick={() => navigate('/dashboard/storefront/settings')}
+          className="min-h-[120px] text-xl"
         >
-          <Settings className="w-5 h-5 ml-2" />
+          <Settings className="w-8 h-8 ml-3" />
           الإعدادات
         </PremiumButton>
         
+        {/* السطر الثاني */}
         <PremiumButton 
           variant="success"
-          size="md"
+          size="lg"
           onClick={() => navigate('/dashboard/storefront/products')}
+          className="min-h-[120px] text-xl"
         >
-          <Package className="w-5 h-5 ml-2" />
+          <Package className="w-8 h-8 ml-3" />
           المنتجات
         </PremiumButton>
         
         <PremiumButton 
-          variant="primary"
-          size="md"
+          variant="promotions"
+          size="lg"
           onClick={() => navigate('/dashboard/storefront/promotions')}
+          className="min-h-[120px] text-xl"
         >
-          <Sparkles className="w-5 h-5 ml-2" />
+          <Sparkles className="w-8 h-8 ml-3" />
           العروض
         </PremiumButton>
       </div>

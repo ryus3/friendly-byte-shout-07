@@ -35,7 +35,7 @@ export const useStorefrontSettings = (slug) => {
           `)
           .eq('slug', slug)
           .eq('is_active', true)
-          .single();
+          .maybeSingle(); // ✅ تغيير من .single() إلى .maybeSingle()
 
         if (fetchError) throw fetchError;
         

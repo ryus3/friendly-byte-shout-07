@@ -1,29 +1,40 @@
 import React from 'react';
 
-const PremiumLoader = ({ message = 'جاري التحميل...' }) => {
+const PremiumLoader = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-background via-background to-purple-50 dark:to-purple-950/20">
-      {/* Animated Logo or Icon */}
-      <div className="relative mb-8">
-        <div className="w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-pulse" />
-        <div className="absolute inset-0 w-24 h-24 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-ping opacity-20" />
+      {/* Animated Rings - تصميم عالمي بدون نصوص */}
+      <div className="relative w-32 h-32">
+        {/* Ring 1 - خارجي */}
+        <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-blue-500 border-r-purple-500 animate-spin" />
+        {/* Ring 2 - وسط */}
+        <div 
+          className="absolute inset-4 rounded-full border-4 border-transparent border-b-pink-500 border-l-cyan-500 animate-spin" 
+          style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} 
+        />
+        {/* Ring 3 - داخلي */}
+        <div 
+          className="absolute inset-8 rounded-full border-4 border-transparent border-t-purple-500 border-b-blue-500 animate-spin" 
+          style={{ animationDuration: '1s' }} 
+        />
+        {/* مركز - نقطة متوهجة */}
+        <div className="absolute inset-0 m-auto w-8 h-8 rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-pulse shadow-2xl shadow-purple-500/50" />
       </div>
 
-      {/* Loading Text */}
-      <h2 className="text-2xl font-bold mb-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-        {message}
-      </h2>
-
-      {/* Animated Progress Bar */}
-      <div className="w-64 h-2 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
-        <div className="h-full bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 animate-loading" />
-      </div>
-
-      {/* Floating Dots */}
-      <div className="flex gap-2 mt-8">
-        <div className="w-3 h-3 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0s' }} />
-        <div className="w-3 h-3 rounded-full bg-purple-500 animate-bounce" style={{ animationDelay: '0.2s' }} />
-        <div className="w-3 h-3 rounded-full bg-pink-500 animate-bounce" style={{ animationDelay: '0.4s' }} />
+      {/* Animated Dots - بدون نص */}
+      <div className="flex gap-3 mt-12">
+        <div 
+          className="w-4 h-4 rounded-full bg-gradient-to-r from-blue-500 to-cyan-500 animate-bounce shadow-lg" 
+          style={{ animationDelay: '0s' }} 
+        />
+        <div 
+          className="w-4 h-4 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 animate-bounce shadow-lg" 
+          style={{ animationDelay: '0.15s' }} 
+        />
+        <div 
+          className="w-4 h-4 rounded-full bg-gradient-to-r from-pink-500 to-orange-500 animate-bounce shadow-lg" 
+          style={{ animationDelay: '0.3s' }} 
+        />
       </div>
     </div>
   );
