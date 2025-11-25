@@ -3,8 +3,13 @@ import { useParams } from 'react-router-dom';
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import StorefrontLayout from '@/components/storefront/StorefrontLayout';
 import HeroSection from '@/components/storefront/HeroSection';
+import CategoryCircles from '@/components/storefront/CategoryCircles';
+import BrandBanners from '@/components/storefront/BrandBanners';
+import FlashSaleBar from '@/components/storefront/FlashSaleBar';
+import PromoPopup from '@/components/storefront/PromoPopup';
 import PremiumProductCard from '@/components/storefront/PremiumProductCard';
 import GradientText from '@/components/storefront/ui/GradientText';
+import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
 import { supabase } from '@/integrations/supabase/client';
 
 const StorefrontHome = () => {
@@ -76,38 +81,42 @@ const StorefrontHome = () => {
     fetchData();
   }, [settings?.employee_id]);
 
+  if (isLoading) {
+    return <PremiumLoader message="جاري تحميل المتجر..." />;
+  }
+
   return (
     <div className="min-h-screen">
+      {/* Flash Sale Bar */}
+      <FlashSaleBar />
+
       {/* Hero Section */}
       <HeroSection slug={settings?.slug} banners={banners} />
+
+      {/* Category Circles */}
+      <CategoryCircles slug={settings?.slug} />
 
       {/* Featured Products Section */}
       <section className="container mx-auto px-4 py-12">
         <div className="text-center mb-12">
           <GradientText 
-            variant="holographic" 
-            className="text-4xl md:text-5xl font-black mb-4"
-            as="h2"
-            animate
+            gradient="from-purple-600 via-pink-600 to-blue-600" 
+            className="text-3xl sm:text-4xl md:text-5xl font-black mb-4"
           >
-            المنتجات المميزة
+            المنتجات المميزة ⭐
           </GradientText>
-          <p className="text-xl text-muted-foreground">
+          <p className="text-lg sm:text-xl text-muted-foreground">
             اكتشف أحدث وأفضل المنتجات المختارة خصيصاً لك
           </p>
         </div>
         
-        {isLoading ? (
+        {products.length === 0 ? (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          </div>
-        ) : products.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-xl text-muted-foreground mb-4">لا توجد منتجات متاحة حالياً</p>
+            <p className="text-xl text-muted-foreground mb-4">لا توجد منتجات مميزة حالياً</p>
             <p className="text-muted-foreground">تحقق مرة أخرى قريباً!</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
             {products.map((product) => (
               <PremiumProductCard 
                 key={product.id} 
@@ -118,6 +127,12 @@ const StorefrontHome = () => {
           </div>
         )}
       </section>
+
+      {/* Brand Banners */}
+      <BrandBanners slug={settings?.slug} />
+
+      {/* Promo Popup */}
+      <PromoPopup code="WELCOME20" discount="20%" delay={3000} />
     </div>
   );
 };

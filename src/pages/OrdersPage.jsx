@@ -118,11 +118,18 @@ const OrdersPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
-  // ⛔ تعطيل المزامنة التلقائية - المستخدم يزامن يدوياً عند الحاجة
+  // ✅ تفعيل المزامنة التلقائية عند دخول الصفحة
   useEffect(() => {
-    console.log('ℹ️ مزامنة OrdersPage معطلة - استخدم زر المزامنة اليدوي');
-    return;
-  }, []);
+    if (orders?.length > 0 && syncVisibleOrdersBatch) {
+      const syncableOrders = orders.filter(o => !o.isarchived && o.tracking_number);
+      if (syncableOrders.length > 0) {
+        console.log('🔄 مزامنة تلقائية عند دخول صفحة الطلبات:', syncableOrders.length, 'طلب');
+        syncVisibleOrdersBatch(syncableOrders).catch(err => {
+          console.error('❌ خطأ في المزامنة التلقائية:', err);
+        });
+      }
+    }
+  }, []); // مرة واحدة عند دخول الصفحة
 
   // ❌ تعطيل Fast Sync مؤقتاً للاختبار - الاعتماد فقط على Smart Sync
   /*
