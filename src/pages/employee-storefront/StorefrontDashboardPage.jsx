@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target } from 'lucide-react';
 import StorefrontAnalytics from '@/components/employee-storefront/StorefrontAnalytics';
-import GradientButton from '@/components/storefront/ui/GradientButton';
+import PremiumButton from '@/components/storefront/ui/PremiumButton';
 import GradientText from '@/components/storefront/ui/GradientText';
 import StatCard from '@/components/storefront/dashboard/StatCard';
 import { toast } from '@/hooks/use-toast';
@@ -124,11 +124,12 @@ const StorefrontDashboardPage = () => {
               </p>
             </div>
             
-            <GradientButton
-              gradient="from-fuchsia-500 via-purple-500 to-blue-500"
+            <PremiumButton
+              variant="primary"
+              size="lg"
               onClick={createStorefront}
               disabled={creating}
-              className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 lg:px-12 lg:py-8 shadow-2xl hover:shadow-fuchsia-500/50 transition-all duration-300 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 lg:px-12 lg:py-8"
             >
               {creating ? (
                 <>
@@ -141,7 +142,7 @@ const StorefrontDashboardPage = () => {
                   إنشاء المتجر الآن
                 </>
               )}
-            </GradientButton>
+            </PremiumButton>
           </CardContent>
         </Card>
       </div>
@@ -162,37 +163,41 @@ const StorefrontDashboardPage = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <GradientButton 
-          gradient="from-blue-500 to-cyan-500"
+        <PremiumButton 
+          variant="primary"
+          size="md"
           onClick={() => window.open(`/storefront/${settings.storefront_slug}`, '_blank')}
         >
           <ExternalLink className="w-5 h-5 ml-2" />
           معاينة المتجر
-        </GradientButton>
+        </PremiumButton>
         
-        <GradientButton 
-          gradient="from-purple-500 to-pink-500"
+        <PremiumButton 
+          variant="settings"
+          size="md"
           onClick={() => navigate('/dashboard/storefront/settings')}
         >
           <Settings className="w-5 h-5 ml-2" />
           الإعدادات
-        </GradientButton>
+        </PremiumButton>
         
-        <GradientButton 
-          gradient="from-emerald-500 to-teal-500"
+        <PremiumButton 
+          variant="success"
+          size="md"
           onClick={() => navigate('/dashboard/storefront/products')}
         >
           <Package className="w-5 h-5 ml-2" />
           المنتجات
-        </GradientButton>
+        </PremiumButton>
         
-        <GradientButton 
-          gradient="from-orange-500 to-red-500"
+        <PremiumButton 
+          variant="primary"
+          size="md"
           onClick={() => navigate('/dashboard/storefront/promotions')}
         >
           <Sparkles className="w-5 h-5 ml-2" />
           العروض
-        </GradientButton>
+        </PremiumButton>
       </div>
 
       {/* Stats Cards */}
