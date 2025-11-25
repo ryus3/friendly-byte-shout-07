@@ -20,12 +20,12 @@ export const useStorefrontSettings = (slug) => {
         setLoading(true);
         setError(null);
 
-        // جلب إعدادات المتجر
+        // جلب إعدادات المتجر مع بيانات الموظف من profiles
         const { data, error: fetchError } = await supabase
           .from('employee_storefront_settings')
           .select(`
             *,
-            profiles!employee_storefront_settings_employee_id_fkey (
+            profile:profiles!employee_storefront_settings_employee_id_fkey (
               user_id,
               full_name,
               business_page_name,
@@ -33,7 +33,7 @@ export const useStorefrontSettings = (slug) => {
               business_links
             )
           `)
-          .eq('storefront_slug', slug)
+          .eq('slug', slug)
           .eq('is_active', true)
           .single();
 
