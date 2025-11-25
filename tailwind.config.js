@@ -259,7 +259,12 @@ module.exports = {
           '100%': {
             transform: 'translateX(0%)'
           }
-        }
+        },
+        'loading': {
+          '0%': { transform: 'translateX(-100%)' },
+          '50%': { transform: 'translateX(100%)' },
+          '100%': { transform: 'translateX(-100%)' },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -282,6 +287,7 @@ module.exports = {
         "wiggle": "wiggle 0.5s ease-in-out",
         "magneticField": "magneticField 3s ease-in-out infinite",
         "scroll-text": "scroll-text 8s ease-in-out infinite",
+        "loading": "loading 1.5s ease-in-out infinite",
       },
     },
   },

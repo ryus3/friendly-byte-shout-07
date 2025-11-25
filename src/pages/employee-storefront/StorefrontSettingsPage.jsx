@@ -1,16 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import ThemeCustomizer from '@/components/employee-storefront/ThemeCustomizer';
-import LogoUploader from '@/components/employee-storefront/LogoUploader';
-import GradientButton from '@/components/storefront/ui/GradientButton';
-import GradientText from '@/components/storefront/ui/GradientText';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import ThemeCard from '@/components/storefront/dashboard/ThemeCard';
 import ColorGradientPicker from '@/components/storefront/dashboard/ColorGradientPicker';
+import LogoUploader from '@/components/employee-storefront/LogoUploader';
+import BannerUploader from '@/components/employee-storefront/BannerUploader';
+import RichTextEditor from '@/components/storefront/RichTextEditor';
+import PremiumButton from '@/components/storefront/ui/PremiumButton';
+import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
+import GradientText from '@/components/storefront/ui/GradientText';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Copy, Palette, Settings2 } from 'lucide-react';
 
@@ -50,10 +55,72 @@ const PRESET_GRADIENTS = [
   { id: 'sky', gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)', primary: '#a8edea', accent: '#fed6e3' }
 ];
 
+const DEFAULT_ABOUT_US = `# مرحباً بك في متجرنا
+
+نحن متجر متخصص في توفير أفضل المنتجات عالية الجودة لعملائنا الكرام.
+
+## لماذا نحن؟
+✓ منتجات أصلية 100%
+✓ أسعار تنافسية
+✓ توصيل سريع لجميع المحافظات
+✓ خدمة عملاء متميزة على مدار الساعة
+
+نفخر بخدمة عملائنا وتقديم أفضل تجربة تسوق.`;
+
+const DEFAULT_PRIVACY_POLICY = `# سياسة الخصوصية
+
+في متجرنا، نحترم خصوصيتك ونلتزم بحماية معلوماتك الشخصية.
+
+## المعلومات التي نجمعها:
+• الاسم ورقم الهاتف
+• عنوان التوصيل
+• سجل الطلبات
+
+## كيف نستخدم معلوماتك:
+• معالجة الطلبات والتوصيل
+• التواصل بشأن الطلبات
+• تحسين خدماتنا
+
+## حماية البيانات:
+نستخدم تقنيات أمان متقدمة لحماية معلوماتك الشخصية.`;
+
+const DEFAULT_TERMS = `# الشروط والأحكام
+
+باستخدامك لهذا المتجر، فإنك توافق على الشروط التالية:
+
+## 1. الطلبات:
+• جميع الطلبات خاضعة للتوافر
+• الأسعار قابلة للتغيير بدون إشعار مسبق
+
+## 2. الدفع:
+• الدفع عند الاستلام
+• يجب فحص المنتج قبل الدفع
+
+## 3. التوصيل:
+• مدة التوصيل 2-5 أيام عمل
+• رسوم التوصيل حسب المنطقة`;
+
+const DEFAULT_RETURN_POLICY = `# سياسة الاسترجاع
+
+نوفر ضمان الاسترجاع خلال 7 أيام من تاريخ الاستلام.
+
+## شروط الاسترجاع:
+✓ المنتج في حالته الأصلية
+✓ عدم استخدام المنتج
+✓ وجود الفاتورة الأصلية
+✓ التغليف الأصلي سليم
+
+## الاستثناءات:
+✗ الملابس الداخلية
+✗ المنتجات المخصصة حسب الطلب
+✗ المنتجات المستخدمة أو التالفة`;
+
 const StorefrontSettingsPage = () => {
   const [settings, setSettings] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchSettings();
@@ -64,15 +131,35 @@ const StorefrontSettingsPage = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data } = await supabase
+      // جلب الإعدادات مع الملف الشخصي
+      const { data: settingsData, error } = await supabase
         .from('employee_storefront_settings')
-        .select('*')
+        .select(`
+          *,
+          profile:profiles!employee_storefront_settings_employee_id_fkey (
+            user_id,
+            full_name,
+            business_page_name,
+            social_media,
+            business_links
+          )
+        `)
         .eq('employee_id', user.id)
         .single();
 
-      setSettings(data);
+      if (error) throw error;
+
+      if (settingsData) {
+        setSettings(settingsData);
+        setProfile(settingsData.profile);
+      }
     } catch (err) {
       console.error('Error fetching settings:', err);
+      toast({
+        title: 'خطأ',
+        description: 'فشل تحميل الإعدادات',
+        variant: 'destructive'
+      });
     } finally {
       setLoading(false);
     }
@@ -84,7 +171,22 @@ const StorefrontSettingsPage = () => {
 
       const { error } = await supabase
         .from('employee_storefront_settings')
-        .update(settings)
+        .update({
+          meta_title: settings.meta_title,
+          meta_description: settings.meta_description,
+          logo_url: settings.logo_url,
+          banner_url: settings.banner_url,
+          theme_name: settings.theme_name,
+          primary_color: settings.primary_color,
+          secondary_color: settings.secondary_color,
+          accent_color: settings.accent_color,
+          font_family: settings.font_family,
+          is_active: settings.is_active,
+          about_us: settings.about_us,
+          privacy_policy: settings.privacy_policy,
+          terms_conditions: settings.terms_conditions,
+          return_policy: settings.return_policy
+        })
         .eq('id', settings.id);
 
       if (error) throw error;
@@ -111,15 +213,19 @@ const StorefrontSettingsPage = () => {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <PremiumLoader message="جاري تحميل إعدادات المتجر..." />;
   }
 
   if (!settings) {
-    return <div className="p-8">لم يتم العثور على المتجر</div>;
+    return (
+      <div className="p-8 min-h-screen flex items-center justify-center">
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="text-xl">لم يتم العثور على المتجر</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   return (
@@ -129,15 +235,15 @@ const StorefrontSettingsPage = () => {
         <GradientText gradient="from-blue-600 via-purple-600 to-pink-600" className="text-4xl">
           إعدادات المتجر
         </GradientText>
-        <GradientButton
-          gradient="from-emerald-500 to-teal-500"
+        <PremiumButton
+          variant="success"
+          size="lg"
           onClick={handleSave}
           disabled={saving}
-          className="px-8"
         >
           {saving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
           حفظ التغييرات
-        </GradientButton>
+        </PremiumButton>
       </div>
 
       {/* معلومات أساسية */}
@@ -153,39 +259,39 @@ const StorefrontSettingsPage = () => {
             <Label>رابط المتجر</Label>
             <div className="flex gap-2 mt-1">
               <Input
-                value={`pos.ryusbrand.com/storefront/${settings.storefront_slug}`}
+                value={`pos.ryusbrand.com/storefront/${settings.slug}`}
                 readOnly
                 className="flex-1 font-mono"
               />
-              <GradientButton
-                gradient="from-blue-500 to-cyan-500"
+              <PremiumButton
+                variant="primary"
+                size="sm"
                 onClick={() => {
-                  navigator.clipboard.writeText(`https://pos.ryusbrand.com/storefront/${settings.storefront_slug}`);
+                  navigator.clipboard.writeText(`https://pos.ryusbrand.com/storefront/${settings.slug}`);
                   toast({ title: '✅ تم النسخ', description: 'تم نسخ رابط المتجر' });
                 }}
               >
                 <Copy className="h-4 w-4" />
-              </GradientButton>
+              </PremiumButton>
             </div>
           </div>
 
           <div>
-            <Label htmlFor="business_name">اسم المتجر</Label>
+            <Label htmlFor="meta_title">اسم المتجر</Label>
             <Input
-              id="business_name"
-              value={settings.business_name || ''}
-              onChange={(e) => setSettings({ ...settings, business_name: e.target.value })}
+              id="meta_title"
+              value={settings.meta_title || ''}
+              onChange={(e) => setSettings({ ...settings, meta_title: e.target.value })}
               className="mt-1"
             />
           </div>
 
           <div>
             <Label htmlFor="meta_description">وصف المتجر (SEO)</Label>
-            <Textarea
+            <Input
               id="meta_description"
               value={settings.meta_description || ''}
               onChange={(e) => setSettings({ ...settings, meta_description: e.target.value })}
-              rows={3}
               className="mt-1"
             />
           </div>
@@ -198,9 +304,62 @@ const StorefrontSettingsPage = () => {
             <Switch
               checked={settings.is_active || false}
               onCheckedChange={(checked) => setSettings({ ...settings, is_active: checked })}
-              className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-emerald-500 data-[state=checked]:to-teal-500"
             />
           </div>
+        </CardContent>
+      </Card>
+
+      {/* معلومات التواصل */}
+      <Card className="border-2 shadow-xl">
+        <CardHeader>
+          <CardTitle>معلومات التواصل</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            ✅ يتم جلبها من ملفك الشخصي تلقائياً
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4 p-4 bg-blue-50 dark:bg-blue-950/20 rounded-xl border-2 border-blue-200">
+          <div>
+            <Label>اسم الصفحة التجارية</Label>
+            <Input 
+              value={profile?.business_page_name || 'غير محدد'} 
+              readOnly 
+              className="bg-white dark:bg-gray-900 mt-1" 
+            />
+          </div>
+          
+          <div>
+            <Label>روابط التواصل</Label>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {profile?.business_links?.whatsapp && (
+                <Badge variant="outline" className="justify-start gap-2">
+                  📱 WhatsApp
+                </Badge>
+              )}
+              {profile?.business_links?.telegram && (
+                <Badge variant="outline" className="justify-start gap-2">
+                  ✈️ Telegram
+                </Badge>
+              )}
+              {profile?.social_media?.instagram && (
+                <Badge variant="outline" className="justify-start gap-2">
+                  📸 Instagram
+                </Badge>
+              )}
+              {profile?.social_media?.facebook && (
+                <Badge variant="outline" className="justify-start gap-2">
+                  👥 Facebook
+                </Badge>
+              )}
+            </div>
+          </div>
+          
+          <Button 
+            variant="outline" 
+            className="w-full"
+            onClick={() => navigate('/dashboard/profile')}
+          >
+            تعديل في الملف الشخصي →
+          </Button>
         </CardContent>
       </Card>
 
@@ -213,6 +372,74 @@ const StorefrontSettingsPage = () => {
           <LogoUploader
             currentLogo={settings.logo_url}
             onUpload={(url) => setSettings({ ...settings, logo_url: url })}
+          />
+        </CardContent>
+      </Card>
+
+      {/* الصفحات القانونية */}
+      <Card className="border-2 shadow-xl">
+        <CardHeader>
+          <CardTitle>الصفحات القانونية</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            محتوى صفحات من نحن، الخصوصية، الشروط، والاسترجاع
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <Tabs defaultValue="about" className="w-full">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="about">من نحن</TabsTrigger>
+              <TabsTrigger value="privacy">الخصوصية</TabsTrigger>
+              <TabsTrigger value="terms">الشروط</TabsTrigger>
+              <TabsTrigger value="return">الاسترجاع</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="about" className="mt-6">
+              <RichTextEditor
+                value={settings.about_us || DEFAULT_ABOUT_US}
+                onChange={(value) => setSettings({...settings, about_us: value})}
+                placeholder="اكتب نبذة عن متجرك..."
+              />
+            </TabsContent>
+            
+            <TabsContent value="privacy" className="mt-6">
+              <RichTextEditor
+                value={settings.privacy_policy || DEFAULT_PRIVACY_POLICY}
+                onChange={(value) => setSettings({...settings, privacy_policy: value})}
+                placeholder="سياسة الخصوصية..."
+              />
+            </TabsContent>
+            
+            <TabsContent value="terms" className="mt-6">
+              <RichTextEditor
+                value={settings.terms_conditions || DEFAULT_TERMS}
+                onChange={(value) => setSettings({...settings, terms_conditions: value})}
+                placeholder="الشروط والأحكام..."
+              />
+            </TabsContent>
+            
+            <TabsContent value="return" className="mt-6">
+              <RichTextEditor
+                value={settings.return_policy || DEFAULT_RETURN_POLICY}
+                onChange={(value) => setSettings({...settings, return_policy: value})}
+                placeholder="سياسة الاسترجاع..."
+              />
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      {/* Banner المتجر */}
+      <Card className="border-2 shadow-xl">
+        <CardHeader>
+          <CardTitle>بانر المتجر (اختياري)</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            يظهر في أعلى الصفحة الرئيسية للمتجر
+          </p>
+        </CardHeader>
+        <CardContent>
+          <BannerUploader
+            currentBanner={settings.banner_url}
+            onUpload={(url) => setSettings({ ...settings, banner_url: url })}
           />
         </CardContent>
       </Card>
@@ -233,8 +460,8 @@ const StorefrontSettingsPage = () => {
                 name={theme.name}
                 description={theme.description}
                 gradient={theme.gradient}
-                selected={settings.theme === theme.id}
-                onClick={() => setSettings({ ...settings, theme: theme.id })}
+                selected={settings.theme_name === theme.id}
+                onClick={() => setSettings({ ...settings, theme_name: theme.id })}
               />
             ))}
           </div>
