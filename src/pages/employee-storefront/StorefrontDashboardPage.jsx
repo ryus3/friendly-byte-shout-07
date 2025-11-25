@@ -66,101 +66,17 @@ const StorefrontDashboardPage = () => {
   const createStorefront = async () => {
     try {
       setCreating(true);
-      console.log('🏪 بدء إنشاء المتجر...');
       
-      // ✅ التحقق من Session مع تفاصيل دقيقة
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      console.log('🔍 Auth response:', { user, authError });
-      
-      if (authError) {
-        console.error('❌ خطأ في التحقق من المستخدم:', authError);
-        toast({
-          title: 'خطأ في المصادقة',
-          description: authError.message,
-          variant: 'destructive'
-        });
-        return;
-      }
-      
-      if (!user) {
-        const session = await supabase.auth.getSession();
-        console.error('❌ لا يوجد مستخدم - Session:', session);
-        toast({
-          title: 'خطأ',
-          description: 'يجب تسجيل الدخول أولاً',
-          variant: 'destructive'
-        });
-        return;
-      }
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('يجب تسجيل الدخول أولاً');
 
-      console.log('✅ المستخدم:', user.id, user.email);
-
-      // ✅ جلب Profile مع معالجة الأخطاء
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('business_page_name, employee_code, user_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profileError) {
-        console.error('❌ خطأ في جلب الملف الشخصي:', profileError);
-        toast({
-          title: 'خطأ في الملف الشخصي',
-          description: profileError.message,
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      console.log('✅ الملف الشخصي:', profile);
-
-      // ✅ إنشاء slug مع fallback
-      const slug = profile?.employee_code 
-        ? `${profile.employee_code}-shop`
-        : `${user.id.substring(0, 8)}-shop`;
-      
-      console.log('📍 Slug:', slug);
-
-      // ✅ إنشاء المتجر مع business_name من profile
-      const { data, error } = await supabase
-        .from('employee_storefront_settings')
-        .insert({
-          employee_id: user.id,
-          slug: slug,
-          business_name: profile?.business_page_name || 'متجري',
-          theme_name: 'modern',
-          primary_color: '#8B5CF6',
-          secondary_color: '#EC4899',
-          accent_color: '#3B82F6',
-          is_active: true
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('❌ خطأ في إنشاء المتجر:', error);
-        toast({
-          title: 'خطأ في إنشاء المتجر',
-          description: error.message || 'فشل إنشاء المتجر. حاول مرة أخرى',
-          variant: 'destructive'
-        });
-        return;
-      }
-
-      console.log('✅ تم إنشاء المتجر بنجاح:', data);
-      
-      setSettings(data);
-      toast({
-        title: '🎉 تم إنشاء المتجر بنجاح',
-        description: 'يمكنك الآن تخصيص متجرك الإلكتروني'
-      });
+      // التوجيه مباشرة إلى Setup Wizard
+      navigate('/dashboard/storefront/setup-wizard');
       
     } catch (err) {
-      console.error('💥 خطأ غير متوقع في إنشاء المتجر:', err);
       toast({
-        title: 'خطأ غير متوقع',
-        description: err.message || 'فشل إنشاء المتجر. حاول مرة أخرى',
+        title: 'خطأ',
+        description: err.message,
         variant: 'destructive'
       });
     } finally {

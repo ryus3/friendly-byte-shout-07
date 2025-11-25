@@ -2120,6 +2120,7 @@ export type Database = {
       }
       employee_storefront_settings: {
         Row: {
+          about_us: string | null
           accent_color: string
           banner_url: string | null
           created_at: string | null
@@ -2133,12 +2134,16 @@ export type Database = {
           meta_description: string | null
           meta_title: string | null
           primary_color: string
+          privacy_policy: string | null
+          return_policy: string | null
           secondary_color: string
           slug: string
+          terms_conditions: string | null
           theme_name: string
           updated_at: string | null
         }
         Insert: {
+          about_us?: string | null
           accent_color?: string
           banner_url?: string | null
           created_at?: string | null
@@ -2152,12 +2157,16 @@ export type Database = {
           meta_description?: string | null
           meta_title?: string | null
           primary_color?: string
+          privacy_policy?: string | null
+          return_policy?: string | null
           secondary_color?: string
           slug: string
+          terms_conditions?: string | null
           theme_name?: string
           updated_at?: string | null
         }
         Update: {
+          about_us?: string | null
           accent_color?: string
           banner_url?: string | null
           created_at?: string | null
@@ -2171,8 +2180,11 @@ export type Database = {
           meta_description?: string | null
           meta_title?: string | null
           primary_color?: string
+          privacy_policy?: string | null
+          return_policy?: string | null
           secondary_color?: string
           slug?: string
+          terms_conditions?: string | null
           theme_name?: string
           updated_at?: string | null
         }

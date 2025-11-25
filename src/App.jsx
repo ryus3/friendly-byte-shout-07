@@ -54,6 +54,7 @@ const StorefrontProductsManagePage = lazy(() => import('@/pages/employee-storefr
 const StorefrontPromotionsPage = lazy(() => import('@/pages/employee-storefront/StorefrontPromotionsPage.jsx'));
 const StorefrontBannersPage = lazy(() => import('@/pages/employee-storefront/StorefrontBannersPage.jsx'));
 const StorefrontOrdersPage = lazy(() => import('@/pages/employee-storefront/StorefrontOrdersPage.jsx'));
+const StorefrontSetupWizard = lazy(() => import('@/pages/employee-storefront/StorefrontSetupWizard.jsx'));
 
 // Public Storefront Pages
 const StorefrontPage = lazy(() => import('@/pages/StorefrontPage.jsx'));
@@ -61,6 +62,13 @@ const StorefrontProductsPage = lazy(() => import('@/pages/StorefrontProductsPage
 const StorefrontProductDetailPage = lazy(() => import('@/pages/StorefrontProductDetailPage.jsx'));
 const StorefrontCartPage = lazy(() => import('@/pages/StorefrontCartPage.jsx'));
 const StorefrontCheckoutPage = lazy(() => import('@/pages/StorefrontCheckoutPage.jsx'));
+
+// Public Storefront Footer Pages
+const AboutPage = lazy(() => import('@/pages/storefront/AboutPage.jsx'));
+const PrivacyPolicyPage = lazy(() => import('@/pages/storefront/PrivacyPolicyPage.jsx'));
+const TermsPage = lazy(() => import('@/pages/storefront/TermsPage.jsx'));
+const ReturnPolicyPage = lazy(() => import('@/pages/storefront/ReturnPolicyPage.jsx'));
+const ContactPage = lazy(() => import('@/pages/storefront/ContactPage.jsx'));
 
 function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
@@ -202,6 +210,7 @@ function AppContent() {
           
           {/* Employee Storefront Dashboard Routes (Protected) */}
           <Route path="/dashboard/storefront" element={<ProtectedRoute>{childrenWithProps(StorefrontDashboardPage)}</ProtectedRoute>} />
+          <Route path="/dashboard/storefront/setup-wizard" element={<ProtectedRoute>{childrenWithProps(StorefrontSetupWizard)}</ProtectedRoute>} />
           <Route path="/dashboard/storefront/settings" element={<ProtectedRoute>{childrenWithProps(StorefrontSettingsPage)}</ProtectedRoute>} />
           <Route path="/dashboard/storefront/products" element={<ProtectedRoute>{childrenWithProps(StorefrontProductsManagePage)}</ProtectedRoute>} />
           <Route path="/dashboard/storefront/promotions" element={<ProtectedRoute>{childrenWithProps(StorefrontPromotionsPage)}</ProtectedRoute>} />
@@ -214,6 +223,13 @@ function AppContent() {
           <Route path="/storefront/:slug/products/:productId" element={<StorefrontProductDetailPage />} />
           <Route path="/storefront/:slug/cart" element={<StorefrontCartPage />} />
           <Route path="/storefront/:slug/checkout" element={<StorefrontCheckoutPage />} />
+          
+          {/* Public Storefront Footer Pages */}
+          <Route path="/storefront/:slug/about" element={<AboutPage />} />
+          <Route path="/storefront/:slug/privacy" element={<PrivacyPolicyPage />} />
+          <Route path="/storefront/:slug/terms" element={<TermsPage />} />
+          <Route path="/storefront/:slug/return-policy" element={<ReturnPolicyPage />} />
+          <Route path="/storefront/:slug/contact" element={<ContactPage />} />
         </Routes>
       </Suspense>
       <Toaster />

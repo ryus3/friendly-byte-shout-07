@@ -41,7 +41,7 @@ const StorefrontLayout = ({ products = [] }) => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" style={customColors}>
       <StorefrontHeader products={products} />
-      <main className="min-h-[calc(100vh-200px)]">
+      <main className="min-h-[calc(100vh-400px)]">
         <Outlet />
       </main>
       <StorefrontFooter />
