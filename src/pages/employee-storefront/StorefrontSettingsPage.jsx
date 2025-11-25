@@ -213,7 +213,7 @@ const StorefrontSettingsPage = () => {
   };
 
   if (loading) {
-    return <PremiumLoader message="جاري تحميل إعدادات المتجر..." />;
+    return <PremiumLoader />;
   }
 
   if (!settings) {
@@ -229,17 +229,18 @@ const StorefrontSettingsPage = () => {
   }
 
   return (
-    <div className="p-8 bg-gradient-to-br from-background via-background to-blue-50 dark:to-blue-950/20 min-h-screen space-y-8">
+    <div className="p-4 sm:p-6 md:p-8 bg-gradient-to-br from-background via-background to-blue-50 dark:to-blue-950/20 min-h-screen space-y-6 sm:space-y-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <GradientText gradient="from-blue-600 via-purple-600 to-pink-600" className="text-4xl">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <GradientText gradient="from-blue-600 via-purple-600 to-pink-600" className="text-2xl sm:text-3xl md:text-4xl">
           إعدادات المتجر
         </GradientText>
         <PremiumButton
           variant="success"
-          size="lg"
+          size="md"
           onClick={handleSave}
           disabled={saving}
+          className="w-full sm:w-auto"
         >
           {saving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
           حفظ التغييرات
@@ -249,7 +250,7 @@ const StorefrontSettingsPage = () => {
       {/* معلومات أساسية */}
       <Card className="border-2 shadow-xl">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-lg sm:text-xl">
             <Settings2 className="h-5 w-5" />
             المعلومات الأساسية
           </CardTitle>

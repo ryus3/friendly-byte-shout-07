@@ -14,12 +14,12 @@ const PremiumButton = ({
       relative overflow-hidden
       bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500
       hover:from-blue-600 hover:via-purple-600 hover:to-pink-600
-      before:absolute before:inset-0 
-      before:bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.2)_0%,transparent_50%)]
-      before:opacity-0 hover:before:opacity-100 before:transition-opacity
-      after:absolute after:inset-0
-      after:bg-[radial-gradient(circle_at_70%_50%,rgba(255,255,255,0.15)_0%,transparent_50%)]
-      after:opacity-0 hover:after:opacity-100 after:transition-opacity
+      before:absolute before:top-0 before:left-0 before:w-32 before:h-32 
+      before:bg-white/20 before:rounded-full before:blur-xl
+      before:animate-pulse
+      after:absolute after:bottom-0 after:right-0 after:w-24 after:h-24 
+      after:bg-white/15 after:rounded-full after:blur-lg
+      after:animate-pulse
     `,
     settings: `
       relative overflow-hidden
@@ -36,6 +36,13 @@ const PremiumButton = ({
       hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600
       before:absolute before:inset-0 
       before:bg-[radial-gradient(circle_at_40%_40%,rgba(255,255,255,0.2)_0%,transparent_50%)]
+    `,
+    promotions: `
+      relative overflow-hidden
+      bg-gradient-to-r from-pink-500 via-rose-500 to-red-500
+      hover:from-pink-600 hover:via-rose-600 hover:to-red-600
+      before:absolute before:inset-0 
+      before:bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.25)_0%,transparent_50%)]
     `,
   };
 
