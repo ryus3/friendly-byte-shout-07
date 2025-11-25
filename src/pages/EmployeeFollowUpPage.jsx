@@ -100,6 +100,10 @@ const EmployeeFollowUpPage = () => {
       setSyncingEmployee(null);
     }
   };
+  
+  // ✅ Aliases للدوال المطلوبة في ProfessionalSyncToolbar
+  const syncSpecificEmployee = syncEmployeeOrders;
+  const syncSpecificEmployeeSmart = syncEmployeeOrders;
 
   const syncAllEmployeesOrders = async () => {
     if (!isAdmin) return;
@@ -177,6 +181,10 @@ const EmployeeFollowUpPage = () => {
       });
     }
   };
+  
+  // ✅ تعريف smartSync كـ alias لـ syncVisibleOrders
+  const smartSync = syncVisibleOrders;
+  
   const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
