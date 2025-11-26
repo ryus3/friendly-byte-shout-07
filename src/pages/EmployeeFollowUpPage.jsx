@@ -762,7 +762,7 @@ useEffect(() => {
       await deleteOrders([order.id]);
       toast({ 
         title: "تم الحذف", 
-        description: `تم حذف الطلب ${order.order_number} وإرجاع المخزون المحجوز.` 
+        description: `تم حذف الطلب ${order.tracking_number || order.order_number} وإرجاع المخزون المحجوز.` 
       });
       await refetchProducts();
     } catch (error) {

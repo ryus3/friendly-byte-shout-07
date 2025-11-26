@@ -1991,6 +1991,7 @@ export const AlWaseetProvider = ({ children }) => {
               account_username: normalizedUsername,
               last_used_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
+              is_active: true, // ✅ تفعيل التوكن عند تسجيل الدخول
             })
             .eq('id', existingAccount.id);
             
@@ -2654,6 +2655,18 @@ export const AlWaseetProvider = ({ children }) => {
           if (confirmKey) {
             const orderOwnerId = localOrder.created_by;
             const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
+            
+            // ✅ حماية: لا تحذف إذا لم يوجد توكن صالح
+            if (ownerAccounts.length === 0) {
+              devLog.warn(`⛔ إيقاف الحذف التلقائي للطلب ${confirmKey} - لا يوجد توكن صالح للتحقق`);
+              toast({
+                title: "⚠️ تنبيه: توكنات منتهية",
+                description: `لم يتم التحقق من الطلب ${confirmKey}. يُرجى تسجيل الدخول لشركة التوصيل أولاً.`,
+                variant: "warning",
+                duration: 8000
+              });
+              continue; // ✅ تخطي هذا الطلب - لا تحذفه!
+            }
             
             // المحاولة 1: فحص بـ getOrderByQR
             devLog.log(`🔍 محاولة 1/3: فحص الطلب ${confirmKey} بـ QR في ${ownerAccounts.length} حساب`);
@@ -3469,6 +3482,12 @@ export const AlWaseetProvider = ({ children }) => {
         
         // جلب جميع حسابات مالك الطلب
         const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
+        
+        // ✅ حماية: لا تحذف إذا لم يوجد توكن صالح
+        if (ownerAccounts.length === 0) {
+          devLog.warn(`⛔ إيقاف الحذف التلقائي للطلب ${orderId} - لا يوجد توكن صالح للتحقق`);
+          return { noValidToken: true }; // إرجاع كائن خاص يمنع الحذف
+        }
         
         devLog.log(`🔍 فحص الطلب ${orderId} بجميع التوكنات (${ownerAccounts.length} حساب)`);
         
