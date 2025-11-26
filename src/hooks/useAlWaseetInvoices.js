@@ -717,47 +717,83 @@ export const useAlWaseetInvoices = () => {
     }
   }, [token, fetchInvoices, fetchInvoiceOrders, user?.id, user?.user_id]);
 
-  // Link invoice with local orders based on merchant_invoice_id
+  // ✅ FIXED: Link invoice with local orders - directly from database
   const linkInvoiceWithLocalOrders = useCallback(async (invoiceId) => {
     if (!invoiceId) return [];
 
     try {
-      const { data: localOrders, error } = await supabase
-        .from('orders')
-        .select('*')
-        .eq('delivery_partner', 'alwaseet')
-        .not('delivery_partner_order_id', 'is', null);
+      console.log(`🔗 جلب الطلبات المرتبطة بالفاتورة ${invoiceId} من قاعدة البيانات مباشرة`);
+      
+      // أولاً: جلب internal ID للفاتورة من external_id
+      const { data: invoiceRecord, error: invoiceError } = await supabase
+        .from('delivery_invoices')
+        .select('id')
+        .eq('external_id', invoiceId)
+        .single();
 
-      if (error) {
-        console.error('Error fetching local orders:', error);
+      if (invoiceError || !invoiceRecord) {
+        console.warn(`⚠️ الفاتورة ${invoiceId} غير موجودة في قاعدة البيانات`);
         return [];
       }
 
-      // Get Al-Waseet orders for this invoice
-      const invoiceData = await fetchInvoiceOrders(invoiceId);
-      const waseetOrders = invoiceData?.orders || [];
+      // ثانياً: جلب الطلبات المرتبطة مباشرة من قاعدة البيانات
+      // بدون الاعتماد على API - يضمن عرض جميع الطلبات المرتبطة
+      const { data: linkedOrders, error } = await supabase
+        .from('delivery_invoice_orders')
+        .select(`
+          id,
+          external_order_id,
+          amount,
+          status,
+          order_id,
+          orders:order_id (
+            id,
+            order_number,
+            tracking_number,
+            customer_name,
+            customer_phone,
+            customer_address,
+            customer_city,
+            delivery_partner,
+            delivery_partner_order_id,
+            delivery_partner_invoice_id,
+            status,
+            delivery_status,
+            total_amount,
+            discount,
+            delivery_fee,
+            sales_amount,
+            final_amount,
+            receipt_received,
+            created_at,
+            updated_at
+          )
+        `)
+        .eq('invoice_id', invoiceRecord.id);
 
-      // Match local orders with Al-Waseet orders by delivery_partner_order_id
-      const linkedOrders = [];
-      for (const waseetOrder of waseetOrders) {
-        const localOrder = localOrders.find(lo => 
-          lo.delivery_partner_order_id === String(waseetOrder.id)
-        );
-        
-        if (localOrder) {
-          linkedOrders.push({
-            ...localOrder,
-            waseet_data: waseetOrder
-          });
-        }
+      if (error) {
+        console.error('❌ خطأ في جلب الطلبات المرتبطة:', error);
+        return [];
       }
 
-      return linkedOrders;
+      // تحويل البيانات للصيغة المتوقعة
+      const formattedOrders = (linkedOrders || [])
+        .filter(item => item.orders) // فقط الطلبات الموجودة
+        .map(item => ({
+          ...item.orders,
+          invoice_link_id: item.id,
+          invoice_amount: item.amount,
+          invoice_status: item.status
+        }));
+
+      console.log(`✅ تم جلب ${formattedOrders.length} طلب مرتبط من قاعدة البيانات`);
+      return formattedOrders;
+      
     } catch (error) {
-      console.error('Error linking invoice with local orders:', error);
+      console.error('❌ خطأ في ربط الفاتورة بالطلبات المحلية:', error);
       return [];
     }
-  }, [fetchInvoiceOrders]);
+  }, []);
 
   // Get invoice statistics
   const getInvoiceStats = useCallback(() => {
