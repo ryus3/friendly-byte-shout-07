@@ -933,6 +933,20 @@ const OrdersPage = () => {
           onEditOrder={handleEditOrder}
           canEditStatus={hasPermission('manage_orders') || (selectedOrder?.created_by === user?.id)}
           sellerName={selectedOrder ? usersMap.get(selectedOrder.created_by) : null}
+          orders={filteredOrders}
+          currentIndex={selectedOrder ? filteredOrders.findIndex(o => o.id === selectedOrder.id) : -1}
+          onNavigatePrev={() => {
+            const currentIdx = filteredOrders.findIndex(o => o.id === selectedOrder?.id);
+            if (currentIdx > 0) {
+              setSelectedOrder(filteredOrders[currentIdx - 1]);
+            }
+          }}
+          onNavigateNext={() => {
+            const currentIdx = filteredOrders.findIndex(o => o.id === selectedOrder?.id);
+            if (currentIdx < filteredOrders.length - 1) {
+              setSelectedOrder(filteredOrders[currentIdx + 1]);
+            }
+          }}
         />
 
         <EditOrderDialog
