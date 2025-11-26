@@ -2936,22 +2936,26 @@ export const AlWaseetProvider = ({ children }) => {
           // ✅ فصل السعر: منتجات = الشامل - التوصيل
           const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
           
-          // ✅ حساب السعر الأصلي الحقيقي (قبل أي تغييرات)
-          // total_amount يمثل السعر الأصلي للمنتجات بالفعل - لا نحتاج إضافة/طرح شيء
+          // ✅ CRITICAL: حساب السعر الأصلي الحقيقي من order_items (قبل أي تغييرات)
+          // يجب جلب سعر المنتجات من order_items وليس من total_amount لأن total_amount قد يكون بعد الخصم
           const currentDiscount = parseInt(String(localOrder.discount)) || 0;
-          let originalProductsPrice = localTotalAmount;
-
-          // فقط في حالة الطلبات القديمة التي لديها price_increase خاطئ
-          if (currentPriceIncrease > 0 && currentDiscount === 0) {
-            // الطلبات القديمة: السعر الأصلي = السعر الحالي - الزيادة
-            originalProductsPrice = localTotalAmount - currentPriceIncrease;
-          }
+          
+          // جلب السعر الأصلي من order_items
+          const { data: orderItemsData } = await supabase
+            .from('order_items')
+            .select('total_price')
+            .eq('order_id', localOrder.id);
+          
+          // السعر الأصلي = مجموع total_price من order_items
+          let originalProductsPrice = orderItemsData?.reduce((sum, item) => 
+            sum + (parseFloat(item.total_price) || 0), 0) || localTotalAmount;
 
           devLog.log(`🔍 حساب السعر الأصلي للطلب ${localOrder.order_number}:`, {
             localTotalAmount,
             currentPriceIncrease,
             currentDiscount,
-            originalProductsPrice
+            originalProductsPriceFromItems: originalProductsPrice,
+            orderItemsCount: orderItemsData?.length || 0
           });
 
           // إذا كان السعر الأصلي = 0، جرب final_amount - delivery_fee
