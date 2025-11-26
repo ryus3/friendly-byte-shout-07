@@ -25,7 +25,15 @@ const OrderStatusHistory = ({ orderId }) => {
           .order('changed_at', { ascending: false });
 
         if (error) throw error;
-        setHistory(data || []);
+        
+        // إزالة التكرارات - الاحتفاظ فقط بالحالات المختلفة المتتالية
+        const filteredData = (data || []).filter((record, index) => {
+          if (index === 0) return true;
+          const prevRecord = data[index - 1];
+          return record.new_delivery_status !== prevRecord.new_delivery_status;
+        });
+        
+        setHistory(filteredData);
       } catch (error) {
         console.error('Error fetching order status history:', error);
       } finally {
@@ -38,23 +46,23 @@ const OrderStatusHistory = ({ orderId }) => {
 
   const getStatusIcon = (statusId) => {
     const statusConfig = ALWASEET_STATUS_DEFINITIONS[statusId];
-    if (!statusConfig) return <Package className="w-4 h-4" />;
+    if (!statusConfig) return <Package className="w-3 h-3" />;
 
     const iconName = statusConfig.icon;
     switch (iconName) {
       case 'CheckCircle':
-        return <CheckCircle className="w-4 h-4" />;
+        return <CheckCircle className="w-3 h-3" />;
       case 'XCircle':
-        return <XCircle className="w-4 h-4" />;
+        return <XCircle className="w-3 h-3" />;
       case 'AlertCircle':
-        return <AlertCircle className="w-4 h-4" />;
+        return <AlertCircle className="w-3 h-3" />;
       case 'ArrowLeft':
-        return <ArrowLeft className="w-4 h-4" />;
+        return <ArrowLeft className="w-3 h-3" />;
       case 'Truck':
-        return <Truck className="w-4 h-4" />;
+        return <Truck className="w-3 h-3" />;
       case 'Package':
       default:
-        return <Package className="w-4 h-4" />;
+        return <Package className="w-3 h-3" />;
     }
   };
 
@@ -113,70 +121,43 @@ const OrderStatusHistory = ({ orderId }) => {
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2 mb-4">
-        <Clock className="w-5 h-5 text-primary" />
-        <h3 className="font-semibold text-lg">سجل حركات الطلب</h3>
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 mb-3">
+        <Clock className="w-4 h-4 text-primary" />
+        <h3 className="font-semibold text-sm">سجل حركات الطلب</h3>
       </div>
 
       <div className="relative">
         {/* خط Timeline العمودي */}
-        <div className="absolute right-[15px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-primary/50 via-primary/30 to-primary/10"></div>
+        <div className="absolute right-[9px] top-3 bottom-3 w-px bg-gradient-to-b from-primary/40 via-primary/20 to-transparent"></div>
 
         {/* عناصر Timeline */}
-        <div className="space-y-4">
+        <div className="space-y-2">
           {history.map((record, index) => {
             const isFirst = index === 0;
-            const isLast = index === history.length - 1;
             const statusId = record.new_delivery_status ? parseInt(record.new_delivery_status) : null;
             const statusColor = getStatusColor(statusId);
             const statusText = getStatusText(statusId, record.new_status);
             const statusIcon = getStatusIcon(statusId);
 
             return (
-              <div key={record.id} className="flex items-start gap-4 relative">
+              <div key={record.id} className="flex items-center gap-3 relative">
                 {/* نقطة الحالة */}
-                <div className={`relative z-10 flex-shrink-0 w-8 h-8 rounded-full ${statusColor} flex items-center justify-center text-white shadow-lg ${isFirst ? 'ring-4 ring-primary/20' : ''}`}>
+                <div className={`relative z-10 flex-shrink-0 w-5 h-5 rounded-full ${statusColor} flex items-center justify-center text-white shadow-md ${isFirst ? 'ring-2 ring-primary/30' : ''}`}>
                   {statusIcon}
                 </div>
 
-                {/* محتوى الحالة */}
-                <div className={`flex-1 pb-4 ${!isLast ? 'border-b border-border/50' : ''}`}>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div>
-                      <p className="font-medium text-foreground">{statusText}</p>
-                      {record.old_status && (
-                        <p className="text-xs text-muted-foreground mt-1">
-                          من: {getStatusText(record.old_delivery_status ? parseInt(record.old_delivery_status) : null, record.old_status)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span className="font-mono">{formatDateTime(record.changed_at)}</span>
-                    </div>
-                  </div>
+                {/* محتوى الحالة - سطر واحد */}
+                <div className="flex-1 flex items-center justify-between py-1">
+                  <p className="text-sm font-medium text-foreground">{statusText}</p>
+                  <span className="text-xs text-muted-foreground font-mono">
+                    {formatDateTime(record.changed_at)}
+                  </span>
                 </div>
               </div>
             );
           })}
         </div>
-      </div>
-
-      {/* إحصائية سريعة */}
-      <div className="mt-6 p-4 bg-muted/30 rounded-lg border border-border/50">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">إجمالي التغييرات:</span>
-          <span className="font-semibold text-foreground">{history.length} تغيير</span>
-        </div>
-        {history[history.length - 1] && (
-          <div className="flex items-center justify-between text-sm mt-2">
-            <span className="text-muted-foreground">تاريخ الإنشاء:</span>
-            <span className="font-mono text-xs text-foreground">
-              {formatDateTime(history[history.length - 1].changed_at)}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   );
