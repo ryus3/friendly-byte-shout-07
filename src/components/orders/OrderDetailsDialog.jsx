@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { User, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle, AlertTriangle, CornerDownLeft, Edit, Building, UserCircle, X, RefreshCw, Loader2, RotateCcw, PackageCheck } from 'lucide-react';
+import { User, Phone, MapPin, Clock, Package, Truck, CheckCircle, XCircle, AlertTriangle, CornerDownLeft, Edit, Building, UserCircle, X, RefreshCw, Loader2, RotateCcw, PackageCheck, ChevronRight, ChevronLeft } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,6 +13,7 @@ import { toast } from '@/components/ui/use-toast';
 import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
 import { getStatusForComponent } from '@/lib/order-status-translator';
 import { useDeliveryTracking } from '@/hooks/useDeliveryTracking';
+import OrderStatusHistory from '@/components/sales/OrderStatusHistory';
 
 const getStatusInfo = (order) => {
   const statusConfig = getStatusForComponent(order);
@@ -35,7 +36,19 @@ const getStatusInfo = (order) => {
     { value: 'unknown', label: 'غير معروف' }
   ];
 
-const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, canEditStatus = false, sellerName }) => {
+const OrderDetailsDialog = ({ 
+  order, 
+  open, 
+  onOpenChange, 
+  onUpdate, 
+  onEditOrder, 
+  canEditStatus = false, 
+  sellerName,
+  orders = [],              // قائمة جميع الطلبات للتنقل
+  currentIndex = -1,        // الفهرس الحالي
+  onNavigatePrev,           // دالة التنقل للسابق
+  onNavigateNext            // دالة التنقل للتالي
+}) => {
   const [newStatus, setNewStatus] = useState(order?.status);
   const [syncing, setSyncing] = useState(false);
   const [checkingInvoice, setCheckingInvoice] = useState(false);
@@ -328,6 +341,11 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
                </div>
              </div>
 
+             {/* Order Status History - سجل حركات الطلب */}
+             <div className="p-4 bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+               <OrderStatusHistory orderId={order.id} />
+             </div>
+ 
              {/* زر استلام الفاتورة في المعاينة */}
              {order.status === 'delivered' && !order.receipt_received && (
                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
@@ -747,29 +765,66 @@ const OrderDetailsDialog = ({ order, open, onOpenChange, onUpdate, onEditOrder, 
           </div>
         </ScrollArea>
         <DialogFooter className="gap-2 pt-4 border-t">
-          {canSyncOrder && (
-            <Button 
-              variant="outline" 
-              onClick={handleSyncWithDelivery} 
-              disabled={syncing}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-blue-400 shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              {syncing ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <RefreshCw className="w-4 h-4 ml-2" />}
-              {syncing ? 'جاري التحقق...' : 'تحقق الآن'}
-            </Button>
-          )}
-          {canEditOrder && onEditOrder && (
-            <Button variant="secondary" onClick={handleEditClick}>
-              <Edit className="w-4 h-4 ml-2" />
-              تعديل الطلب
-            </Button>
-          )}
-            {canEditStatusForOrder && (
-            <Button onClick={handleUpdateStatus} disabled={newStatus === order.status}>
-              <Edit className="w-4 h-4 ml-2" />
-              تحديث الحالة
-            </Button>
-          )}
+          <div className="flex items-center justify-between w-full flex-wrap gap-2">
+            {/* أزرار التنقل بين الطلبات */}
+            <div className="flex items-center gap-2">
+              {orders.length > 0 && onNavigatePrev && onNavigateNext && (
+                <>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={onNavigatePrev}
+                    disabled={currentIndex <= 0}
+                  >
+                    <ChevronRight className="w-4 h-4 ml-1" />
+                    السابق
+                  </Button>
+                  
+                  <span className="text-sm text-muted-foreground px-2">
+                    {currentIndex + 1} من {orders.length}
+                  </span>
+                  
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={onNavigateNext}
+                    disabled={currentIndex >= orders.length - 1}
+                  >
+                    التالي
+                    <ChevronLeft className="w-4 h-4 mr-1" />
+                  </Button>
+                </>
+              )}
+            </div>
+
+            {/* أزرار الإجراءات */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {canSyncOrder && (
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleSyncWithDelivery} 
+                  disabled={syncing}
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white border-blue-400 shadow-lg hover:shadow-xl transition-all duration-300"
+                >
+                  {syncing ? <Loader2 className="w-4 h-4 ml-2 animate-spin" /> : <RefreshCw className="w-4 h-4 ml-2" />}
+                  {syncing ? 'جاري التحقق...' : 'تحقق الآن'}
+                </Button>
+              )}
+              {canEditOrder && onEditOrder && (
+                <Button variant="secondary" size="sm" onClick={handleEditClick}>
+                  <Edit className="w-4 h-4 ml-2" />
+                  تعديل الطلب
+                </Button>
+              )}
+              {canEditStatusForOrder && (
+                <Button size="sm" onClick={handleUpdateStatus} disabled={newStatus === order.status}>
+                  <Edit className="w-4 h-4 ml-2" />
+                  تحديث الحالة
+                </Button>
+              )}
+            </div>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
