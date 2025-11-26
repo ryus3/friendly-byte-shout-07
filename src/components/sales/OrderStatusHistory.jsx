@@ -128,9 +128,10 @@ const OrderStatusHistory = ({ orderId }) => {
           {history.map((record, index) => {
             const isFirst = index === 0;
             const isLast = index === history.length - 1;
-            const statusColor = getStatusColor(record.new_status_normalized);
-            const statusText = getStatusText(record.new_status_normalized, record.new_status);
-            const statusIcon = getStatusIcon(record.new_status_normalized);
+            const statusId = record.new_delivery_status ? parseInt(record.new_delivery_status) : null;
+            const statusColor = getStatusColor(statusId);
+            const statusText = getStatusText(statusId, record.new_status);
+            const statusIcon = getStatusIcon(statusId);
 
             return (
               <div key={record.id} className="flex items-start gap-4 relative">
@@ -146,7 +147,7 @@ const OrderStatusHistory = ({ orderId }) => {
                       <p className="font-medium text-foreground">{statusText}</p>
                       {record.old_status && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          من: {getStatusText(record.old_status_normalized, record.old_status)}
+                          من: {getStatusText(record.old_delivery_status ? parseInt(record.old_delivery_status) : null, record.old_status)}
                         </p>
                       )}
                     </div>
