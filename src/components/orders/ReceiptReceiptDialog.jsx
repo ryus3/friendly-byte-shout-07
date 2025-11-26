@@ -43,12 +43,13 @@ const ReceiptReceiptDialog = ({ open, onClose, orders, onSuccess, user }) => {
     try {
       setIsProcessing(true);
 
-      // تحديث حالة استلام الفواتير للطلبات المختارة
+      // ✅ CRITICAL FIX: لا نُحدد receipt_received_at يدوياً
+      // الـ trigger في قاعدة البيانات سيأخذ التاريخ من الفاتورة تلقائياً (للطلبات المربوطة بفواتير)
+      // أو سيستخدم NOW() للطلبات المحلية (عبر trigger منفصل)
       const { error } = await supabase
         .from('orders')
         .update({
           receipt_received: true,
-          receipt_received_at: new Date().toISOString(),
           receipt_received_by: user?.user_id || user?.id
         })
         .in('id', selectedOrders);

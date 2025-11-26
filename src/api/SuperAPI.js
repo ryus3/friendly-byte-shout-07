@@ -470,12 +470,13 @@ return this.fetch('all_data', async () => {
 const superAPI = new SuperAPI();
 
 // عمليات مالية موحدة لكتابة البيانات (بدون تغيير سلوك)
+// ✅ CRITICAL FIX: لا نُحدد receipt_received_at يدوياً
+// الـ trigger في قاعدة البيانات سيأخذ التاريخ من الفاتورة تلقائياً
 superAPI.markOrdersReceiptReceived = async (orderIds, userId) => {
   const { error } = await supabase
     .from('orders')
     .update({
       receipt_received: true,
-      receipt_received_at: new Date().toISOString(),
       receipt_received_by: userId
     })
     .in('id', orderIds);
