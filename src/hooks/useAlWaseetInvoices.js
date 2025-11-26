@@ -627,12 +627,12 @@ export const useAlWaseetInvoices = () => {
 
         console.log(`📦 تحديث ${orderIds.length} طلب مرتبط...`);
 
-        // تحديث جدول الطلبات
+        // ✅ CRITICAL FIX: لا نُحدد receipt_received_at يدوياً
+        // الـ trigger في قاعدة البيانات سيأخذ التاريخ من الفاتورة تلقائياً
         const { data: updated, error: updateError } = await supabase
           .from('orders')
           .update({
             receipt_received: true,
-            receipt_received_at: new Date().toISOString(),
             receipt_received_by: user?.id || user?.user_id || null,
             delivery_partner_invoice_id: String(invoiceId),
             delivery_partner_invoice_date: invoiceDate,

@@ -14,10 +14,11 @@ const ReceiveInvoiceButton = ({ order, onSuccess }) => {
 
     setIsReceiving(true);
     try {
-      // trigger الجديد سيتولى إنشاء رقم الفاتورة تلقائياً للطلبات المحلية
+      // ✅ CRITICAL FIX: لا نُحدد receipt_received_at يدوياً
+      // الـ trigger في قاعدة البيانات سيأخذ التاريخ من الفاتورة تلقائياً (للطلبات المربوطة بفواتير)
+      // أو سيستخدم NOW() للطلبات المحلية (عبر trigger منفصل)
       const updateData = {
         receipt_received: true,
-        receipt_received_at: new Date().toISOString(),
         receipt_received_by: user.id
       };
 
