@@ -3,7 +3,8 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { ALWASEET_STATUS_DEFINITIONS } from '@/lib/alwaseet-statuses';
-import { Clock, Package, CheckCircle, XCircle, AlertCircle, ArrowLeft, Truck } from 'lucide-react';
+import { Clock } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 /**
  * مكون لعرض سجل حركات الطلب المفصل مع الأوقات والألوان المميزة
@@ -12,6 +13,22 @@ import { Clock, Package, CheckCircle, XCircle, AlertCircle, ArrowLeft, Truck } f
 const OrderStatusHistory = ({ orderId }) => {
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // دالة لتحويل القيمة إلى ID
+  const getStatusIdFromValue = (value) => {
+    if (!value) return null;
+    
+    // إذا كان رقم
+    const parsed = parseInt(value);
+    if (!isNaN(parsed)) return parsed;
+    
+    // إذا كان نص - البحث في التعريفات عن نص مطابق
+    for (const [id, config] of Object.entries(ALWASEET_STATUS_DEFINITIONS)) {
+      if (config.text === value) return parseInt(id);
+    }
+    
+    return null;
+  };
 
   useEffect(() => {
     const fetchHistory = async () => {
@@ -26,14 +43,20 @@ const OrderStatusHistory = ({ orderId }) => {
 
         if (error) throw error;
         
-        // إزالة التكرارات - الاحتفاظ فقط بالحالات المختلفة المتتالية
-        const filteredData = (data || []).filter((record, index) => {
-          if (index === 0) return true;
-          const prevRecord = data[index - 1];
-          return record.new_delivery_status !== prevRecord.new_delivery_status;
-        });
+        // إزالة التكرارات المتتالية بشكل صحيح
+        const uniqueHistory = [];
+        for (const record of (data || [])) {
+          const statusId = getStatusIdFromValue(record.new_delivery_status);
+          const lastId = uniqueHistory.length > 0 
+            ? getStatusIdFromValue(uniqueHistory[uniqueHistory.length - 1].new_delivery_status)
+            : null;
+          
+          if (statusId !== lastId && statusId !== null) {
+            uniqueHistory.push(record);
+          }
+        }
         
-        setHistory(filteredData);
+        setHistory(uniqueHistory);
       } catch (error) {
         console.error('Error fetching order status history:', error);
       } finally {
@@ -44,53 +67,26 @@ const OrderStatusHistory = ({ orderId }) => {
     fetchHistory();
   }, [orderId]);
 
-  const getStatusIcon = (statusId) => {
-    const statusConfig = ALWASEET_STATUS_DEFINITIONS[statusId];
-    if (!statusConfig) return <Package className="w-3 h-3" />;
-
-    const iconName = statusConfig.icon;
-    switch (iconName) {
-      case 'CheckCircle':
-        return <CheckCircle className="w-3 h-3" />;
-      case 'XCircle':
-        return <XCircle className="w-3 h-3" />;
-      case 'AlertCircle':
-        return <AlertCircle className="w-3 h-3" />;
-      case 'ArrowLeft':
-        return <ArrowLeft className="w-3 h-3" />;
-      case 'Truck':
-        return <Truck className="w-3 h-3" />;
-      case 'Package':
-      default:
-        return <Package className="w-3 h-3" />;
-    }
-  };
-
   const getStatusColor = (statusId) => {
     const statusConfig = ALWASEET_STATUS_DEFINITIONS[statusId];
     if (!statusConfig) return 'bg-gray-500';
-
-    // تحويل اسم اللون إلى class Tailwind
-    const colorMap = {
-      'green': 'bg-green-500',
-      'blue': 'bg-blue-500',
-      'yellow': 'bg-yellow-500',
-      'red': 'bg-red-500',
-      'purple': 'bg-purple-500',
-      'orange': 'bg-orange-500',
-      'gray': 'bg-gray-500',
-      'emerald': 'bg-emerald-500',
-      'cyan': 'bg-cyan-500',
-      'pink': 'bg-pink-500',
-      'indigo': 'bg-indigo-500'
-    };
-
-    return colorMap[statusConfig.color] || 'bg-gray-500';
+    
+    // استخراج اللون الأساسي من الـ gradient class
+    const colorClass = statusConfig.color;
+    
+    // البحث عن اللون الأساسي (from-COLOR-500 or via-COLOR-500 or to-COLOR-500)
+    const colorMatch = colorClass.match(/(?:from|via|to)-(\w+)-\d+/);
+    if (colorMatch) {
+      const baseColor = colorMatch[1]; // green, blue, yellow, etc.
+      return `bg-${baseColor}-500`; // مثال: bg-green-500
+    }
+    
+    return 'bg-gray-500';
   };
 
-  const getStatusText = (statusId, statusText) => {
+  const getStatusText = (statusId) => {
     const statusConfig = ALWASEET_STATUS_DEFINITIONS[statusId];
-    return statusConfig?.text || statusText || `حالة ${statusId}`;
+    return statusConfig?.text || `حالة ${statusId}`;
   };
 
   const formatDateTime = (dateString) => {
@@ -122,43 +118,36 @@ const OrderStatusHistory = ({ orderId }) => {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-2">
         <Clock className="w-4 h-4 text-primary" />
         <h3 className="font-semibold text-sm">سجل حركات الطلب</h3>
       </div>
 
-      <div className="relative">
-        {/* خط Timeline العمودي */}
-        <div className="absolute right-[9px] top-3 bottom-3 w-px bg-gradient-to-b from-primary/40 via-primary/20 to-transparent"></div>
-
-        {/* عناصر Timeline */}
-        <div className="space-y-2">
+      {/* منطقة التمرير الداخلي - ارتفاع محدد لعرض 3-4 حالات */}
+      <ScrollArea className="h-32">
+        <div className="space-y-1 pr-2">
           {history.map((record, index) => {
-            const isFirst = index === 0;
-            const statusId = record.new_delivery_status ? parseInt(record.new_delivery_status) : null;
+            const statusId = getStatusIdFromValue(record.new_delivery_status);
             const statusColor = getStatusColor(statusId);
-            const statusText = getStatusText(statusId, record.new_status);
-            const statusIcon = getStatusIcon(statusId);
+            const statusText = getStatusText(statusId);
 
             return (
-              <div key={record.id} className="flex items-center gap-3 relative">
-                {/* نقطة الحالة */}
-                <div className={`relative z-10 flex-shrink-0 w-5 h-5 rounded-full ${statusColor} flex items-center justify-center text-white shadow-md ${isFirst ? 'ring-2 ring-primary/30' : ''}`}>
-                  {statusIcon}
-                </div>
-
-                {/* محتوى الحالة - سطر واحد */}
-                <div className="flex-1 flex items-center justify-between py-1">
-                  <p className="text-sm font-medium text-foreground">{statusText}</p>
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {formatDateTime(record.changed_at)}
-                  </span>
-                </div>
+              <div key={record.id} className="flex items-center gap-2 py-0.5">
+                {/* نقطة ملونة صغيرة */}
+                <div className={`w-3 h-3 rounded-full ${statusColor} shadow-sm flex-shrink-0`} />
+                
+                {/* اسم الحالة */}
+                <span className="text-xs font-medium flex-1">{statusText}</span>
+                
+                {/* التاريخ بخط صغير رمادي */}
+                <span className="text-[10px] text-muted-foreground font-mono whitespace-nowrap">
+                  {formatDateTime(record.changed_at)}
+                </span>
               </div>
             );
           })}
         </div>
-      </div>
+      </ScrollArea>
     </div>
   );
 };
