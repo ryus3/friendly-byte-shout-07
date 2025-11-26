@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import OrderStatusHistory from './OrderStatusHistory';
 
 const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee }) => {
   const { orderItems, products } = useSuper();
@@ -310,6 +311,13 @@ const OrderDetailsModal = ({ order, isOpen, onClose, formatCurrency, employee })
                      </div>
                    </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Order Status History - سجل حركات الطلب */}
+            <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 dark:from-purple-950/20 dark:to-indigo-950/20 border-purple-200 dark:border-purple-800">
+              <CardContent className="pt-6">
+                <OrderStatusHistory orderId={order.id} />
               </CardContent>
             </Card>
           </div>
