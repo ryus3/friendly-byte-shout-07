@@ -464,6 +464,11 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           alwaseet_region_id: updates.alwaseet_region_id ?? null,
           notes: updates.notes,
           total_amount: updates.total_amount,
+          sales_amount: updates.sales_amount,
+          final_amount: updates.final_amount,
+          discount: updates.discount,
+          price_increase: updates.price_increase,
+          price_change_type: updates.price_change_type,
           delivery_fee: updates.delivery_fee,
           updated_at: new Date().toISOString()
         })
