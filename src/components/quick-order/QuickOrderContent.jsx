@@ -57,6 +57,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const preloadedRegionsApplied = useRef(false);
   const originalPriceRef = useRef(null);
   
+  // ✅ إعادة تعيين refs عند تغيير الطلب المحرر
+  useEffect(() => {
+    if (isEditMode && aiOrderData?.orderId) {
+      console.log('🔄 إعادة تعيين refs للطلب الجديد:', aiOrderData.orderId);
+      loadedProducts.current = false;
+      preloadedRegionsApplied.current = false;
+      originalPriceRef.current = null;
+    }
+  }, [aiOrderData?.orderId, isEditMode]);
+  
   // ✅ النهائي: Cleanup آمن بدون clearCart
   useEffect(() => {
     isMountedRef.current = true;
@@ -1299,8 +1309,42 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             await editAlWaseetOrder(deliveryOrderData, waseetToken);
           }
           
-          // ✅ بعد نجاح التحديث في شركة التوصيل، تحديث قاعدة البيانات المحلية
+          // ✅ بعد نجاح التحديث في شركة التوصيل، تحديث قاعدة البيانات المحلية مع حساب الخصم/الزيادة
           const userEnteredPrice = parseInt(formData.price) || originalPriceRef.current || finalTotal;
+          
+          // ✅ جلب السعر الأصلي من order_items
+          const { data: orderItemsData } = await supabase
+            .from('order_items')
+            .select('total_price')
+            .eq('order_id', originalOrder.id);
+
+          const originalProductsPrice = orderItemsData?.reduce((sum, item) => 
+            sum + (parseFloat(item.total_price) || 0), 0) || 0;
+
+          // ✅ حساب سعر المنتجات الجديد (بدون التوصيل)
+          const deliveryFee = originalOrder.delivery_fee || 0;
+          const newProductsPrice = userEnteredPrice - deliveryFee;
+          const priceDiff = newProductsPrice - originalProductsPrice;
+
+          // ✅ تحديد الخصم أو الزيادة
+          let discountAmount = 0;
+          let priceIncreaseAmount = 0;
+          let priceChangeType = null;
+
+          if (priceDiff < 0) {
+            // خصم - السعر الجديد أقل من الأصلي
+            discountAmount = Math.abs(priceDiff);
+            priceChangeType = 'discount';
+            console.log(`🔻 خصم تلقائي: ${discountAmount.toLocaleString()} د.ع (${originalProductsPrice.toLocaleString()} → ${newProductsPrice.toLocaleString()})`);
+          } else if (priceDiff > 0) {
+            // زيادة - السعر الجديد أكبر من الأصلي
+            priceIncreaseAmount = priceDiff;
+            priceChangeType = 'increase';
+            console.log(`🔺 زيادة تلقائية: ${priceIncreaseAmount.toLocaleString()} د.ع (${originalProductsPrice.toLocaleString()} → ${newProductsPrice.toLocaleString()})`);
+          } else {
+            console.log(`✅ السعر لم يتغير: ${newProductsPrice.toLocaleString()} د.ع`);
+          }
+          
           const { error: localDbUpdateError } = await supabase
             .from('orders')
             .update({
@@ -1311,9 +1355,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               customer_province: formData.region,
               customer_address: formData.address,
               notes: formData.notes,
-              total_amount: userEnteredPrice,
-              sales_amount: userEnteredPrice,
-              final_amount: userEnteredPrice,
+              total_amount: newProductsPrice,  // سعر المنتجات فقط (بدون التوصيل)
+              sales_amount: newProductsPrice,
+              final_amount: userEnteredPrice,  // السعر الكلي شامل التوصيل
+              discount: discountAmount,
+              price_increase: priceIncreaseAmount,
+              price_change_type: priceChangeType,
               package_size: parseInt(selectedPackageSize) || 1,
               city_id: validCityId,
               region_id: validRegionId
@@ -1364,7 +1411,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
       // ✅ تحديث order_items في قاعدة البيانات - حماية من حذف المنتجات
       const validCartItems = cart?.filter(item => 
-        item && item.product_id && item.quantity > 0
+        item && (item.productId || item.product_id) && item.quantity > 0
       ) || [];
       
       if (validCartItems.length === 0 && originalOrder.items?.length > 0) {
@@ -1376,18 +1423,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           .delete()
           .eq('order_id', originalOrder.id);
         
-        // إضافة العناصر الجديدة
-        const newOrderItems = cart.map(item => ({
+        // إضافة العناصر الجديدة - دعم كلا التنسيقين
+        const newOrderItems = validCartItems.map(item => ({
           order_id: originalOrder.id,
-          product_id: item.product_id,
-          variant_id: item.variant_id,
-          product_name: item.productName || item.name,
+          product_id: item.productId || item.product_id,
+          variant_id: item.variantId || item.variant_id,
+          product_name: item.productName || item.product_name || item.name,
           color: item.color,
           size: item.size,
           quantity: item.quantity,
-          price: item.price,
+          unit_price: item.price,
           total_price: item.quantity * item.price
         }));
+        
+        console.log('✅ حفظ المنتجات:', newOrderItems.length, 'منتجات');
         
         await supabase
           .from('order_items')
