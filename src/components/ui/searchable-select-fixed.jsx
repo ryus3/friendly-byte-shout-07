@@ -38,9 +38,26 @@ export const SearchableSelectFixed = ({
     return String(optionValue) === String(value);
   });
 
-  // إضافة fallback للقيمة الموجودة بدون options - الحل الجذري النهائي
-  const displayText = selectedOption?.label || selectedOption?.name || 
-    (options.length === 0 && value ? "جاري التحميل..." : placeholder);
+  // ✅ displayText ذكي - لا يعرض القيمة الرقمية أبداً
+  const displayText = React.useMemo(() => {
+    // إذا وُجد الخيار المطابق، اعرض اسمه
+    if (selectedOption) {
+      return selectedOption.label || selectedOption.name;
+    }
+    
+    // إذا لا توجد options بعد والقيمة موجودة (لا زالت تُحمّل)
+    if (options.length === 0 && value) {
+      return "جاري التحميل...";
+    }
+    
+    // إذا توجد options لكن لا يوجد تطابق (ربما البيانات محملة لكن القيمة خاطئة)
+    if (options.length > 0 && value && !selectedOption) {
+      return "جاري التحميل..."; // بدلاً من عرض القيمة الرقمية
+    }
+    
+    // الحالة الافتراضية: اعرض placeholder
+    return placeholder;
+  }, [selectedOption, options, value, placeholder]);
   
   // Detect touch device, dialog presence, calculate dropdown direction, and update button position
   useEffect(() => {

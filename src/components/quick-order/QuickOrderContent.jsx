@@ -40,8 +40,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   // ✅ استخدام الـ Cache للمدن والمناطق بدلاً من API
   const { 
-    cities: cachedCities, 
-    fetchRegionsByCity: fetchRegionsFromCache,
+    cities: cachedCities,
+    allRegions: cachedRegions, // ✅ جميع المناطق دفعة واحدة
+    getRegionsByCity, // ✅ فلترة من الـ cache
     isLoaded: isCacheLoaded,
     isLoading: isCacheLoading
   } = useCitiesCache();
@@ -203,47 +204,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setActivePartner('local');
         }
         
-         // تحميل المنتجات الحقيقية من النظام الموحد في وضع التعديل
-         if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
-           clearCart();
-           
-           (aiOrderData.items || []).filter(item => item != null).forEach((item, index) => {
-             if (item && item.product_id && item.variant_id) {
-               
-               // التحقق من صحة البيانات قبل المعالجة
-               const safeItem = {
-                 ...item,
-                 quantity: item.quantity || 1,
-                 price: item.unit_price || item.price || 0,
-                 cost_price: item.costPrice || item.cost_price || 0
-               };
-               
-               // استخدام البيانات الأصلية مع المعرفات الصحيحة
-               const tempProduct = {
-                 id: safeItem.product_id,
-                 name: safeItem.productName || safeItem.product_name || 'منتج',
-                 images: [safeItem.image || '/placeholder.svg'],
-                 price: safeItem.price,
-                 cost_price: safeItem.cost_price
-               };
-               
-               const tempVariant = {
-                 id: safeItem.variant_id,
-                 sku: safeItem.sku || '',
-                 color: safeItem.color || '',
-                 size: safeItem.size || '',
-                 quantity: safeItem.stock || 999,
-                 reserved: 0,
-                 price: safeItem.price,
-                 cost_price: safeItem.cost_price,
-                 image: safeItem.image || '/placeholder.svg',
-                 barcode: safeItem.barcode || ''
-               };
-               
-               addToCart(tempProduct, tempVariant, safeItem.quantity, false, true); // تجاهل فحص المخزون في وضع التعديل
-             }
-           });
-         }
+         // ✅ تم نقل تحميل المنتجات إلى مكان واحد فقط (أسفل في useEffect منفصل)
         
         return; // انتهاء وضع التعديل
       }
@@ -267,88 +228,53 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         deliveryPartner: aiOrderData.order_data?.delivery_type === 'توصيل' ? 'الوسيط' : 'محلي'
       }));
       
-      // إضافة المنتجات للسلة مع التحقق من وجودها في قاعدة البيانات
-      if (Array.isArray(aiOrderData.items)) {
-        clearCart();
-        
-        const loadAiOrderItems = async () => {
-          for (const item of aiOrderData.items) {
-            // إذا كان لدينا product_id و variant_id، استخدمهما مباشرة
-            if (item.product_id && item.variant_id) {
-              // جلب بيانات المنتج من قاعدة البيانات
-              try {
-                const { data: productData } = await supabase
-                  .from('products')
-                  .select(`
-                    id,
-                    name,
-                    images,
-                    product_variants!inner (
-                      id,
-                      price,
-                      cost_price,
-                      colors (name),
-                      sizes (name)
-                    )
-                  `)
-                  .eq('id', item.product_id)
-                  .eq('product_variants.id', item.variant_id)
-                  .maybeSingle();
-
-                if (productData && productData.product_variants && productData.product_variants[0]) {
-                  const variant = productData.product_variants[0];
-                  const product = {
-                    id: productData.id,
-                    name: productData.name,
-                    images: productData.images || []
-                  };
-                  const variantData = {
-                    id: variant.id,
-                    sku: variant.id, // استخدام ID كـ SKU
-                    price: variant.price,
-                    cost_price: variant.cost_price,
-                    color: variant.colors?.name || item.color || '',
-                    size: variant.sizes?.name || item.size || '',
-                    barcode: variant.barcode || '',
-                    quantity: 100 // افتراضي للمخزون
-                  };
-                  addToCart(product, variantData, item.quantity || 1, false);
-                } else {
-                  // fallback للطريقة القديمة
-                  fallbackAddToCart(item);
-                }
-              } catch (error) {
-                console.error('Error fetching product data:', error);
-                fallbackAddToCart(item);
-              }
-              } else {
-                fallbackAddToCart(item);
-            }
-          }
-        };
-        
-        loadAiOrderItems();
-      }
-    
-      function fallbackAddToCart(item) {
-        const product = { 
-          id: item.product_id || `ai-${Date.now()}-${Math.random()}`, 
-          name: item.name || item.product_name,
-          images: item.images || []
-        };
-        const variant = { 
-          sku: item.variant_id || `fallback-${Date.now()}`,
-          price: item.price || 0, 
-          cost_price: item.cost_price || 0,
-          color: item.color || '', 
-          size: item.size || '',
-          barcode: item.barcode || '',
-          quantity: 100 // افتراضي للمخزون
-        };
-        addToCart(product, variant, item.quantity || 1, false);
-      }
+      // ✅ تم حذف الكود المكرر - يتم التحميل في مكان واحد فقط أسفل
     }
   }, [aiOrderData, clearCart, addToCart, isEditMode]);
+
+  // ===== 📦 تحميل المنتجات في وضع التعديل (مكان واحد فقط) =====
+  useEffect(() => {
+    if (!isEditMode || !aiOrderData?.items || loadedProducts.current) return;
+    
+    console.log('🔧 بدء تحميل منتجات للتعديل:', aiOrderData.items.length);
+    loadedProducts.current = true;
+    
+    clearCart();
+    
+    aiOrderData.items.forEach((item, index) => {
+      if (item?.product_id && item?.variant_id) {
+        console.log(`📦 إضافة منتج ${index + 1}:`, {
+          id: item.product_id,
+          variant: item.variant_id,
+          name: item.productName || item.product_name,
+          quantity: item.quantity
+        });
+        
+        // استخدام بيانات المنتج الموجودة في الطلب
+        const product = {
+          id: item.product_id,
+          name: item.productName || item.product_name || 'منتج',
+          images: item.image ? [item.image] : ['/placeholder.svg'],
+          price: item.unit_price || item.price || 0
+        };
+        
+        const variant = {
+          id: item.variant_id,
+          product_id: item.product_id,
+          colors: { name: item.color || '' },
+          sizes: { name: item.size || '' },
+          price: item.unit_price || item.price || 0,
+          images: item.image ? [item.image] : ['/placeholder.svg'],
+          quantity: 999,
+          reserved_quantity: 0
+        };
+        
+        addToCart(product, variant, item.quantity || 1, false, true);
+      }
+    });
+    
+    console.log('✅ تم تحميل جميع منتجات التعديل');
+  }, [isEditMode, aiOrderData?.items, clearCart, addToCart]);
 
   // useEffect منفصل لضمان تطبيق نوع الطلب الافتراضي في وضع التعديل
   useEffect(() => {
@@ -721,34 +647,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         }
       }
 
-      // تحديث السلة بالمنتجات
-      if (aiOrderData.items && Array.isArray(aiOrderData.items)) {
-        clearCart();
-        aiOrderData.items.filter(item => item != null && typeof item === 'object' && item.productId && item.variantId).forEach(item => {
-          try {
-            // تحويل item إلى product و variant منفصلين
-            const product = {
-              id: item.productId,
-              name: item.productName || item.product_name || 'منتج',
-              images: [item.image || '/placeholder.svg']
-            };
-            const variant = {
-              id: item.variantId,
-              sku: item.sku || item.variantId,
-              color: item.color || 'افتراضي',
-              size: item.size || 'افتراضي',
-              price: Number(item.price) || Number(item.unit_price) || 0,
-              cost_price: Number(item.costPrice) || Number(item.cost_price) || 0,
-              quantity: Number(item.stock) || 999,
-              reserved: Number(item.reserved) || 0,
-              image: item.image || '/placeholder.svg'
-            };
-            addToCart(product, variant, Number(item?.quantity) || 1, false, true);
-          } catch (error) {
-            console.error('❌ خطأ في إضافة منتج للسلة:', error, item);
-          }
-        });
-      }
+      // ✅ تم حذف الكود المكرر - يتم التحميل في مكان واحد فقط
     }
   }, [aiOrderData, clearCart, addToCart]);
 
@@ -824,21 +723,25 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               }));
             }
           } else {
-            // ✅ للوسيط: استخدام الـ Cache بدلاً من API
-            console.log('🔍 جلب المدن من Cache (الوسيط)...');
-            if (cachedCities.length > 0) {
+            // ✅ للوسيط: استخدام المدن من الـ Cache فقط
+            if (isCacheLoaded && cachedCities.length > 0) {
+              console.log('✅ استخدام المدن من الـ Cache:', cachedCities.length);
               citiesData = cachedCities.map(city => ({
                 id: city.alwaseet_id,
                 name: city.name
               }));
-              console.log(`✅ تم جلب ${citiesData.length} مدينة من Cache`);
+              packageSizesData = await getPackageSizes(waseetToken);
+            } else if (!isCacheLoaded) {
+              console.log('⏳ انتظار تحميل الـ Cache...');
+              return;
             } else {
-              console.warn('⚠️ Cache فارغ - استخدام API كـ fallback');
-              citiesData = await getCities(waseetToken);
+              console.error('❌ الـ Cache فارغ ولا توجد مدن');
+              citiesData = [];
+              packageSizesData = await getPackageSizes(waseetToken);
             }
-            
-            packageSizesData = await getPackageSizes(waseetToken);
           }
+          
+          // ✅ تم إزالة الكود المكرر أسفل
           
           const safeCities = Array.isArray(citiesData) ? citiesData : Object.values(citiesData || {});
           const safePackageSizes = Array.isArray(packageSizesData) ? packageSizesData : Object.values(packageSizesData || {});
@@ -953,21 +856,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   city_id: region.city_id
                 }));
               } else {
-                // ✅ الوسيط: استخدام الـ Cache
-                console.log(`🔍 جلب المناطق من Cache للمدينة ${cityIdForRegions}...`);
+                // ✅ الوسيط: فلترة المناطق من الـ Cache فوراً
+                console.log(`🔍 فلترة المناطق للمدينة ${cityIdForRegions}...`);
                 
-                // ✅ استخدام alwaseet_id مباشرة (لأن city_id في regions_master = alwaseet_id)
-                const cachedRegionsData = await fetchRegionsFromCache(parseInt(cityIdForRegions));
-                
-                if (cachedRegionsData && cachedRegionsData.length > 0) {
-                  regionsData = cachedRegionsData.map(region => ({
-                    id: region.alwaseet_id,
+                if (isCacheLoaded && cachedRegions.length > 0) {
+                  const filteredRegions = getRegionsByCity(cityIdForRegions);
+                  console.log(`✅ تم فلترة ${filteredRegions.length} منطقة من الـ Cache`);
+                  
+                  regionsData = filteredRegions.map(region => ({
+                    id: region.alwaseet_id || region.id,
                     name: region.name,
                     city_id: cityIdForRegions
                   }));
-                  console.log(`✅ تم جلب ${regionsData.length} منطقة من Cache`);
                 } else {
-                  console.warn('⚠️ Cache فارغ - لا توجد مناطق');
+                  console.log('⏳ انتظار تحميل الـ Cache...');
                   regionsData = [];
                 }
               }
