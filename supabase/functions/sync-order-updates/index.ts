@@ -251,6 +251,16 @@ Deno.serve(async (req) => {
           updates.status = finalStatus;
           statusChanged = true;
           changesList.push(`الحالة: ${currentStatus} → ${newStatus} (${statusConfig.text})`);
+          
+          // ✅ مزامنة خفيفة للمدينة والمنطقة (فقط عند تغيير الحالة - بدون API إضافي)
+          if (waseetOrder.city_name && localOrder.customer_city !== waseetOrder.city_name) {
+            updates.customer_city = waseetOrder.city_name;
+            changesList.push(`المدينة: ${localOrder.customer_city} → ${waseetOrder.city_name}`);
+          }
+          if (waseetOrder.region_name && localOrder.customer_province !== waseetOrder.region_name) {
+            updates.customer_province = waseetOrder.region_name;
+            changesList.push(`المنطقة: ${localOrder.customer_province} → ${waseetOrder.region_name}`);
+          }
         }
 
         // Compare prices (تجاهل للطلبات الجزئية - السعر ثابت)

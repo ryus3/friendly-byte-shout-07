@@ -3,7 +3,8 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
-import { getCities, getRegionsByCity, createAlWaseetOrder, editAlWaseetOrder, getPackageSizes } from '@/lib/alwaseet-api';
+import { createAlWaseetOrder, editAlWaseetOrder, getPackageSizes } from '@/lib/alwaseet-api';
+import { useCitiesCache } from '@/hooks/useCitiesCache';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -37,6 +38,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const { cart, setCart, clearCart, addToCart, removeFromCart } = useCart(isEditMode); // استخدام useCart مع وضع التعديل
   const { deleteAiOrderWithLink } = useAiOrdersCleanup();
   
+  // ✅ استخدام الـ Cache للمدن والمناطق بدلاً من API
+  const { cities: cachedCities, fetchRegionsByCity: fetchRegionsFromCache } = useCitiesCache();
+  
   // ✅ ref للتحقق من mount status
   const isMountedRef = useRef(true);
   
@@ -50,6 +54,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   // ذاكرة تخزينية للمناطق لتقليل استدعاءات API
   const regionCache = useRef(new Map());
+  
+  // ✅ ref لحفظ region_id المعلق (لحل سباق البيانات)
+  const pendingRegionIdRef = useRef(null);
   
   // حالة التعديل
   
@@ -701,20 +708,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       if (correctCityId) {
         setSelectedCityId(correctCityId);
         
-        // حفظ region_id للاستخدام لاحقاً عند تحميل المناطق
+        // ✅ حفظ region_id في ref بدلاً من setTimeout (إصلاح سباق البيانات)
         if (aiOrderData.region_id) {
           const correctRegionId = String(aiOrderData.region_id);
-          setSelectedRegionId(correctRegionId);
+          pendingRegionIdRef.current = correctRegionId;
           setPreservedRegionId(correctRegionId);
-          
-          // تأخير إضافي لضمان تطبيق القيم على الـ dropdowns
-          setTimeout(() => {
-            setFormData(prev => ({
-              ...prev,
-              city_id: correctCityId, // تأكيد city_id مرة أخرى
-              region_id: correctRegionId
-            }));
-          }, 500);
         }
       }
 
@@ -790,24 +788,38 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           
           if (activePartner === 'modon') {
             const ModonAPI = await import('@/lib/modon-api');
-            [citiesData, packageSizesData] = await Promise.all([
-              ModonAPI.getCities(waseetToken),
-              ModonAPI.getPackageSizes(waseetToken)
-            ]);
+            packageSizesData = await ModonAPI.getPackageSizes(waseetToken);
             
-            citiesData = citiesData.map(city => ({
-              id: city.id,
-              name: city.city_name
-            }));
             packageSizesData = packageSizesData.map(size => ({
               id: size.id,
               size: size.size
             }));
+            
+            // ✅ استخدام الـ Cache للمدن - تحويل modon_id إذا كان موجوداً
+            citiesData = cachedCities
+              .filter(c => c.modon_id) // فقط المدن التي لها modon_id
+              .map(city => ({
+                id: city.modon_id,
+                name: city.name
+              }));
+            
+            // إذا لم تكن هناك مدن في الـ cache، استخدم API
+            if (citiesData.length === 0) {
+              console.warn('⚠️ لا توجد مدن مدن في الـ Cache - استخدام API');
+              const modonCitiesData = await ModonAPI.getCities(waseetToken);
+              citiesData = modonCitiesData.map(city => ({
+                id: city.id,
+                name: city.city_name
+              }));
+            }
           } else {
-            [citiesData, packageSizesData] = await Promise.all([
-              getCities(waseetToken),
-              getPackageSizes(waseetToken)
-            ]);
+            // ✅ للوسيط: استخدام الـ Cache بدلاً من API
+            citiesData = cachedCities.map(city => ({
+              id: city.alwaseet_id,
+              name: city.name
+            }));
+            
+            packageSizesData = await getPackageSizes(waseetToken);
           }
           
           const safeCities = Array.isArray(citiesData) ? citiesData : Object.values(citiesData || {});
@@ -871,14 +883,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // مرجع لتتبع آخر مدينة محددة
   const prevCityIdRef = useRef(formData.city_id);
 
-  // إصلاح شامل لجلب المناطق - الاعتماد على selectedCityId في وضع التعديل
+  // ✅ إصلاح شامل لجلب المناطق - استخدام Cache + إصلاح سباق البيانات
   useEffect(() => {
     const cityIdForRegions = isEditMode ? selectedCityId : formData.city_id;
     
     if (cityIdForRegions && (activePartner === 'alwaseet' || activePartner === 'modon') && waseetToken) {
       const fetchRegionsData = async () => {
         setLoadingRegions(true);
-        setRegions([]);
         
         const preservedRegionId = isEditMode ? (selectedRegionId || formData.region_id || '') : '';
         
@@ -898,17 +909,23 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
              
              if (cachedRegions) {
                setRegions(cachedRegions);
-              
-              if (isEditMode && preservedRegionId) {
-                setTimeout(() => {
-                  setSelectedRegionId(preservedRegionId);
-                  setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
-                }, 150);
+               
+               // ✅ تطبيق pendingRegionId بعد تحميل المناطق
+               if (pendingRegionIdRef.current && cachedRegions.find(r => String(r.id) === String(pendingRegionIdRef.current))) {
+                 setSelectedRegionId(pendingRegionIdRef.current);
+                 setFormData(prev => ({ ...prev, region_id: pendingRegionIdRef.current }));
+                 pendingRegionIdRef.current = null;
+               }
+               
+                setLoadingRegions(false);
+                return;
               }
-            } else {
+               
+              // ✅ جلب المناطق من الـ Cache بدلاً من API
               let regionsData;
               
               if (activePartner === 'modon') {
+                // مدن: جلب من API (لأن الـ cache لا يحتوي على modon_id للمناطق حالياً)
                 const ModonAPI = await import('@/lib/modon-api');
                 regionsData = await ModonAPI.getRegionsByCity(waseetToken, cityIdForRegions);
                 
@@ -918,7 +935,19 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   city_id: region.city_id
                 }));
               } else {
-                regionsData = await getRegionsByCity(waseetToken, cityIdForRegions);
+                // الوسيط: استخدام الـ Cache
+                const cityMasterId = cachedCities.find(c => c.alwaseet_id === parseInt(cityIdForRegions))?.id;
+                if (cityMasterId) {
+                  const cachedRegionsData = await fetchRegionsFromCache(cityMasterId);
+                  regionsData = cachedRegionsData.map(region => ({
+                    id: region.alwaseet_id,
+                    name: region.name,
+                    city_id: cityIdForRegions
+                  }));
+                } else {
+                  console.warn('⚠️ لم يتم العثور على المدينة في الـ Cache');
+                  regionsData = [];
+                }
               }
               
               const safeRegions = Array.isArray(regionsData) ? regionsData : Object.values(regionsData || {});
@@ -938,12 +967,17 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               regionCache.current.set(cacheKey, safeRegions);
               setRegions(safeRegions);
               
-               if (isEditMode && preservedRegionId) {
-                 setTimeout(() => {
-                   setSelectedRegionId(preservedRegionId);
-                   setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
-                 }, 300);
-               }
+              // ✅ تطبيق pendingRegionId بعد تحميل المناطق من API
+              if (pendingRegionIdRef.current && safeRegions.find(r => String(r.id) === String(pendingRegionIdRef.current))) {
+                setSelectedRegionId(pendingRegionIdRef.current);
+                setFormData(prev => ({ ...prev, region_id: pendingRegionIdRef.current }));
+                pendingRegionIdRef.current = null;
+              } else if (isEditMode && preservedRegionId) {
+                setTimeout(() => {
+                  setSelectedRegionId(preservedRegionId);
+                  setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
+                }, 300);
+              }
              }
         } catch (error) { 
           console.error('❌ خطأ في جلب المناطق:', error);
@@ -1238,9 +1272,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
       let updateResult;
       
-      // إذا كان الطلب مع الوسيط، قم بتحديث الطلب في الوسيط أولاً مع تحسينات
-      if (activePartner === 'alwaseet' && isWaseetLoggedIn && originalOrder?.tracking_number) {
-        // تحضير المنتجات للوسيط بالتنسيق الصحيح
+      // ✅ إذا كان الطلب مع الوسيط أو مدن، قم بتحديث الطلب في شركة التوصيل أولاً
+      if ((activePartner === 'alwaseet' || activePartner === 'modon') && isWaseetLoggedIn && originalOrder?.tracking_number) {
+        // تحضير المنتجات بالتنسيق الصحيح
          const cartItems = cart.filter(item => item && item.quantity).map(item => ({
            product_name: item.productName || item.name || 'منتج غير محدد',
            color: item.color || '',
@@ -1255,7 +1289,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         const validRegionId = parseInt(effectiveRegionId || selectedRegionId || formData.region_id || 0);
         
         if (!validCityId || !validRegionId) {
-          throw new Error('معرفات المدينة والمنطقة مطلوبة لتحديث طلب الوسيط');
+          throw new Error('معرفات المدينة والمنطقة مطلوبة لتحديث الطلب');
         }
 
         // تكوين اسم نوع البضاعة بالتفصيل: اسم المنتج + الحجم + اللون (بدون العدد أو السعر)
@@ -1266,7 +1300,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           return `${name}${sizePart}${colorPart}`.trim();
         }).join(' + ');
 
-        const alwaseetData = {
+        const deliveryOrderData = {
           qr_id: originalOrder.tracking_number, // مطلوب للتعديل
           client_name: formData.name,
           client_mobile: formData.phone,
@@ -1283,24 +1317,26 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         };
 
         try {
-          const waseetResponse = await editAlWaseetOrder(alwaseetData, waseetToken);
-          
-          // التحقق من نجاح الاستجابة بناءً على success flag
-          if (!waseetResponse || !waseetResponse.success) {
-            throw new Error('فشل تحديث الطلب في شركة التوصيل: ' + 
-              (waseetResponse?.error || waseetResponse?.message || 'استجابة غير صحيحة'));
+          if (activePartner === 'modon') {
+            // ✅ دعم تعديل طلبات مدن
+            const ModonAPI = await import('@/lib/modon-api');
+            await ModonAPI.editModonOrder(deliveryOrderData, waseetToken);
+          } else {
+            // الوسيط
+            await editAlWaseetOrder(deliveryOrderData, waseetToken);
           }
-        } catch (waseetError) {
-          console.error('❌ خطأ في تحديث طلب الوسيط:', waseetError);
+          
+        } catch (deliveryError) {
+          console.error(`❌ خطأ في تحديث طلب ${activePartner}:`, deliveryError);
           
           // إظهار رسالة خطأ واضحة للمستخدم
           toast({
             title: "خطأ في تحديث الطلب",
-            description: `فشل تحديث الطلب في شركة التوصيل: ${waseetError.message}`,
+            description: `فشل تحديث الطلب في شركة التوصيل: ${deliveryError.message}`,
             variant: "destructive"
           });
           
-          // توقف العملية - لا نحدث محلياً إذا فشل التحديث في الوسيط
+          // توقف العملية - لا نحدث محلياً إذا فشل التحديث في شركة التوصيل
           return;
         }
       }

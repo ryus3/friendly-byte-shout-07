@@ -101,10 +101,10 @@ export const SearchableSelectFixed = ({
     };
   }, [open]);
 
-  // Focus search input when opening - enhanced for dialogs
+  // Focus search input when opening - enhanced for dialogs with increased delay
   useEffect(() => {
     if (open && searchInputRef.current) {
-      const delay = isInDialog ? 50 : 100;
+      const delay = isInDialog ? 150 : 100;
       setTimeout(() => {
         searchInputRef.current?.focus();
       }, delay);
@@ -198,15 +198,17 @@ export const SearchableSelectFixed = ({
       <div className="p-1 border-b border-border">
         <div className="relative">
           <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              placeholder={searchPlaceholder}
-              value={search}
-              onChange={handleSearchChange}
-              onKeyDown={handleKeyDown}
-              className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
-              autoComplete="off"
-            />
+          <Input
+            ref={searchInputRef}
+            placeholder={searchPlaceholder}
+            value={search}
+            onChange={handleSearchChange}
+            onKeyDown={handleKeyDown}
+            onClick={(e) => e.stopPropagation()}
+            onFocus={(e) => e.stopPropagation()}
+            className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
+            autoComplete="off"
+          />
         </div>
       </div>
 
@@ -330,7 +332,7 @@ export const SearchableSelectFixed = ({
           className="fixed"
           style={{
             direction: 'rtl',
-            zIndex: 99999,
+            zIndex: 99999, // ✅ فوق كل شيء بما في ذلك Dialog
             left: buttonRect.left + 'px',
             top: dropdownDirection === 'down' 
               ? (buttonRect.bottom + 4) + 'px' 
