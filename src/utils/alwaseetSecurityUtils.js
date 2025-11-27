@@ -17,7 +17,7 @@ export const verifyOrderOwnership = (order, currentUser) => {
   const userUUID = getUserUUID(currentUser);
   const orderCreatedBy = order.created_by || order.user_id;
   
-  // المديرون يملكون الوصول لجميع الطلبات
+  // ✅ المديرون يملكون الوصول لجميع الطلبات - باستخدام user_id الصحيح
   if (currentUser.email === 'ryusbrand@gmail.com' || userUUID === '91484496-b887-44f7-9e5d-be9db5567604') {
     return true;
   }

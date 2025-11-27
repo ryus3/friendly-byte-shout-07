@@ -1500,20 +1500,21 @@ export const AlWaseetProvider = ({ children }) => {
   
   // دالة مساعدة لتطبيق فصل الحسابات على جميع استعلامات الطلبات
   const scopeOrdersQuery = useCallback((query, restrictToOwnOrders = false) => {
-    if (!user?.id) return query;
+    const userUUID = user?.user_id || user?.id;
+    if (!userUUID) return query;
     
     // إذا كان restrictToOwnOrders = true، حتى المدير يحصل على طلباته فقط (للحذف الآمن)
     if (restrictToOwnOrders) {
-      return query.eq('created_by', user.id);
+      return query.eq('created_by', userUUID);
     }
     
-    // المدير يرى جميع الطلبات للعرض
-    if (user.email === 'ryusbrand@gmail.com' || user.id === '91484496-b887-44f7-9e5d-be9db5567604') {
+    // ✅ المدير يرى جميع الطلبات للعرض - باستخدام user_id الصحيح
+    if (user?.email === 'ryusbrand@gmail.com' || userUUID === '91484496-b887-44f7-9e5d-be9db5567604') {
       return query;
     }
     
     // الموظفون يرون طلباتهم فقط
-    return query.eq('created_by', user.id);
+    return query.eq('created_by', userUUID);
   }, [user]);
   
   // إنشاء فلتر أمان إضافي لطلبات الوسيط
@@ -2515,15 +2516,16 @@ export const AlWaseetProvider = ({ children }) => {
       }
       
       // 4. حذف الطلب من قاعدة البيانات (مع فصل آمن للحسابات)
-      const { error: deleteError } = await scopeOrdersQuery(
+      const { error: deleteError, count } = await scopeOrdersQuery(
         supabase
           .from('orders')
           .delete()
-          .eq('id', orderId)
-      );
+          .eq('id', orderId),
+        false // المدير يستطيع حذف جميع الطلبات
+      ).select('id', { count: 'exact' });
         
-      if (deleteError) {
-        devLog.error('❌ فشل في حذف الطلب:', deleteError);
+      if (deleteError || count === 0) {
+        devLog.error('❌ فشل في حذف الطلب:', deleteError || 'لم يُحذف أي سجل - قد يكون RLS يمنع الحذف');
         return false;
       }
       
