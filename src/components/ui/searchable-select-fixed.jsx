@@ -197,7 +197,6 @@ export const SearchableSelectFixed = ({
   };
 
   const handleSearchChange = (e) => {
-    e.preventDefault();
     e.stopPropagation();
     setSearch(e.target.value);
   };
@@ -280,6 +279,10 @@ export const SearchableSelectFixed = ({
             onChange={handleSearchChange}
             onKeyDown={handleKeyDown}
             onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              setTimeout(() => searchInputRef.current?.focus(), 0);
+            }}
             onFocus={(e) => {
               e.stopPropagation();
               e.target.select();
