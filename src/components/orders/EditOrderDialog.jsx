@@ -64,13 +64,18 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       }
     }
 
-    // حساب الإجمالي الصحيح للطلب
+    // ✅ حساب السعر النهائي الصحيح - استخدام final_amount مباشرة
     const subtotal = cartItems.reduce((sum, item) => sum + (item.total || 0), 0);
     const deliveryFee = order.delivery_fee || 0;
     const discount = order.discount || 0;
-    // ✅ استخدام final_amount من الطلب الأصلي إذا كان موجوداً
-    const originalFinalAmount = order.final_amount || order.final_total || 0;
-    const finalTotal = originalFinalAmount > 0 ? originalFinalAmount : (subtotal + deliveryFee - discount);
+    
+    // ✅ final_amount هو المصدر الرسمي - السعر الكامل شامل التوصيل
+    const finalAmountFromOrder = order.final_amount || 0;
+    
+    // إذا لم يكن final_amount موجوداً، احسبه
+    const finalTotal = finalAmountFromOrder > 0 
+      ? finalAmountFromOrder 
+      : (subtotal + deliveryFee - discount);
 
     const editData = {
       // معلومات العميل - مع ضمان وجود جميع البيانات
@@ -90,9 +95,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       total_amount: subtotal,
       delivery_fee: deliveryFee,
       discount: discount,
+      final_amount: finalTotal,  // ✅ إضافة final_amount صريحاً
       final_total: finalTotal,
-      // ✅ إضافة السعر الإجمالي شامل التوصيل
-      price_with_delivery: finalTotal,
+      price_with_delivery: finalTotal,  // ✅ السعر الكامل شامل التوصيل
       delivery_partner: order.delivery_partner || 'محلي',
       tracking_number: order.tracking_number || '',
       order_number: order.order_number || '',
@@ -138,12 +143,20 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       if (order) {
         const data = await convertOrderToEditData(order);
         
-        // ✅ تحميل المناطق مسبقاً للمدينة المختارة
+        // ✅ تحميل المناطق مسبقاً قبل تعيين editData
         if (data?.city_id && cachedRegions.length > 0) {
-          const cityRegions = cachedRegions.filter(r => 
-            String(r.city_id) === String(data.city_id) || 
-            String(r.alwaseet_id) === String(data.city_id)
-          );
+          console.log(`🔍 فلترة المناطق للمدينة ${data.city_id} من ${cachedRegions.length} منطقة...`);
+          
+          // فلترة المناطق للمدينة المختارة باستخدام city_id فقط
+          const cityRegions = cachedRegions.filter(r => {
+            const rCityId = String(r.city_id || '');
+            const dataCity = String(data.city_id || '');
+            return rCityId === dataCity;
+          });
+          
+          console.log(`✅ تم فلترة ${cityRegions.length} منطقة للمدينة ${data.city_id}`);
+          
+          // تمرير المناطق المحملة مع البيانات
           data.preloadedRegions = cityRegions;
         }
         
