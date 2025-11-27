@@ -279,18 +279,41 @@ export const SearchableSelectFixed = ({
             value={search}
             onChange={handleSearchChange}
             onKeyDown={handleKeyDown}
-            onClick={(e) => e.stopPropagation()}
-            onFocus={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onFocus={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              e.target.select(); // ✅ تحديد النص عند التركيز
+            }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+            }}
             className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
             autoComplete="off"
+            autoCorrect="off"
+            autoCapitalize="off"
+            inputMode="search"
           />
         </div>
       </div>
 
       {/* Options List */}
       <div 
-        className="p-1 max-h-48 overflow-y-auto overscroll-contain touch-pan-y"
-        style={{ WebkitOverflowScrolling: 'touch' }} // ✅ iOS scroll smoothness
+        className="p-1 max-h-48 overflow-y-auto"
+        style={{ 
+          WebkitOverflowScrolling: 'touch',
+          overscrollBehavior: 'contain',
+          touchAction: 'pan-y'
+        }}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         {filteredOptions.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted-foreground">
@@ -407,10 +430,14 @@ export const SearchableSelectFixed = ({
       {/* Dropdown - Using Portal for proper z-index */}
       {open && buttonRect && createPortal(
         <div 
-          className="fixed"
+          className="fixed isolate"
+          role="listbox"
+          aria-modal="true"
           style={{
             direction: 'rtl',
-            zIndex: 99999, // ✅ فوق كل شيء بما في ذلك Dialog
+            zIndex: 99999,
+            isolation: 'isolate',
+            pointerEvents: 'auto',
             left: buttonRect.left + 'px',
             top: dropdownDirection === 'down' 
               ? (buttonRect.bottom + 4) + 'px' 
@@ -420,6 +447,20 @@ export const SearchableSelectFixed = ({
               : 'auto',
             width: buttonRect.width + 'px'
           }}
+          onMouseDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+          onTouchStart={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+          onPointerDown={(e) => {
+            e.stopPropagation();
+            e.preventDefault();
+          }}
+          onClick={(e) => e.stopPropagation()}
+          onFocus={(e) => e.stopPropagation()}
         >
           {renderDropdownContent()}
         </div>,
