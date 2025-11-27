@@ -53,6 +53,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // ✅ ref لمنع تحميل المنتجات المكرر في وضع التعديل
   const loadedProducts = useRef(false);
   
+  // ✅ refs لإصلاح المناطق والسعر في وضع التعديل
+  const preloadedRegionsApplied = useRef(false);
+  const originalPriceRef = useRef(null);
+  
   // ✅ النهائي: Cleanup آمن بدون clearCart
   useEffect(() => {
     isMountedRef.current = true;
@@ -154,6 +158,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       
       // في وضع التعديل، استخدم البيانات الأصلية مباشرة
       if (isEditMode) {
+        // ✅ حفظ السعر الأصلي (شامل التوصيل) في ref لمنع إعادة الحساب
+        const originalPrice = aiOrderData.final_amount || aiOrderData.price_with_delivery || 
+          aiOrderData.final_total || aiOrderData.total_amount || 0;
+        originalPriceRef.current = originalPrice;
+        
         setFormData(prev => ({
           ...prev,
           name: aiOrderData.customer_name || '',
@@ -165,10 +174,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           region_id: aiOrderData.region_id || '',  // معرف المنطقة للوسيط
           address: aiOrderData.customer_address || '',
           notes: aiOrderData.notes || '',
-          price: aiOrderData.price_with_delivery || aiOrderData.final_total || aiOrderData.total_amount || 0,
+          price: originalPrice,  // ✅ استخدام السعر الكامل شامل التوصيل
           delivery_fee: aiOrderData.delivery_fee || 0,
           // ضمان عرض السعر الصحيح مع التوصيل
-          total_with_delivery: (aiOrderData.total_amount || 0) + (aiOrderData.delivery_fee || 0),
+          total_with_delivery: originalPrice,
           
           // إضافة البيانات الأصلية للعرض
           originalCity: aiOrderData.customer_city || '',
@@ -210,6 +219,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 name: r.name,
                 city_id: r.city_id
               })));
+              preloadedRegionsApplied.current = true; // ✅ تعيين ref لمنع إعادة التحميل
+              console.log('✅ تم تحميل المناطق مسبقاً:', aiOrderData.preloadedRegions.length);
             }
           }
         } else {
@@ -818,6 +829,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
   // ✅ إصلاح شامل لجلب المناطق - استخدام Cache + إصلاح سباق البيانات
   useEffect(() => {
+    // ✅ تجاهل إذا كانت المناطق محملة مسبقاً في وضع التعديل
+    if (isEditMode && preloadedRegionsApplied.current && regions.length > 0) {
+      console.log('⏭️ تجاهل جلب المناطق - محملة مسبقاً');
+      return;
+    }
+    
     const cityIdForRegions = isEditMode ? selectedCityId : formData.city_id;
     
     if (cityIdForRegions && (activePartner === 'alwaseet' || activePartner === 'modon') && waseetToken) {
@@ -930,6 +947,27 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   // تحديث تفاصيل الطلب والسعر تلقائياً عند تغيير السلة أو الشريك أو الخصم
   useEffect(() => {
+    // ✅ في وضع التعديل: لا تُعد حساب السعر تلقائياً - احتفظ بالسعر الأصلي
+    if (isEditMode && originalPriceRef.current !== null) {
+      console.log('⏭️ تجاهل إعادة حساب السعر - وضع التعديل (السعر الأصلي:', originalPriceRef.current, ')');
+      
+      // فقط تحديث التفاصيل والكمية بدون تغيير السعر
+      const safeCart = Array.isArray(cart) ? cart.filter(item => item != null) : [];
+      const quantityCount = safeCart.reduce((sum, item) => sum + (item?.quantity || 1), 0);
+      const detailsString = safeCart.map(item => 
+        `${item.productName || ''} ${item.size || ''} . ${item.color || ''}${item.quantity > 1 ? ` (عدد ${item.quantity})` : ''}`.trim()
+      ).filter(detail => detail).join(' + ');
+      
+      setFormData(prev => ({
+        ...prev, 
+        quantity: quantityCount > 0 ? quantityCount : 1,
+        details: detailsString,
+        // ✅ الحفاظ على السعر الأصلي شامل التوصيل
+      }));
+      return;
+    }
+    
+    // الحالة العادية (ليس وضع تعديل): احسب السعر تلقائياً
     const safeCart = Array.isArray(cart) ? cart.filter(item => item != null) : [];
     const quantityCount = safeCart.reduce((sum, item) => sum + (item?.quantity || 1), 0);
     const cartSubtotal = safeCart.reduce((sum, item) => sum + (item?.total || ((item?.price || 0) * (item?.quantity || 1)) || 0), 0);
@@ -960,7 +998,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       delivery_fee: calculatedDeliveryFee,
       details: detailsString,
     }));
-  }, [cart, settings?.deliveryFee, activePartner, discount, applyLoyaltyDelivery]);
+  }, [cart, settings?.deliveryFee, activePartner, discount, applyLoyaltyDelivery, isEditMode]);
 
   // ✅ تحديث formData.details تلقائياً للاستبدال
   useEffect(() => {
