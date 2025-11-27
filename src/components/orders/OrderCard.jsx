@@ -574,13 +574,8 @@ const OrderCard = React.memo(({
                                 return Number(order.final_amount || 0).toLocaleString();
                               }
                               
-                              // للطلبات العادية: حساب عادي
-                              const totalAmount = Number(order.total_amount || 0);
-                              const discount = Number(order.discount || 0);
-                              const priceIncrease = Number(order.price_increase || 0);
-                              const deliveryFee = Number(order.delivery_fee || 0);
-                              const displayPrice = totalAmount - discount + priceIncrease + deliveryFee;
-                              return displayPrice.toLocaleString();
+                              // للطلبات العادية: استخدام final_amount مباشرة
+                              return Number(order.final_amount || 0).toLocaleString();
                             })()}
                           </span>
                           <span className="text-xs text-muted-foreground font-medium">
