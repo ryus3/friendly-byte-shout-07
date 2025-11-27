@@ -1283,7 +1283,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           location: formData.address,
           type_name: typeName,
           items_number: (cart || []).filter(item => item != null).reduce((sum, item) => sum + (item?.quantity || 1), 0),
-          price: finalTotal,
+          price: parseInt(formData.price) || originalPriceRef.current || finalTotal,
           package_size: parseInt(selectedPackageSize) || 1,
           merchant_notes: formData.notes,
           replacement: 0
@@ -1300,6 +1300,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           }
           
           // ✅ بعد نجاح التحديث في شركة التوصيل، تحديث قاعدة البيانات المحلية
+          const userEnteredPrice = parseInt(formData.price) || originalPriceRef.current || finalTotal;
           const { error: localDbUpdateError } = await supabase
             .from('orders')
             .update({
@@ -1310,9 +1311,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               customer_province: formData.region,
               customer_address: formData.address,
               notes: formData.notes,
-              total_amount: formData.price || finalTotal,
-              sales_amount: formData.price || finalTotal,
-              final_amount: formData.price || finalTotal,
+              total_amount: userEnteredPrice,
+              sales_amount: userEnteredPrice,
+              final_amount: userEnteredPrice,
               package_size: parseInt(selectedPackageSize) || 1,
               city_id: validCityId,
               region_id: validRegionId
@@ -1343,6 +1344,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       // تحديث الطلب محلياً - تمرير جميع البيانات المحدثة
       const { items, ...orderDataWithoutItems } = orderData;
       // إضافة البيانات المحدثة من النموذج
+      const userEnteredPrice = parseInt(formData.price) || originalPriceRef.current || finalTotal;
       const completeOrderData = {
         ...orderDataWithoutItems,
         customer_name: formData.name,
@@ -1353,16 +1355,22 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         customer_address: formData.address,
         notes: formData.notes,
         details: formData.details,
-        total_amount: formData.price || finalTotal,
-        sales_amount: formData.price || finalTotal,
-        final_amount: formData.price || finalTotal,
+        total_amount: userEnteredPrice,
+        sales_amount: userEnteredPrice,
+        final_amount: userEnteredPrice,
         package_size: parseInt(selectedPackageSize) || 1
       };
       updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
 
-      // ✅ تحديث order_items في قاعدة البيانات
-      if (cart && cart.length > 0) {
-        // حذف العناصر القديمة
+      // ✅ تحديث order_items في قاعدة البيانات - حماية من حذف المنتجات
+      const validCartItems = cart?.filter(item => 
+        item && item.product_id && item.quantity > 0
+      ) || [];
+      
+      if (validCartItems.length === 0 && originalOrder.items?.length > 0) {
+        console.warn('⚠️ السلة فارغة - الحفاظ على المنتجات الأصلية');
+      } else if (validCartItems.length > 0) {
+        // حذف العناصر القديمة فقط إذا كانت هناك عناصر صالحة جديدة
         await supabase
           .from('order_items')
           .delete()
@@ -2203,6 +2211,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const city = activePartner === 'local' ? formData.city : (Array.isArray(cities) ? cities.find(c => c.id == formData.city_id)?.name : '') || '';
       const region = activePartner === 'local' ? formData.region : (Array.isArray(regions) ? regions.find(r => r.id == formData.region_id)?.name : '') || '';
       
+      const userPrice = parseInt(formData.price) || newFinalTotal;
       const updateData = {
         customer_name: formData.name.trim() || defaultCustomerName || formData.defaultCustomerName || `زبون-${Date.now().toString().slice(-6)}`,
         customer_phone: normalizedPhone,
@@ -2214,8 +2223,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         region_id: formData.region_id || null,
         notes: formData.notes || '',
         discount: discount,
-        total_amount: newSubtotal,
-        final_total: newFinalTotal,
+        total_amount: userPrice,
+        final_total: userPrice,
         delivery_fee: deliveryFee,
         updated_at: new Date().toISOString()
       };
@@ -2235,6 +2244,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       });
       
       if (isWaseetLoggedIn && activePartner === 'alwaseet' && trackingNumber) {
+        const userPrice = parseInt(formData.price) || newFinalTotal;
         const editData = {
           tracking_number: trackingNumber,
           qr_id: trackingNumber, // نفس القيمة للتأكد
@@ -2247,9 +2257,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           customer_address: updateData.customer_address,
           package_size_id: formData.size || 1,
           notes: updateData.notes,
-          price: newFinalTotal,
-          final_total: newFinalTotal,
-          total_amount: newSubtotal,
+          price: userPrice,
+          final_total: userPrice,
+          total_amount: userPrice,
           delivery_fee: deliveryFee,
           items_number: cart.length,
           details: `طلب محدث - ${cart.length} عنصر`
