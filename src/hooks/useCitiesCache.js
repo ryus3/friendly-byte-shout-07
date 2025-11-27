@@ -6,6 +6,7 @@ import { toast } from '@/components/ui/use-toast';
 export const useCitiesCache = () => {
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
+  const [allRegions, setAllRegions] = useState([]); // ✅ جميع المناطق دفعة واحدة
   const [loading, setLoading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -100,6 +101,14 @@ export const useCitiesCache = () => {
       });
       return [];
     }
+  };
+
+  // ✅ فلترة المناطق من الـ cache بدون API calls
+  const getRegionsByCity = (alwaseetCityId) => {
+    if (!alwaseetCityId) return [];
+    return allRegions.filter(r => 
+      String(r.city_id) === String(alwaseetCityId)
+    );
   };
 
   // جلب معلومات آخر مزامنة ناجحة فقط
@@ -231,7 +240,8 @@ export const useCitiesCache = () => {
       setIsLoading(true);
       console.log('🔄 بدء تحميل الـ Cache...');
       await fetchCities();
-      await fetchAllRegions();
+      const loadedRegions = await fetchAllRegions();
+      setAllRegions(loadedRegions); // ✅ حفظ جميع المناطق
       await fetchSyncInfo();
       setIsLoaded(true);
       setIsLoading(false);
@@ -243,6 +253,7 @@ export const useCitiesCache = () => {
   return {
     cities,
     regions,
+    allRegions, // ✅ جميع المناطق
     loading,
     isLoading,
     isLoaded,
@@ -250,6 +261,7 @@ export const useCitiesCache = () => {
     syncInfo,
     fetchCities,
     fetchRegionsByCity,
+    getRegionsByCity, // ✅ فلترة من الـ cache
     fetchAllRegions,
     updateCache,
     fetchSyncInfo,

@@ -3,11 +3,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { getCities, getRegionsByCity } from '@/lib/alwaseet-api';
+import { useCitiesCache } from '@/hooks/useCitiesCache'; // ✅ استخدام الـ Cache
 import { UnifiedEditOrderLoader } from '@/components/quick-order/UnifiedEditOrderLoader';
 
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const { isLoggedIn, token } = useAlWaseet();
+  const { cities: cachedCities, allRegions: cachedRegions, isLoaded: isCacheLoaded } = useCitiesCache(); // ✅ استخدام الـ Cache
   
   // تحويل بيانات الطلب لصيغة البيانات المطلوبة لـ QuickOrderContent
   const convertOrderToEditData = async (order) => {
@@ -39,27 +40,27 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
 
     
 
-    // تحويل معرفات/أسماء المدن والمناطق إلى معرفات Al Waseet مع أفضلية القيم المخزنة
+    // ✅ تحويل معرفات/أسماء المدن والمناطق باستخدام الـ Cache فقط
     let city_id = order?.alwaseet_city_id ? String(order.alwaseet_city_id) : '';
     let region_id = order?.alwaseet_region_id ? String(order.alwaseet_region_id) : '';
     
     if (!city_id && order?.city_id) city_id = String(order.city_id);
     if (!region_id && order?.region_id) region_id = String(order.region_id);
     
-    if (!city_id && order.delivery_partner === 'alwaseet' && isLoggedIn && token) {
-      try {
-        const cities = await getCities(token);
-        const cityMatch = cities.find(city => city.name === order.customer_city);
-        if (cityMatch) {
-          city_id = String(cityMatch.id);
-          const regions = await getRegionsByCity(token, cityMatch.id);
-          const regionMatch = regions.find(region => region.name === order.customer_province);
+    // ✅ استخدام الـ Cache للبحث عن المدينة والمنطقة
+    if (!city_id && order.customer_city && isCacheLoaded) {
+      const cityMatch = cachedCities.find(city => city.name === order.customer_city);
+      if (cityMatch) {
+        city_id = String(cityMatch.alwaseet_id);
+        
+        if (!region_id && order.customer_province) {
+          const regionMatch = cachedRegions.find(r => 
+            r.city_id === cityMatch.alwaseet_id && r.name === order.customer_province
+          );
           if (regionMatch) {
-            region_id = String(regionMatch.id);
+            region_id = String(regionMatch.alwaseet_id);
           }
         }
-      } catch (error) {
-        devLog.warn('⚠️ فشل تحويل أسماء المدينة/المنطقة إلى معرفات:', error);
       }
     }
 
@@ -125,8 +126,10 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
 
   const [editData, setEditData] = useState(null);
   
-  // تحويل البيانات بشكل غير متزامن
+  // ✅ تحويل البيانات بعد تحميل الـ Cache
   useEffect(() => {
+    if (!isCacheLoaded) return; // ✅ انتظار تحميل الـ Cache
+    
     const loadEditData = async () => {
       if (order) {
         const data = await convertOrderToEditData(order);
@@ -134,7 +137,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       }
     };
     loadEditData();
-  }, [order]);
+  }, [order, isCacheLoaded]); // ✅ إضافة isCacheLoaded
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
