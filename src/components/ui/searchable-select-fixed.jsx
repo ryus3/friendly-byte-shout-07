@@ -118,13 +118,17 @@ export const SearchableSelectFixed = ({
     };
   }, [open]);
 
-  // Focus search input when opening - enhanced for dialogs with increased delay
+  // ✅ محاولات متعددة للـ focus داخل Dialog
   useEffect(() => {
     if (open && searchInputRef.current) {
-      const delay = isInDialog ? 300 : 100; // ✅ تأخير أطول للـ dialogs
-      setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, delay);
+      const focusAttempts = isInDialog ? [100, 200, 400] : [50];
+      focusAttempts.forEach(delay => {
+        setTimeout(() => {
+          if (searchInputRef.current && document.activeElement !== searchInputRef.current) {
+            searchInputRef.current.focus();
+          }
+        }, delay);
+      });
     }
   }, [open, isInDialog]);
 
@@ -202,6 +206,8 @@ export const SearchableSelectFixed = ({
   const renderDropdownContent = () => (
       <div 
         ref={dropdownRef}
+        onMouseDown={(e) => e.stopPropagation()} // ✅ منع Dialog من سرقة الـ focus
+        onTouchStart={(e) => e.stopPropagation()} // ✅ للموبايل
         className="bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
         style={{ 
           direction: 'rtl',
@@ -230,7 +236,10 @@ export const SearchableSelectFixed = ({
       </div>
 
       {/* Options List */}
-      <div className="p-1 max-h-48 overflow-y-auto overscroll-contain touch-pan-y">
+      <div 
+        className="p-1 max-h-48 overflow-y-auto overscroll-contain touch-pan-y"
+        style={{ WebkitOverflowScrolling: 'touch' }} // ✅ iOS scroll smoothness
+      >
         {filteredOptions.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted-foreground">
             {emptyText}

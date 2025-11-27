@@ -32,7 +32,8 @@ const OrderDetailsForm = ({
   onToggleLoyaltyDelivery,
   cart,
   removeFromCart,
-  showProductSelection = true // ✅ prop جديد لإخفاء قسم المنتجات
+  showProductSelection = true, // ✅ prop جديد لإخفاء قسم المنتجات
+  isEditMode = false // ✅ prop جديد لوضع التعديل
 }) => {
   const { hasPermission } = useAuth();
   
@@ -58,13 +59,16 @@ const OrderDetailsForm = ({
     }
   }, [activePartner, packageSizes, formData.size, handleSelectChange]);
 
-  // ✅ تحديث السعر فقط عند تغيير السلة، وليس في كل لحظة (للسماح بالتعديل اليدوي)
+  // ✅ تحديث السعر فقط عند تغيير السلة (إلا في وضع التعديل)
   useEffect(() => {
+    // ✅ في وضع التعديل: لا تُعيد السعر تلقائياً للسماح بالتعديل اليدوي
+    if (isEditMode) return;
+    
     // فقط عند إضافة منتجات للسلة أو تغييرها
     if (cart.length > 0) {
       handleChange({ target: { name: 'price', value: finalTotal } });
     }
-  }, [cart, finalTotal, handleChange]);
+  }, [cart, finalTotal, handleChange, isEditMode]);
 
   return (
     <Card dir="rtl">
