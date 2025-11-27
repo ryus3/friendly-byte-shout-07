@@ -7,6 +7,8 @@ export const useCitiesCache = () => {
   const [cities, setCities] = useState([]);
   const [regions, setRegions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoaded, setIsLoaded] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [syncInfo, setSyncInfo] = useState(null);
   const { token } = useAlWaseet();
@@ -226,9 +228,14 @@ export const useCitiesCache = () => {
   // جلب المدن والمناطق عند التحميل الأولي
   useEffect(() => {
     const loadCacheData = async () => {
+      setIsLoading(true);
+      console.log('🔄 بدء تحميل الـ Cache...');
       await fetchCities();
       await fetchAllRegions();
       await fetchSyncInfo();
+      setIsLoaded(true);
+      setIsLoading(false);
+      console.log('✅ اكتمل تحميل الـ Cache');
     };
     loadCacheData();
   }, []);
@@ -237,6 +244,8 @@ export const useCitiesCache = () => {
     cities,
     regions,
     loading,
+    isLoading,
+    isLoaded,
     lastUpdated,
     syncInfo,
     fetchCities,

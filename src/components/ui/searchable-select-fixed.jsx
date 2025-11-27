@@ -40,7 +40,7 @@ export const SearchableSelectFixed = ({
 
   // إضافة fallback للقيمة الموجودة بدون options - الحل الجذري النهائي
   const displayText = selectedOption?.label || selectedOption?.name || 
-    (value && !selectedOption && options.length === 0 ? `القيمة: ${value}` : placeholder);
+    (options.length === 0 && value ? "جاري التحميل..." : placeholder);
   
   // Detect touch device, dialog presence, calculate dropdown direction, and update button position
   useEffect(() => {
