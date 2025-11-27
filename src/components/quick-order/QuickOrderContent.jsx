@@ -50,22 +50,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // ✅ ref للتحقق من mount status
   const isMountedRef = useRef(true);
   
-  // ✅ ref لمنع تحميل المنتجات المكرر في وضع التعديل
-  const loadedProducts = useRef(false);
-  
   // ✅ refs لإصلاح المناطق والسعر في وضع التعديل
   const preloadedRegionsApplied = useRef(false);
   const originalPriceRef = useRef(null);
-  
-  // ✅ إعادة تعيين refs عند تغيير الطلب المحرر
-  useEffect(() => {
-    if (isEditMode && aiOrderData?.orderId) {
-      console.log('🔄 إعادة تعيين refs للطلب الجديد:', aiOrderData.orderId);
-      loadedProducts.current = false;
-      preloadedRegionsApplied.current = false;
-      originalPriceRef.current = null;
-    }
-  }, [aiOrderData?.orderId, isEditMode]);
   
   // ✅ النهائي: Cleanup آمن بدون clearCart
   useEffect(() => {
@@ -265,49 +252,51 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
   }, [aiOrderData, clearCart, addToCart, isEditMode]);
 
-  // ===== 📦 تحميل المنتجات في وضع التعديل (مكان واحد فقط) =====
+  // ===== 📦 تحميل المنتجات في وضع التعديل (نسخة موحدة موثوقة) =====
   useEffect(() => {
-    if (!isEditMode || !aiOrderData?.items || loadedProducts.current) return;
+    // ✅ التحقق من الشروط الأساسية
+    if (!isEditMode || !aiOrderData?.items || !Array.isArray(aiOrderData.items)) {
+      return;
+    }
     
-    console.log('🔧 بدء تحميل منتجات للتعديل:', aiOrderData.items.length);
-    loadedProducts.current = true;
+    // ✅ التحقق من وجود منتجات فعلية
+    if (aiOrderData.items.length === 0) {
+      return;
+    }
     
-    clearCart();
+    console.log('🔧 بدء تحميل منتجات للتعديل:', aiOrderData.items.length, 'للطلب:', aiOrderData.orderId);
     
-    aiOrderData.items.forEach((item, index) => {
-      if (item?.product_id && item?.variant_id) {
-        console.log(`📦 إضافة منتج ${index + 1}:`, {
-          id: item.product_id,
-          variant: item.variant_id,
-          name: item.productName || item.product_name,
-          quantity: item.quantity
-        });
-        
-        // استخدام بيانات المنتج الموجودة في الطلب
-        const product = {
-          id: item.product_id,
-          name: item.productName || item.product_name || 'منتج',
-          images: item.image ? [item.image] : ['/placeholder.svg'],
-          price: item.unit_price || item.price || 0
-        };
-        
-        const variant = {
-          id: item.variant_id,
-          product_id: item.product_id,
-          colors: { name: item.color || '' },
-          sizes: { name: item.size || '' },
-          price: item.unit_price || item.price || 0,
-          images: item.image ? [item.image] : ['/placeholder.svg'],
-          quantity: 999,
-          reserved_quantity: 0
-        };
-        
-        addToCart(product, variant, item.quantity || 1, false, true);
-      }
-    });
+    // ✅ إنشاء cart items مباشرة (بدون clearCart + addToCart منفصلة)
+    const newCartItems = aiOrderData.items.map((item, index) => {
+      console.log(`📦 تجهيز منتج ${index + 1}:`, item.productName || item.product_name);
+      
+      return {
+        id: `${item.product_id || 'temp'}-${item.variant_id || 'no-variant'}`,
+        productId: item.product_id,
+        product_id: item.product_id,  // للتوافق مع كلا التنسيقين
+        variantId: item.variant_id,
+        variant_id: item.variant_id,  // للتوافق مع كلا التنسيقين
+        sku: item.sku || item.variant_id || 'temp-sku',
+        productName: item.productName || item.product_name || 'منتج',
+        product_name: item.productName || item.product_name || 'منتج',
+        name: item.productName || item.product_name || 'منتج',
+        image: item.image || '/placeholder.svg',
+        color: item.color || '',
+        size: item.size || '',
+        quantity: item.quantity || 1,
+        price: item.unit_price || item.price || 0,
+        costPrice: item.costPrice || item.cost_price || 0,
+        stock: 999,  // مخزون عالي للتعديل
+        reserved: 0,
+        total: (item.unit_price || item.price || 0) * (item.quantity || 1)
+      };
+    }).filter(item => item.productId || item.product_id);  // فلترة العناصر بدون ID
     
-    console.log('✅ تم تحميل جميع منتجات التعديل');
-  }, [isEditMode, aiOrderData?.items, clearCart, addToCart]);
+    // ✅ تعيين السلة مباشرة (لا clearCart ولا addToCart)
+    console.log('✅ تم تحميل', newCartItems.length, 'منتج للتعديل');
+    setCart(newCartItems);
+    
+  }, [isEditMode, aiOrderData?.orderId, aiOrderData?.items, setCart]);
 
   // useEffect منفصل لضمان تطبيق نوع الطلب الافتراضي في وضع التعديل
   useEffect(() => {
