@@ -121,7 +121,7 @@ export const SearchableSelectFixed = ({
   // Focus search input when opening - enhanced for dialogs with increased delay
   useEffect(() => {
     if (open && searchInputRef.current) {
-      const delay = isInDialog ? 150 : 100;
+      const delay = isInDialog ? 300 : 100; // ✅ تأخير أطول للـ dialogs
       setTimeout(() => {
         searchInputRef.current?.focus();
       }, delay);
@@ -230,7 +230,7 @@ export const SearchableSelectFixed = ({
       </div>
 
       {/* Options List */}
-      <div className="p-1 max-h-48 overflow-y-auto">
+      <div className="p-1 max-h-48 overflow-y-auto overscroll-contain touch-pan-y">
         {filteredOptions.length === 0 ? (
           <div className="py-6 text-center text-sm text-muted-foreground">
             {emptyText}

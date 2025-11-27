@@ -41,7 +41,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // ✅ استخدام الـ Cache للمدن والمناطق بدلاً من API
   const { 
     cities: cachedCities,
-    allRegions: cachedRegions, // ✅ جميع المناطق دفعة واحدة
+    allRegions: globalRegionsCache, // ✅ جميع المناطق دفعة واحدة - اسم فريد
     getRegionsByCity, // ✅ فلترة من الـ cache
     isLoaded: isCacheLoaded,
     isLoading: isCacheLoading
@@ -829,13 +829,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
              }
              
              const cacheKey = `regions_${activePartner}_${cityIdForRegions}`;
-             const cachedRegions = regionCache.current.get(cacheKey);
-             
-             if (cachedRegions) {
-               setRegions(cachedRegions);
-               
-               // ✅ تطبيق pendingRegionId بعد تحميل المناطق
-               if (pendingRegionIdRef.current && cachedRegions.find(r => String(r.id) === String(pendingRegionIdRef.current))) {
+              const localRegionsCache = regionCache.current.get(cacheKey); // ✅ اسم محلي واضح
+              
+              if (localRegionsCache) {
+                setRegions(localRegionsCache);
+                
+                // ✅ تطبيق pendingRegionId بعد تحميل المناطق
+                if (pendingRegionIdRef.current && localRegionsCache.find(r => String(r.id) === String(pendingRegionIdRef.current))) {
                  setSelectedRegionId(pendingRegionIdRef.current);
                  setFormData(prev => ({ ...prev, region_id: pendingRegionIdRef.current }));
                  pendingRegionIdRef.current = null;
@@ -862,7 +862,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 // ✅ الوسيط: فلترة المناطق من الـ Cache فوراً
                 console.log(`🔍 فلترة المناطق للمدينة ${cityIdForRegions}...`);
                 
-                if (isCacheLoaded && cachedRegions.length > 0) {
+                if (isCacheLoaded && globalRegionsCache.length > 0) {
                   const filteredRegions = getRegionsByCity(cityIdForRegions);
                   console.log(`✅ تم فلترة ${filteredRegions.length} منطقة من الـ Cache`);
                   
@@ -1250,6 +1250,26 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           } else {
             // الوسيط
             await editAlWaseetOrder(deliveryOrderData, waseetToken);
+          }
+          
+          // ✅ بعد نجاح التحديث في شركة التوصيل، تحديث قاعدة البيانات المحلية
+          const { error: localDbUpdateError } = await supabase
+            .from('orders')
+            .update({
+              customer_name: formData.name,
+              customer_phone: formData.phone,
+              customer_phone2: formData.second_phone || null,
+              customer_city: formData.city,
+              customer_province: formData.region,
+              customer_address: formData.address,
+              notes: formData.notes
+            })
+            .eq('tracking_number', originalOrder.tracking_number);
+          
+          if (localDbUpdateError) {
+            console.error('⚠️ تحذير: فشل تحديث قاعدة البيانات المحلية:', localDbUpdateError);
+          } else {
+            console.log('✅ تم تحديث قاعدة البيانات المحلية بنجاح');
           }
           
         } catch (deliveryError) {

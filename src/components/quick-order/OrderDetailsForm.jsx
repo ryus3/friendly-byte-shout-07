@@ -58,12 +58,13 @@ const OrderDetailsForm = ({
     }
   }, [activePartner, packageSizes, formData.size, handleSelectChange]);
 
-  // تحديث السعر النهائي في الحقل تلقائياً
+  // ✅ تحديث السعر فقط عند تغيير السلة، وليس في كل لحظة (للسماح بالتعديل اليدوي)
   useEffect(() => {
-    if (finalTotal !== formData.price) {
+    // فقط عند إضافة منتجات للسلة أو تغييرها
+    if (cart.length > 0) {
       handleChange({ target: { name: 'price', value: finalTotal } });
     }
-  }, [finalTotal, formData.price, handleChange]);
+  }, [cart, finalTotal, handleChange]);
 
   return (
     <Card dir="rtl">
