@@ -197,11 +197,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             setFormData(prev => ({ ...prev, city_id: aiOrderData.city_id }));
           }
           if (aiOrderData.region_id) {
-            // تأخير تحديد المنطقة لضمان تحميل البيانات أولاً
-            setTimeout(() => {
-              setSelectedRegionId(aiOrderData.region_id);
-              setFormData(prev => ({ ...prev, region_id: aiOrderData.region_id }));
-            }, 500);
+            // ✅ تخزين region_id للتطبيق بعد تحميل المناطق
+            pendingRegionIdRef.current = aiOrderData.region_id;
+            // ✅ تحديد فوري أيضاً (لا تأخير)
+            setSelectedRegionId(aiOrderData.region_id);
+            setFormData(prev => ({ ...prev, region_id: aiOrderData.region_id }));
           }
         } else {
           setActivePartner('local');
@@ -860,7 +860,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 }));
               } else {
                 // ✅ الوسيط: فلترة المناطق من الـ Cache فوراً
-                console.log(`🔍 فلترة المناطق للمدينة ${cityIdForRegions}...`);
+                console.log(`🔍 فلترة المناطق للمدينة ${cityIdForRegions} (cache: ${globalRegionsCache.length} منطقة)...`);
                 
                 if (isCacheLoaded && globalRegionsCache.length > 0) {
                   const filteredRegions = getRegionsByCity(cityIdForRegions);
@@ -917,7 +917,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       };
       fetchRegionsData();
     }
-  }, [selectedCityId, formData.city_id, activePartner, waseetToken, isEditMode]);
+  }, [selectedCityId, formData.city_id, activePartner, waseetToken, isEditMode, globalRegionsCache, isCacheLoaded, getRegionsByCity]);
   
   // تحديث تفاصيل الطلب والسعر تلقائياً عند تغيير السلة أو الشريك أو الخصم
   useEffect(() => {
@@ -2521,6 +2521,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             cart={cart}
             removeFromCart={removeFromCart}
             showProductSelection={formData.type !== 'exchange' && formData.type !== 'return'}
+            isEditMode={isEditMode} // ✅ تمرير وضع التعديل
           />
           
           {/* نماذج الاستبدال والإرجاع */}
