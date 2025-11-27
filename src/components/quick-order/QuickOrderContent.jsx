@@ -165,7 +165,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           region_id: aiOrderData.region_id || '',  // معرف المنطقة للوسيط
           address: aiOrderData.customer_address || '',
           notes: aiOrderData.notes || '',
-          price: aiOrderData.final_total || aiOrderData.total_amount || 0,
+          price: aiOrderData.price_with_delivery || aiOrderData.final_total || aiOrderData.total_amount || 0,
           delivery_fee: aiOrderData.delivery_fee || 0,
           // ضمان عرض السعر الصحيح مع التوصيل
           total_with_delivery: (aiOrderData.total_amount || 0) + (aiOrderData.delivery_fee || 0),
@@ -202,6 +202,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             // ✅ تحديد فوري أيضاً (لا تأخير)
             setSelectedRegionId(aiOrderData.region_id);
             setFormData(prev => ({ ...prev, region_id: aiOrderData.region_id }));
+            
+            // ✅ استخدام المناطق المحملة مسبقاً إذا كانت متوفرة
+            if (aiOrderData.preloadedRegions && aiOrderData.preloadedRegions.length > 0) {
+              setRegions(aiOrderData.preloadedRegions.map(r => ({
+                id: r.alwaseet_id || r.id,
+                name: r.name,
+                city_id: r.city_id
+              })));
+            }
           }
         } else {
           setActivePartner('local');
