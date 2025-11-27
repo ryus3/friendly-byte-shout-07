@@ -1310,9 +1310,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               customer_province: formData.region,
               customer_address: formData.address,
               notes: formData.notes,
-              total_amount: newFinalTotal,
-              sales_amount: newFinalTotal,
-              final_amount: newFinalTotal + (formData.delivery_fee || 0),
+              total_amount: formData.price || finalTotal,
+              sales_amount: formData.price || finalTotal,
+              final_amount: formData.price || finalTotal,
               package_size: parseInt(selectedPackageSize) || 1,
               city_id: validCityId,
               region_id: validRegionId
@@ -1353,9 +1353,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         customer_address: formData.address,
         notes: formData.notes,
         details: formData.details,
-        total_amount: newFinalTotal,
-        sales_amount: newFinalTotal,
-        final_amount: newFinalTotal + (formData.delivery_fee || 0),
+        total_amount: formData.price || finalTotal,
+        sales_amount: formData.price || finalTotal,
+        final_amount: formData.price || finalTotal,
         package_size: parseInt(selectedPackageSize) || 1
       };
       updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
