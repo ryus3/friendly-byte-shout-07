@@ -81,6 +81,40 @@ export const SearchableSelectFixed = ({
     }
   }, [open]);
 
+  // ✅ تحديث موضع dropdown عند التمرير داخل Dialog أو ScrollArea
+  useEffect(() => {
+    if (!open || !buttonRef.current) return;
+    
+    const updatePosition = () => {
+      const rect = buttonRef.current?.getBoundingClientRect();
+      if (rect) {
+        setButtonRect(rect);
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        setDropdownDirection(spaceBelow < 200 && spaceAbove > spaceBelow ? 'up' : 'down');
+      }
+    };
+    
+    // Listen for scroll events in parent ScrollArea or Dialog
+    const scrollParent = buttonRef.current.closest('[data-radix-scroll-area-viewport], [data-radix-dialog-content]');
+    if (scrollParent) {
+      scrollParent.addEventListener('scroll', updatePosition, { passive: true });
+      window.addEventListener('resize', updatePosition, { passive: true });
+      return () => {
+        scrollParent.removeEventListener('scroll', updatePosition);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+    
+    // Fallback to window scroll
+    window.addEventListener('scroll', updatePosition, { passive: true });
+    window.addEventListener('resize', updatePosition, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', updatePosition);
+      window.removeEventListener('resize', updatePosition);
+    };
+  }, [open]);
+
   // Simplified interaction handling for better mobile support
   useEffect(() => {
     if (!open) return;

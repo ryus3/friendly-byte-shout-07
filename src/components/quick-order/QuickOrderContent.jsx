@@ -1262,7 +1262,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               customer_city: formData.city,
               customer_province: formData.region,
               customer_address: formData.address,
-              notes: formData.notes
+              notes: formData.notes,
+              total_amount: newFinalTotal,
+              sales_amount: newFinalTotal,
+              final_amount: newFinalTotal + (formData.delivery_fee || 0),
+              package_size: parseInt(selectedPackageSize) || 1,
+              city_id: validCityId,
+              region_id: validRegionId
             })
             .eq('tracking_number', originalOrder.tracking_number);
           
@@ -1299,9 +1305,39 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         customer_province: formData.region,
         customer_address: formData.address,
         notes: formData.notes,
-        details: formData.details
+        details: formData.details,
+        total_amount: newFinalTotal,
+        sales_amount: newFinalTotal,
+        final_amount: newFinalTotal + (formData.delivery_fee || 0),
+        package_size: parseInt(selectedPackageSize) || 1
       };
       updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
+
+      // ✅ تحديث order_items في قاعدة البيانات
+      if (cart && cart.length > 0) {
+        // حذف العناصر القديمة
+        await supabase
+          .from('order_items')
+          .delete()
+          .eq('order_id', originalOrder.id);
+        
+        // إضافة العناصر الجديدة
+        const newOrderItems = cart.map(item => ({
+          order_id: originalOrder.id,
+          product_id: item.product_id,
+          variant_id: item.variant_id,
+          product_name: item.productName || item.name,
+          color: item.color,
+          size: item.size,
+          quantity: item.quantity,
+          price: item.price,
+          total_price: item.quantity * item.price
+        }));
+        
+        await supabase
+          .from('order_items')
+          .insert(newOrderItems);
+      }
 
       // تحديث SuperProvider أيضاً لضمان انعكاس التغييرات في صفحة الطلبات
       if (window.superProviderUpdate) {
