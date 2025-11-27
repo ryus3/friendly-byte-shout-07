@@ -279,23 +279,13 @@ export const SearchableSelectFixed = ({
             value={search}
             onChange={handleSearchChange}
             onKeyDown={handleKeyDown}
-            onClick={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-            }}
+            onClick={(e) => e.stopPropagation()}
             onFocus={(e) => {
               e.stopPropagation();
-              e.preventDefault();
-              e.target.select(); // ✅ تحديد النص عند التركيز
+              e.target.select();
             }}
-            onTouchStart={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-            }}
-            onPointerDown={(e) => {
-              e.stopPropagation();
-              e.preventDefault();
-            }}
+            onTouchStart={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
             className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
             autoComplete="off"
             autoCorrect="off"
