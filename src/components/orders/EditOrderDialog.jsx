@@ -68,7 +68,9 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     const subtotal = cartItems.reduce((sum, item) => sum + (item.total || 0), 0);
     const deliveryFee = order.delivery_fee || 0;
     const discount = order.discount || 0;
-    const finalTotal = subtotal + deliveryFee - discount;
+    // ✅ استخدام final_amount من الطلب الأصلي إذا كان موجوداً
+    const originalFinalAmount = order.final_amount || order.final_total || 0;
+    const finalTotal = originalFinalAmount > 0 ? originalFinalAmount : (subtotal + deliveryFee - discount);
 
     const editData = {
       // معلومات العميل - مع ضمان وجود جميع البيانات
@@ -89,6 +91,8 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
       delivery_fee: deliveryFee,
       discount: discount,
       final_total: finalTotal,
+      // ✅ إضافة السعر الإجمالي شامل التوصيل
+      price_with_delivery: finalTotal,
       delivery_partner: order.delivery_partner || 'محلي',
       tracking_number: order.tracking_number || '',
       order_number: order.order_number || '',
@@ -133,11 +137,21 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     const loadEditData = async () => {
       if (order) {
         const data = await convertOrderToEditData(order);
+        
+        // ✅ تحميل المناطق مسبقاً للمدينة المختارة
+        if (data?.city_id && cachedRegions.length > 0) {
+          const cityRegions = cachedRegions.filter(r => 
+            String(r.city_id) === String(data.city_id) || 
+            String(r.alwaseet_id) === String(data.city_id)
+          );
+          data.preloadedRegions = cityRegions;
+        }
+        
         setEditData(data);
       }
     };
     loadEditData();
-  }, [order, isCacheLoaded]); // ✅ إضافة isCacheLoaded
+  }, [order, isCacheLoaded, cachedRegions]); // ✅ إضافة cachedRegions
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

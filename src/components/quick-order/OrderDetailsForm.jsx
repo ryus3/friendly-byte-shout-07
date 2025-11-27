@@ -216,7 +216,7 @@ const OrderDetailsForm = ({
           <Input type="number" id="quantity" name="quantity" value={formData.quantity} readOnly disabled={isSubmittingState} />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="price">السعر مع التوصيل</Label>
+          <Label htmlFor="price">السعر مع التوصيل {isEditMode && "(شامل التوصيل - قابل للتعديل)"}</Label>
           
           {/* Toggle Buttons للموجب/السالب */}
           <div className="flex gap-2 mb-2">

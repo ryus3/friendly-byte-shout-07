@@ -95,22 +95,21 @@ export const SearchableSelectFixed = ({
       }
     };
     
-    // Listen for scroll events in parent ScrollArea or Dialog
-    const scrollParent = buttonRef.current.closest('[data-radix-scroll-area-viewport], [data-radix-dialog-content]');
-    if (scrollParent) {
-      scrollParent.addEventListener('scroll', updatePosition, { passive: true });
-      window.addEventListener('resize', updatePosition, { passive: true });
-      return () => {
-        scrollParent.removeEventListener('scroll', updatePosition);
-        window.removeEventListener('resize', updatePosition);
-      };
-    }
+    // ✅ الاستماع لكل من Dialog content و ScrollArea viewport
+    const dialogContent = buttonRef.current.closest('[data-radix-dialog-content]');
+    const scrollArea = buttonRef.current.closest('[data-radix-scroll-area-viewport]');
     
-    // Fallback to window scroll
-    window.addEventListener('scroll', updatePosition, { passive: true });
+    // الاستماع لكليهما
+    [dialogContent, scrollArea].filter(Boolean).forEach(el => {
+      el.addEventListener('scroll', updatePosition, { passive: true });
+    });
+    
     window.addEventListener('resize', updatePosition, { passive: true });
+    
     return () => {
-      window.removeEventListener('scroll', updatePosition);
+      [dialogContent, scrollArea].filter(Boolean).forEach(el => {
+        el.removeEventListener('scroll', updatePosition);
+      });
       window.removeEventListener('resize', updatePosition);
     };
   }, [open]);
@@ -152,18 +151,33 @@ export const SearchableSelectFixed = ({
     };
   }, [open]);
 
-  // ✅ محاولات متعددة للـ focus داخل Dialog
+  // ✅ إصلاح جذري للـ focus داخل Dialog/ScrollArea
   useEffect(() => {
-    if (open && searchInputRef.current) {
-      const focusAttempts = isInDialog ? [100, 200, 400] : [50];
-      focusAttempts.forEach(delay => {
-        setTimeout(() => {
-          if (searchInputRef.current && document.activeElement !== searchInputRef.current) {
-            searchInputRef.current.focus();
-          }
-        }, delay);
-      });
-    }
+    if (!open || !searchInputRef.current) return;
+    
+    // ✅ منع Dialog من سرقة الـ focus
+    const preventDialogFocusSteal = (e) => {
+      if (dropdownRef.current?.contains(e.target)) {
+        e.stopPropagation();
+      }
+    };
+    
+    document.addEventListener('focusin', preventDialogFocusSteal, true);
+    
+    // محاولات متعددة للـ focus مع تأخيرات مختلفة
+    const focusAttempts = isInDialog ? [50, 150, 300, 500] : [30, 100];
+    const timeouts = focusAttempts.map(delay => 
+      setTimeout(() => {
+        if (open && searchInputRef.current) {
+          searchInputRef.current.focus({ preventScroll: true });
+        }
+      }, delay)
+    );
+    
+    return () => {
+      document.removeEventListener('focusin', preventDialogFocusSteal, true);
+      timeouts.forEach(clearTimeout);
+    };
   }, [open, isInDialog]);
 
   const handleToggle = () => {
@@ -240,8 +254,12 @@ export const SearchableSelectFixed = ({
   const renderDropdownContent = () => (
       <div 
         ref={dropdownRef}
-        onMouseDown={(e) => e.stopPropagation()} // ✅ منع Dialog من سرقة الـ focus
-        onTouchStart={(e) => e.stopPropagation()} // ✅ للموبايل
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          e.preventDefault(); // ✅ منع Dialog من الإغلاق
+        }}
+        onTouchStart={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()} // ✅ إضافة pointer events
         className="bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
         style={{ 
           direction: 'rtl',
