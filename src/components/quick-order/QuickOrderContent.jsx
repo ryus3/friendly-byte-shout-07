@@ -39,7 +39,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const { deleteAiOrderWithLink } = useAiOrdersCleanup();
   
   // ✅ استخدام الـ Cache للمدن والمناطق بدلاً من API
-  const { cities: cachedCities, fetchRegionsByCity: fetchRegionsFromCache } = useCitiesCache();
+  const { 
+    cities: cachedCities, 
+    fetchRegionsByCity: fetchRegionsFromCache,
+    isLoaded: isCacheLoaded,
+    isLoading: isCacheLoading
+  } = useCitiesCache();
   
   // ✅ ref للتحقق من mount status
   const isMountedRef = useRef(true);
@@ -779,6 +784,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   useEffect(() => {
     const fetchInitialData = async () => {
       if ((activePartner === 'alwaseet' || activePartner === 'modon') && waseetToken) {
+        // ✅ انتظار تحميل الـ cache للوسيط
+        if (activePartner === 'alwaseet' && !isCacheLoaded) {
+          console.log('⏳ انتظار تحميل الـ Cache للوسيط...');
+          return;
+        }
+        
         setLoadingCities(true);
         setLoadingPackageSizes(true);
         setInitialDataLoaded(false);
@@ -814,10 +825,17 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             }
           } else {
             // ✅ للوسيط: استخدام الـ Cache بدلاً من API
-            citiesData = cachedCities.map(city => ({
-              id: city.alwaseet_id,
-              name: city.name
-            }));
+            console.log('🔍 جلب المدن من Cache (الوسيط)...');
+            if (cachedCities.length > 0) {
+              citiesData = cachedCities.map(city => ({
+                id: city.alwaseet_id,
+                name: city.name
+              }));
+              console.log(`✅ تم جلب ${citiesData.length} مدينة من Cache`);
+            } else {
+              console.warn('⚠️ Cache فارغ - استخدام API كـ fallback');
+              citiesData = await getCities(waseetToken);
+            }
             
             packageSizesData = await getPackageSizes(waseetToken);
           }
@@ -878,7 +896,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             fetchInitialData();
         }
     }
-  }, [activePartner, waseetToken, isWaseetLoggedIn, isDeliveryPartnerSelected]);
+  }, [activePartner, waseetToken, isWaseetLoggedIn, isDeliveryPartnerSelected, isCacheLoaded, cachedCities]);
 
   // مرجع لتتبع آخر مدينة محددة
   const prevCityIdRef = useRef(formData.city_id);
@@ -935,17 +953,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   city_id: region.city_id
                 }));
               } else {
-                // الوسيط: استخدام الـ Cache
-                const cityMasterId = cachedCities.find(c => c.alwaseet_id === parseInt(cityIdForRegions))?.id;
-                if (cityMasterId) {
-                  const cachedRegionsData = await fetchRegionsFromCache(cityMasterId);
+                // ✅ الوسيط: استخدام الـ Cache
+                console.log(`🔍 جلب المناطق من Cache للمدينة ${cityIdForRegions}...`);
+                
+                // ✅ استخدام alwaseet_id مباشرة (لأن city_id في regions_master = alwaseet_id)
+                const cachedRegionsData = await fetchRegionsFromCache(parseInt(cityIdForRegions));
+                
+                if (cachedRegionsData && cachedRegionsData.length > 0) {
                   regionsData = cachedRegionsData.map(region => ({
                     id: region.alwaseet_id,
                     name: region.name,
                     city_id: cityIdForRegions
                   }));
+                  console.log(`✅ تم جلب ${regionsData.length} منطقة من Cache`);
                 } else {
-                  console.warn('⚠️ لم يتم العثور على المدينة في الـ Cache');
+                  console.warn('⚠️ Cache فارغ - لا توجد مناطق');
                   regionsData = [];
                 }
               }
