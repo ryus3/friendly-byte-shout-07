@@ -2463,27 +2463,7 @@ export const AlWaseetProvider = ({ children }) => {
         source: source
       };
 
-      try {
-        await supabase.from('auto_delete_log').insert({
-          order_id: orderToDelete.id,
-          order_number: orderToDelete.order_number,
-          tracking_number: orderToDelete.tracking_number,
-          qr_id: orderToDelete.qr_id,
-          delivery_partner_order_id: orderToDelete.delivery_partner_order_id,
-          deleted_by: user?.id,
-          delete_source: source,
-          reason: deleteReason,
-          order_status: orderToDelete.status,
-          delivery_status: orderToDelete.delivery_status,
-          order_age_minutes: orderAge,
-          order_data: orderToDelete
-        });
-        devLog.log('📝 تم تسجيل الحذف في سجل الحذف التلقائي');
-      } catch (logError) {
-        console.error('⚠️ فشل تسجيل الحذف:', logError);
-      }
-      
-      // 2. حذف الخصومات المطبقة أولاً (Fallback - CASCADE سيحذفها تلقائياً)
+      // 1. حذف الخصومات المطبقة أولاً (Fallback - CASCADE سيحذفها تلقائياً)
       try {
         const { error: discountsDeleteError } = await supabase
           .from('applied_customer_discounts')
@@ -2499,7 +2479,7 @@ export const AlWaseetProvider = ({ children }) => {
         devLog.warn('⚠️ خطأ في حذف الخصومات:', discountError);
       }
       
-      // 3. تحرير المخزون المحجوز
+      // 2. تحرير المخزون المحجوز
       if (orderToDelete.order_items && orderToDelete.order_items.length > 0) {
         for (const item of orderToDelete.order_items) {
           try {
@@ -2515,18 +2495,45 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
       
-      // 4. حذف الطلب من قاعدة البيانات (مع فصل آمن للحسابات)
-      const { error: deleteError, count } = await scopeOrdersQuery(
-        supabase
-          .from('orders')
-          .delete()
-          .eq('id', orderId),
-        false // المدير يستطيع حذف جميع الطلبات
-      ).select('id', { count: 'exact' });
+      // 3. حذف الطلب من قاعدة البيانات (✅ صيغة صحيحة مع التحقق الفعلي)
+      const { error: deleteError, data } = await supabase
+        .from('orders')
+        .delete({ count: 'exact' })
+        .eq('id', orderId)
+        .select();
         
-      if (deleteError || count === 0) {
-        devLog.error('❌ فشل في حذف الطلب:', deleteError || 'لم يُحذف أي سجل - قد يكون RLS يمنع الحذف');
+      if (deleteError) {
+        devLog.error('❌ خطأ في حذف الطلب:', deleteError);
         return false;
+      }
+      
+      if (!data || data.length === 0) {
+        devLog.error('❌ لم يُحذف أي سجل - قد يكون RLS يمنع الحذف أو الطلب غير موجود');
+        return false;
+      }
+      
+      // ✅ الحذف نجح فعلياً - الآن نسجل في auto_delete_log
+      devLog.log(`✅ تم حذف ${data.length} طلب فعلياً`);
+      
+      // 4. تسجيل الحذف في سجل الحذف التلقائي (بعد نجاح الحذف)
+      try {
+        await supabase.from('auto_delete_log').insert({
+          order_id: orderId,
+          order_number: orderToDelete.order_number,
+          tracking_number: orderToDelete.tracking_number,
+          qr_id: orderToDelete.qr_id,
+          delivery_partner_order_id: orderToDelete.delivery_partner_order_id,
+          deleted_by: user?.id,
+          delete_source: source,
+          reason: deleteReason,
+          order_status: orderToDelete.status,
+          delivery_status: orderToDelete.delivery_status,
+          order_age_minutes: orderAge,
+          order_data: orderToDelete
+        });
+        devLog.log('📝 تم تسجيل الحذف في سجل الحذف التلقائي');
+      } catch (logError) {
+        console.error('⚠️ فشل تسجيل الحذف:', logError);
       }
       
       devLog.log(`✅ تم حذف الطلب ${orderToDelete.tracking_number || orderToDelete.order_number || orderId} تلقائياً من ${source}`);
