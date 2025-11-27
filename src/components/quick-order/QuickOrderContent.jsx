@@ -967,19 +967,18 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               regionCache.current.set(cacheKey, safeRegions);
               setRegions(safeRegions);
               
-              // ✅ تطبيق pendingRegionId بعد تحميل المناطق من API
-              if (pendingRegionIdRef.current && safeRegions.find(r => String(r.id) === String(pendingRegionIdRef.current))) {
-                setSelectedRegionId(pendingRegionIdRef.current);
-                setFormData(prev => ({ ...prev, region_id: pendingRegionIdRef.current }));
-                pendingRegionIdRef.current = null;
-              } else if (isEditMode && preservedRegionId) {
-                setTimeout(() => {
-                  setSelectedRegionId(preservedRegionId);
-                  setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
-                }, 300);
-              }
-             }
-        } catch (error) { 
+               // ✅ تطبيق pendingRegionId بعد تحميل المناطق من API
+               if (pendingRegionIdRef.current && safeRegions.find(r => String(r.id) === String(pendingRegionIdRef.current))) {
+                 setSelectedRegionId(pendingRegionIdRef.current);
+                 setFormData(prev => ({ ...prev, region_id: pendingRegionIdRef.current }));
+                 pendingRegionIdRef.current = null;
+               } else if (isEditMode && preservedRegionId) {
+                 setTimeout(() => {
+                   setSelectedRegionId(preservedRegionId);
+                   setFormData(prev => ({ ...prev, region_id: preservedRegionId }));
+                 }, 300);
+               }
+         } catch (error) {
           console.error('❌ خطأ في جلب المناطق:', error);
           toast({ 
             title: "خطأ", 
