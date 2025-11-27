@@ -50,6 +50,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // ✅ ref للتحقق من mount status
   const isMountedRef = useRef(true);
   
+  // ✅ ref لمنع تحميل المنتجات المكرر في وضع التعديل
+  const loadedProducts = useRef(false);
+  
   // ✅ النهائي: Cleanup آمن بدون clearCart
   useEffect(() => {
     isMountedRef.current = true;
