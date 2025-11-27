@@ -1294,6 +1294,72 @@ export const AlWaseetProvider = ({ children }) => {
                   }
                 } else {
                   devLog.warn(`❌ الطلب ${localOrder.tracking_number} غير موجود حتى في getOrderById!`);
+                  
+                  // ⚠️ الطلب غير موجود - فحص إمكانية الحذف التلقائي
+                  if (canAutoDeleteOrder(localOrder, user)) {
+                    devLog.log(`🗑️ [AUTO-DELETE-CHECK] الطلب ${localOrder.tracking_number} غير موجود - بدء فحص الحذف...`);
+                    
+                    // ✅ جلب توكن الحساب المحدد
+                    const deleteToken = await getTokenForUser(
+                      localOrder.created_by, 
+                      localOrder.delivery_account_used, 
+                      localOrder.delivery_partner, 
+                      true // strict mode
+                    );
+                    
+                    // ⛔ لا تحذف إذا لم يوجد توكن صالح
+                    if (!deleteToken) {
+                      devLog.warn(`⛔ إيقاف الحذف - لا يوجد توكن صالح للحساب "${localOrder.delivery_account_used}"`);
+                      toast({
+                        title: "⚠️ توكن منتهي",
+                        description: `لم يتم التحقق من الطلب ${localOrder.tracking_number}. سجّل دخول للحساب أولاً.`,
+                        variant: "warning",
+                        duration: 8000
+                      });
+                    } else {
+                      // ✅ فحص 3 مرات بتأخير
+                      let foundOrder = false;
+                      const RETRY_DELAYS = [0, 2000, 4000];
+                      
+                      for (let attempt = 1; attempt <= 3; attempt++) {
+                        if (attempt > 1) await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt-1]));
+                        
+                        devLog.log(`🔍 محاولة ${attempt}/3: فحص ${localOrder.tracking_number}`);
+                        
+                        try {
+                          // طريقة 1: بـ QR
+                          let found = await AlWaseetAPI.getOrderByQR(deleteToken.token, localOrder.tracking_number);
+                          
+                          // طريقة 2: بـ ID (fallback)
+                          if (!found && localOrder.delivery_partner_order_id) {
+                            found = await AlWaseetAPI.getOrderById(deleteToken.token, localOrder.delivery_partner_order_id);
+                          }
+                          
+                          if (found) {
+                            foundOrder = true;
+                            devLog.log(`✅ محاولة ${attempt}: الطلب موجود - لن يُحذف`);
+                            break;
+                          }
+                        } catch (e) {
+                          devLog.warn(`⚠️ محاولة ${attempt} فشلت: ${e.message}`);
+                        }
+                      }
+                      
+                      // ✅ حذف فقط بعد 3 محاولات فاشلة
+                      if (!foundOrder) {
+                        devLog.log(`🗑️ الطلب ${localOrder.tracking_number} غير موجود بعد 3 محاولات - سيُحذف`);
+                        
+                        toast({
+                          title: "🗑️ طلب محذوف من شركة التوصيل",
+                          description: `الطلب ${localOrder.tracking_number} غير موجود وتم حذفه محلياً`,
+                          variant: "warning",
+                          duration: 8000
+                        });
+                        
+                        await handleAutoDeleteOrder(localOrder.id, 'syncVisibleBatch');
+                      }
+                    }
+                  }
                 }
               } catch (directError) {
                 // ✅ معالجة خاصة لـ Rate Limiting - لا نوقف المزامنة
