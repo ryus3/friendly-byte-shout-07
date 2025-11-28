@@ -1272,11 +1272,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           return `${name}${sizePart}${colorPart}`.trim();
         }).join(' + ');
 
+        // استخدام القيمة الفعلية للاسم المعروض
+        const actualCustomerName = formData.name || formData.defaultCustomerName || '';
+        
         const deliveryOrderData = {
           qr_id: originalOrder.tracking_number, // مطلوب للتعديل
-          client_name: formData.name,
-          client_mobile: formData.phone,
-          client_mobile2: formData.second_phone || undefined,
+          customer_name: actualCustomerName,
+          customer_phone: formData.phone,
+          customer_phone2: formData.second_phone || undefined,
           city_id: validCityId,
           region_id: validRegionId,
           location: formData.address,
@@ -1287,6 +1290,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           merchant_notes: formData.notes,
           replacement: 0
         };
+
+        console.log('📤 بيانات تعديل طلب الوسيط:', {
+          customer_name: actualCustomerName,
+          customer_phone: formData.phone,
+          customer_phone2: formData.second_phone
+        });
 
         try {
           if (activePartner === 'modon') {
