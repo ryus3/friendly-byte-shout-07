@@ -1189,6 +1189,41 @@ export const SuperProvider = ({ children }) => {
         }
       }
       
+      // ✅ تحديث order_items في قاعدة البيانات إذا تم تمرير newItems
+      if (newItems && Array.isArray(newItems) && newItems.length > 0) {
+        console.log('🔄 تحديث order_items في قاعدة البيانات:', newItems.length);
+        
+        // حذف العناصر القديمة
+        const { error: deleteError } = await supabase
+          .from('order_items')
+          .delete()
+          .eq('order_id', orderId);
+        
+        if (deleteError) {
+          console.error('❌ خطأ في حذف order_items القديمة:', deleteError);
+        } else {
+          // إضافة العناصر الجديدة
+          const orderItemsToInsert = newItems.map(item => ({
+            order_id: orderId,
+            product_id: item.productId || item.product_id,
+            variant_id: item.variantId || item.variant_id,
+            quantity: item.quantity || 1,
+            unit_price: item.price || item.unit_price || 0,
+            total_price: (item.price || item.unit_price || 0) * (item.quantity || 1)
+          }));
+          
+          const { error: insertError } = await supabase
+            .from('order_items')
+            .insert(orderItemsToInsert);
+          
+          if (insertError) {
+            console.error('❌ خطأ في إضافة order_items الجديدة:', insertError);
+          } else {
+            console.log('✅ تم تحديث order_items بنجاح');
+          }
+        }
+      }
+      
       // تحديث فوري محلياً مع البيانات الكاملة
       setAllData(prev => ({
         ...prev,
@@ -1260,7 +1295,7 @@ export const SuperProvider = ({ children }) => {
       
       return { success: false, error: error.message };
     }
-  }, [normalizeOrder]);
+  }, [normalizeOrder, allData.orders]);
 
   // تعرض دالة التحديث للمكونات الخارجية
   useEffect(() => {
