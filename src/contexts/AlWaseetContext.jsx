@@ -2495,10 +2495,10 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
       
-      // 3. حذف الطلب من قاعدة البيانات (✅ صيغة صحيحة مع التحقق الفعلي)
+      // 3. حذف الطلب من قاعدة البيانات (✅ الصيغة الصحيحة من Supabase)
       const { error: deleteError, data } = await supabase
         .from('orders')
-        .delete({ count: 'exact' })
+        .delete()
         .eq('id', orderId)
         .select();
         
