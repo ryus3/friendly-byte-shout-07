@@ -2195,17 +2195,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }
   };
 
-  // ✅ تم حذف دالة handleOrderUpdate المكررة - يتم التحديث عبر handleUpdateOrder فقط
-      console.error('❌ خطأ في تحديث الطلب:', error);
-      toast({
-        title: "خطأ في تحديث الطلب",
-        description: error.message || "حدث خطأ غير متوقع أثناء التحديث",
-        variant: "destructive",
-        duration: 6000
-      });
-    }
-  };
-  
   const handleConfirmProductSelection = (selectedItems) => {
     clearCart();
     (selectedItems || []).filter(item => item != null && typeof item === 'object').forEach(item => {
