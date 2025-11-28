@@ -1344,9 +1344,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               customer_province: formData.region,
               customer_address: formData.address,
               notes: formData.notes,
-              total_amount: newProductsPrice,  // سعر المنتجات فقط (بدون التوصيل)
+              total_amount: newProductsPrice,
               sales_amount: newProductsPrice,
-              final_amount: userEnteredPrice,  // السعر الكلي شامل التوصيل
+              final_amount: userEnteredPrice,
               discount: discountAmount,
               price_increase: priceIncreaseAmount,
               price_change_type: priceChangeType,
@@ -1358,121 +1358,220 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           
           if (localDbUpdateError) {
             console.error('⚠️ تحذير: فشل تحديث قاعدة البيانات المحلية:', localDbUpdateError);
-          } else {
-            console.log('✅ تم تحديث قاعدة البيانات المحلية بنجاح');
+            toast({
+              title: "خطأ في التحديث المحلي",
+              description: localDbUpdateError.message,
+              variant: "destructive"
+            });
+            return;
           }
+
+          // ✅ تحديث order_items - حماية من فقدان المنتجات
+          const validCartItems = cart?.filter(item => 
+            item && (item.productId || item.product_id) && item.quantity > 0
+          ) || [];
+          
+          if (validCartItems.length === 0) {
+            console.warn('⚠️ السلة فارغة - الحفاظ على المنتجات الأصلية');
+          } else {
+            // ✅ إدراج المنتجات الجديدة أولاً (بدون الأعمدة غير الموجودة)
+            const newOrderItems = validCartItems.map(item => ({
+              order_id: originalOrder.id,
+              product_id: item.productId || item.product_id,
+              variant_id: item.variantId || item.variant_id,
+              quantity: item.quantity,
+              unit_price: item.price,
+              total_price: item.quantity * item.price
+            }));
+            
+            const { data: insertedItems, error: insertError } = await supabase
+              .from('order_items')
+              .insert(newOrderItems)
+              .select('id');
+
+            if (insertError) {
+              console.error('❌ فشل إدراج المنتجات:', insertError);
+              toast({
+                title: "خطأ في حفظ المنتجات",
+                description: insertError.message,
+                variant: "destructive"
+              });
+              return;
+            }
+
+            console.log('✅ تم إدراج المنتجات الجديدة:', insertedItems.length);
+
+            // ✅ حذف المنتجات القديمة فقط (باستثناء الجديدة)
+            if (insertedItems && insertedItems.length > 0) {
+              const newItemIds = insertedItems.map(item => item.id);
+              const { error: deleteError } = await supabase
+                .from('order_items')
+                .delete()
+                .eq('order_id', originalOrder.id)
+                .not('id', 'in', `(${newItemIds.join(',')})`);
+
+              if (deleteError) {
+                console.error('⚠️ تحذير: فشل حذف المنتجات القديمة:', deleteError);
+              } else {
+                console.log('✅ تم حذف المنتجات القديمة');
+              }
+            }
+          }
+
+          console.log('✅ تم تحديث قاعدة البيانات المحلية بنجاح');
+
+          // ✅ إرسال أحداث التحديث والخروج (بدون استدعاء updateOrder المزدوج)
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('orderUpdated', { 
+              detail: { 
+                id: originalOrder.id,
+                tracking_number: originalOrder.tracking_number,
+                timestamp: new Date().toISOString()
+              } 
+            }));
+            
+            window.dispatchEvent(new CustomEvent('refreshOrdersData', {
+              detail: { source: 'quickOrderUpdate', timestamp: new Date().toISOString() }
+            }));
+          }, 200);
+
+          toast({
+            title: "تم تحديث الطلب بنجاح",
+            description: `رقم التتبع: ${originalOrder.tracking_number}`,
+            variant: "default",
+          });
+
+          if (onOrderCreated) onOrderCreated({ order: originalOrder });
+
+          // ✅ إعادة تعيين النموذج بعد النجاح
+          if (!isDialog) {
+            setTimeout(() => {
+              const baghdadCity = cities.find(city => 
+                city.name?.toLowerCase().includes('بغداد') || 
+                city.name?.toLowerCase().includes('baghdad')
+              );
+              if (baghdadCity) {
+                setSelectedCityId(String(baghdadCity.id));
+                setSelectedRegionId('');
+                setFormData(prev => ({
+                  ...prev,
+                  city_id: String(baghdadCity.id),
+                  region_id: '',
+                  city: '',
+                  region: ''
+                }));
+              }
+            }, 1000);
+          }
+
+          return; // ✅ الخروج - لا نستدعي updateOrder() للطلبات مع شركة توصيل
           
         } catch (deliveryError) {
           console.error(`❌ خطأ في تحديث طلب ${activePartner}:`, deliveryError);
-          
-          // إظهار رسالة خطأ واضحة للمستخدم
           toast({
             title: "خطأ في تحديث الطلب",
             description: `فشل تحديث الطلب في شركة التوصيل: ${deliveryError.message}`,
             variant: "destructive"
           });
-          
-          // توقف العملية - لا نحدث محلياً إذا فشل التحديث في شركة التوصيل
           return;
         }
       }
 
-      // تحديث الطلب محلياً - تمرير جميع البيانات المحدثة
-      const { items, ...orderDataWithoutItems } = orderData;
-      // إضافة البيانات المحدثة من النموذج
+      // ✅ الطلبات المحلية فقط تصل هنا (بدون شركة توصيل)
+      const validCartItems = cart?.filter(item => 
+        item && (item.productId || item.product_id) && item.quantity > 0
+      ) || [];
+      
+      if (validCartItems.length === 0) {
+        toast({
+          title: "خطأ",
+          description: "لا يمكن حفظ طلب بدون منتجات",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // إدراج المنتجات الجديدة أولاً
+      const newOrderItems = validCartItems.map(item => ({
+        order_id: originalOrder.id,
+        product_id: item.productId || item.product_id,
+        variant_id: item.variantId || item.variant_id,
+        quantity: item.quantity,
+        unit_price: item.price,
+        total_price: item.quantity * item.price
+      }));
+      
+      const { data: insertedItems, error: insertError } = await supabase
+        .from('order_items')
+        .insert(newOrderItems)
+        .select('id');
+
+      if (insertError) {
+        console.error('❌ فشل إدراج المنتجات:', insertError);
+        toast({
+          title: "خطأ في حفظ المنتجات",
+          description: insertError.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // حذف المنتجات القديمة (باستثناء الجديدة)
+      if (insertedItems && insertedItems.length > 0) {
+        const newItemIds = insertedItems.map(item => item.id);
+        await supabase
+          .from('order_items')
+          .delete()
+          .eq('order_id', originalOrder.id)
+          .not('id', 'in', `(${newItemIds.join(',')})`);
+      }
+
+      // تحديث بيانات الطلب
       const userEnteredPrice = parseInt(formData.price) || originalPriceRef.current || finalTotal;
       const completeOrderData = {
-        ...orderDataWithoutItems,
         customer_name: formData.name,
         customer_phone: formData.phone,
-        customer_phone2: formData.second_phone,
+        customer_phone2: formData.second_phone || null,
         customer_city: formData.city,
         customer_province: formData.region,
         customer_address: formData.address,
         notes: formData.notes,
-        details: formData.details,
         total_amount: userEnteredPrice,
         sales_amount: userEnteredPrice,
         final_amount: userEnteredPrice,
         package_size: parseInt(selectedPackageSize) || 1
       };
-      updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
 
-      // ✅ تحديث order_items في قاعدة البيانات - حماية من حذف المنتجات
-      const validCartItems = cart?.filter(item => 
-        item && (item.productId || item.product_id) && item.quantity > 0
-      ) || [];
-      
-      if (validCartItems.length === 0 && originalOrder.items?.length > 0) {
-        console.warn('⚠️ السلة فارغة - الحفاظ على المنتجات الأصلية');
-      } else if (validCartItems.length > 0) {
-        // حذف العناصر القديمة فقط إذا كانت هناك عناصر صالحة جديدة
-        await supabase
-          .from('order_items')
-          .delete()
-          .eq('order_id', originalOrder.id);
-        
-        // إضافة العناصر الجديدة - دعم كلا التنسيقين
-        const newOrderItems = validCartItems.map(item => ({
-          order_id: originalOrder.id,
-          product_id: item.productId || item.product_id,
-          variant_id: item.variantId || item.variant_id,
-          product_name: item.productName || item.product_name || item.name,
-          color: item.color,
-          size: item.size,
-          quantity: item.quantity,
-          unit_price: item.price,
-          total_price: item.quantity * item.price
-        }));
-        
-        console.log('✅ حفظ المنتجات:', newOrderItems.length, 'منتجات');
-        
-        await supabase
-          .from('order_items')
-          .insert(newOrderItems);
-      }
+      const updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
 
-      // تحديث SuperProvider أيضاً لضمان انعكاس التغييرات في صفحة الطلبات
-      if (window.superProviderUpdate) {
-        window.superProviderUpdate(originalOrder.id, completeOrderData);
-      }
-
-      // إرسال أحداث متعددة لضمان تحديث كل المكونات
+      // إرسال أحداث التحديث
       setTimeout(() => {
-        // حدث للطلب المحدث
         window.dispatchEvent(new CustomEvent('orderUpdated', { 
           detail: { 
-            id: originalOrder.id, 
+            id: originalOrder.id,
             updates: completeOrderData,
             order: updateResult.order,
             timestamp: new Date().toISOString()
           } 
         }));
         
-        // حدث لإعادة تحميل البيانات
         window.dispatchEvent(new CustomEvent('refreshOrdersData', {
           detail: { source: 'quickOrderUpdate', timestamp: new Date().toISOString() }
         }));
-        
-        // حدث لتحديث الحالة العامة
-        window.dispatchEvent(new CustomEvent('dataStateChanged', {
-          detail: { type: 'orderUpdate', orderId: originalOrder.id }
-        }));
       }, 200);
 
-      // عرض رسالة نجاح مع رقم التتبع الصحيح
-      console.log('📢 عرض تنبيه نجاح التحديث:', updateResult);
-      const trackingNumber = updateResult.order?.tracking_number || originalOrder.tracking_number || updateResult.order?.order_number || originalOrder.order_number || 'غير محدد';
+      const trackingNumber = updateResult.order?.tracking_number || originalOrder.tracking_number || 'غير محدد';
       toast({
         title: "تم تحديث الطلب بنجاح",
         description: `رقم التتبع: ${trackingNumber}`,
         variant: "default",
       });
 
+      if (onOrderCreated) onOrderCreated(updateResult);
+
       // إعادة تعيين النموذج للمدينة الافتراضية بعد التحديث الناجح
       if (!isDialog) {
         setTimeout(() => {
-          // إعادة تعيين معرفات المدينة والمنطقة للقيم الافتراضية
           const baghdadCity = cities.find(city => 
             city.name?.toLowerCase().includes('بغداد') || 
             city.name?.toLowerCase().includes('baghdad')
@@ -1487,13 +1586,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               city: '',
               region: ''
             }));
-            console.log('🔄 تم إعادة تعيين النموذج للمدينة الافتراضية بعد التحديث');
           }
         }, 1000);
       }
-
-      // استدعاء onOrderCreated (يعمل أيضاً للتحديث)
-      if (onOrderCreated) onOrderCreated(updateResult);
 
     } catch (error) {
       console.error('❌ Order update error:', error);
