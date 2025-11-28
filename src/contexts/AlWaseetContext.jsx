@@ -1077,7 +1077,9 @@ export const AlWaseetProvider = ({ children }) => {
                 localOrder.status !== newStatus ||
                 localOrder.delivery_fee !== newDeliveryFee ||
                 localOrder.receipt_received !== newReceiptReceived ||
-                !localOrder.delivery_partner_order_id
+                !localOrder.delivery_partner_order_id ||
+                (remoteOrder.city_name && localOrder.customer_city !== remoteOrder.city_name) ||
+                (remoteOrder.region_name && localOrder.customer_province !== remoteOrder.region_name)
               );
               
               // 🔍 Logging لسبب التحديث أو عدمه
@@ -1107,6 +1109,14 @@ export const AlWaseetProvider = ({ children }) => {
                   delivery_partner_order_id: isModon ? String(remoteOrder.id) : (remoteOrder.id || remoteOrder.order_id),
                   updated_at: new Date().toISOString()
                 };
+
+                // ✅ مزامنة المدينة/المنطقة من شركة التوصيل (بدون استهلاك API إضافي)
+                if (remoteOrder.city_name && localOrder.customer_city !== remoteOrder.city_name) {
+                  updates.customer_city = remoteOrder.city_name;
+                }
+                if (remoteOrder.region_name && localOrder.customer_province !== remoteOrder.region_name) {
+                  updates.customer_province = remoteOrder.region_name;
+                }
 
                 // تحديث الطلب في قاعدة البيانات
                 const { error } = await supabase
@@ -1259,7 +1269,9 @@ export const AlWaseetProvider = ({ children }) => {
                     localOrder.status !== newStatus ||
                     localOrder.delivery_fee !== newDeliveryFee ||
                     localOrder.receipt_received !== newReceiptReceived ||
-                    !localOrder.delivery_partner_order_id
+                    !localOrder.delivery_partner_order_id ||
+                    (directOrder.city_name && localOrder.customer_city !== directOrder.city_name) ||
+                    (directOrder.region_name && localOrder.customer_province !== directOrder.region_name)
                   );
 
                   if (needsUpdate) {
@@ -1271,6 +1283,14 @@ export const AlWaseetProvider = ({ children }) => {
                       delivery_partner_order_id: directOrder.id || directOrder.order_id,
                       updated_at: new Date().toISOString()
                     };
+
+                    // ✅ مزامنة المدينة/المنطقة من شركة التوصيل (fallback)
+                    if (directOrder.city_name && localOrder.customer_city !== directOrder.city_name) {
+                      updates.customer_city = directOrder.city_name;
+                    }
+                    if (directOrder.region_name && localOrder.customer_province !== directOrder.region_name) {
+                      updates.customer_province = directOrder.region_name;
+                    }
 
                     const { error } = await supabase
                       .from('orders')
