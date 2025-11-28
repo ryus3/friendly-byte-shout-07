@@ -4,19 +4,19 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Scrolling text animation for status badges */
+/* Scrolling text animation for status badges - starts from beginning (right in RTL) */
 @keyframes scroll-text {
   0% {
+    transform: translateX(0%);
+  }
+  25% {
+    transform: translateX(0%);
+  }
+  75% {
     transform: translateX(-100%);
   }
-  30% {
-    transform: translateX(0%);
-  }
-  70% {
-    transform: translateX(0%);
-  }
   100% {
-    transform: translateX(100%);
+    transform: translateX(0%);
   }
 }
 
