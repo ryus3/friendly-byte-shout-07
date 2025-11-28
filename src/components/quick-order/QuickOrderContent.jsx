@@ -1542,7 +1542,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         package_size: parseInt(selectedPackageSize) || 1
       };
 
-      const updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
+      updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
 
       // إرسال أحداث التحديث
       setTimeout(() => {
