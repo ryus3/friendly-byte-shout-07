@@ -1399,7 +1399,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const userEnteredPrice = parseInt(formData.price) || originalPriceRef.current || finalTotal;
       const completeOrderData = {
         ...orderDataWithoutItems,
-        customer_name: actualCustomerName,  // ✅ استخدام actualCustomerName بدلاً من formData.name
+        customer_name: actualCustomerName,
         customer_phone: formData.phone,
         customer_phone2: formData.second_phone,
         customer_city: formData.city,
@@ -1412,41 +1412,46 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         final_amount: userEnteredPrice,
         package_size: parseInt(selectedPackageSize) || 1
       };
-      updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
 
-      // ✅ تحديث order_items في قاعدة البيانات - حماية من حذف المنتجات
-      const validCartItems = cart?.filter(item => 
-        item && (item.productId || item.product_id) && item.quantity > 0
-      ) || [];
-      
-      if (validCartItems.length === 0 && originalOrder.items?.length > 0) {
-        console.warn('⚠️ السلة فارغة - الحفاظ على المنتجات الأصلية');
-      } else if (validCartItems.length > 0) {
-        // حذف العناصر القديمة فقط إذا كانت هناك عناصر صالحة جديدة
-        await supabase
-          .from('order_items')
-          .delete()
-          .eq('order_id', originalOrder.id);
-        
-        // إضافة العناصر الجديدة - دعم كلا التنسيقين
-        const newOrderItems = validCartItems.map(item => ({
-          order_id: originalOrder.id,
+      // ✅ تحويل cart للتنسيق الصحيح قبل تمريره لـ updateOrder
+      const cartForUpdate = cart?.filter(item => item && (item.productId || item.product_id) && item.quantity > 0)
+        .map(item => ({
           product_id: item.productId || item.product_id,
           variant_id: item.variantId || item.variant_id,
-          product_name: item.productName || item.product_name || item.name,
-          color: item.color,
-          size: item.size,
           quantity: item.quantity,
           unit_price: item.price,
-          total_price: item.quantity * item.price
-        }));
-        
-        console.log('✅ حفظ المنتجات:', newOrderItems.length, 'منتجات');
-        
-        await supabase
-          .from('order_items')
-          .insert(newOrderItems);
+          total_price: item.quantity * item.price,
+          product_name: item.productName || item.product_name || item.name,
+          color: item.color,
+          size: item.size
+        })) || [];
+
+      // حماية: لا تحذف المنتجات إذا كانت السلة فارغة
+      const productsToUpdate = cartForUpdate.length > 0 ? cartForUpdate : null;
+
+      console.log('📤 بيانات التحديث:', {
+        actualCustomerName,
+        'formData.name': formData.name,
+        'formData.phone': formData.phone,
+        cartLength: cart?.length,
+        cartForUpdateLength: cartForUpdate?.length
+      });
+
+      // ✅ تحديث الطلب عبر useOrders (سيقوم بتحديث order_items تلقائياً)
+      updateResult = await updateOrder(originalOrder.id, completeOrderData, productsToUpdate, originalOrder.items);
+
+      // ✅ التحقق من نجاح التحديث
+      if (!updateResult.success) {
+        console.error('❌ فشل تحديث الطلب:', updateResult.error);
+        toast({
+          title: "خطأ في تحديث الطلب",
+          description: updateResult.error,
+          variant: "destructive"
+        });
+        return;
       }
+
+      console.log('✅ تم تحديث الطلب بنجاح:', updateResult.order?.id);
 
       // تحديث SuperProvider أيضاً لضمان انعكاس التغييرات في صفحة الطلبات
       if (window.superProviderUpdate) {
