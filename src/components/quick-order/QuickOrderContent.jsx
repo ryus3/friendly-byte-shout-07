@@ -1215,8 +1215,18 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // معالجة تحديث الطلب
   const handleUpdateOrder = async () => {
     try {
+      // ✅ تعريف اسم العميل الفعلي في البداية ليكون متاحاً في كل مكان
+      const actualCustomerName = formData.name || formData.defaultCustomerName || '';
+
+      console.log('🔍 قيم التعديل:', {
+        'formData.name': formData.name,
+        'formData.defaultCustomerName': formData.defaultCustomerName,
+        'actualCustomerName': actualCustomerName,
+        'tracking_number': originalOrder?.tracking_number
+      });
+
       const orderData = {
-        customer_name: formData.name,
+        customer_name: actualCustomerName,  // ✅ استخدام actualCustomerName بدلاً من formData.name
         customer_phone: formData.phone,
         customer_phone2: formData.second_phone || '',
         customer_address: formData.address,
@@ -1241,9 +1251,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         custom_discount: discount,
         promo_code: formData.promocode
       };
-
-      // ✅ تعريف اسم العميل الفعلي مرة واحدة ليكون متاحاً في كل مكان
-      const actualCustomerName = formData.name || formData.defaultCustomerName || '';
 
       let updateResult;
       
