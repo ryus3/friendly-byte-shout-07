@@ -1346,7 +1346,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           const { error: localDbUpdateError } = await supabase
             .from('orders')
             .update({
-              customer_name: formData.name,
+              customer_name: actualCustomerName,
               customer_phone: formData.phone,
               customer_phone2: formData.second_phone || null,
               customer_city: formData.city,
