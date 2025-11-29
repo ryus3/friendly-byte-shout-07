@@ -1360,9 +1360,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               discount: discountAmount,
               price_increase: priceIncreaseAmount,
               price_change_type: priceChangeType,
-              package_size: parseInt(selectedPackageSize) || 1,
-              city_id: validCityId,
-              region_id: validRegionId
+              alwaseet_city_id: validCityId,
+              alwaseet_region_id: validRegionId
             })
             .eq('id', originalOrder.id)  // ✅ استخدام id بدلاً من tracking_number لضمان التحديث
             .select('customer_name, customer_phone')  // ✅ جلب البيانات للتحقق الفعلي
