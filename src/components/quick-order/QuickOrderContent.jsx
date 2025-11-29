@@ -1343,7 +1343,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             orderId: originalOrder.id
           });
           
-          const { error: localDbUpdateError } = await supabase
+          // ✅ تحديث قاعدة البيانات المحلية مع التحقق الفعلي من النجاح
+          const { data: updatedData, error: localDbUpdateError } = await supabase
             .from('orders')
             .update({
               customer_name: formData.name,
@@ -1363,12 +1364,21 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               city_id: validCityId,
               region_id: validRegionId
             })
-            .eq('tracking_number', originalOrder.tracking_number);
+            .eq('id', originalOrder.id)  // ✅ استخدام id بدلاً من tracking_number لضمان التحديث
+            .select('customer_name, customer_phone')  // ✅ جلب البيانات للتحقق الفعلي
+            .single();
           
           if (localDbUpdateError) {
-            console.error('⚠️ تحذير: فشل تحديث قاعدة البيانات المحلية:', localDbUpdateError);
+            console.error('❌ خطأ في تحديث قاعدة البيانات المحلية:', localDbUpdateError);
+            throw new Error(`فشل حفظ بيانات العميل محلياً: ${localDbUpdateError.message}`);
+          } else if (!updatedData) {
+            console.error('❌ لم يتم تحديث أي صف - قد تكون مشكلة صلاحيات RLS');
+            throw new Error('فشل تحديث الطلب - تحقق من الصلاحيات');
           } else {
-            console.log('✅ تم تحديث قاعدة البيانات المحلية بنجاح');
+            console.log('✅ تم تحديث قاعدة البيانات المحلية بنجاح:', {
+              customer_name: updatedData.customer_name,
+              customer_phone: updatedData.customer_phone
+            });
           }
           
         } catch (deliveryError) {
