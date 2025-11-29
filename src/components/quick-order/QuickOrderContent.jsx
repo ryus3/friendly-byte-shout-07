@@ -1308,7 +1308,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             .eq('order_id', originalOrder.id);
 
           const originalProductsPrice = orderItemsData?.reduce((sum, item) => 
-            sum + (parseFloat(item.total_price) || 0), 0) || 0;
+            sum + (parseFloat(item.total_price) || 0), 0) || originalOrder.total_amount || 0;
+          
+          console.log('📊 السعر الأصلي للمنتجات:', originalProductsPrice.toLocaleString(), 'د.ع');
 
           // ✅ حساب سعر المنتجات الجديد (بدون التوصيل)
           const deliveryFee = originalOrder.delivery_fee || 0;
@@ -1333,6 +1335,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           } else {
             console.log(`✅ السعر لم يتغير: ${newProductsPrice.toLocaleString()} د.ع`);
           }
+          
+          console.log('📝 بيانات العميل للحفظ:', {
+            name: formData.name,
+            phone: formData.phone,
+            phone2: formData.second_phone,
+            orderId: originalOrder.id
+          });
           
           const { error: localDbUpdateError } = await supabase
             .from('orders')
@@ -1407,29 +1416,38 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         console.warn('⚠️ السلة فارغة - الحفاظ على المنتجات الأصلية');
       } else if (validCartItems.length > 0) {
         // حذف العناصر القديمة فقط إذا كانت هناك عناصر صالحة جديدة
-        await supabase
+        const { error: deleteError } = await supabase
           .from('order_items')
           .delete()
           .eq('order_id', originalOrder.id);
         
-        // إضافة العناصر الجديدة - دعم كلا التنسيقين
+        if (deleteError) {
+          console.error('❌ خطأ في حذف المنتجات القديمة:', deleteError);
+          throw new Error(`فشل حذف المنتجات القديمة: ${deleteError.message}`);
+        }
+        
+        // إضافة العناصر الجديدة - الأعمدة الصحيحة فقط
         const newOrderItems = validCartItems.map(item => ({
           order_id: originalOrder.id,
           product_id: item.productId || item.product_id,
           variant_id: item.variantId || item.variant_id,
-          product_name: item.productName || item.product_name || item.name,
-          color: item.color,
-          size: item.size,
           quantity: item.quantity,
           unit_price: item.price,
           total_price: item.quantity * item.price
         }));
         
-        console.log('✅ حفظ المنتجات:', newOrderItems.length, 'منتجات');
+        console.log('✅ حفظ المنتجات:', newOrderItems.length, 'منتجات', newOrderItems);
         
-        await supabase
+        const { error: insertError } = await supabase
           .from('order_items')
           .insert(newOrderItems);
+        
+        if (insertError) {
+          console.error('❌ خطأ في إدخال المنتجات الجديدة:', insertError);
+          throw new Error(`فشل إدخال المنتجات الجديدة: ${insertError.message}`);
+        }
+        
+        console.log('✅ تم حفظ المنتجات بنجاح في قاعدة البيانات');
       }
 
       // تحديث SuperProvider أيضاً لضمان انعكاس التغييرات في صفحة الطلبات
