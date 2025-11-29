@@ -1405,7 +1405,18 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         final_amount: userEnteredPrice,
         package_size: parseInt(selectedPackageSize) || 1
       };
-      updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
+      // ✅ لا نحتاج تحديث قاعدة البيانات مرة أخرى - تم بالفعل في السطور 1346-1366
+      // نحدث الـ state المحلي فقط لتجنب التحديث المزدوج
+      updateResult = { 
+        success: true, 
+        order: { 
+          ...originalOrder, 
+          customer_name: formData.name,
+          customer_phone: formData.phone,
+          customer_phone2: formData.second_phone,
+          ...completeOrderData 
+        } 
+      };
 
       // ✅ تحديث order_items في قاعدة البيانات - حماية من حذف المنتجات
       const validCartItems = cart?.filter(item => 
