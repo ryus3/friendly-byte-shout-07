@@ -1405,11 +1405,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         customer_city: formData.city,
         customer_province: formData.region,
         customer_address: formData.address,
+        alwaseet_city_id: formData.cityId || originalOrder?.alwaseet_city_id,
+        alwaseet_region_id: formData.regionId || originalOrder?.alwaseet_region_id,
         notes: formData.notes,
         total_amount: userEnteredPrice,
         sales_amount: userEnteredPrice,
-        final_amount: userEnteredPrice,
-        package_size: parseInt(selectedPackageSize) || 1
+        final_amount: userEnteredPrice
       };
 
       console.log('📤 بيانات التحديث النهائية:', Object.keys(completeOrderData));
