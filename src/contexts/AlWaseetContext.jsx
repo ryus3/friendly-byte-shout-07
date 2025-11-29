@@ -1028,6 +1028,23 @@ export const AlWaseetProvider = ({ children }) => {
                       processedItems: returnResult.processedItems,
                       financialResult: returnResult.financialResult
                     });
+                    
+                    // ✅ إشعار للطلبات العادية (التي يتم تخطيها في handleReturnStatusChange)
+                    if (returnResult.skipped) {
+                      await supabase.from('notifications').insert({
+                        user_id: localOrder.created_by,
+                        title: '📦 طلب مُرجع من شركة التوصيل',
+                        message: `تم إرجاع الطلب ${localOrder.tracking_number} (${localOrder.customer_name}) من شركة التوصيل - الحالة 17`,
+                        type: 'order_returned',
+                        related_order_id: localOrder.id,
+                        data: { 
+                          tracking_number: localOrder.tracking_number,
+                          delivery_status: '17',
+                          order_type: localOrder.order_type || 'regular'
+                        }
+                      });
+                      console.log('✅ [RETURN-17] تم إرسال إشعار للطلب العادي المُرجع');
+                    }
                   } else {
                     console.error('❌ [RETURN-17] خطأ في معالجة الحالة 17:', returnResult.error);
                   }
