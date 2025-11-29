@@ -389,8 +389,8 @@ return this.fetch('all_data', async () => {
       'alwaseet_city_id', 'alwaseet_region_id', 'notes',
       'total_amount', 'sales_amount', 'final_amount',
       'discount', 'price_increase', 'price_change_type',
-      'delivery_fee', 'package_size', 'status', 'delivery_status',
-      'isarchived', 'receipt_received', 'employee_paid'
+      'delivery_fee', 'status', 'delivery_status',
+      'isarchived', 'receipt_received'
     ];
     
     const filteredUpdates = {};
