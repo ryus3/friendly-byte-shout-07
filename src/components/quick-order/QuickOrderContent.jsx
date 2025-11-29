@@ -2565,6 +2565,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                    // مسح المنطقة عند تغيير المدينة
                    setSelectedRegionId('');
                    handleSelectChange('region_id', '');
+                   // ✅ إعادة تفعيل جلب المناطق الجديدة في وضع التعديل
+                   preloadedRegionsApplied.current = false;
                  }}
                  options={(Array.isArray(cities) ? cities : []).map(c => ({ value: String(c.id), label: c.name }))}
                  placeholder={loadingCities ? 'تحميل...' : 'اختر مدينة'}
