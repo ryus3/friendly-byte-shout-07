@@ -1406,12 +1406,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         customer_province: formData.region,
         customer_address: formData.address,
         notes: formData.notes,
-        details: formData.details,
         total_amount: userEnteredPrice,
         sales_amount: userEnteredPrice,
         final_amount: userEnteredPrice,
         package_size: parseInt(selectedPackageSize) || 1
       };
+
+      console.log('📤 بيانات التحديث النهائية:', Object.keys(completeOrderData));
 
       // ✅ تحويل cart للتنسيق الصحيح قبل تمريره لـ updateOrder
       const cartForUpdate = cart?.filter(item => item && (item.productId || item.product_id) && item.quantity > 0)
