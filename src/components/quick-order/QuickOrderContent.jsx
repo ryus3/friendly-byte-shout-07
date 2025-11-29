@@ -1242,6 +1242,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         promo_code: formData.promocode
       };
 
+      // ✅ تعريف اسم العميل الفعلي مرة واحدة ليكون متاحاً في كل مكان
+      const actualCustomerName = formData.name || formData.defaultCustomerName || '';
+
       let updateResult;
       
       // ✅ إذا كان الطلب مع الوسيط أو مدن، قم بتحديث الطلب في شركة التوصيل أولاً
@@ -1272,9 +1275,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           return `${name}${sizePart}${colorPart}`.trim();
         }).join(' + ');
 
-        // استخدام القيمة الفعلية للاسم المعروض
-        const actualCustomerName = formData.name || formData.defaultCustomerName || '';
-        
         const deliveryOrderData = {
           qr_id: originalOrder.tracking_number, // مطلوب للتعديل
           customer_name: actualCustomerName,
@@ -1392,7 +1392,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const userEnteredPrice = parseInt(formData.price) || originalPriceRef.current || finalTotal;
       const completeOrderData = {
         ...orderDataWithoutItems,
-        customer_name: formData.name,
+        customer_name: actualCustomerName,  // ✅ استخدام actualCustomerName بدلاً من formData.name
         customer_phone: formData.phone,
         customer_phone2: formData.second_phone,
         customer_city: formData.city,
@@ -1443,7 +1443,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
       // تحديث SuperProvider أيضاً لضمان انعكاس التغييرات في صفحة الطلبات
       if (window.superProviderUpdate) {
-        window.superProviderUpdate(originalOrder.id, completeOrderData);
+        window.superProviderUpdate(originalOrder.id, {
+          ...completeOrderData,
+          customer_name: actualCustomerName  // ✅ تأكيد إضافي
+        });
       }
 
       // إرسال أحداث متعددة لضمان تحديث كل المكونات
