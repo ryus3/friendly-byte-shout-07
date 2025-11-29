@@ -1215,18 +1215,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // معالجة تحديث الطلب
   const handleUpdateOrder = async () => {
     try {
-      // ✅ تعريف اسم العميل الفعلي في البداية ليكون متاحاً في كل مكان
-      const actualCustomerName = formData.name || formData.defaultCustomerName || '';
-
-      console.log('🔍 قيم التعديل:', {
-        'formData.name': formData.name,
-        'formData.defaultCustomerName': formData.defaultCustomerName,
-        'actualCustomerName': actualCustomerName,
-        'tracking_number': originalOrder?.tracking_number
-      });
-
       const orderData = {
-        customer_name: actualCustomerName,  // ✅ استخدام actualCustomerName بدلاً من formData.name
+        customer_name: formData.name,
         customer_phone: formData.phone,
         customer_phone2: formData.second_phone || '',
         customer_address: formData.address,
@@ -1284,9 +1274,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
 
         const deliveryOrderData = {
           qr_id: originalOrder.tracking_number, // مطلوب للتعديل
-          customer_name: actualCustomerName,
-          customer_phone: formData.phone,
-          customer_phone2: formData.second_phone || undefined,
+          client_name: formData.name,
+          client_mobile: formData.phone,
+          client_mobile2: formData.second_phone || undefined,
           city_id: validCityId,
           region_id: validRegionId,
           location: formData.address,
@@ -1297,12 +1287,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           merchant_notes: formData.notes,
           replacement: 0
         };
-
-        console.log('📤 بيانات تعديل طلب الوسيط:', {
-          customer_name: actualCustomerName,
-          customer_phone: formData.phone,
-          customer_phone2: formData.second_phone
-        });
 
         try {
           if (activePartner === 'modon') {
@@ -1353,7 +1337,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           const { error: localDbUpdateError } = await supabase
             .from('orders')
             .update({
-              customer_name: actualCustomerName,
+              customer_name: formData.name,
               customer_phone: formData.phone,
               customer_phone2: formData.second_phone || null,
               customer_city: formData.city,
@@ -1399,68 +1383,58 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const userEnteredPrice = parseInt(formData.price) || originalPriceRef.current || finalTotal;
       const completeOrderData = {
         ...orderDataWithoutItems,
-        customer_name: actualCustomerName,
+        customer_name: formData.name,
         customer_phone: formData.phone,
         customer_phone2: formData.second_phone,
         customer_city: formData.city,
         customer_province: formData.region,
         customer_address: formData.address,
-        alwaseet_city_id: formData.cityId || originalOrder?.alwaseet_city_id,
-        alwaseet_region_id: formData.regionId || originalOrder?.alwaseet_region_id,
         notes: formData.notes,
+        details: formData.details,
         total_amount: userEnteredPrice,
         sales_amount: userEnteredPrice,
-        final_amount: userEnteredPrice
+        final_amount: userEnteredPrice,
+        package_size: parseInt(selectedPackageSize) || 1
       };
+      updateResult = await updateOrder(originalOrder.id, completeOrderData, cart, originalOrder.items);
 
-      console.log('📤 بيانات التحديث النهائية:', Object.keys(completeOrderData));
-
-      // ✅ تحويل cart للتنسيق الصحيح قبل تمريره لـ updateOrder
-      const cartForUpdate = cart?.filter(item => item && (item.productId || item.product_id) && item.quantity > 0)
-        .map(item => ({
+      // ✅ تحديث order_items في قاعدة البيانات - حماية من حذف المنتجات
+      const validCartItems = cart?.filter(item => 
+        item && (item.productId || item.product_id) && item.quantity > 0
+      ) || [];
+      
+      if (validCartItems.length === 0 && originalOrder.items?.length > 0) {
+        console.warn('⚠️ السلة فارغة - الحفاظ على المنتجات الأصلية');
+      } else if (validCartItems.length > 0) {
+        // حذف العناصر القديمة فقط إذا كانت هناك عناصر صالحة جديدة
+        await supabase
+          .from('order_items')
+          .delete()
+          .eq('order_id', originalOrder.id);
+        
+        // إضافة العناصر الجديدة - دعم كلا التنسيقين
+        const newOrderItems = validCartItems.map(item => ({
+          order_id: originalOrder.id,
           product_id: item.productId || item.product_id,
           variant_id: item.variantId || item.variant_id,
-          quantity: item.quantity,
-          unit_price: item.price,
-          total_price: item.quantity * item.price,
           product_name: item.productName || item.product_name || item.name,
           color: item.color,
-          size: item.size
-        })) || [];
-
-      // حماية: لا تحذف المنتجات إذا كانت السلة فارغة
-      const productsToUpdate = cartForUpdate.length > 0 ? cartForUpdate : null;
-
-      console.log('📤 بيانات التحديث:', {
-        actualCustomerName,
-        'formData.name': formData.name,
-        'formData.phone': formData.phone,
-        cartLength: cart?.length,
-        cartForUpdateLength: cartForUpdate?.length
-      });
-
-      // ✅ تحديث الطلب عبر useOrders (سيقوم بتحديث order_items تلقائياً)
-      updateResult = await updateOrder(originalOrder.id, completeOrderData, productsToUpdate, originalOrder.items);
-
-      // ✅ التحقق من نجاح التحديث
-      if (!updateResult.success) {
-        console.error('❌ فشل تحديث الطلب:', updateResult.error);
-        toast({
-          title: "خطأ في تحديث الطلب",
-          description: updateResult.error,
-          variant: "destructive"
-        });
-        return;
+          size: item.size,
+          quantity: item.quantity,
+          unit_price: item.price,
+          total_price: item.quantity * item.price
+        }));
+        
+        console.log('✅ حفظ المنتجات:', newOrderItems.length, 'منتجات');
+        
+        await supabase
+          .from('order_items')
+          .insert(newOrderItems);
       }
-
-      console.log('✅ تم تحديث الطلب بنجاح:', updateResult.order?.id);
 
       // تحديث SuperProvider أيضاً لضمان انعكاس التغييرات في صفحة الطلبات
       if (window.superProviderUpdate) {
-        window.superProviderUpdate(originalOrder.id, {
-          ...completeOrderData,
-          customer_name: actualCustomerName  // ✅ تأكيد إضافي
-        });
+        window.superProviderUpdate(originalOrder.id, completeOrderData);
       }
 
       // إرسال أحداث متعددة لضمان تحديث كل المكونات

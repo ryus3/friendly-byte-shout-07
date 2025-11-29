@@ -382,30 +382,9 @@ return this.fetch('all_data', async () => {
    * تحديث طلب
    */
   async updateOrder(orderId, updates) {
-    // ✅ تصفية الحقول - إرسال فقط الحقول الموجودة في جدول orders
-    const allowedFields = [
-      'customer_name', 'customer_phone', 'customer_phone2',
-      'customer_city', 'customer_province', 'customer_address',
-      'alwaseet_city_id', 'alwaseet_region_id', 'notes',
-      'total_amount', 'sales_amount', 'final_amount',
-      'discount', 'price_increase', 'price_change_type',
-      'delivery_fee', 'status', 'delivery_status',
-      'isarchived', 'receipt_received'
-    ];
-    
-    const filteredUpdates = {};
-    for (const key of allowedFields) {
-      if (updates[key] !== undefined) {
-        filteredUpdates[key] = updates[key];
-      }
-    }
-    filteredUpdates.updated_at = new Date().toISOString();
-    
-    console.log('🔍 SuperAPI.updateOrder - حقول مصفاة:', Object.keys(filteredUpdates));
-    
     const { data, error } = await supabase
       .from('orders')
-      .update(filteredUpdates)
+      .update(updates)
       .eq('id', orderId)
       .select()
       .single();
