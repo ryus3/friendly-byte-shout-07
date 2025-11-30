@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -151,8 +151,8 @@ export const SearchableSelectFixed = ({
     };
   }, [open]);
 
-  // ✅ إصلاح جذري للـ focus داخل Dialog/ScrollArea
-  useEffect(() => {
+  // ✅ إصلاح احترافي للـ focus داخل Dialog - استخدام useLayoutEffect للأولوية
+  useLayoutEffect(() => {
     if (!open || !searchInputRef.current) return;
     
     // ✅ منع Dialog من سرقة الـ focus
@@ -164,11 +164,18 @@ export const SearchableSelectFixed = ({
     
     document.addEventListener('focusin', preventDialogFocusSteal, true);
     
-    // محاولات متعددة للـ focus مع تأخيرات مختلفة
-    const focusAttempts = isInDialog ? [50, 150, 300, 500] : [30, 100];
+    // ✅ Focus فوري باستخدام requestAnimationFrame
+    requestAnimationFrame(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus({ preventScroll: true });
+      }
+    });
+    
+    // محاولات إضافية للـ focus مع تأخيرات أطول داخل Dialog
+    const focusAttempts = isInDialog ? [100, 300, 600, 800] : [50, 150];
     const timeouts = focusAttempts.map(delay => 
       setTimeout(() => {
-        if (open && searchInputRef.current) {
+        if (open && searchInputRef.current && document.activeElement !== searchInputRef.current) {
           searchInputRef.current.focus({ preventScroll: true });
         }
       }, delay)
@@ -275,14 +282,18 @@ export const SearchableSelectFixed = ({
           <Input
             ref={searchInputRef}
             autoFocus={true}
+            readOnly={false}
             placeholder={searchPlaceholder}
             value={search}
             onChange={handleSearchChange}
             onKeyDown={handleKeyDown}
-            onClick={(e) => e.stopPropagation()}
+            onClick={(e) => {
+              e.stopPropagation();
+              requestAnimationFrame(() => searchInputRef.current?.focus());
+            }}
             onMouseDown={(e) => {
               e.stopPropagation();
-              setTimeout(() => searchInputRef.current?.focus(), 0);
+              requestAnimationFrame(() => searchInputRef.current?.focus());
             }}
             onFocus={(e) => {
               e.stopPropagation();
@@ -290,10 +301,16 @@ export const SearchableSelectFixed = ({
             }}
             onTouchStart={(e) => {
               e.stopPropagation();
-              // ✅ Focus مباشر عند اللمس لفتح الكيبورد على iOS
-              searchInputRef.current?.focus();
+              // ✅ Focus مباشر متعدد للتأكد من فتح الكيبورد على iOS
+              requestAnimationFrame(() => {
+                searchInputRef.current?.focus();
+                setTimeout(() => searchInputRef.current?.focus(), 100);
+              });
             }}
-            onPointerDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              requestAnimationFrame(() => searchInputRef.current?.focus());
+            }}
             className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
             autoComplete="off"
             autoCorrect="off"
