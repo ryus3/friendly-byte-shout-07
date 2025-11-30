@@ -17,8 +17,6 @@ export const useAlWaseetInvoices = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceOrders, setInvoiceOrders] = useState([]);
 
-  console.log('🔧 useAlWaseetInvoices hook initialized');
-
   // Enhanced smart fetch with instant loading and background sync
   const fetchInvoices = useCallback(async (timeFilter = 'week', forceRefresh = false) => {
     if (!token || !isLoggedIn || (activePartner !== 'alwaseet' && activePartner !== 'modon')) {
@@ -32,7 +30,6 @@ export const useAlWaseetInvoices = () => {
 
     try {
       // Smart fetch: only get recent invoices to avoid loading thousands
-      console.log(`🔄 جلب الفواتير (${timeFilter}) - ${forceRefresh ? 'إجباري' : 'تلقائي'} من ${activePartner}`);
       
       // ✅ جلب جميع التوكنات النشطة للمستخدم
       const { data: userTokens, error: tokensError } = await supabase
@@ -44,18 +41,14 @@ export const useAlWaseetInvoices = () => {
         .gt('expires_at', new Date().toISOString());
       
       if (tokensError) {
-        console.error('❌ خطأ في جلب التوكنات:', tokensError);
         throw new Error('فشل جلب التوكنات');
       }
-      
-      console.log(`🔑 تم جلب ${userTokens?.length || 0} توكن نشط للمستخدم`);
       
       let allInvoicesData = [];
       
       // جلب الفواتير من كل توكن على حدة
       if (userTokens && userTokens.length > 0) {
         for (const tokenData of userTokens) {
-          console.log(`🔄 جلب فواتير من حساب: ${tokenData.account_username}`);
           
           let invoicesFromThisToken;
           if (activePartner === 'modon') {
@@ -76,13 +69,11 @@ export const useAlWaseetInvoices = () => {
             });
             
             allInvoicesData.push(...invoicesFromThisToken);
-            console.log(`✅ تم جلب ${invoicesFromThisToken.length} فاتورة من حساب ${tokenData.account_username}`);
           }
         }
       }
       
       const invoicesData = allInvoicesData;
-      console.log(`📊 إجمالي الفواتير من جميع الحسابات: ${invoicesData.length}`);
       
       // Persist invoices to DB (bulk upsert via RPC) - in background
       if (invoicesData?.length > 0) {
@@ -90,13 +81,8 @@ export const useAlWaseetInvoices = () => {
           const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
             p_invoices: invoicesData
           });
-          if (upsertErr) {
-            console.warn('خطأ في حفظ الفواتير:', upsertErr.message);
-          } else {
-            console.log(`💾 حفظ ${invoicesData.length} فاتورة في قاعدة البيانات`);
-          }
         } catch (e) {
-          console.warn('تعذر حفظ الفواتير:', e?.message || e);
+          // Silent error handling
         }
       }
       
@@ -155,11 +141,8 @@ export const useAlWaseetInvoices = () => {
         });
       
       setInvoices(filteredAndSortedInvoices);
-      console.log(`📊 عرض ${filteredAndSortedInvoices.length} فاتورة (${timeFilter})`);
       return filteredAndSortedInvoices;
     } catch (error) {
-      console.error('خطأ في جلب الفواتير:', error);
-      
       // Only show error toast for force refresh (manual actions)
       if (forceRefresh) {
         toast({
@@ -167,8 +150,6 @@ export const useAlWaseetInvoices = () => {
           description: error.message,
           variant: 'destructive'
         });
-      } else {
-        console.warn('تعذر التحديث التلقائي للفواتير:', error.message);
       }
       return [];
     } finally {
@@ -191,16 +172,12 @@ export const useAlWaseetInvoices = () => {
       });
       
       if (error) {
-        console.warn('مزامنة تلقائية فشلت:', error.message);
+        // Silent error
       } else if (data?.invoices_synced > 0) {
-        console.log(`🔄 مزامنة تلقائية: ${data.invoices_synced} فاتورة جديدة`);
-        // Refresh local state without loading indicator
         fetchInvoices('week', false);
-      } else {
-        console.log('✅ لا توجد فواتير جديدة للمزامنة');
       }
     } catch (error) {
-      console.warn('خطأ في المزامنة التلقائية:', error);
+      // Silent error
     }
   }, [fetchInvoices, user?.id]);
 
@@ -220,10 +197,6 @@ export const useAlWaseetInvoices = () => {
           .eq('is_active', true)
           .gt('expires_at', new Date().toISOString());
 
-        if (tokensError) {
-          console.warn('⚠️ خطأ في جلب التوكنات:', tokensError);
-        }
-
         // إنشاء خريطة للتوكنات (بـ merchant_id و user_id)
         const tokensMap = {};
         if (allTokens && allTokens.length > 0) {
@@ -234,7 +207,6 @@ export const useAlWaseetInvoices = () => {
             // إضافة mapping بـ user_id كـ fallback
             tokensMap[`user_${token.user_id}`] = token;
           });
-          console.log(`✅ تم جلب ${allTokens.length} توكن`, allTokens.map(t => `${t.account_username} (${t.merchant_id || 'بدون merchant_id'})`));
         }
 
         // جلب الفواتير من قاعدة البيانات
@@ -272,11 +244,9 @@ export const useAlWaseetInvoices = () => {
           });
           
           setInvoices(transformedInvoices);
-          console.log(`⚡ تحميل فوري: عرض ${transformedInvoices.length} فاتورة مع أسماء الحسابات`);
-          console.log('📊 إحصائيات الفواتير حسب الحساب:', accountsStats);
         }
       } catch (cacheError) {
-        console.warn('تعذر تحميل الفواتير المحفوظة:', cacheError);
+        // Silent error
       }
 
       // 2. Then update from API in background (non-blocking)
@@ -286,18 +256,10 @@ export const useAlWaseetInvoices = () => {
       const cooldownMs = SYNC_COOLDOWN_MINUTES * 60 * 1000;
 
       if (timeSinceLastSync > cooldownMs) {
-        console.log('🔄 تحديث في الخلفية: جلب فواتير جديدة...');
         localStorage.setItem(lastSyncKey, Date.now().toString());
         
         // Smart background sync using edge function
-        smartBackgroundSync().then(() => {
-          console.log('✅ تم التحديث الذكي في الخلفية');
-        }).catch(err => {
-          console.warn('تعذر التحديث الذكي في الخلفية:', err);
-        });
-      } else {
-        const remainingMinutes = Math.ceil((cooldownMs - timeSinceLastSync) / 60000);
-        console.log(`⏰ تم التحديث مؤخراً، التالي خلال ${remainingMinutes} دقيقة`);
+        smartBackgroundSync();
       }
     };
 
@@ -305,13 +267,11 @@ export const useAlWaseetInvoices = () => {
 
     // Listen for invoice updates via custom events only
     const handleInvoiceReceived = (event) => {
-      console.log('تحديث فوري للفاتورة المستلمة:', event.detail);
-      fetchInvoices('week', false); // Refresh without loading indicator
+      fetchInvoices('week', false);
     };
 
     const handleInvoiceUpdated = (event) => {
-      console.log('تحديث فوري للفاتورة:', event.detail);
-      fetchInvoices('week', false); // Refresh without loading indicator
+      fetchInvoices('week', false);
     };
 
     window.addEventListener('invoiceReceived', handleInvoiceReceived);
@@ -354,7 +314,6 @@ export const useAlWaseetInvoices = () => {
 
         if (tokenData?.token) {
           selectedToken = tokenData.token;
-          console.log(`✅ استخدام التوكن الصحيح للفاتورة ${invoiceId} (${invoiceRecord.partner})`);
         }
       }
 
@@ -369,23 +328,9 @@ export const useAlWaseetInvoices = () => {
             invoiceData = await AlWaseetAPI.getInvoiceOrders(selectedToken, invoiceId);
           }
           dataSource = 'api';
-          console.log('✅ جلب طلبات الفاتورة من API مباشرة:', invoiceData?.orders?.length || 0);
-          
-          // تسجيل البيانات للمقارنة
-          if (invoiceData?.orders?.length > 0) {
-            console.log('📊 بيانات الطلبات من API:', {
-              orders: invoiceData.orders.map(o => ({
-                id: o.id,
-                client_name: o.client_name,
-                price: o.price
-              }))
-            });
-          }
         } catch (apiError) {
-          console.warn('⚠️ فشل الوصول للAPI، التبديل لقاعدة البيانات:', apiError.message);
+          // Fallback to database
         }
-      } else {
-        console.log('⚠️ لا يوجد token أو لست مسجل دخول، استخدام قاعدة البيانات مباشرة');
       }
 
       // البديل المحسن من قاعدة البيانات

@@ -216,11 +216,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 name: r.name,
                 city_id: r.city_id
               })));
-              preloadedRegionsApplied.current = true; // ✅ تعيين ref لمنع إعادة التحميل
-              console.log('✅ تم تحميل المناطق مسبقاً:', aiOrderData.preloadedRegions.length);
-            }
+            console.log('✅ تم تحميل المناطق مسبقاً:', aiOrderData.preloadedRegions.length);
           }
-        } else {
+        }
+      } else {
           setActivePartner('local');
         }
         
@@ -264,12 +263,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       return;
     }
     
-    console.log('🔧 بدء تحميل منتجات للتعديل:', aiOrderData.items.length, 'للطلب:', aiOrderData.orderId);
-    
     // ✅ إنشاء cart items مباشرة (بدون clearCart + addToCart منفصلة)
     const newCartItems = aiOrderData.items.map((item, index) => {
-      console.log(`📦 تجهيز منتج ${index + 1}:`, item.productName || item.product_name);
-      
       return {
         id: `${item.product_id || 'temp'}-${item.variant_id || 'no-variant'}`,
         productId: item.product_id,
@@ -293,7 +288,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     }).filter(item => item.productId || item.product_id);  // فلترة العناصر بدون ID
     
     // ✅ تعيين السلة مباشرة (لا clearCart ولا addToCart)
-    console.log('✅ تم تحميل', newCartItems.length, 'منتج للتعديل');
     setCart(newCartItems);
     
   }, [isEditMode, aiOrderData?.orderId, aiOrderData?.items, setCart]);
@@ -417,7 +411,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
         // setFormData(prev => ({ ...prev, promocode: promoCode }));
         
       } catch (error) {
-        console.error('خطأ في حساب بيانات العميل:', error);
         setCustomerData(null);
         setLoyaltyDiscount(0);
         setDiscount(0);
@@ -730,14 +723,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             // ✅ استخدام الـ Cache للمدن - تحويل modon_id إذا كان موجوداً
             citiesData = cachedCities
               .filter(c => c.modon_id) // فقط المدن التي لها modon_id
-              .map(city => ({
-                id: city.modon_id,
-                name: city.name
-              }));
-            
-            // إذا لم تكن هناك مدن في الـ cache، استخدم API
-            if (citiesData.length === 0) {
-              console.warn('⚠️ لا توجد مدن مدن في الـ Cache - استخدام API');
               const modonCitiesData = await ModonAPI.getCities(waseetToken);
               citiesData = modonCitiesData.map(city => ({
                 id: city.id,
@@ -747,17 +732,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           } else {
             // ✅ للوسيط: استخدام المدن من الـ Cache فقط
             if (isCacheLoaded && cachedCities.length > 0) {
-              console.log('✅ استخدام المدن من الـ Cache:', cachedCities.length);
               citiesData = cachedCities.map(city => ({
                 id: city.alwaseet_id,
                 name: city.name
               }));
               packageSizesData = await getPackageSizes(waseetToken);
             } else if (!isCacheLoaded) {
-              console.log('⏳ انتظار تحميل الـ Cache...');
               return;
             } else {
-              console.error('❌ الـ Cache فارغ ولا توجد مدن');
               citiesData = [];
               packageSizesData = await getPackageSizes(waseetToken);
             }
@@ -793,7 +775,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             setSelectedPackageSize(String(safePackageSizes[0].id));
           }
         } catch (error) {
-          console.error('❌ خطأ في جلب بيانات شركة التوصيل:', error);
           setDataFetchError(true);
           toast({ 
             title: "خطأ", 
