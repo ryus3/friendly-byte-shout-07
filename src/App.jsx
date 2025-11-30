@@ -15,6 +15,7 @@ import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 import { useAppStartSync } from '@/hooks/useAppStartSync';
 import AppSplashScreen from '@/components/AppSplashScreen.jsx';
+import OfflineIndicator from '@/components/OfflineIndicator.jsx';
 
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
@@ -239,6 +240,7 @@ function AppContent() {
       <Toaster />
       <SuperAiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
       {user && <NotificationsHandler />}
+      <OfflineIndicator />
     </div>
   )
 }
