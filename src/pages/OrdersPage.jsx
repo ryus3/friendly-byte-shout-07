@@ -342,9 +342,10 @@ const OrdersPage = () => {
 
   // تم تحريك usersMap للأعلى لتجنب مشكلة "Cannot access uninitialized variable"
 
-      const fetchEmployeeCode = async () => {
-        if (!userUUID || hasPermission('view_all_orders')) return;
-        try {
+  useEffect(() => {
+    const fetchEmployeeCode = async () => {
+      if (!userUUID || hasPermission('view_all_orders')) return;
+      try {
         const { data } = await supabase
           .from('employee_telegram_codes')
           .select('telegram_code')
@@ -354,9 +355,9 @@ const OrdersPage = () => {
       } catch (err) {
         // Silent error
       }
-      };
-      fetchEmployeeCode();
-    }, [user, hasPermission]);
+    };
+    fetchEmployeeCode();
+  }, [user, hasPermission]);
 
   // خيارات الموظفين للمدير
   const employeeOptions = useMemo(() => {
