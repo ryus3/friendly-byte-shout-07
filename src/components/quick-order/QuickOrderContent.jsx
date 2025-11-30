@@ -1301,39 +1301,41 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           // ✅ بعد نجاح التحديث في شركة التوصيل، تحديث قاعدة البيانات المحلية مع حساب الخصم/الزيادة
           const userEnteredPrice = parseInt(formData.price) || originalPriceRef.current || finalTotal;
           
-          // ✅ جلب السعر الأصلي من order_items
-          const { data: orderItemsData } = await supabase
-            .from('order_items')
-            .select('total_price')
-            .eq('order_id', originalOrder.id);
+          // ✅ حساب مجموع المنتجات الحالية من السلة (بعد التعديل)
+          const cartProductsTotal = cart.reduce((sum, item) => 
+            sum + ((item.quantity || 1) * (item.unit_price || item.price || 0)), 0);
 
-          const originalProductsPrice = orderItemsData?.reduce((sum, item) => 
-            sum + (parseFloat(item.total_price) || 0), 0) || originalOrder.total_amount || 0;
-          
-          console.log('📊 السعر الأصلي للمنتجات:', originalProductsPrice.toLocaleString(), 'د.ع');
+          console.log('📊 مجموع المنتجات في السلة:', cartProductsTotal.toLocaleString(), 'د.ع');
 
-          // ✅ حساب سعر المنتجات الجديد (بدون التوصيل)
+          // ✅ حساب السعر المتوقع (منتجات + توصيل)
           const deliveryFee = originalOrder.delivery_fee || 0;
-          const newProductsPrice = userEnteredPrice - deliveryFee;
-          const priceDiff = newProductsPrice - originalProductsPrice;
+          const expectedTotalPrice = cartProductsTotal + deliveryFee;
 
-          // ✅ تحديد الخصم أو الزيادة
+          console.log('💰 السعر المتوقع:', expectedTotalPrice.toLocaleString(), 'د.ع', `(${cartProductsTotal.toLocaleString()} + ${deliveryFee.toLocaleString()} توصيل)`);
+          console.log('💵 السعر المدخل:', userEnteredPrice.toLocaleString(), 'د.ع');
+
+          // ✅ حساب الفرق بين ما أدخله المستخدم والسعر المتوقع
+          const priceDiff = userEnteredPrice - expectedTotalPrice;
+          const newProductsPrice = cartProductsTotal;
+
+          // ✅ تحديد الخصم أو الزيادة بشكل صحيح
           let discountAmount = 0;
           let priceIncreaseAmount = 0;
           let priceChangeType = null;
 
           if (priceDiff < 0) {
-            // خصم - السعر الجديد أقل من الأصلي
+            // خصم - المستخدم أدخل سعر أقل من سعر المنتجات + التوصيل
             discountAmount = Math.abs(priceDiff);
             priceChangeType = 'discount';
-            console.log(`🔻 خصم تلقائي: ${discountAmount.toLocaleString()} د.ع (${originalProductsPrice.toLocaleString()} → ${newProductsPrice.toLocaleString()})`);
+            console.log(`🔻 خصم: ${discountAmount.toLocaleString()} د.ع (المدخل ${userEnteredPrice.toLocaleString()} < المتوقع ${expectedTotalPrice.toLocaleString()})`);
           } else if (priceDiff > 0) {
-            // زيادة - السعر الجديد أكبر من الأصلي
+            // زيادة - المستخدم أدخل سعر أكبر من سعر المنتجات + التوصيل
             priceIncreaseAmount = priceDiff;
             priceChangeType = 'increase';
-            console.log(`🔺 زيادة تلقائية: ${priceIncreaseAmount.toLocaleString()} د.ع (${originalProductsPrice.toLocaleString()} → ${newProductsPrice.toLocaleString()})`);
+            console.log(`🔺 زيادة: ${priceIncreaseAmount.toLocaleString()} د.ع (المدخل ${userEnteredPrice.toLocaleString()} > المتوقع ${expectedTotalPrice.toLocaleString()})`);
           } else {
-            console.log(`✅ السعر لم يتغير: ${newProductsPrice.toLocaleString()} د.ع`);
+            // ✅ السعر مطابق تماماً - لا خصم ولا زيادة
+            console.log(`✅ السعر صحيح: ${userEnteredPrice.toLocaleString()} = ${cartProductsTotal.toLocaleString()} + ${deliveryFee.toLocaleString()} (توصيل)`);
           }
           
           console.log('📝 بيانات العميل للحفظ:', {
