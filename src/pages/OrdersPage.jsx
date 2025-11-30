@@ -25,7 +25,7 @@ import OrdersStats from '@/components/orders/OrdersStats';
 import OrdersToolbar from '@/components/orders/OrdersToolbar';
 import OrderList from '@/components/orders/OrderList';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
-// Removed EditOrderDialog - now using dedicated page
+import EditOrderDialog from '@/components/orders/EditOrderDialog';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager';
 import StatCard from '@/components/dashboard/StatCard';
@@ -84,6 +84,7 @@ const OrdersPage = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [dialogs, setDialogs] = useState({
     details: false,
+    edit: false,
     quickOrder: false,
     aiManager: false,
     deleteAlert: false,
@@ -651,9 +652,9 @@ const OrdersPage = () => {
   }, []);
 
   const handleEditOrder = useCallback((order) => {
-    // Navigate to edit page instead of opening dialog
-    navigate(`/edit-order/${order.tracking_number}`);
-  }, [navigate]);
+    setSelectedOrder(order);
+    setDialogs(d => ({ ...d, edit: true }));
+  }, []);
 
   const handleUpdateOrderStatus = useCallback(async (orderId, newStatus) => {
     await updateOrder(orderId, { status: newStatus });
@@ -948,7 +949,15 @@ const OrdersPage = () => {
           }}
         />
 
-        {/* EditOrderDialog removed - now using dedicated page at /edit-order/:trackingNumber */}
+        <EditOrderDialog
+          order={selectedOrder}
+          open={dialogs.edit}
+          onOpenChange={(open) => setDialogs(d => ({ ...d, edit: open }))}
+          onOrderUpdated={async () => {
+            setDialogs(d => ({ ...d, edit: false }));
+            await refetchProducts();
+          }}
+        />
         
         <QuickOrderDialog
           open={dialogs.quickOrder}

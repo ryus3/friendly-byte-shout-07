@@ -1,5 +1,4 @@
 import React, { useMemo, useState, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -51,7 +50,6 @@ const OrderCard = React.memo(({
   additionalButtons
 }) => {
   const { hasPermission } = useAuth();
-  const navigate = useNavigate();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showPartialDelivery, setShowPartialDelivery] = useState(false);
   
@@ -502,7 +500,7 @@ const OrderCard = React.memo(({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => navigate(`/edit-order/${order.tracking_number}`)}
+                      onClick={() => onEditOrder?.(order)}
                       className="h-8 w-8 p-0 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 hover:scale-110 transition-all duration-300 shadow-md"
                       title="تعديل"
                     >
