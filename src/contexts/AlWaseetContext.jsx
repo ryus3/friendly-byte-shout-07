@@ -1145,6 +1145,21 @@ export const AlWaseetProvider = ({ children }) => {
                   groupUpdated++;
                   totalUpdated++;
                   console.log(`✅ [SYNC-SUCCESS] تم تحديث ${localOrder.tracking_number} بنجاح`);
+                  
+                  // ✅ إرسال إشعار تغيير الحالة
+                  if (localOrder.delivery_status !== newDeliveryStatus) {
+                    devLog.log('📢 [SYNC] إرسال إشعار تغيير حالة:', { 
+                      trackingNumber: localOrder.tracking_number, 
+                      oldStatus: localOrder.delivery_status,
+                      newStatus: newDeliveryStatus,
+                      statusText: statusConfig.text 
+                    });
+                    createOrderStatusNotification(
+                      localOrder.tracking_number, 
+                      newDeliveryStatus, 
+                      statusConfig.text
+                    );
+                  }
                 } else {
                   // ✅ إضافة logging مفصّل للأخطاء
                   console.error(`❌ [SYNC-ERROR] فشل تحديث الطلب ${localOrder.tracking_number}:`, {
@@ -1317,6 +1332,21 @@ export const AlWaseetProvider = ({ children }) => {
                     if (!error) {
                       totalUpdated++;
                       devLog.log(`✅ تم تحديث ${localOrder.tracking_number} عبر getOrderById (fallback)`);
+                      
+                      // ✅ إرسال إشعار تغيير الحالة للـ fallback أيضاً
+                      if (localOrder.delivery_status !== newDeliveryStatus) {
+                        devLog.log('📢 [FALLBACK] إرسال إشعار تغيير حالة:', { 
+                          trackingNumber: localOrder.tracking_number, 
+                          oldStatus: localOrder.delivery_status,
+                          newStatus: newDeliveryStatus,
+                          statusText: statusConfig.text 
+                        });
+                        createOrderStatusNotification(
+                          localOrder.tracking_number, 
+                          newDeliveryStatus, 
+                          statusConfig.text
+                        );
+                      }
                     } else {
                       console.error(`❌ خطأ تحديث ${localOrder.tracking_number}:`, error);
                     }
