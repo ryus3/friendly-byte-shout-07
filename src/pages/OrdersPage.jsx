@@ -354,9 +354,9 @@ const OrdersPage = () => {
       } catch (err) {
         // Silent error
       }
-    };
-    fetchEmployeeCode();
-  }, [user?.user_id, hasPermission]);
+      };
+      fetchEmployeeCode();
+    }, [user, hasPermission]);
 
   // خيارات الموظفين للمدير
   const employeeOptions = useMemo(() => {
