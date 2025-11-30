@@ -720,15 +720,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               size: size.size
             }));
             
-            // ✅ استخدام الـ Cache للمدن - تحويل modon_id إذا كان موجوداً
-            citiesData = cachedCities
-              .filter(c => c.modon_id) // فقط المدن التي لها modon_id
-              const modonCitiesData = await ModonAPI.getCities(waseetToken);
-              citiesData = modonCitiesData.map(city => ({
-                id: city.id,
-                name: city.city_name
-              }));
-            }
+            // ✅ للوسيط مدن: جلب من API مباشرة
+            const modonCitiesData = await ModonAPI.getCities(waseetToken);
+            citiesData = modonCitiesData.map(city => ({
+              id: city.id,
+              name: city.city_name
+            }));
           } else {
             // ✅ للوسيط: استخدام المدن من الـ Cache فقط
             if (isCacheLoaded && cachedCities.length > 0) {

@@ -1157,7 +1157,8 @@ export const AlWaseetProvider = ({ children }) => {
                     createOrderStatusNotification(
                       localOrder.tracking_number, 
                       newDeliveryStatus, 
-                      statusConfig.text
+                      statusConfig.text,
+                      localOrder.id // ✅ UUID الحقيقي
                     );
                   }
                 } else {
@@ -1344,7 +1345,8 @@ export const AlWaseetProvider = ({ children }) => {
                         createOrderStatusNotification(
                           localOrder.tracking_number, 
                           newDeliveryStatus, 
-                          statusConfig.text
+                          statusConfig.text,
+                          localOrder.id // ✅ UUID الحقيقي
                         );
                       }
                     } else {
@@ -1667,8 +1669,8 @@ export const AlWaseetProvider = ({ children }) => {
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
 
   // ✅ دالة إرسال إشعارات تغيير الحالة - مفعلة الآن
-  const createOrderStatusNotification = useCallback(async (trackingNumber, stateId, statusText) => {
-    devLog.log('📢 إرسال إشعار تغيير حالة:', { trackingNumber, stateId, statusText });
+  const createOrderStatusNotification = useCallback(async (trackingNumber, stateId, statusText, orderId = null) => {
+    devLog.log('📢 إرسال إشعار تغيير حالة:', { trackingNumber, stateId, statusText, orderId });
     
     // منع التكرار الذكي - فقط عند تغيير الحالة فعلياً
     const trackingKey = `${trackingNumber}`;
@@ -1744,7 +1746,7 @@ export const AlWaseetProvider = ({ children }) => {
         tracking_number: trackingNumber,
         status_text: statusConfig.text || statusText,
         timestamp: new Date().toISOString(),
-        order_id: trackingNumber,
+        order_id: orderId || trackingNumber, // ✅ UUID الحقيقي إذا كان متاحاً
         order_number: trackingNumber
       };
       
