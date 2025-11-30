@@ -124,7 +124,7 @@ export const NotificationsSystemProvider = ({ children }) => {
           message: notification.message,
           type: notification.type,
           user_id: notification.target_user_id,
-          data: {
+          data: data.data || {
             target_role: notification.target_role,
             related_entity_type: notification.related_entity_type,
             related_entity_id: notification.related_entity_id
