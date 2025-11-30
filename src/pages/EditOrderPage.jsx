@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
-import QuickOrderContent from '@/components/quick-order/QuickOrderContent';
+import { QuickOrderContent } from '@/components/quick-order/QuickOrderContent';
 import { useCitiesCache } from '@/hooks/useCitiesCache';
 
 const EditOrderPage = () => {
