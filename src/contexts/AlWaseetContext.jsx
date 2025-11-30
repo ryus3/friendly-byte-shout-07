@@ -1636,12 +1636,9 @@ export const AlWaseetProvider = ({ children }) => {
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
 
-  // دالة معطلة مؤقتاً - الإشعارات تأتي الآن من database trigger فقط
+  // ✅ دالة إرسال إشعارات تغيير الحالة - مفعلة الآن
   const createOrderStatusNotification = useCallback(async (trackingNumber, stateId, statusText) => {
-    // تم تعطيل هذه الدالة لمنع الإشعارات المكررة
-    // Database trigger notify_alwaseet_status_change() يتولى إرسال الإشعارات الآن
-    devLog.log('🔕 تم إلغاء إرسال الإشعار من العميل - التريغر يتولى الأمر:', { trackingNumber, stateId, statusText });
-    return;
+    devLog.log('📢 إرسال إشعار تغيير حالة:', { trackingNumber, stateId, statusText });
     
     // منع التكرار الذكي - فقط عند تغيير الحالة فعلياً
     const trackingKey = `${trackingNumber}`;
