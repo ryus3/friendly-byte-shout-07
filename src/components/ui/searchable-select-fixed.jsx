@@ -281,7 +281,6 @@ export const SearchableSelectFixed = ({
           <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             ref={searchInputRef}
-            autoFocus={true}
             readOnly={false}
             placeholder={searchPlaceholder}
             value={search}
@@ -301,11 +300,14 @@ export const SearchableSelectFixed = ({
             }}
             onTouchStart={(e) => {
               e.stopPropagation();
-              // ✅ Focus مباشر متعدد للتأكد من فتح الكيبورد على iOS
-              requestAnimationFrame(() => {
-                searchInputRef.current?.focus();
-                setTimeout(() => searchInputRef.current?.focus(), 100);
-              });
+              // ✅ Focus قوي ومتعدد للتأكد من فتح الكيبورد على iOS داخل Dialog
+              const input = searchInputRef.current;
+              if (input) {
+                input.focus();
+                input.click(); // محاكاة click لفتح الكيبورد
+                setTimeout(() => input.focus(), 50);
+                setTimeout(() => input.focus(), 150);
+              }
             }}
             onPointerDown={(e) => {
               e.stopPropagation();
@@ -463,16 +465,22 @@ export const SearchableSelectFixed = ({
             width: buttonRect.width + 'px'
           }}
           onMouseDown={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
+            // ✅ فقط stopPropagation - بدون preventDefault
+            if (e.target === e.currentTarget) {
+              e.stopPropagation();
+            }
           }}
           onTouchStart={(e) => {
-            e.stopPropagation();
             // ✅ إزالة preventDefault للسماح بفتح الكيبورد على iOS
+            if (e.target === e.currentTarget) {
+              e.stopPropagation();
+            }
           }}
           onPointerDown={(e) => {
-            e.stopPropagation();
-            e.preventDefault();
+            // ✅ فقط stopPropagation - بدون preventDefault
+            if (e.target === e.currentTarget) {
+              e.stopPropagation();
+            }
           }}
           onClick={(e) => e.stopPropagation()}
           onFocus={(e) => e.stopPropagation()}
