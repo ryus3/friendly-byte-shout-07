@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,6 +50,7 @@ const OrderDetailsDialog = ({
   onNavigatePrev,           // دالة التنقل للسابق
   onNavigateNext            // دالة التنقل للتالي
 }) => {
+  const navigate = useNavigate();
   const [newStatus, setNewStatus] = useState(order?.status);
   const [syncing, setSyncing] = useState(false);
   const [checkingInvoice, setCheckingInvoice] = useState(false);
@@ -89,10 +91,8 @@ const OrderDetailsDialog = ({
   };
 
   const handleEditClick = () => {
-    if(onEditOrder){
-      onOpenChange(false); // Close this dialog
-      onEditOrder(order); // Open the edit dialog
-    }
+    onOpenChange(false); // Close this dialog
+    navigate(`/edit-order/${order.tracking_number}`); // Navigate to edit page
   };
 
   const handleSyncWithDelivery = async () => {
