@@ -1,5 +1,5 @@
 // ✅ نظام إدارة المزامنة Offline - RYUS System
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 const DB_NAME = 'ryus-offline-db';
 const DB_VERSION = 1;
@@ -173,11 +173,18 @@ export async function syncPendingOperations() {
     
     // ✅ إشعار المستخدم
     if (syncedCount > 0) {
-      toast.success(`✅ تم مزامنة ${syncedCount} عملية بنجاح`);
+      toast({
+        title: "✅ تمت المزامنة",
+        description: `تم مزامنة ${syncedCount} عملية بنجاح`
+      });
     }
     
     if (failedCount > 0) {
-      toast.error(`⚠️ فشلت مزامنة ${failedCount} عملية`);
+      toast({
+        title: "⚠️ خطأ في المزامنة",
+        description: `فشلت مزامنة ${failedCount} عملية`,
+        variant: "destructive"
+      });
     }
 
     return { success: true, synced: syncedCount, failed: failedCount };
@@ -225,14 +232,21 @@ export function setupOfflineSync() {
   // ✅ عند عودة الاتصال
   window.addEventListener('online', () => {
     console.log('🌐 Connection restored');
-    toast.info('🌐 عاد الاتصال بالإنترنت - جاري المزامنة...');
+    toast({
+      title: "🌐 عاد الاتصال",
+      description: "جاري المزامنة..."
+    });
     setTimeout(() => syncPendingOperations(), 2000);
   });
 
   // ✅ عند فقدان الاتصال
   window.addEventListener('offline', () => {
     console.log('📡 Connection lost');
-    toast.warning('📡 لا يوجد اتصال - سيتم حفظ التغييرات محلياً');
+    toast({
+      title: "📡 لا يوجد اتصال",
+      description: "سيتم حفظ التغييرات محلياً",
+      variant: "destructive"
+    });
   });
 
   // ✅ مزامنة دورية كل 5 دقائق
