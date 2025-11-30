@@ -13,7 +13,6 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   // تحويل بيانات الطلب لصيغة البيانات المطلوبة لـ QuickOrderContent
   const convertOrderToEditData = async (order) => {
     if (!order) {
-      devLog.log('❌ No order data provided to EditOrderDialog');
       return null;
     }
     
@@ -50,10 +49,10 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
     // ✅ استخدام الـ Cache للبحث عن المدينة والمنطقة
     if (!city_id && order.customer_city && isCacheLoaded) {
       const cityMatch = cachedCities.find(city => city.name === order.customer_city);
-      if (cityMatch) {
-        city_id = String(cityMatch.alwaseet_id);
-        
-        if (!region_id && order.customer_province) {
+        if (cityMatch) {
+          city_id = String(cityMatch.alwaseet_id);
+          
+          if (!region_id && order.customer_province) {
           const regionMatch = cachedRegions.find(r => 
             r.city_id === cityMatch.alwaseet_id && r.name === order.customer_province
           );

@@ -123,9 +123,7 @@ const OrdersPage = () => {
     if (orders?.length > 0 && syncVisibleOrdersBatch) {
       const syncableOrders = orders.filter(o => !o.isarchived && o.tracking_number);
       if (syncableOrders.length > 0) {
-        console.log('🔄 مزامنة تلقائية عند دخول صفحة الطلبات:', syncableOrders.length, 'طلب');
         syncVisibleOrdersBatch(syncableOrders).catch(err => {
-          console.error('❌ خطأ في المزامنة التلقائية:', err);
         });
       }
     }
@@ -162,7 +160,6 @@ const OrdersPage = () => {
         },
         (payload) => {
           const newOrder = payload.new;
-          devLog.log('📢 إشعار طلب جديد:', newOrder.qr_id || newOrder.order_number);
           
           // إشعار فوري عند إنشاء طلب جديد فقط
           toast({
@@ -197,15 +194,6 @@ const OrdersPage = () => {
           const updatedOrder = payload.new;
           const oldOrder = payload.old;
           
-          devLog.log('🔄 تحديث طلب فوري:', {
-            id: updatedOrder.id,
-            old_status: oldOrder?.status,
-            new_status: updatedOrder.status,
-            old_delivery_id: oldOrder?.delivery_partner_order_id,
-            new_delivery_id: updatedOrder.delivery_partner_order_id,
-            tracking_number: updatedOrder.tracking_number
-          });
-          
           // إشعار فقط للتحديثات المهمة (تغيير الحالة أو ربط معرف التوصيل)
           if (oldOrder?.status !== updatedOrder.status) {
             toast({
@@ -227,7 +215,6 @@ const OrdersPage = () => {
           }
           
           if (!oldOrder?.delivery_partner_order_id && updatedOrder.delivery_partner_order_id) {
-            devLog.log('✅ تم ربط معرف شركة التوصيل:', updatedOrder.delivery_partner_order_id);
             toast({
               title: "تم ربط الطلب مع شركة التوصيل",
               description: `الطلب ${updatedOrder.qr_id || updatedOrder.order_number} مرتبط الآن مع معرف التوصيل: ${updatedOrder.delivery_partner_order_id}`,
@@ -252,8 +239,6 @@ const OrdersPage = () => {
     const handleOrderDeleted = (event) => {
       const orderId = event.detail?.id;
       if (orderId) {
-        devLog.log('🗑️ OrdersPage: حذف طلب فوري:', orderId, 'confirmed:', event.detail?.confirmed);
-        
         // تسجيل كمحذوف نهائياً
         deletedOrdersSet.current.add(orderId);
         
@@ -265,7 +250,6 @@ const OrdersPage = () => {
     const handleAiOrderDeleted = (event) => {
       const deletedAiOrderId = event.detail?.id;
       if (deletedAiOrderId) {
-        devLog.log('🗑️ OrdersPage: حذف طلب ذكي فوري:', deletedAiOrderId);
         deletedOrdersSet.current.add(deletedAiOrderId);
         setSelectedOrders(prev => prev.filter(id => id !== deletedAiOrderId));
       }
@@ -275,12 +259,11 @@ const OrdersPage = () => {
     const handleOrderDeletedConfirmed = (event) => {
       const deletedOrderId = event.detail?.id;
       if (deletedOrderId) {
-        devLog.log('✅ OrdersPage: تأكيد نهائي حذف طلب:', deletedOrderId);
         deletedOrdersSet.current.add(deletedOrderId);
         setSelectedOrders(prev => prev.filter(id => id !== deletedOrderId));
         
         if (event.detail?.final) {
-          devLog.log('🔒 طلب محذوف نهائياً - منع العودة:', deletedOrderId);
+          // Final deletion confirmed
         }
       }
     };
@@ -288,7 +271,6 @@ const OrdersPage = () => {
     const handleAiOrderDeletedConfirmed = (event) => {
       const deletedAiOrderId = event.detail?.id;
       if (deletedAiOrderId) {
-        devLog.log('✅ OrdersPage: تأكيد نهائي حذف طلب ذكي:', deletedAiOrderId);
         setSelectedOrders(prev => prev.filter(id => id !== deletedAiOrderId));
       }
     };
@@ -297,10 +279,8 @@ const OrdersPage = () => {
     const handleOrderUpdated = (event) => {
       const { id: orderId, updates, timestamp } = event.detail || {};
       if (orderId && updates) {
-        devLog.log('🔄 OrdersPage: استلام تحديث طلب:', { orderId, updates, timestamp });
         // تحديث فوري للواجهة عن طريق استدعاء refreshOrders
         if (refreshOrders) {
-          devLog.log('🔄 OrdersPage: تنشيط تحديث البيانات');
           refreshOrders();
         }
       }
@@ -362,11 +342,9 @@ const OrdersPage = () => {
 
   // تم تحريك usersMap للأعلى لتجنب مشكلة "Cannot access uninitialized variable"
 
-  // جلب رمز الموظف لفلترة طلبات الذكاء الاصطناعي للموظف
-  useEffect(() => {
-    const fetchEmployeeCode = async () => {
-      if (!userUUID || hasPermission('view_all_orders')) return;
-      try {
+      const fetchEmployeeCode = async () => {
+        if (!userUUID || hasPermission('view_all_orders')) return;
+        try {
         const { data } = await supabase
           .from('employee_telegram_codes')
           .select('telegram_code')
@@ -374,7 +352,7 @@ const OrdersPage = () => {
           .single();
         if (data?.telegram_code) setUserEmployeeCode(String(data.telegram_code).toUpperCase());
       } catch (err) {
-        console.error('Error fetching employee telegram_code:', err);
+        // Silent error
       }
     };
     fetchEmployeeCode();
@@ -594,7 +572,6 @@ const OrdersPage = () => {
   useEffect(() => {
     const performInitialSync = async () => {
       if (!syncableOrders || syncableOrders.length === 0) {
-        devLog.log('⏭️ [OrdersPage] لا توجد طلبات ظاهرة نشطة للمزامنة');
         return;
       }
       
@@ -612,7 +589,6 @@ const OrdersPage = () => {
     if (activeTab === 'orders' && syncableOrders && syncableOrders.length > 0) {
       // تخزين الطلبات الظاهرة في window لاستخدامها في المزامنة
       window.__visibleOrdersForSync = syncableOrders;
-      devLog.log(`✅ [OrdersPage] حفظ ${syncableOrders.length} طلب ظاهر للمزامنة`);
     } else {
       // مسح الطلبات الظاهرة عند مغادرة تبويب الطلبات
       window.__visibleOrdersForSync = null;
@@ -675,7 +651,6 @@ const OrdersPage = () => {
       return;
     }
 
-    // تطبيع المدخلات للتأكد من أنها مصفوفة من IDs
     const normalizeToIds = (input) => {
       if (!input) return [];
       if (Array.isArray(input)) {
@@ -691,15 +666,13 @@ const OrdersPage = () => {
     };
 
     const orderIds = normalizeToIds(ordersToDelete);
-    devLog.log('🗑️ معرفات الطلبات المطلوب حذفها:', orderIds);
     
-    const ordersToDeleteFiltered = orderIds.filter(id => 
+    const ordersToDeleteFiltered = orderIds.filter(id =>
       !deletedOrdersSet.current.has(id) && 
       orders.some(o => o.id === id)
     );
     
     if (ordersToDeleteFiltered.length === 0) {
-      devLog.log('⚠️ لا توجد طلبات صالحة للحذف');
       toast({ title: 'لا توجد طلبات صالحة للحذف', variant: 'destructive' });
       return;
     }
@@ -720,7 +693,6 @@ const OrdersPage = () => {
         const result = await deleteOrdersContext(ordersToDeleteFiltered);
         
         if (result && result.success) {
-            devLog.log('✅ حذف طلبات مكتمل بنجاح');
             toast({
                 title: 'تم الحذف بنجاح',
                 description: `تم حذف ${ordersToDeleteFiltered.length} طلب نهائياً وتحرير المخزون.`,
