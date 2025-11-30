@@ -262,7 +262,7 @@ export const SearchableSelectFixed = ({
         ref={dropdownRef}
         onMouseDown={(e) => {
           e.stopPropagation();
-          e.preventDefault(); // ✅ منع Dialog من الإغلاق
+          // ❌ إزالة e.preventDefault() - يمنع فتح الكيبورد على الهواتف
         }}
         onTouchStart={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()} // ✅ إضافة pointer events
