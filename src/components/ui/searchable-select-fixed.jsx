@@ -274,6 +274,7 @@ export const SearchableSelectFixed = ({
           <Search className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             ref={searchInputRef}
+            autoFocus={true}
             placeholder={searchPlaceholder}
             value={search}
             onChange={handleSearchChange}
@@ -287,7 +288,11 @@ export const SearchableSelectFixed = ({
               e.stopPropagation();
               e.target.select();
             }}
-            onTouchStart={(e) => e.stopPropagation()}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+              // ✅ Focus مباشر عند اللمس لفتح الكيبورد على iOS
+              searchInputRef.current?.focus();
+            }}
             onPointerDown={(e) => e.stopPropagation()}
             className="pr-10 text-right border-0 focus-visible:ring-0 focus-visible:ring-offset-0 bg-transparent"
             autoComplete="off"
@@ -446,7 +451,7 @@ export const SearchableSelectFixed = ({
           }}
           onTouchStart={(e) => {
             e.stopPropagation();
-            e.preventDefault();
+            // ✅ إزالة preventDefault للسماح بفتح الكيبورد على iOS
           }}
           onPointerDown={(e) => {
             e.stopPropagation();
