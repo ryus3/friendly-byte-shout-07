@@ -324,7 +324,7 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                           <div className="space-y-1 md:space-y-2">
                             <div className="flex items-center gap-2 md:gap-3">
                               <h3 className="font-black text-base md:text-2xl bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                                {order.order_number}
+                                {order.tracking_number || order.order_number}
                               </h3>
                             </div>
                             <div className="flex items-center gap-1 md:gap-2 text-xs md:text-sm text-muted-foreground">
