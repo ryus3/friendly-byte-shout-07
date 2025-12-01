@@ -224,8 +224,9 @@ const iconMap = {
   low_stock: StockWarningIcon,
   stock_warning: StockWarningIcon,
   order_completed: OrderSuccessIcon,
-  order_shipped: OrderIcon,
-  order_status_changed: OrderIcon,
+  order_shipped: SystemIcon,
+  order_status_changed: SystemIcon,
+  order_status_update: SystemIcon,
   new_order: OrderIcon,
   new_order_employee: SystemIcon,
   new_registration: UserRegistrationIcon,
@@ -234,7 +235,7 @@ const iconMap = {
   employee_settlement_completed: ProfitSettlementIcon,
   city_discount_selected: CityDiscountIcon,
   city_discounts: CityDiscountIcon,
-  alwaseet_status_change: OrderIcon,
+  alwaseet_status_change: SystemIcon,
   system: SystemIcon,
   // ألوان حسب النوع
   AlertTriangle: StockWarningIcon,
@@ -852,38 +853,42 @@ const NotificationsPanel = () => {
                            <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 <h3 className={cn("font-semibold text-sm leading-tight truncate", colors.text)}>
-                                   {(() => {
-                                     // تخصيص العنوان لإشعارات تحديث حالة الطلب
-                                     if (notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
-                                       const data = notification.data || {};
-                                       const orderId = data.order_id;
-                                       
-                                        // البحث عن الطلب من النظام الموحد (بـ UUID أو tracking_number)
-                                        if (orderId && orders && orders.length > 0) {
-                                          const foundOrder = orders.find(order => 
-                                            order.id === orderId || 
-                                            order.tracking_number === orderId ||
-                                            order.order_number === orderId
-                                          );
-                                          if (foundOrder) {
-                                            // استخدام تنسيق "المدينة - المنطقة" مباشرة من customer_province
-                                            const city = (foundOrder.customer_city || '').trim() || 'غير محدد';
-                                            const region = (foundOrder.customer_province || '').trim() || 'غير محدد';
-                                            return `${city} - ${region}`;
-                                          }
-                                       }
-                                       
-                                        // للإشعارات القديمة بدون order_id، استخدام البيانات من data
-                                        if (data.customer_city || data.customer_address) {
-                                          const city = data.customer_city || 'غير محدد';
-                                          const region = data.customer_province || 'غير محدد';
-                                          return `${city} - ${region}`;
+                                     {(() => {
+                                      // تخصيص العنوان لإشعارات تحديث حالة الطلب
+                                      if (notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
+                                        const data = notification.data || {};
+                                        const orderId = data.order_id;
+                                        
+                                        // ✅ Fallback: استخراج tracking_number من message إذا لم يوجد order_id
+                                        const trackingFromMessage = !orderId ? parseTrackingFromMessage(notification.message) : null;
+                                        const searchKey = orderId || trackingFromMessage || data.tracking_number || data.order_number;
+                                        
+                                         // البحث عن الطلب من النظام الموحد (بـ UUID أو tracking_number)
+                                         if (searchKey && orders && orders.length > 0) {
+                                           const foundOrder = orders.find(order => 
+                                             order.id === searchKey || 
+                                             order.tracking_number === searchKey ||
+                                             order.order_number === searchKey
+                                           );
+                                           if (foundOrder) {
+                                             // استخدام تنسيق "المدينة - المنطقة" مباشرة
+                                             const city = (foundOrder.customer_city || '').trim() || 'غير محدد';
+                                             const region = (foundOrder.customer_province || '').trim() || 'غير محدد';
+                                             return `${city} - ${region}`;
+                                           }
                                         }
-                                     }
-                                     
-                                     // العنوان الافتراضي
-                                     return notification.title || 'إشعار جديد';
-                                   })()}
+                                        
+                                         // للإشعارات القديمة بدون order_id، استخدام البيانات من data
+                                         if (data.customer_city || data.customer_address) {
+                                           const city = data.customer_city || 'غير محدد';
+                                           const region = data.customer_province || 'غير محدد';
+                                           return `${city} - ${region}`;
+                                         }
+                                      }
+                                      
+                                      // العنوان الافتراضي
+                                      return notification.title || 'إشعار جديد';
+                                    })()}
                                 </h3>
                                 <div className="flex items-center gap-1">
                                   {!(notification.is_read || notification.read) && (
