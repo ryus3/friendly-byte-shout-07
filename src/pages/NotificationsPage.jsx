@@ -61,6 +61,9 @@ const iconMap = {
   low_stock: <StockWarningIcon />,
   stock_warning: <StockWarningIcon />,
   order_completed: <OrderSuccessIcon />,
+  order_status_changed: <SystemIcon />,
+  order_status_update: <SystemIcon />,
+  alwaseet_status_change: <SystemIcon />,
   new_order: <OrderIcon />,
   new_registration: <UserRegistrationIcon />,
   system: <SystemIcon />,
@@ -429,14 +432,49 @@ const NotificationsPage = () => {
                               
                              <div className="flex-1 min-w-0">
                                  <div className="flex items-center gap-2 mb-2 md:mb-3">
-                                   <h3 className={cn(
-                                     "font-bold text-base md:text-lg truncate flex-1",
-                                     !notification.is_read 
-                                       ? "bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 bg-clip-text text-transparent" 
-                                       : "text-foreground"
-                                   )}>
-                                     {notification.title}
-                                   </h3>
+                                    <h3 className={cn(
+                                      "font-bold text-base md:text-lg truncate flex-1",
+                                      !notification.is_read 
+                                        ? "bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 bg-clip-text text-transparent" 
+                                        : "text-foreground"
+                                    )}>
+                                      {(() => {
+                                        // ✅ تخصيص العنوان لإشعارات تحديث حالة الطلب
+                                        if (notification.type === 'alwaseet_status_change' || notification.type === 'order_status_update' || notification.type === 'order_status_changed') {
+                                          const data = notification.data || {};
+                                          const orderId = data.order_id;
+                                          
+                                          // ✅ Fallback: استخراج tracking_number من message إذا لم يوجد order_id
+                                          const trackingFromMessage = !orderId ? parseTrackingFromMessage(notification.message) : null;
+                                          const searchKey = orderId || trackingFromMessage || data.tracking_number || data.order_number;
+                                          
+                                          // البحث عن الطلب من النظام الموحد
+                                          if (searchKey && orders && orders.length > 0) {
+                                            const foundOrder = orders.find(order => 
+                                              order.id === searchKey || 
+                                              order.tracking_number === searchKey ||
+                                              order.order_number === searchKey
+                                            );
+                                            if (foundOrder) {
+                                              // عرض "المدينة - المنطقة"
+                                              const city = (foundOrder.customer_city || '').trim() || 'غير محدد';
+                                              const region = (foundOrder.customer_province || '').trim() || 'غير محدد';
+                                              return `${city} - ${region}`;
+                                            }
+                                          }
+                                          
+                                          // للإشعارات القديمة بدون order_id
+                                          if (data.customer_city || data.customer_address) {
+                                            const city = data.customer_city || 'غير محدد';
+                                            const region = data.customer_province || 'غير محدد';
+                                            return `${city} - ${region}`;
+                                          }
+                                        }
+                                        
+                                        // العنوان الافتراضي
+                                        return notification.title || 'إشعار جديد';
+                                      })()}
+                                    </h3>
                                    {!notification.is_read && (
                                      <div className="relative flex-shrink-0">
                                        <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-blue-500 animate-pulse" />
