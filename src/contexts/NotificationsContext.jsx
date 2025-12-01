@@ -115,7 +115,10 @@ export const NotificationsProvider = ({ children }) => {
             }
 
             if (shouldShow) {
-                if (newNotification.type !== 'welcome') {
+                // ✅ استثناء إشعارات تغيير حالة الطلبات من التوست - نكتفي بنافذة الإشعارات
+                const skipToastForTypes = ['order_status_changed', 'order_status_update', 'alwaseet_status_change'];
+                
+                if (newNotification.type !== 'welcome' && !skipToastForTypes.includes(newNotification.type)) {
                     // تشغيل صوت الإشعار الاحترافي
                     try {
                         const notificationSettings = JSON.parse(localStorage.getItem('notificationSettings') || '{}');
@@ -157,6 +160,8 @@ export const NotificationsProvider = ({ children }) => {
                         duration: newNotification.type === 'welcome' ? 8000 : 6000,
                     });
                 }
+                
+                // ✅ الإشعار يظهر في نافذة الإشعارات دائماً (سواء كان هناك توست أم لا)
                 setNotifications(prev => [newNotification, ...prev.filter(n => n.id !== newNotification.id)]);
             }
         };
