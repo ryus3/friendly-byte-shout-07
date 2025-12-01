@@ -6736,6 +6736,7 @@ export type Database = {
         Returns: Json
       }
       get_default_cash_source: { Args: never; Returns: string }
+      get_delivery_status_text: { Args: { status_id: string }; Returns: string }
       get_employee_by_telegram_chat_id: {
         Args: { p_chat_id: number }
         Returns: Json
