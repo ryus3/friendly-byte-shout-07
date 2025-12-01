@@ -1769,18 +1769,20 @@ export const AlWaseetProvider = ({ children }) => {
           devLog.log('🔄 تم تحديث الإشعار الموجود بنجاح');
         }
       } else {
+        // ✅ الإشعارات تُرسل تلقائياً من database trigger: trg_send_order_notifications
+        // تم تعطيل إنشاء الإشعارات من هنا لمنع التكرار
         // إنشاء إشعار جديد
-        const newNotificationData = {
-          type: 'order_status_update',
-          title: 'تحديث حالة الطلب',
-          message: message,
-          priority: priority,
-          data: notificationData
-        };
+        // const newNotificationData = {
+        //   type: 'order_status_update',
+        //   title: 'تحديث حالة الطلب',
+        //   message: message,
+        //   priority: priority,
+        //   data: notificationData
+        // };
         
-        devLog.log('📤 بيانات الإشعار الجديدة:', newNotificationData);
-        await createNotification(newNotificationData);
-        devLog.log('🆕 تم إنشاء إشعار جديد');
+        // devLog.log('📤 بيانات الإشعار الجديدة:', newNotificationData);
+        // await createNotification(newNotificationData);
+        // devLog.log('🆕 تم إنشاء إشعار جديد');
       }
       
       // تحديث آخر حالة مرسلة
@@ -3476,14 +3478,15 @@ export const AlWaseetProvider = ({ children }) => {
               updatedCount++;
               devLog.log(`✅ تم تحديث الطلب ${trackingNumber}: ${existingOrder.status} → ${localStatus}`);
               
-              // إرسال إشعار تغيير الحالة للحالات المهمة مع تحديد state_id الصحيح
-              const actualStateId = waseetOrder.state_id || waseetOrder.status_id || waseetOrder.statusId;
-              if (actualStateId) {
-                devLog.log('📢 إرسال إشعار تغيير حالة:', { trackingNumber, stateId: actualStateId, statusText: waseetStatusText });
-                createOrderStatusNotification(trackingNumber, actualStateId, waseetStatusText);
-              } else {
-                devLog.warn('⚠️ لا يوجد state_id للطلب:', trackingNumber, waseetOrder);
-              }
+              // ✅ الإشعارات تُرسل تلقائياً من database trigger: trg_send_order_notifications
+              // تم تعطيل إرسال الإشعارات من هنا لمنع التكرار
+              // const actualStateId = waseetOrder.state_id || waseetOrder.status_id || waseetOrder.statusId;
+              // if (actualStateId) {
+              //   devLog.log('📢 إرسال إشعار تغيير حالة:', { trackingNumber, stateId: actualStateId, statusText: waseetStatusText });
+              //   createOrderStatusNotification(trackingNumber, actualStateId, waseetStatusText);
+              // } else {
+              //   devLog.warn('⚠️ لا يوجد state_id للطلب:', trackingNumber, waseetOrder);
+              // }
             }
           }
         } catch (error) {
