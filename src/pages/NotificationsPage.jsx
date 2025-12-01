@@ -262,11 +262,13 @@ const NotificationsPage = () => {
 
       <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6">
         {/* إعدادات الإشعارات */}
-        <NotificationSettings />
+        <div className="hidden md:block">
+          <NotificationSettings />
+        </div>
 
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
           <div className="space-y-3">
-            <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-primary via-blue-600 to-primary bg-clip-text text-transparent">
+            <h1 className="text-xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-primary via-blue-600 to-primary bg-clip-text text-transparent">
               إدارة الإشعارات
             </h1>
             <p className="text-muted-foreground text-sm md:text-base lg:text-lg">تحكم شامل وإدارة احترافية لجميع الإشعارات</p>
@@ -334,7 +336,7 @@ const NotificationsPage = () => {
           className="relative overflow-hidden"
         >
           <Card className="bg-gradient-to-r from-primary/10 via-blue-500/10 to-primary/10 border-primary/20 dark:from-primary/5 dark:via-blue-500/5 dark:to-primary/5 dark:border-primary/15 shadow-lg">
-            <CardContent className="p-6 md:p-8">
+            <CardContent className="p-3 md:p-6">
               <div className="flex flex-col lg:flex-row items-center justify-between gap-6 lg:gap-8">
                 <div className="flex items-center gap-4 lg:gap-6">
                   <div className="p-3 lg:p-4 rounded-2xl bg-primary/15 border border-primary/25 dark:bg-primary/10 dark:border-primary/20">
@@ -350,25 +352,25 @@ const NotificationsPage = () => {
                 
                 <div className="flex flex-wrap items-center justify-center gap-4 lg:gap-8">
                   <div className="text-center min-w-[80px]">
-                    <div className="text-3xl lg:text-4xl font-bold text-primary">
+                    <div className="text-2xl lg:text-3xl font-bold text-primary">
                       {uniqueNotifications.length}
                     </div>
                     <div className="text-xs lg:text-sm text-muted-foreground mt-1">المجموع</div>
                   </div>
                   
-                  <Separator orientation="vertical" className="h-12 bg-border/50" />
+                  <Separator orientation="vertical" className="h-8 md:h-12 bg-border/50" />
                   
                   <div className="text-center min-w-[80px]">
-                    <div className="text-3xl lg:text-4xl font-bold text-red-500 dark:text-red-400">
+                    <div className="text-2xl lg:text-3xl font-bold text-red-500 dark:text-red-400">
                       {unreadCount}
                     </div>
                     <div className="text-xs lg:text-sm text-muted-foreground mt-1">غير مقروءة</div>
                   </div>
                   
-                  <Separator orientation="vertical" className="h-12 bg-border/50" />
+                  <Separator orientation="vertical" className="h-8 md:h-12 bg-border/50" />
                   
                   <div className="text-center min-w-[80px]">
-                    <div className="text-3xl lg:text-4xl font-bold text-green-600 dark:text-green-500">
+                    <div className="text-2xl lg:text-3xl font-bold text-green-600 dark:text-green-500">
                       {uniqueNotifications.length - unreadCount}
                     </div>
                     <div className="text-xs lg:text-sm text-muted-foreground mt-1">مقروءة</div>
@@ -395,8 +397,8 @@ const NotificationsPage = () => {
               </div>
             </div>
           </CardHeader>
-          <CardContent className="relative p-4 md:p-6">
-            <ScrollArea className="h-[60vh] md:h-[65vh]">
+          <CardContent className="relative p-3 md:p-6">
+            <ScrollArea className="h-[calc(100vh-280px)] md:h-[65vh]">
               <AnimatePresence>
                 {filteredNotifications.length > 0 ? (
                   <div className="space-y-3">
@@ -407,9 +409,9 @@ const NotificationsPage = () => {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, x: -20 }}
-                          transition={{ duration: 0.3 }}
-                           className={cn(
-                             "notification-item-enhanced relative p-4 md:p-6 rounded-2xl border transition-all duration-300 hover:shadow-lg group",
+                           transition={{ duration: 0.3 }}
+                            className={cn(
+                              "notification-item-enhanced relative p-3 md:p-4 rounded-2xl border transition-all duration-300 hover:shadow-lg group",
                              notification.is_read 
                                ? "notification-read" 
                                : "notification-unread"
