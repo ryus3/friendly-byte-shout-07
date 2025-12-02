@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus, Trash2, User, Lock, Star, Badge as BadgeIcon } from 'lucide-react';
+import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus, Trash2, User, Lock, Star, Badge as BadgeIcon, RefreshCw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from './ui/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
@@ -25,6 +25,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const [userAccounts, setUserAccounts] = useState([]);
     const [selectedAccount, setSelectedAccount] = useState(null);
     const [showAddForm, setShowAddForm] = useState(false);
+    const [isRenewing, setIsRenewing] = useState(false);
     
     const orderCreationMode = user?.order_creation_mode || 'choice';
 
@@ -312,6 +313,65 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
         }
     }
 
+    const handleRenewToken = async () => {
+        if (!selectedAccount || !user?.id || isRenewing) return;
+        
+        setIsRenewing(true);
+        
+        try {
+            toast({
+                title: "🔄 جاري تجديد التوكن",
+                description: `جاري تجديد التوكن للحساب ${selectedAccount.account_label || selectedAccount.account_username}...`,
+            });
+            
+            // إعادة تسجيل الدخول باستخدام بيانات الحساب المحفوظة
+            const success = await activateAccount(selectedAccount.account_username, selectedPartner, true);
+            
+            if (success) {
+                // تحديث expires_at لـ 7 أيام جديدة
+                const newExpiryDate = new Date();
+                newExpiryDate.setDate(newExpiryDate.getDate() + 7);
+                
+                const { error } = await supabase
+                    .from('delivery_partner_tokens')
+                    .update({
+                        expires_at: newExpiryDate.toISOString(),
+                        last_used_at: new Date().toISOString()
+                    })
+                    .eq('user_id', user.id)
+                    .eq('partner_name', selectedPartner)
+                    .eq('account_username', selectedAccount.account_username);
+                
+                if (!error) {
+                    toast({
+                        title: "✅ تم تجديد التوكن",
+                        description: `تم تجديد التوكن بنجاح. صالح لمدة 7 أيام جديدة.`,
+                        variant: 'success'
+                    });
+                    
+                    // إعادة تحميل الحسابات لتحديث تاريخ الانتهاء
+                    const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
+                    setUserAccounts(accounts);
+                    const updatedAccount = accounts.find(acc => acc.account_username === selectedAccount.account_username);
+                    setSelectedAccount(updatedAccount || selectedAccount);
+                } else {
+                    throw new Error(error.message);
+                }
+            } else {
+                throw new Error('فشل في تجديد التوكن');
+            }
+        } catch (error) {
+            console.error('Error renewing token:', error);
+            toast({
+                title: "❌ خطأ في التجديد",
+                description: "فشل في تجديد التوكن. يرجى المحاولة مرة أخرى أو تسجيل الدخول يدوياً.",
+                variant: 'destructive'
+            });
+        } finally {
+            setIsRenewing(false);
+        }
+    }
+
     const isCurrentPartnerSelected = activePartner === selectedPartner;
 
 
@@ -376,7 +436,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                             </div>
                         )}
                         
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                             {selectedAccount && !selectedAccount.is_default && (
                                 <Button 
                                     variant="secondary" 
@@ -393,8 +453,21 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                     variant="outline" 
                                     size="sm" 
                                     type="button" 
+                                    onClick={handleRenewToken}
+                                    className="w-full border-green-200 text-green-600 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30"
+                                    disabled={isRenewing}
+                                >
+                                    <RefreshCw className={`w-4 h-4 ml-2 ${isRenewing ? 'animate-spin' : ''}`} />
+                                    {isRenewing ? "جاري التجديد..." : "تجديد التوكن"}
+                                </Button>
+                            )}
+                            {selectedAccount && (
+                                <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    type="button" 
                                     onClick={handleAccountLogout}
-                                    className="w-full border-orange-200 text-orange-600 hover:bg-orange-50"
+                                    className="w-full border-orange-200 text-orange-600 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-400 dark:hover:bg-orange-950/30"
                                 >
                                     <LogOut className="w-4 h-4 ml-2" />
                                     تسجيل الخروج
