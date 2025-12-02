@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { ShoppingCart, Search, Menu } from 'lucide-react';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { Button } from '@/components/ui/button';
@@ -8,13 +8,19 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 
 const StorefrontHeader = () => {
   const { settings, itemCount, updateFilters } = useStorefront();
+  const { slug: urlSlug } = useParams();
+  
+  // استخدام slug من settings أو من URL
+  const slug = settings?.slug || urlSlug;
+
+  if (!settings) return null;
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <Link to={`/storefront/${settings.slug}`} className="flex items-center gap-3">
+          <Link to={`/storefront/${slug}`} className="flex items-center gap-3">
             {settings.logo_url && (
               <img 
                 src={settings.logo_url} 
@@ -23,7 +29,7 @@ const StorefrontHeader = () => {
               />
             )}
             <span className="text-xl font-bold text-foreground">
-              {settings.business_name || settings.profiles?.business_page_name}
+              {settings.business_name || settings.profile?.business_page_name || 'متجرنا'}
             </span>
           </Link>
 
@@ -35,7 +41,7 @@ const StorefrontHeader = () => {
                 type="search"
                 placeholder="ابحث عن المنتجات..."
                 className="pr-10"
-                onChange={(e) => updateFilters({ search: e.target.value })}
+                onChange={(e) => updateFilters?.({ search: e.target.value })}
               />
             </div>
           </div>
@@ -43,7 +49,7 @@ const StorefrontHeader = () => {
           {/* Actions */}
           <div className="flex items-center gap-4">
             {/* Cart */}
-            <Link to={`/storefront/${settings.slug}/cart`}>
+            <Link to={`/storefront/${slug}/cart`}>
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="h-5 w-5" />
                 {itemCount > 0 && (
@@ -63,21 +69,31 @@ const StorefrontHeader = () => {
               </SheetTrigger>
               <SheetContent side="right" className="w-80">
                 <nav className="flex flex-col gap-4 mt-8">
-                  <Link to={`/storefront/${settings.slug}`}>
+                  <Link to={`/storefront/${slug}`}>
                     <Button variant="ghost" className="w-full justify-start">
                       الرئيسية
                     </Button>
                   </Link>
-                  <Link to={`/storefront/${settings.slug}/products`}>
+                  <Link to={`/storefront/${slug}/products`}>
                     <Button variant="ghost" className="w-full justify-start">
                       المنتجات
+                    </Button>
+                  </Link>
+                  <Link to={`/storefront/${slug}/about`}>
+                    <Button variant="ghost" className="w-full justify-start">
+                      من نحن
+                    </Button>
+                  </Link>
+                  <Link to={`/storefront/${slug}/contact`}>
+                    <Button variant="ghost" className="w-full justify-start">
+                      اتصل بنا
                     </Button>
                   </Link>
                   <div className="mt-4">
                     <Input
                       type="search"
                       placeholder="ابحث..."
-                      onChange={(e) => updateFilters({ search: e.target.value })}
+                      onChange={(e) => updateFilters?.({ search: e.target.value })}
                     />
                   </div>
                 </nav>
@@ -88,11 +104,17 @@ const StorefrontHeader = () => {
 
         {/* Navigation - Desktop */}
         <nav className="hidden md:flex items-center gap-6 py-3 border-t border-border">
-          <Link to={`/storefront/${settings.slug}`}>
+          <Link to={`/storefront/${slug}`}>
             <Button variant="ghost">الرئيسية</Button>
           </Link>
-          <Link to={`/storefront/${settings.slug}/products`}>
+          <Link to={`/storefront/${slug}/products`}>
             <Button variant="ghost">جميع المنتجات</Button>
+          </Link>
+          <Link to={`/storefront/${slug}/about`}>
+            <Button variant="ghost">من نحن</Button>
+          </Link>
+          <Link to={`/storefront/${slug}/contact`}>
+            <Button variant="ghost">اتصل بنا</Button>
           </Link>
         </nav>
       </div>

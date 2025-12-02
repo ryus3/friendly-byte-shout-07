@@ -57,10 +57,14 @@ const StorefrontProducts = () => {
           .from('products')
           .select(`
             *,
+            category:categories(id, name),
+            department:departments(id, name),
             variants:product_variants(
               id,
               color,
               size,
+              color_id,
+              size_id,
               price,
               quantity,
               reserved_quantity,
@@ -72,9 +76,13 @@ const StorefrontProducts = () => {
         const { data, error } = await query;
         if (error) throw error;
 
-        // فلترة المنتجات المتاحة فقط
+        // فلترة المنتجات المتاحة فقط - دعم هيكل مرن
         const available = data?.filter(p => 
-          p.variants?.some(v => (v.quantity - (v.reserved_quantity || 0)) > 0)
+          p.variants?.some(v => {
+            const qty = v.inventory?.quantity ?? v.quantity ?? 0;
+            const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+            return (qty - reserved) > 0;
+          })
         ) || [];
 
         setProducts(available);

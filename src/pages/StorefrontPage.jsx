@@ -54,22 +54,63 @@ const StorefrontHome = () => {
             .from('products')
             .select(`
               *,
+              category:categories(id, name),
+              department:departments(id, name),
               variants:product_variants(
                 id,
                 color,
                 size,
+                price,
                 quantity,
                 reserved_quantity,
-                price,
                 images
-              ),
-              category:categories(name),
-              department:departments(name)
+              )
             `)
             .in('id', productIds)
             .eq('is_active', true);
 
-          setProducts(productsData || []);
+          // فلترة المنتجات المتاحة فقط
+          const availableProducts = productsData?.filter(p => 
+            p.variants?.some(v => {
+              const qty = v.inventory?.quantity ?? v.quantity ?? 0;
+              const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+              return (qty - reserved) > 0;
+            })
+          ) || [];
+
+          setProducts(availableProducts);
+        } else {
+          // إذا لم يوجد منتجات مميزة، جلب أحدث المنتجات
+          const { data: latestProducts } = await supabase
+            .from('products')
+            .select(`
+              *,
+              category:categories(id, name),
+              department:departments(id, name),
+              variants:product_variants(
+                id,
+                color,
+                size,
+                price,
+                quantity,
+                reserved_quantity,
+                images
+              )
+            `)
+            .eq('is_active', true)
+            .order('created_at', { ascending: false })
+            .limit(8);
+
+          // فلترة المنتجات المتاحة فقط
+          const availableProducts = latestProducts?.filter(p => 
+            p.variants?.some(v => {
+              const qty = v.inventory?.quantity ?? v.quantity ?? 0;
+              const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+              return (qty - reserved) > 0;
+            })
+          ) || [];
+
+          setProducts(availableProducts);
         }
       } catch (err) {
         console.error('Error fetching storefront data:', err);

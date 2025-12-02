@@ -23,6 +23,8 @@ export const useProductRecommendations = (productId, categoryId, departmentId) =
           .from('products')
           .select(`
             *,
+            category:categories(id, name),
+            department:departments(id, name),
             variants:product_variants(
               id,
               color,
@@ -48,11 +50,13 @@ export const useProductRecommendations = (productId, categoryId, departmentId) =
 
         if (error) throw error;
 
-        // فلترة المنتجات التي لها variants متاحة
+        // فلترة المنتجات التي لها variants متاحة - دعم هيكل مرن
         const availableProducts = data?.filter(product => {
-          return product.variants?.some(v => 
-            (v.quantity - (v.reserved_quantity || 0)) > 0
-          );
+          return product.variants?.some(v => {
+            const qty = v.inventory?.quantity ?? v.quantity ?? 0;
+            const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+            return (qty - reserved) > 0;
+          });
         }) || [];
 
         setRecommendations(availableProducts);

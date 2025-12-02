@@ -1,11 +1,11 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useStorefront } from '@/contexts/StorefrontContext';
+import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
+import StorefrontLayout from '@/components/storefront/StorefrontLayout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Shield } from 'lucide-react';
 
-const PrivacyPolicyPage = () => {
-  const { slug } = useParams();
+const PrivacyContent = () => {
   const { settings, settingsLoading } = useStorefront();
 
   if (settingsLoading) {
@@ -17,7 +17,9 @@ const PrivacyPolicyPage = () => {
     );
   }
 
-  const privacyContent = settings?.privacy_policy || `في ${settings?.profile?.business_page_name || 'متجرنا'}، نحترم خصوصيتك ونلتزم بحماية معلوماتك الشخصية.
+  const businessName = settings?.profile?.business_page_name || settings?.business_name || 'متجرنا';
+
+  const privacyContent = settings?.privacy_policy || `في ${businessName}، نحترم خصوصيتك ونلتزم بحماية معلوماتك الشخصية.
 
 ## المعلومات التي نجمعها:
 • الاسم الكامل
@@ -72,6 +74,18 @@ const PrivacyPolicyPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const PrivacyPolicyPage = () => {
+  const { slug } = useParams();
+
+  return (
+    <StorefrontProvider slug={slug}>
+      <StorefrontLayout>
+        <PrivacyContent />
+      </StorefrontLayout>
+    </StorefrontProvider>
   );
 };
 

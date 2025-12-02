@@ -1,11 +1,11 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useStorefront } from '@/contexts/StorefrontContext';
+import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
+import StorefrontLayout from '@/components/storefront/StorefrontLayout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { FileText } from 'lucide-react';
 
-const TermsPage = () => {
-  const { slug } = useParams();
+const TermsContent = () => {
   const { settings, settingsLoading } = useStorefront();
 
   if (settingsLoading) {
@@ -17,7 +17,9 @@ const TermsPage = () => {
     );
   }
 
-  const termsContent = settings?.terms_conditions || `باستخدامك لمتجر ${settings?.profile?.business_page_name || 'متجرنا'}، فإنك توافق على الشروط التالية:
+  const businessName = settings?.profile?.business_page_name || settings?.business_name || 'متجرنا';
+
+  const termsContent = settings?.terms_conditions || `باستخدامك لمتجر ${businessName}، فإنك توافق على الشروط التالية:
 
 ## 1. الطلبات والأسعار
 • جميع الطلبات خاضعة لتوافر المخزون
@@ -71,6 +73,18 @@ const TermsPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const TermsPage = () => {
+  const { slug } = useParams();
+
+  return (
+    <StorefrontProvider slug={slug}>
+      <StorefrontLayout>
+        <TermsContent />
+      </StorefrontLayout>
+    </StorefrontProvider>
   );
 };
 
