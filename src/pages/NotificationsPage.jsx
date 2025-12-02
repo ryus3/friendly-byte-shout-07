@@ -401,7 +401,7 @@ const NotificationsPage = () => {
             <ScrollArea className="h-[calc(100vh-280px)] md:h-[65vh]">
               <AnimatePresence>
                 {filteredNotifications.length > 0 ? (
-                  <div className="space-y-3">
+        <div className="space-y-2 md:space-y-3">
                     {filteredNotifications.map((notification) => (
                        <motion.div
                           key={notification.id}
@@ -410,8 +410,8 @@ const NotificationsPage = () => {
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, x: -20 }}
                            transition={{ duration: 0.3 }}
-                            className={cn(
-                              "notification-item-enhanced relative p-3 md:p-4 rounded-2xl border transition-all duration-300 hover:shadow-lg group",
+                           className={cn(
+                              "notification-item-enhanced relative p-2 md:p-4 rounded-xl md:rounded-2xl border transition-all duration-300 hover:shadow-lg group",
                              notification.is_read 
                                ? "notification-read" 
                                : "notification-unread"
@@ -432,15 +432,11 @@ const NotificationsPage = () => {
                                  {iconMap[notification.type] || iconMap[notification.icon] || iconMap.Bell}
                                </div>
                               
-                             <div className="flex-1 min-w-0">
-                                 <div className="flex items-center gap-2 mb-2 md:mb-3">
-                                    <h3 className={cn(
-                                      "font-bold text-base md:text-lg truncate flex-1",
-                                      !notification.is_read 
-                                        ? "bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 bg-clip-text text-transparent" 
-                                        : "text-foreground"
-                                    )}>
-                                      {(() => {
+                              <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1 md:mb-2">
+                                     <div className="flex-1 min-w-0">
+                                       <ScrollingText 
+                                         text={(() => {
                                         // ✅ تخصيص العنوان لإشعارات تحديث حالة الطلب
                                         if (notification.type === 'alwaseet_status_change' || notification.type === 'order_status_update' || notification.type === 'order_status_changed') {
                                           const data = notification.data || {};
@@ -473,10 +469,18 @@ const NotificationsPage = () => {
                                           }
                                         }
                                         
-                                        // العنوان الافتراضي
-                                        return notification.title || 'إشعار جديد';
-                                      })()}
-                                    </h3>
+                                         // العنوان الافتراضي
+                                         return notification.title || 'إشعار جديد';
+                                       })()}
+                                         maxWidth="100%"
+                                         className={cn(
+                                           "font-bold text-sm md:text-base",
+                                           !notification.is_read 
+                                             ? "bg-gradient-to-r from-violet-600 via-purple-600 to-blue-600 bg-clip-text text-transparent" 
+                                             : "text-foreground"
+                                         )}
+                                       />
+                                     </div>
                                    {!notification.is_read && (
                                      <div className="relative flex-shrink-0">
                                        <div className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full bg-gradient-to-r from-violet-500 via-purple-500 to-blue-500 animate-pulse" />
@@ -484,7 +488,7 @@ const NotificationsPage = () => {
                                      </div>
                                    )}
                                  </div>
-                                <div className="text-sm text-muted-foreground line-clamp-3 mb-4 leading-relaxed">
+                                <div className="text-xs md:text-sm text-muted-foreground line-clamp-1 md:line-clamp-2 mb-2 md:mb-3 leading-relaxed">
                                   {(() => {
                                     // تنسيق موحد للإشعارات المتعلقة بالطلبات - استخدام النظام الموحد
                                     if (notification.type === 'alwaseet_status_change' || notification.type === 'order_status_update' || notification.type === 'order_status_changed') {
