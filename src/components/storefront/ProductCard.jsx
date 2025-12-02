@@ -1,23 +1,30 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { Badge } from '@/components/ui/badge';
 
 const ProductCard = ({ product }) => {
   const { settings } = useStorefront();
+  const { slug: urlSlug } = useParams();
   
-  // جلب أول variant متاح
-  const availableVariant = product.variants?.find(v => 
-    (v.quantity - (v.reserved_quantity || 0)) > 0
-  );
+  // استخدام slug من URL أو من settings
+  const storeSlug = settings?.slug || urlSlug;
+  
+  // جلب أول variant متاح مع دعم هيكل المخزون
+  const availableVariant = product.variants?.find(v => {
+    const qty = v.inventory?.quantity ?? v.quantity ?? 0;
+    const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+    return (qty - reserved) > 0;
+  });
 
   if (!availableVariant) return null;
 
   const mainImage = availableVariant.images?.[0] || product.image || '/placeholder.png';
   const price = availableVariant.price;
+  const colorName = availableVariant.color?.name || availableVariant.color || '';
 
   return (
-    <Link to={`/storefront/${settings.storefront_slug}/products/${product.id}`}>
+    <Link to={`/storefront/${storeSlug}/products/${product.id}`}>
       <div className="group relative overflow-hidden rounded-lg border border-border bg-card hover:shadow-lg transition-all duration-300">
         {/* صورة المنتج */}
         <div className="aspect-square overflow-hidden bg-muted">

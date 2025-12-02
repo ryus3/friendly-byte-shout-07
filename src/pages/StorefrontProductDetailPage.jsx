@@ -56,10 +56,14 @@ const ProductDetail = () => {
           .from('products')
           .select(`
             *,
+            category:categories(id, name),
+            department:departments(id, name),
             variants:product_variants(
               id,
               color,
               size,
+              color_id,
+              size_id,
               price,
               quantity,
               reserved_quantity,
@@ -85,13 +89,21 @@ const ProductDetail = () => {
         setProduct(productData);
 
         if (productData.variants && productData.variants.length > 0) {
-          const availableVariant = productData.variants.find(v =>
-            (v.quantity - (v.reserved_quantity || 0)) > 0
-          );
+          const availableVariant = productData.variants.find(v => {
+            const qty = v.inventory?.quantity ?? v.quantity ?? 0;
+            const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+            return (qty - reserved) > 0;
+          });
           
           if (availableVariant) {
-            setSelectedColor(availableVariant.color);
-            setSelectedSize(availableVariant.size);
+            const colorVal = typeof availableVariant.color === 'object' 
+              ? availableVariant.color?.name 
+              : availableVariant.color;
+            const sizeVal = typeof availableVariant.size === 'object'
+              ? availableVariant.size?.name
+              : availableVariant.size;
+            setSelectedColor(colorVal);
+            setSelectedSize(sizeVal);
           }
         }
       } catch (err) {
@@ -121,12 +133,15 @@ const ProductDetail = () => {
     updatePrice();
   }, [selectedColor, selectedSize, id, settings?.employee_id, calculateDiscountedPrice]);
 
-  const selectedVariant = product?.variants?.find(
-    v => v.color === selectedColor && v.size === selectedSize
-  );
+  const selectedVariant = product?.variants?.find(v => {
+    const colorVal = typeof v.color === 'object' ? v.color?.name : v.color;
+    const sizeVal = typeof v.size === 'object' ? v.size?.name : v.size;
+    return colorVal === selectedColor && sizeVal === selectedSize;
+  });
 
   const availableStock = selectedVariant
-    ? selectedVariant.quantity - (selectedVariant.reserved_quantity || 0)
+    ? (selectedVariant.inventory?.quantity ?? selectedVariant.quantity ?? 0) - 
+      (selectedVariant.inventory?.reserved_quantity ?? selectedVariant.reserved_quantity ?? 0)
     : 0;
 
   const currentImages = customDescription?.custom_images?.length > 0
@@ -188,12 +203,23 @@ const ProductDetail = () => {
   }
 
   const availableColors = [...new Set(product.variants
-    .filter(v => (v.quantity - (v.reserved_quantity || 0)) > 0)
-    .map(v => v.color))];
+    .filter(v => {
+      const qty = v.inventory?.quantity ?? v.quantity ?? 0;
+      const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+      return (qty - reserved) > 0;
+    })
+    .map(v => typeof v.color === 'object' ? v.color?.name : v.color)
+  )].filter(Boolean);
 
   const availableSizes = product.variants
-    .filter(v => v.color === selectedColor && (v.quantity - (v.reserved_quantity || 0)) > 0)
-    .map(v => v.size);
+    .filter(v => {
+      const colorVal = typeof v.color === 'object' ? v.color?.name : v.color;
+      const qty = v.inventory?.quantity ?? v.quantity ?? 0;
+      const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+      return colorVal === selectedColor && (qty - reserved) > 0;
+    })
+    .map(v => typeof v.size === 'object' ? v.size?.name : v.size)
+    .filter(Boolean);
 
   const discount = finalPrice && selectedVariant?.price ? 
     Math.round(((selectedVariant.price - finalPrice) / selectedVariant.price) * 100) : 0;

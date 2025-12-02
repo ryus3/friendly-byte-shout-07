@@ -1,10 +1,10 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useStorefront } from '@/contexts/StorefrontContext';
+import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
+import StorefrontLayout from '@/components/storefront/StorefrontLayout';
 import { Skeleton } from '@/components/ui/skeleton';
 
-const AboutPage = () => {
-  const { slug } = useParams();
+const AboutContent = () => {
   const { settings, settingsLoading } = useStorefront();
 
   if (settingsLoading) {
@@ -16,7 +16,9 @@ const AboutPage = () => {
     );
   }
 
-  const aboutContent = settings?.about_us || `مرحباً بك في متجر ${settings?.profile?.business_page_name || 'متجرنا'}
+  const businessName = settings?.profile?.business_page_name || settings?.business_name || 'متجرنا';
+  
+  const aboutContent = settings?.about_us || `مرحباً بك في متجر ${businessName}
 
 نحن متجر متخصص في توفير أفضل المنتجات عالية الجودة لعملائنا الكرام.
 نفخر بتقديم تجربة تسوق مميزة ومنتجات منتقاة بعناية.
@@ -71,6 +73,18 @@ const AboutPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const AboutPage = () => {
+  const { slug } = useParams();
+
+  return (
+    <StorefrontProvider slug={slug}>
+      <StorefrontLayout>
+        <AboutContent />
+      </StorefrontLayout>
+    </StorefrontProvider>
   );
 };
 

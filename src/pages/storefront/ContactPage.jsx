@@ -1,13 +1,12 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useStorefront } from '@/contexts/StorefrontContext';
+import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
+import StorefrontLayout from '@/components/storefront/StorefrontLayout';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageCircle, Send, Instagram, Facebook, Mail, Phone } from 'lucide-react';
+import { MessageCircle, Send, Instagram, Facebook } from 'lucide-react';
 import { formatWhatsAppLink } from '@/utils/phoneUtils';
-import { Button } from '@/components/ui/button';
 
-const ContactPage = () => {
-  const { slug } = useParams();
+const ContactContent = () => {
   const { settings, settingsLoading } = useStorefront();
 
   if (settingsLoading) {
@@ -133,6 +132,18 @@ const ContactPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const ContactPage = () => {
+  const { slug } = useParams();
+
+  return (
+    <StorefrontProvider slug={slug}>
+      <StorefrontLayout>
+        <ContactContent />
+      </StorefrontLayout>
+    </StorefrontProvider>
   );
 };
 

@@ -7,25 +7,44 @@ import AnimatedBadge from './ui/AnimatedBadge';
 const PremiumProductCard = ({ product, slug }) => {
   const [isHovered, setIsHovered] = React.useState(false);
   
-  const availableVariant = product.variants?.find(v => 
-    (v.quantity - (v.reserved_quantity || 0)) > 0
-  );
+  // دعم هيكل المخزون المرن
+  const availableVariant = product.variants?.find(v => {
+    const qty = v.inventory?.quantity ?? v.quantity ?? 0;
+    const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+    return (qty - reserved) > 0;
+  });
 
   if (!availableVariant) return null;
 
   const mainImage = availableVariant.images?.[0] || product.image || '/placeholder.png';
   const hoverImage = availableVariant.images?.[1] || mainImage;
   const price = availableVariant.price;
-  const originalPrice = price * 1.4; // Mock discount
+  const originalPrice = price * 1.4;
   const discount = Math.round(((originalPrice - price) / originalPrice) * 100);
   
   const isNew = new Date() - new Date(product.created_at) < 7 * 24 * 60 * 60 * 1000;
-  const isFeatured = Math.random() > 0.7; // Mock featured
-  const rating = 4 + Math.random(); // Mock rating
+  const isFeatured = product.is_featured || Math.random() > 0.7;
+  const rating = 4 + Math.random();
   const reviews = Math.floor(Math.random() * 500) + 10;
 
-  // Mock available colors
-  const colors = availableVariant.color ? [availableVariant.color] : [];
+  // جلب اللون بشكل مرن
+  const colorData = availableVariant.color;
+  const colorName = typeof colorData === 'object' ? colorData?.name : colorData;
+  const colorHex = typeof colorData === 'object' ? colorData?.hex_code : null;
+
+  // جمع الألوان المتاحة
+  const availableColors = product.variants
+    ?.filter(v => {
+      const qty = v.inventory?.quantity ?? v.quantity ?? 0;
+      const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+      return (qty - reserved) > 0;
+    })
+    ?.map(v => {
+      const c = v.color;
+      return typeof c === 'object' ? c : { name: c, hex_code: null };
+    })
+    ?.filter((c, i, arr) => arr.findIndex(x => x.name === c.name) === i)
+    ?.slice(0, 5) || [];
 
   return (
     <div
@@ -86,7 +105,7 @@ const PremiumProductCard = ({ product, slug }) => {
       <div className="p-5 space-y-3">
         {/* Category */}
         <span className="text-xs bg-gradient-to-r from-purple-500 to-pink-500 bg-clip-text text-transparent font-semibold uppercase">
-          {product.category_name || product.department_name || 'عام'}
+          {product.category?.name || product.department?.name || 'عام'}
         </span>
 
         {/* Title */}
@@ -125,9 +144,9 @@ const PremiumProductCard = ({ product, slug }) => {
         </div>
 
         {/* Colors Preview */}
-        {colors.length > 0 && (
+        {availableColors.length > 0 && (
           <div className="flex gap-2">
-            {colors.slice(0, 5).map((color, idx) => (
+            {availableColors.map((color, idx) => (
               <div
                 key={idx}
                 className="w-6 h-6 rounded-full border-2 border-gray-200 hover:scale-125 transition-transform cursor-pointer shadow-sm"
@@ -135,11 +154,6 @@ const PremiumProductCard = ({ product, slug }) => {
                 title={color.name}
               />
             ))}
-            {colors.length > 5 && (
-              <div className="w-6 h-6 rounded-full border-2 border-gray-200 flex items-center justify-center text-xs font-bold text-gray-500">
-                +{colors.length - 5}
-              </div>
-            )}
           </div>
         )}
       </div>

@@ -1,11 +1,11 @@
 import React from 'react';
 import { useParams } from 'react-router-dom';
-import { useStorefront } from '@/contexts/StorefrontContext';
+import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
+import StorefrontLayout from '@/components/storefront/StorefrontLayout';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RotateCcw } from 'lucide-react';
 
-const ReturnPolicyPage = () => {
-  const { slug } = useParams();
+const ReturnContent = () => {
   const { settings, settingsLoading } = useStorefront();
 
   if (settingsLoading) {
@@ -84,6 +84,18 @@ const ReturnPolicyPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const ReturnPolicyPage = () => {
+  const { slug } = useParams();
+
+  return (
+    <StorefrontProvider slug={slug}>
+      <StorefrontLayout>
+        <ReturnContent />
+      </StorefrontLayout>
+    </StorefrontProvider>
   );
 };
 
