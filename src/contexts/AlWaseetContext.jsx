@@ -2004,20 +2004,80 @@ export const AlWaseetProvider = ({ children }) => {
           }
         }
         
-        // تسجيل خروج تلقائي عند انتهاء الصلاحية
-        if (expiresAt <= now) {
-          devLog.log('⚠️ انتهت صلاحية التوكن. تسجيل خروج تلقائي...');
-          setToken(null);
-          setWaseetUser(null);
-          setIsLoggedIn(false);
+        // ✅ تجديد تلقائي للتوكن قبل 12 ساعة من انتهاء الصلاحية أو عند انتهائها
+        if (hoursUntilExpiry <= 12) {
+          devLog.log(`🔄 تجديد تلقائي للتوكن (باقي ${hoursUntilExpiry} ساعة)...`);
           
-          const partnerDisplayName = deliveryPartners[activePartner]?.name || activePartner;
-          toast({
-            title: "انتهت صلاحية تسجيل الدخول",
-            description: `يرجى تسجيل الدخول مرة أخرى إلى ${partnerDisplayName}`,
-            variant: "destructive",
-            duration: 8000
-          });
+          try {
+            // جلب بيانات الحساب (username + password المشفرة)
+            const { data: accountData, error: fetchError } = await supabase
+              .from('delivery_partner_tokens')
+              .select('account_username, credentials')
+              .eq('user_id', user.id)
+              .eq('token', token)
+              .single();
+            
+            if (fetchError) throw fetchError;
+            
+            if (accountData?.credentials?.password) {
+              devLog.log('🔐 استخدام كلمة المرور المحفوظة للتجديد...');
+              
+              // استدعاء تسجيل الدخول للحصول على توكن جديد
+              const newTokenData = await AlWaseetAPI.loginToWaseet(
+                accountData.account_username,
+                accountData.credentials.password
+              );
+              
+              if (!newTokenData?.token) {
+                throw new Error('لم يتم الحصول على توكن جديد');
+              }
+              
+              // تحديث التوكن في قاعدة البيانات
+              const newExpiryDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+              const { error: updateError } = await supabase
+                .from('delivery_partner_tokens')
+                .update({
+                  token: newTokenData.token,
+                  expires_at: newExpiryDate.toISOString(),
+                  last_used_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id)
+                .eq('account_username', accountData.account_username);
+              
+              if (updateError) throw updateError;
+              
+              // تحديث الحالة المحلية
+              setToken(newTokenData.token);
+              setTokenExpiry(newExpiryDate);
+              
+              devLog.log('✅ تم تجديد التوكن تلقائياً بنجاح');
+              
+              toast({
+                title: "✅ تم تجديد التوكن تلقائياً",
+                description: `تم تجديد صلاحية الحساب لـ 7 أيام جديدة`,
+                variant: "default",
+                duration: 5000
+              });
+            } else {
+              throw new Error('كلمة المرور غير متوفرة للتجديد التلقائي');
+            }
+          } catch (error) {
+            // فشل التجديد التلقائي - تسجيل خروج
+            console.error('❌ فشل التجديد التلقائي:', error);
+            devLog.log('⚠️ فشل التجديد التلقائي. تسجيل خروج...');
+            
+            setToken(null);
+            setWaseetUser(null);
+            setIsLoggedIn(false);
+            
+            const partnerDisplayName = deliveryPartners[activePartner]?.name || activePartner;
+            toast({
+              title: "⚠️ فشل التجديد التلقائي",
+              description: `يرجى تسجيل الدخول يدوياً إلى ${partnerDisplayName}`,
+              variant: "destructive",
+              duration: 8000
+            });
+          }
         }
       } catch (error) {
         console.error('❌ خطأ في فحص صلاحية التوكن:', error);
