@@ -50,7 +50,7 @@ const StorefrontProductsManagePage = () => {
             images,
             color:colors(id, name, hex_code),
             size:sizes(id, name),
-            inventory(quantity, reserved_quantity)
+            inventory!inventory_variant_id_fkey(quantity, reserved_quantity)
           )
         `)
         .eq('is_active', true);
