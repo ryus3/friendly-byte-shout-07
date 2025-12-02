@@ -892,11 +892,11 @@ const NotificationsPanel = () => {
                                   })();
                                   
                                   // استخدام ScrollingText للعناوين الطويلة
-                                  return titleText.length > 20 ? (
+                                  return titleText.length > 18 ? (
                                     <ScrollingText 
                                       text={titleText} 
                                       className={cn("font-semibold text-sm leading-tight", colors.text)}
-                                      maxWidth="200px"
+                                      maxWidth="160px"
                                     />
                                   ) : (
                                     <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
