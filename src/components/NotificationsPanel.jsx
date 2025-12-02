@@ -896,7 +896,7 @@ const NotificationsPanel = () => {
                                     <ScrollingText 
                                       text={titleText} 
                                       className={cn("font-semibold text-sm leading-tight", colors.text)}
-                                      maxWidth="150px"
+                                      maxWidth="200px"
                                     />
                                   ) : (
                                     <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
