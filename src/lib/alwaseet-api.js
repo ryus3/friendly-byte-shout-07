@@ -371,3 +371,33 @@ export const getOrderByQR = async (token, qrId) => {
     return null;
   }
 };
+
+// ✅ تسجيل الدخول للحصول على توكن جديد
+export const loginToWaseet = async (username, password) => {
+  const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {
+    body: {
+      endpoint: 'login',
+      method: 'POST',
+      payload: { username, password }
+    }
+  });
+
+  if (error) {
+    let errorMessage = 'فشل الاتصال بالخادم.';
+    try {
+      const errorBody = await error.context.json();
+      errorMessage = errorBody.msg || errorMessage;
+    } catch {}
+    throw new Error(errorMessage);
+  }
+  
+  if (!data) {
+    throw new Error('لم يتم استلام رد من الخادم.');
+  }
+  
+  if (data.errNum !== "S000" || !data.status) {
+    throw new Error(data.msg || 'فشل تسجيل الدخول. تحقق من البيانات.');
+  }
+
+  return data.data; // يحتوي على { token, merchant_id, ... }
+};
