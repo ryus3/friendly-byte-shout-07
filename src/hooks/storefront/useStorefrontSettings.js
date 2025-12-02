@@ -59,7 +59,7 @@ export const useStorefrontSettings = (slug) => {
           event: '*',
           schema: 'public',
           table: 'employee_storefront_settings',
-          filter: `storefront_slug=eq.${slug}`
+          filter: `slug=eq.${slug}`
         },
         (payload) => {
           if (payload.eventType === 'UPDATE') {
