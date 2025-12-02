@@ -46,18 +46,21 @@ const StorefrontProductsManagePage = () => {
           *,
           variants:product_variants(
             id,
-            color,
-            size,
             price,
-            quantity,
-            reserved_quantity,
-            images
+            images,
+            color:colors(id, name, hex_code),
+            size:sizes(id, name),
+            inventory(quantity, reserved_quantity)
           )
         `)
         .eq('is_active', true);
 
       const available = data?.filter(p =>
-        p.variants?.some(v => (v.quantity - (v.reserved_quantity || 0)) > 0)
+        p.variants?.some(v => {
+          const qty = v.inventory?.quantity || 0;
+          const reserved = v.inventory?.reserved_quantity || 0;
+          return (qty - reserved) > 0;
+        })
       ) || [];
 
       setProducts(available);
