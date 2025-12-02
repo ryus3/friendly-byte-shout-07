@@ -61,14 +61,11 @@ const StorefrontProducts = () => {
             department:departments(id, name),
             variants:product_variants(
               id,
-              color,
-              size,
-              color_id,
-              size_id,
               price,
-              quantity,
-              reserved_quantity,
-              images
+              images,
+              color:colors(id, name, hex_code),
+              size:sizes(id, name),
+              inventory(quantity, reserved_quantity)
             )
           `)
           .eq('is_active', true);
@@ -128,14 +125,14 @@ const StorefrontProducts = () => {
     // فلتر الألوان
     if (filters.colors.length > 0) {
       result = result.filter(p =>
-        p.variants.some(v => filters.colors.includes(v.color))
+        p.variants.some(v => filters.colors.includes(v.color?.name))
       );
     }
 
     // فلتر الأحجام
     if (filters.sizes.length > 0) {
       result = result.filter(p =>
-        p.variants.some(v => filters.sizes.includes(v.size))
+        p.variants.some(v => filters.sizes.includes(v.size?.name))
       );
     }
 

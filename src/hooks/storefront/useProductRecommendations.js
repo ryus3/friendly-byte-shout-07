@@ -27,12 +27,11 @@ export const useProductRecommendations = (productId, categoryId, departmentId) =
             department:departments(id, name),
             variants:product_variants(
               id,
-              color,
-              size,
               price,
-              quantity,
-              reserved_quantity,
-              images
+              images,
+              color:colors(id, name, hex_code),
+              size:sizes(id, name),
+              inventory(quantity, reserved_quantity)
             )
           `)
           .neq('id', productId)

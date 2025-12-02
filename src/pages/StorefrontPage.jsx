@@ -58,12 +58,11 @@ const StorefrontHome = () => {
               department:departments(id, name),
               variants:product_variants(
                 id,
-                color,
-                size,
                 price,
-                quantity,
-                reserved_quantity,
-                images
+                images,
+                color:colors(id, name, hex_code),
+                size:sizes(id, name),
+                inventory(quantity, reserved_quantity)
               )
             `)
             .in('id', productIds)
@@ -89,12 +88,11 @@ const StorefrontHome = () => {
               department:departments(id, name),
               variants:product_variants(
                 id,
-                color,
-                size,
                 price,
-                quantity,
-                reserved_quantity,
-                images
+                images,
+                color:colors(id, name, hex_code),
+                size:sizes(id, name),
+                inventory(quantity, reserved_quantity)
               )
             `)
             .eq('is_active', true)

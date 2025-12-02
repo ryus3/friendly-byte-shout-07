@@ -60,14 +60,11 @@ const ProductDetail = () => {
             department:departments(id, name),
             variants:product_variants(
               id,
-              color,
-              size,
-              color_id,
-              size_id,
               price,
-              quantity,
-              reserved_quantity,
-              images
+              images,
+              color:colors(id, name, hex_code),
+              size:sizes(id, name),
+              inventory(quantity, reserved_quantity)
             )
           `)
           .eq('id', id)
