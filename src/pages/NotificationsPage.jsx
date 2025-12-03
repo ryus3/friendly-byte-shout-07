@@ -472,7 +472,7 @@ const NotificationsPage = () => {
                                          // العنوان الافتراضي
                                          return notification.title || 'إشعار جديد';
                                        })()}
-                                         maxWidth="100%"
+                                         maxWidth="200px"
                                          className={cn(
                                            "font-bold text-sm md:text-base",
                                            !notification.is_read 
