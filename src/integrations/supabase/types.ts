@@ -6465,6 +6465,22 @@ export type Database = {
         Args: { p_full_name: string; p_user_id: string }
         Returns: Json
       }
+      audit_inventory_accuracy: {
+        Args: never
+        Returns: {
+          calculated_reserved: number
+          calculated_sold: number
+          color_name: string
+          current_reserved: number
+          current_sold: number
+          has_discrepancy: boolean
+          product_name: string
+          reserved_diff: number
+          size_value: string
+          sold_diff: number
+          variant_id: string
+        }[]
+      }
       auth_with_username: {
         Args: { password_input: string; username_input: string }
         Returns: {
@@ -6704,6 +6720,17 @@ export type Database = {
         }[]
       }
       fix_incorrect_price_increase_v2: { Args: never; Returns: Json }
+      fix_inventory_discrepancies: {
+        Args: never
+        Returns: {
+          fixed_variant_id: string
+          new_reserved: number
+          new_sold: number
+          old_reserved: number
+          old_sold: number
+          product_name: string
+        }[]
+      }
       fix_partial_delivery_financials_112066293: { Args: never; Returns: Json }
       fix_regions_cities_linking: { Args: never; Returns: Json }
       generate_customer_promo_code: {
