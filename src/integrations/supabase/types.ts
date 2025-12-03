@@ -7278,6 +7278,10 @@ export type Database = {
         Returns: Json
       }
       refresh_main_cash_balance: { Args: never; Returns: undefined }
+      release_reservation_only: {
+        Args: { p_quantity: number; p_variant_id: string }
+        Returns: undefined
+      }
       release_reserved_stock: {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
         Returns: Json
