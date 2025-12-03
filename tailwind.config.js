@@ -286,7 +286,7 @@ module.exports = {
         "syncSpin": "syncSpin 1s linear infinite",
         "wiggle": "wiggle 0.5s ease-in-out",
         "magneticField": "magneticField 3s ease-in-out infinite",
-        "scroll-text": "scroll-text 8s ease-in-out infinite",
+        "scroll-text": "scroll-text 8s linear infinite",
         "loading": "loading 1.5s ease-in-out infinite",
       },
     },
