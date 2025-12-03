@@ -1052,7 +1052,8 @@ export const AlWaseetProvider = ({ children }) => {
                   console.error('❌ [RETURN-17] خطأ في استدعاء handleReturnStatusChange:', error);
                 }
               } else if (newDeliveryStatus === '31' || newDeliveryStatus === '32') {
-                newStatus = 'cancelled';
+                // ✅ مرفوض - يبقى محجوز حتى يرجع فعلياً (delivery_status = 17)
+                newStatus = 'returned';
               }
               // ✅ الأولوية 4: استخدام statusConfig
               else {
