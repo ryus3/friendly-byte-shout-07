@@ -1128,6 +1128,12 @@ export const AlWaseetProvider = ({ children }) => {
                   updated_at: new Date().toISOString()
                 };
 
+                // ✅ تحويل order_type فوراً عند الحالة 21 لأول مرة
+                if (newDeliveryStatus === '21' && localOrder.order_type !== 'partial_delivery') {
+                  updates.order_type = 'partial_delivery';
+                  console.log(`🔄 [PARTIAL-DELIVERY] تحويل نوع الطلب ${localOrder.tracking_number} إلى partial_delivery`);
+                }
+
                 // ✅ مزامنة المدينة/المنطقة من شركة التوصيل (بدون استهلاك API إضافي)
                 if (remoteOrder.city_name && localOrder.customer_city !== remoteOrder.city_name) {
                   updates.customer_city = remoteOrder.city_name;

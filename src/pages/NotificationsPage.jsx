@@ -434,8 +434,8 @@ const NotificationsPage = () => {
                               
                               <div className="flex-1 min-w-0">
                                   <div className="flex items-center gap-2 mb-1 md:mb-2">
-                                     <div className="flex-1 min-w-0">
-                                       <ScrollingText 
+                                     <div className="flex-1 min-w-0 max-w-[calc(100vw-140px)] md:max-w-none">
+                                       <ScrollingText
                                          text={(() => {
                                         // ✅ تخصيص العنوان لإشعارات تحديث حالة الطلب
                                         if (notification.type === 'alwaseet_status_change' || notification.type === 'order_status_update' || notification.type === 'order_status_changed') {
