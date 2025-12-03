@@ -7454,10 +7454,10 @@ export type Database = {
       }
       update_order_reservation_status: {
         Args: {
-          p_delivery_partner?: string
-          p_new_delivery_status?: string
-          p_new_status: string
+          p_delivery_partner: string
+          p_delivery_status: string
           p_order_id: string
+          p_status: string
         }
         Returns: Json
       }
