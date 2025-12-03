@@ -55,12 +55,14 @@ const ScrollingText = ({ text, className = "", maxWidth = "150px" }) => {
         ref={textRef}
         className="animate-scroll-text whitespace-nowrap inline-block"
         style={{
-          animationDuration: '6s',
+          animationDuration: '8s',
           animationDelay: '0s',
           animationIterationCount: 'infinite',
           animationTimingFunction: 'linear'
         }}
       >
+        {text}
+        <span className="mx-8">&nbsp;&nbsp;&nbsp;</span>
         {text}
       </span>
     </div>

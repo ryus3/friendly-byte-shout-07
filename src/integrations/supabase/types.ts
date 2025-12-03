@@ -6885,10 +6885,8 @@ export type Database = {
       get_products_sold_stats: {
         Args: never
         Returns: {
-          last_sold_date: string
           orders_count: number
-          sold_quantity: number
-          total_cost: number
+          total_quantity_sold: number
           total_revenue: number
           variant_id: string
         }[]
