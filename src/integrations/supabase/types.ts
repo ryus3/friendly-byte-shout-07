@@ -2078,6 +2078,7 @@ export type Database = {
           discount_start_date: string | null
           display_order: number | null
           employee_id: string
+          hashtags: string[] | null
           id: string
           is_custom_product: boolean | null
           is_featured: boolean | null
@@ -2098,6 +2099,7 @@ export type Database = {
           discount_start_date?: string | null
           display_order?: number | null
           employee_id: string
+          hashtags?: string[] | null
           id?: string
           is_custom_product?: boolean | null
           is_featured?: boolean | null
@@ -2118,6 +2120,7 @@ export type Database = {
           discount_start_date?: string | null
           display_order?: number | null
           employee_id?: string
+          hashtags?: string[] | null
           id?: string
           is_custom_product?: boolean | null
           is_featured?: boolean | null

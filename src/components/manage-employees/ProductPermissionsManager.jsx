@@ -13,7 +13,20 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import { Package, Palette, Ruler, Building, Tag, Calendar, CheckCircle, XCircle, Store, Search, Plus, Trash2 } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Package, Palette, Ruler, Building, Tag, Calendar, CheckCircle, XCircle, Store, Search, Plus, Trash2, ChevronDown, Check } from 'lucide-react';
 import { useFiltersData } from '@/hooks/useFiltersData';
 
 const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) => {
@@ -33,6 +46,11 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
   const [allProducts, setAllProducts] = useState([]);
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(false);
+  
+  // حالات Multi-select dropdown
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [selectedProducts, setSelectedProducts] = useState([]);
+  const [dropdownSearch, setDropdownSearch] = useState('');
 
   const [availableOptions, setAvailableOptions] = useState({
     categories: [],
@@ -120,7 +138,18 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
           product_id,
           is_active,
           added_at,
-          product:products(id, name, images, base_price)
+          product:products(
+            id, 
+            name, 
+            images, 
+            base_price,
+            variants:product_variants(
+              id,
+              color:colors(id, name, hex_code),
+              size:sizes(id, name),
+              inventory!inventory_variant_id_fkey(quantity, reserved_quantity)
+            )
+          )
         `)
         .eq('employee_id', selectedUser.user_id);
 
@@ -137,7 +166,18 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
       setLoadingProducts(true);
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, images, base_price')
+        .select(`
+          id, 
+          name, 
+          images, 
+          base_price,
+          variants:product_variants(
+            id,
+            color:colors(id, name, hex_code),
+            size:sizes(id, name),
+            inventory!inventory_variant_id_fkey(quantity, reserved_quantity)
+          )
+        `)
         .eq('is_active', true)
         .order('name');
 
@@ -150,7 +190,7 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
     }
   };
 
-  // إضافة منتج للقائمة المسموحة
+  // إضافة منتج واحد للقائمة المسموحة
   const addAllowedProduct = async (productId) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -177,6 +217,47 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
       console.error('خطأ في إضافة المنتج:', error);
       toast({ title: 'خطأ في إضافة المنتج', variant: 'destructive' });
     }
+  };
+
+  // إضافة عدة منتجات دفعة واحدة
+  const addSelectedProducts = async () => {
+    if (selectedProducts.length === 0) {
+      toast({ title: 'اختر منتجات أولاً', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const productsToInsert = selectedProducts.map(productId => ({
+        employee_id: selectedUser.user_id,
+        product_id: productId,
+        added_by: user.id
+      }));
+
+      const { error } = await supabase
+        .from('employee_allowed_products')
+        .upsert(productsToInsert, { onConflict: 'employee_id,product_id', ignoreDuplicates: true });
+
+      if (error) throw error;
+
+      toast({ title: `تمت إضافة ${selectedProducts.length} منتج بنجاح` });
+      setSelectedProducts([]);
+      setDropdownOpen(false);
+      await fetchAllowedProducts();
+    } catch (error) {
+      console.error('خطأ في إضافة المنتجات:', error);
+      toast({ title: 'خطأ في إضافة المنتجات', variant: 'destructive' });
+    }
+  };
+
+  // تبديل اختيار منتج في dropdown
+  const toggleProductSelection = (productId) => {
+    setSelectedProducts(prev => 
+      prev.includes(productId) 
+        ? prev.filter(id => id !== productId)
+        : [...prev, productId]
+    );
   };
 
   // حذف منتج من القائمة المسموحة
@@ -264,6 +345,31 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
     }
   };
 
+  // حساب الألوان والقياسات المتاحة لمنتج
+  const getAvailableVariants = (product) => {
+    const colors = new Map();
+    const sizes = new Map();
+    
+    product?.variants?.forEach(v => {
+      const qty = v.inventory?.quantity || 0;
+      const reserved = v.inventory?.reserved_quantity || 0;
+      const available = qty - reserved;
+      
+      if (available > 0) {
+        if (v.color?.name) {
+          const existing = colors.get(v.color.name) || { count: 0, hex: v.color.hex_code };
+          colors.set(v.color.name, { count: existing.count + available, hex: existing.hex });
+        }
+        if (v.size?.name) {
+          const existing = sizes.get(v.size.name) || 0;
+          sizes.set(v.size.name, existing + available);
+        }
+      }
+    });
+    
+    return { colors: Array.from(colors.entries()), sizes: Array.from(sizes.entries()) };
+  };
+
   const permissionTabs = [
     { key: 'storefront', label: 'منتجات المتجر', icon: Store, isStorefront: true },
     { key: 'category', label: 'التصنيفات', icon: Tag, options: availableOptions.categories },
@@ -274,10 +380,17 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
     { key: 'season_occasion', label: 'المواسم', icon: Calendar, options: availableOptions.seasons_occasions }
   ];
 
-  // فلترة المنتجات للبحث
+  // فلترة المنتجات للبحث (المنتجات غير المضافة)
   const filteredProducts = allProducts.filter(p => {
     const isNotAllowed = !allowedProducts.some(ap => ap.product_id === p.id);
     const matchesSearch = p.name?.toLowerCase().includes(productSearchTerm.toLowerCase());
+    return isNotAllowed && matchesSearch;
+  });
+
+  // فلترة المنتجات للـ dropdown
+  const dropdownFilteredProducts = allProducts.filter(p => {
+    const isNotAllowed = !allowedProducts.some(ap => ap.product_id === p.id);
+    const matchesSearch = p.name?.toLowerCase().includes(dropdownSearch.toLowerCase());
     return isNotAllowed && matchesSearch;
   });
 
@@ -344,9 +457,98 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
-              {/* البحث وإضافة منتجات */}
+              {/* Multi-select Dropdown لإضافة منتجات متعددة */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">إضافة منتجات جديدة</h4>
+                
+                <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="w-full justify-between border-2 border-purple-200 hover:border-purple-400"
+                    >
+                      <span className="flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        {selectedProducts.length > 0 
+                          ? `${selectedProducts.length} منتج محدد`
+                          : 'اختر المنتجات للإضافة...'
+                        }
+                      </span>
+                      <ChevronDown className="h-4 w-4 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput 
+                        placeholder="ابحث عن منتج..." 
+                        value={dropdownSearch}
+                        onValueChange={setDropdownSearch}
+                      />
+                      <CommandList className="max-h-60">
+                        <CommandEmpty>لا توجد منتجات مطابقة</CommandEmpty>
+                        <CommandGroup>
+                          {dropdownFilteredProducts.slice(0, 50).map(product => {
+                            const isSelected = selectedProducts.includes(product.id);
+                            const { colors, sizes } = getAvailableVariants(product);
+                            
+                            return (
+                              <CommandItem
+                                key={product.id}
+                                onSelect={() => toggleProductSelection(product.id)}
+                                className="cursor-pointer"
+                              >
+                                <div className="flex items-center gap-3 w-full">
+                                  <Checkbox 
+                                    checked={isSelected}
+                                    className="pointer-events-none"
+                                  />
+                                  {product.images?.[0] && (
+                                    <img src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-medium text-sm truncate">{product.name}</p>
+                                    <div className="flex flex-wrap gap-1 mt-1">
+                                      {colors.slice(0, 3).map(([name, { hex }]) => (
+                                        <span 
+                                          key={name} 
+                                          className="w-4 h-4 rounded-full border border-gray-300"
+                                          style={{ backgroundColor: hex || '#ccc' }}
+                                          title={name}
+                                        />
+                                      ))}
+                                      {sizes.slice(0, 3).map(([name]) => (
+                                        <span key={name} className="text-[10px] bg-muted px-1 rounded">{name}</span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                  <span className="text-xs text-muted-foreground">
+                                    {product.base_price?.toLocaleString('ar-IQ')} IQD
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                    {selectedProducts.length > 0 && (
+                      <div className="p-2 border-t">
+                        <Button 
+                          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white"
+                          onClick={addSelectedProducts}
+                        >
+                          <Plus className="h-4 w-4 ml-2" />
+                          إضافة {selectedProducts.length} منتج
+                        </Button>
+                      </div>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* البحث المباشر (يبقى موجوداً) */}
+              <div className="space-y-3">
+                <h4 className="text-sm font-medium">أو ابحث وأضف منتج واحد</h4>
                 <div className="relative">
                   <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -359,30 +561,48 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
                 
                 {productSearchTerm && (
                   <div className="max-h-48 overflow-y-auto border rounded-lg divide-y">
-                    {filteredProducts.slice(0, 10).map(product => (
-                      <div 
-                        key={product.id}
-                        className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
-                      >
-                      <div className="flex items-center gap-3">
-                          {product.images?.[0] && (
-                            <img src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
-                          )}
-                          <div>
-                            <p className="font-medium text-sm">{product.name}</p>
-                            <p className="text-xs text-muted-foreground">{product.base_price?.toLocaleString('ar-IQ')} IQD</p>
-                          </div>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={() => addAllowedProduct(product.id)}
+                    {filteredProducts.slice(0, 10).map(product => {
+                      const { colors, sizes } = getAvailableVariants(product);
+                      
+                      return (
+                        <div 
+                          key={product.id}
+                          className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
                         >
-                          <Plus className="h-4 w-4 ml-1" />
-                          إضافة
-                        </Button>
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-3">
+                            {product.images?.[0] && (
+                              <img src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
+                            )}
+                            <div>
+                              <p className="font-medium text-sm">{product.name}</p>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {colors.slice(0, 3).map(([name, { count, hex }]) => (
+                                  <span 
+                                    key={name} 
+                                    className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1"
+                                    style={{ backgroundColor: hex ? `${hex}20` : '#f0f0f0' }}
+                                  >
+                                    <span 
+                                      className="w-2 h-2 rounded-full"
+                                      style={{ backgroundColor: hex || '#ccc' }}
+                                    />
+                                    {name} ({count})
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => addAllowedProduct(product.id)}
+                          >
+                            <Plus className="h-4 w-4 ml-1" />
+                            إضافة
+                          </Button>
+                        </div>
+                      );
+                    })}
                     {filteredProducts.length === 0 && (
                       <p className="text-center py-4 text-muted-foreground text-sm">
                         لا توجد منتجات مطابقة
@@ -392,7 +612,7 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
                 )}
               </div>
 
-              {/* قائمة المنتجات المسموحة */}
+              {/* قائمة المنتجات المسموحة مع الألوان والقياسات */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">
                   المنتجات المسموحة ({allowedProducts.length})
@@ -405,31 +625,67 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
                     <p className="text-xs text-muted-foreground">ابحث وأضف منتجات للموظف</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-80 overflow-y-auto">
-                    {allowedProducts.map(ap => (
-                      <div 
-                        key={ap.id}
-                        className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border"
-                      >
-                        <div className="flex items-center gap-3">
-                          {ap.product?.images?.[0] && (
-                            <img src={ap.product.images[0]} alt="" className="w-12 h-12 rounded object-cover" />
-                          )}
-                          <div>
-                            <p className="font-medium text-sm">{ap.product?.name || 'منتج محذوف'}</p>
-                            <p className="text-xs text-muted-foreground">{ap.product?.base_price?.toLocaleString('ar-IQ')} IQD</p>
-                          </div>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="ghost"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => removeAllowedProduct(ap.id)}
+                  <div className="grid grid-cols-1 gap-3 max-h-80 overflow-y-auto">
+                    {allowedProducts.map(ap => {
+                      const { colors, sizes } = getAvailableVariants(ap.product);
+                      
+                      return (
+                        <div 
+                          key={ap.id}
+                          className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border"
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            {ap.product?.images?.[0] && (
+                              <img src={ap.product.images[0]} alt="" className="w-14 h-14 rounded object-cover" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm">{ap.product?.name || 'منتج محذوف'}</p>
+                              <p className="text-xs text-muted-foreground">{ap.product?.base_price?.toLocaleString('ar-IQ')} IQD</p>
+                              
+                              {/* عرض الألوان المتاحة */}
+                              {colors.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  <span className="text-[10px] text-muted-foreground">الألوان:</span>
+                                  {colors.map(([name, { count, hex }]) => (
+                                    <span 
+                                      key={name} 
+                                      className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1"
+                                      style={{ backgroundColor: hex ? `${hex}20` : '#f0f0f0' }}
+                                    >
+                                      <span 
+                                        className="w-2 h-2 rounded-full"
+                                        style={{ backgroundColor: hex || '#ccc' }}
+                                      />
+                                      {name} ({count})
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* عرض القياسات المتاحة */}
+                              {sizes.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  <span className="text-[10px] text-muted-foreground">القياسات:</span>
+                                  {sizes.map(([name, count]) => (
+                                    <span key={name} className="text-[10px] bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
+                                      {name} ({count})
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => removeAllowedProduct(ap.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -454,75 +710,63 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
                       </p>
                     </div>
                   </div>
-                  <Badge variant={permissions[tab.key]?.has_full_access ? "default" : "secondary"}>
-                    {permissions[tab.key]?.has_full_access ? "وصول كامل" : "وصول محدود"}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-gradient-to-r from-primary/5 to-primary/10 rounded-xl border border-primary/20">
-                  <div className="flex items-center space-x-3 space-x-reverse">
-                    <Checkbox
-                      id={`${tab.key}-full-access`}
-                      checked={permissions[tab.key]?.has_full_access}
-                      onCheckedChange={(checked) => 
-                        updatePermission(tab.key, 'has_full_access', checked)
-                      }
-                    />
-                    <label
-                      htmlFor={`${tab.key}-full-access`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                    >
-                      وصول كامل لجميع {tab.label}
-                    </label>
-                  </div>
-                  {permissions[tab.key]?.has_full_access ? (
-                    <Badge variant="default" className="bg-green-600">
-                      <CheckCircle className="h-3 w-3 ml-1" />
-                      مفعل
-                    </Badge>
-                  ) : (
-                    <Badge variant="outline">
-                      <XCircle className="h-3 w-3 ml-1" />
-                      محدود
+                  {permissions[tab.key]?.has_full_access && (
+                    <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      صلاحية كاملة
                     </Badge>
                   )}
-                </div>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-6 space-y-4">
+                <label className="flex items-center space-x-2 space-x-reverse cursor-pointer p-3 rounded-lg border-2 hover:bg-muted/50 transition-colors">
+                  <Checkbox
+                    checked={permissions[tab.key]?.has_full_access || false}
+                    onCheckedChange={(checked) => updatePermission(tab.key, 'has_full_access', checked)}
+                  />
+                  <div className="flex-1">
+                    <span className="font-medium">صلاحية كاملة</span>
+                    <p className="text-xs text-muted-foreground">السماح بالوصول لجميع {tab.label}</p>
+                  </div>
+                  {permissions[tab.key]?.has_full_access ? (
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <XCircle className="h-5 w-5 text-muted-foreground/30" />
+                  )}
+                </label>
 
                 {!permissions[tab.key]?.has_full_access && (
-                  <div>
-                    <h4 className="text-sm font-medium mb-3">
-                      اختيار {tab.label} محددة ({permissions[tab.key]?.allowed_items?.length || 0} من {tab.options?.length || 0})
-                    </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 max-h-60 overflow-y-auto">
-                      {tab.options?.map(option => (
-                        <div
-                          key={option.id}
-                          className="flex items-center space-x-2 space-x-reverse p-2 rounded border hover:bg-muted/50"
-                        >
-                          <Checkbox
-                            id={`${tab.key}-${option.id}`}
-                            checked={permissions[tab.key]?.allowed_items?.includes(option.id)}
-                            onCheckedChange={() => toggleAllowedItem(tab.key, option.id)}
-                          />
-                          <label
-                            htmlFor={`${tab.key}-${option.id}`}
-                            className="text-sm cursor-pointer flex-1"
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      أو اختر {tab.label} المحددة:
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-60 overflow-y-auto p-2">
+                      {(tab.options || []).map(option => {
+                        const isSelected = permissions[tab.key]?.allowed_items?.includes(option.id);
+                        return (
+                          <label 
+                            key={option.id}
+                            className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all ${
+                              isSelected 
+                                ? 'border-primary bg-primary/5' 
+                                : 'border-muted hover:border-muted-foreground/30'
+                            }`}
                           >
-                            {option.name}
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={() => toggleAllowedItem(tab.key, option.id)}
+                            />
+                            <span className="text-sm truncate">{option.name}</span>
                           </label>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
+                    {permissions[tab.key]?.allowed_items?.length > 0 && (
+                      <p className="text-xs text-muted-foreground text-center">
+                        {permissions[tab.key].allowed_items.length} عنصر محدد
+                      </p>
+                    )}
                   </div>
                 )}
-
-                <div className="text-xs text-muted-foreground">
-                  {permissions[tab.key]?.has_full_access 
-                    ? `الموظف يستطيع رؤية جميع ${tab.label} (${tab.options?.length || 0} عنصر)`
-                    : `الموظف يستطيع رؤية ${permissions[tab.key]?.allowed_items?.length || 0} من ${tab.options?.length || 0} عنصر`
-                  }
-                </div>
               </CardContent>
             </Card>
           </TabsContent>
