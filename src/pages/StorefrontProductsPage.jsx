@@ -102,7 +102,7 @@ const StorefrontProducts = () => {
       const searchLower = filters.search.toLowerCase();
       result = result.filter(p => 
         p.name?.toLowerCase().includes(searchLower) ||
-        p.brand?.toLowerCase().includes(searchLower)
+        p.description?.toLowerCase().includes(searchLower)
       );
     }
 
