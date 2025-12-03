@@ -995,20 +995,14 @@ export const AlWaseetProvider = ({ children }) => {
                     deliveryFeeAllocated: partialHistory.delivery_fee_allocated
                   });
                   
-                  // تحديث في orderUpdates
-                  const existingUpdate = orderUpdates.find(u => u.id === localOrder.id);
-                  if (existingUpdate) {
-                    existingUpdate.final_amount = partialHistory.delivered_revenue;
-                    existingUpdate.discount = 0;
-                  } else {
-                    orderUpdates.push({
-                      id: localOrder.id,
+                  // ✅ تحديث مباشر لقاعدة البيانات بدلاً من orderUpdates غير المعرّف
+                  await supabase
+                    .from('orders')
+                    .update({ 
                       final_amount: partialHistory.delivered_revenue,
-                      discount: 0,
-                      delivery_status: newDeliveryStatus,
-                      updated_at: newOrder.updated_at || new Date().toISOString()
-                    });
-                  }
+                      discount: 0
+                    })
+                    .eq('id', localOrder.id);
                 }
               }
               // ✅ الأولوية 3: delivery_status الصريح (للطلبات العادية)
