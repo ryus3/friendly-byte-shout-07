@@ -40,8 +40,8 @@ export const useSalesStats = (options = {}) => {
       // تحويل بيانات المنتجات إلى Map للوصول السريع
       const productsSoldMap = new Map();
       productsSoldData.forEach(item => {
-        productsSoldMap.set(item.variant_id, {
-          soldQuantity: item.sold_quantity || 0,
+      productsSoldMap.set(item.variant_id, {
+        soldQuantity: item.total_quantity_sold || 0,
           ordersCount: item.orders_count || 0,
           totalRevenue: item.total_revenue || 0,
           totalCost: item.total_cost || 0,
