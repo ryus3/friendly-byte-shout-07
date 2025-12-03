@@ -12,8 +12,9 @@
 export const calculateReservedQuantityForVariant = (variantId, orders = []) => {
   if (!variantId || !Array.isArray(orders)) return 0;
 
-  // ✅ الحالات المحجوزة: pending, shipped, delivery, returned
-  const activeOrderStatuses = ['pending', 'shipped', 'delivery', 'returned'];
+  // ✅ الحالات المحجوزة: pending, shipped, delivery, returned, partial_delivery, cancelled
+  // القاعدة الذهبية: كل شيء محجوز إلا delivery_status = 4 (مباع) أو 17 (رجع للمخزون)
+  const activeOrderStatuses = ['pending', 'shipped', 'delivery', 'returned', 'partial_delivery', 'cancelled'];
   
   return orders.reduce((totalReserved, order) => {
     // استبعاد طلبات الإرجاع من الحجز
