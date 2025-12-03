@@ -1699,6 +1699,58 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_allowed_products: {
+        Row: {
+          added_at: string | null
+          added_by: string
+          employee_id: string
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          product_id: string
+        }
+        Insert: {
+          added_at?: string | null
+          added_by: string
+          employee_id: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          product_id: string
+        }
+        Update: {
+          added_at?: string | null
+          added_by?: string
+          employee_id?: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_allowed_products_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "employee_allowed_products_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "employee_allowed_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_banners: {
         Row: {
           banner_image: string
@@ -2029,6 +2081,7 @@ export type Database = {
           id: string
           is_custom_product: boolean | null
           is_featured: boolean | null
+          is_in_storefront: boolean | null
           product_id: string
           size_chart_url: string | null
           updated_at: string | null
@@ -2048,6 +2101,7 @@ export type Database = {
           id?: string
           is_custom_product?: boolean | null
           is_featured?: boolean | null
+          is_in_storefront?: boolean | null
           product_id: string
           size_chart_url?: string | null
           updated_at?: string | null
@@ -2067,6 +2121,7 @@ export type Database = {
           id?: string
           is_custom_product?: boolean | null
           is_featured?: boolean | null
+          is_in_storefront?: boolean | null
           product_id?: string
           size_chart_url?: string | null
           updated_at?: string | null
