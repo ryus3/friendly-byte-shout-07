@@ -120,7 +120,7 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
           product_id,
           is_active,
           added_at,
-          product:products(id, name, brand, image_url)
+          product:products(id, name, images, base_price)
         `)
         .eq('employee_id', selectedUser.user_id);
 
@@ -137,7 +137,7 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
       setLoadingProducts(true);
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, brand, image_url')
+        .select('id, name, images, base_price')
         .eq('is_active', true)
         .order('name');
 
@@ -277,8 +277,7 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
   // فلترة المنتجات للبحث
   const filteredProducts = allProducts.filter(p => {
     const isNotAllowed = !allowedProducts.some(ap => ap.product_id === p.id);
-    const matchesSearch = p.name?.toLowerCase().includes(productSearchTerm.toLowerCase()) ||
-                          p.brand?.toLowerCase().includes(productSearchTerm.toLowerCase());
+    const matchesSearch = p.name?.toLowerCase().includes(productSearchTerm.toLowerCase());
     return isNotAllowed && matchesSearch;
   });
 
@@ -365,13 +364,13 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
                         key={product.id}
                         className="flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
                       >
-                        <div className="flex items-center gap-3">
-                          {product.image_url && (
-                            <img src={product.image_url} alt="" className="w-10 h-10 rounded object-cover" />
+                      <div className="flex items-center gap-3">
+                          {product.images?.[0] && (
+                            <img src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
                           )}
                           <div>
                             <p className="font-medium text-sm">{product.name}</p>
-                            <p className="text-xs text-muted-foreground">{product.brand}</p>
+                            <p className="text-xs text-muted-foreground">{product.base_price?.toLocaleString('ar-IQ')} IQD</p>
                           </div>
                         </div>
                         <Button 
@@ -413,12 +412,12 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
                         className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border"
                       >
                         <div className="flex items-center gap-3">
-                          {ap.product?.image_url && (
-                            <img src={ap.product.image_url} alt="" className="w-12 h-12 rounded object-cover" />
+                          {ap.product?.images?.[0] && (
+                            <img src={ap.product.images[0]} alt="" className="w-12 h-12 rounded object-cover" />
                           )}
                           <div>
                             <p className="font-medium text-sm">{ap.product?.name || 'منتج محذوف'}</p>
-                            <p className="text-xs text-muted-foreground">{ap.product?.brand}</p>
+                            <p className="text-xs text-muted-foreground">{ap.product?.base_price?.toLocaleString('ar-IQ')} IQD</p>
                           </div>
                         </div>
                         <Button 
