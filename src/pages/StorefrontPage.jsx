@@ -39,77 +39,79 @@ const StorefrontHome = () => {
 
         setBanners(bannersData || []);
 
-        // جلب المنتجات المميزة
-        const { data: customProducts } = await supabase
-          .from('employee_product_descriptions')
+        // === النظام الهجين: جلب المنتجات المسموحة التي هي في المتجر ===
+        
+        // 1. جلب IDs المنتجات المسموحة للموظف
+        const { data: allowedProductsData } = await supabase
+          .from('employee_allowed_products')
           .select('product_id')
           .eq('employee_id', settings.employee_id)
-          .eq('is_featured', true)
-          .order('display_order');
+          .eq('is_active', true);
 
-        if (customProducts && customProducts.length > 0) {
-          const productIds = customProducts.map(p => p.product_id);
+        const allowedProductIds = allowedProductsData?.map(ap => ap.product_id) || [];
 
-          const { data: productsData } = await supabase
-            .from('products')
-            .select(`
-              *,
-              category:categories(id, name),
-              department:departments(id, name),
-              variants:product_variants(
-                id,
-                price,
-                images,
-                color:colors(id, name, hex_code),
-                size:sizes(id, name),
-                inventory!inventory_variant_id_fkey(quantity, reserved_quantity)
-              )
-            `)
-            .in('id', productIds)
-            .eq('is_active', true);
-
-          // فلترة المنتجات المتاحة فقط
-          const availableProducts = productsData?.filter(p => 
-            p.variants?.some(v => {
-              const qty = v.inventory?.quantity ?? v.quantity ?? 0;
-              const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
-              return (qty - reserved) > 0;
-            })
-          ) || [];
-
-          setProducts(availableProducts);
-        } else {
-          // إذا لم يوجد منتجات مميزة، جلب أحدث المنتجات
-          const { data: latestProducts } = await supabase
-            .from('products')
-            .select(`
-              *,
-              category:categories(id, name),
-              department:departments(id, name),
-              variants:product_variants(
-                id,
-                price,
-                images,
-                color:colors(id, name, hex_code),
-                size:sizes(id, name),
-                inventory!inventory_variant_id_fkey(quantity, reserved_quantity)
-              )
-            `)
-            .eq('is_active', true)
-            .order('created_at', { ascending: false })
-            .limit(8);
-
-          // فلترة المنتجات المتاحة فقط
-          const availableProducts = latestProducts?.filter(p => 
-            p.variants?.some(v => {
-              const qty = v.inventory?.quantity ?? v.quantity ?? 0;
-              const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
-              return (qty - reserved) > 0;
-            })
-          ) || [];
-
-          setProducts(availableProducts);
+        if (allowedProductIds.length === 0) {
+          setProducts([]);
+          setIsLoading(false);
+          return;
         }
+
+        // 2. جلب المنتجات المعروضة في المتجر (is_in_storefront = true) + المميزة
+        const { data: storefrontDescriptions } = await supabase
+          .from('employee_product_descriptions')
+          .select('product_id, is_featured, display_order')
+          .eq('employee_id', settings.employee_id)
+          .eq('is_in_storefront', true);
+
+        // المنتجات التي يجب عرضها = المسموحة و في المتجر
+        const storefrontProductIds = storefrontDescriptions
+          ?.filter(d => allowedProductIds.includes(d.product_id))
+          .map(d => d.product_id) || [];
+
+        // المنتجات المميزة (للصفحة الرئيسية)
+        const featuredProductIds = storefrontDescriptions
+          ?.filter(d => d.is_featured && allowedProductIds.includes(d.product_id))
+          .map(d => d.product_id) || [];
+
+        // جلب المنتجات المميزة أو أحدث المنتجات من المتجر
+        const productIdsToFetch = featuredProductIds.length > 0 
+          ? featuredProductIds 
+          : storefrontProductIds.slice(0, 8);
+
+        if (productIdsToFetch.length === 0) {
+          setProducts([]);
+          setIsLoading(false);
+          return;
+        }
+
+        const { data: productsData } = await supabase
+          .from('products')
+          .select(`
+            *,
+            category:categories(id, name),
+            department:departments(id, name),
+            variants:product_variants(
+              id,
+              price,
+              images,
+              color:colors(id, name, hex_code),
+              size:sizes(id, name),
+              inventory!inventory_variant_id_fkey(quantity, reserved_quantity)
+            )
+          `)
+          .in('id', productIdsToFetch)
+          .eq('is_active', true);
+
+        // فلترة المنتجات المتاحة فقط (التي لديها مخزون)
+        const availableProducts = productsData?.filter(p => 
+          p.variants?.some(v => {
+            const qty = v.inventory?.quantity ?? v.quantity ?? 0;
+            const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+            return (qty - reserved) > 0;
+          })
+        ) || [];
+
+        setProducts(availableProducts);
       } catch (err) {
         console.error('Error fetching storefront data:', err);
       } finally {

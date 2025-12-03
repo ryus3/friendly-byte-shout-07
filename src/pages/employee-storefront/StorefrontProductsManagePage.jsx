@@ -7,7 +7,7 @@ import ProductCustomizationPanel from '@/components/employee-storefront/ProductC
 import ProductManagementCard from '@/components/storefront/dashboard/ProductManagementCard';
 import GradientText from '@/components/storefront/ui/GradientText';
 import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
-import { Search, Star, Package, Store, AlertCircle } from 'lucide-react';
+import { Search, Star, Package, Store, AlertCircle, Palette, Ruler } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
 
@@ -72,7 +72,7 @@ const StorefrontProductsManagePage = () => {
         return;
       }
 
-      // جلب تفاصيل المنتجات المسموحة
+      // جلب تفاصيل المنتجات المسموحة مع الألوان والقياسات
       const { data: productsData, error: productsError } = await supabase
         .from('products')
         .select(`
@@ -232,9 +232,34 @@ const StorefrontProductsManagePage = () => {
     }
   };
 
+  // حساب الألوان والقياسات المتاحة لمنتج
+  const getAvailableVariants = (product) => {
+    const colors = new Map();
+    const sizes = new Map();
+    
+    product?.variants?.forEach(v => {
+      const qty = v.inventory?.quantity || 0;
+      const reserved = v.inventory?.reserved_quantity || 0;
+      const available = qty - reserved;
+      
+      if (available > 0) {
+        if (v.color?.name) {
+          const existing = colors.get(v.color.name) || { count: 0, hex: v.color.hex_code };
+          colors.set(v.color.name, { count: existing.count + available, hex: existing.hex });
+        }
+        if (v.size?.name) {
+          const existing = sizes.get(v.size.name) || 0;
+          sizes.set(v.size.name, existing + available);
+        }
+      }
+    });
+    
+    return { colors: Array.from(colors.entries()), sizes: Array.from(sizes.entries()) };
+  };
+
   const filteredProducts = products.filter(p =>
     p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.brand?.toLowerCase().includes(searchTerm.toLowerCase())
+    p.description?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const storefrontProductsList = filteredProducts.filter(p => storefrontProducts.includes(p.id));
@@ -301,32 +326,107 @@ const StorefrontProductsManagePage = () => {
             {filteredProducts.map(product => {
               const isInStorefront = storefrontProducts.includes(product.id);
               const isFeatured = customDescriptions[product.id]?.is_featured;
+              const { colors, sizes } = getAvailableVariants(product);
               
               return (
-                <div key={product.id} className="relative">
-                  <ProductManagementCard
-                    product={product}
-                    isFeatured={isFeatured}
-                    onToggleFeatured={() => toggleFeatured(product.id)}
-                    onEditDescription={() => setSelectedProduct(product)}
-                    canUploadImages={user?.can_upload_custom_images}
-                  />
-                  {/* زر إضافة/إزالة من المتجر */}
-                  <div className="absolute top-3 left-3">
-                    <Button
-                      size="sm"
-                      variant={isInStorefront ? "default" : "outline"}
-                      className={isInStorefront 
-                        ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0" 
-                        : "border-purple-300 text-purple-600 hover:bg-purple-50"
-                      }
-                      onClick={() => toggleStorefront(product.id)}
-                    >
-                      <Store className="h-4 w-4 ml-1" />
-                      {isInStorefront ? 'في المتجر' : 'أضف للمتجر'}
-                    </Button>
-                  </div>
-                </div>
+                <Card key={product.id} className="relative overflow-hidden border-2 hover:border-purple-300 transition-all">
+                  <CardContent className="p-4">
+                    <div className="flex gap-4">
+                      {/* صورة المنتج */}
+                      <div className="relative">
+                        <img 
+                          src={product.variants?.[0]?.images?.[0] || '/placeholder.png'}
+                          alt={product.name}
+                          className="w-24 h-24 rounded-lg object-cover"
+                        />
+                        {isFeatured && (
+                          <Star className="absolute -top-1 -right-1 h-5 w-5 text-yellow-500 fill-yellow-500" />
+                        )}
+                      </div>
+                      
+                      {/* تفاصيل المنتج */}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-lg truncate">{product.name}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {product.base_price?.toLocaleString('ar-IQ')} IQD
+                        </p>
+                        
+                        {/* الألوان المتاحة */}
+                        {colors.length > 0 && (
+                          <div className="flex items-center gap-2 mt-2">
+                            <Palette className="h-3 w-3 text-muted-foreground" />
+                            <div className="flex flex-wrap gap-1">
+                              {colors.map(([name, { count, hex }]) => (
+                                <span 
+                                  key={name} 
+                                  className="text-[10px] px-1.5 py-0.5 rounded flex items-center gap-1"
+                                  style={{ backgroundColor: hex ? `${hex}20` : '#f0f0f0' }}
+                                >
+                                  <span 
+                                    className="w-2 h-2 rounded-full"
+                                    style={{ backgroundColor: hex || '#ccc' }}
+                                  />
+                                  {name} ({count})
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* القياسات المتاحة */}
+                        {sizes.length > 0 && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <Ruler className="h-3 w-3 text-muted-foreground" />
+                            <div className="flex flex-wrap gap-1">
+                              {sizes.map(([name, count]) => (
+                                <span key={name} className="text-[10px] bg-blue-100 dark:bg-blue-900/30 px-1.5 py-0.5 rounded">
+                                  {name} ({count})
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* أزرار التحكم */}
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          size="sm"
+                          variant={isInStorefront ? "default" : "outline"}
+                          className={isInStorefront 
+                            ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0" 
+                            : "border-purple-300 text-purple-600 hover:bg-purple-50"
+                          }
+                          onClick={() => toggleStorefront(product.id)}
+                        >
+                          <Store className="h-4 w-4 ml-1" />
+                          {isInStorefront ? 'في المتجر' : 'أضف'}
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant={isFeatured ? "default" : "outline"}
+                          className={isFeatured 
+                            ? "bg-yellow-500 text-white border-0" 
+                            : ""
+                          }
+                          onClick={() => toggleFeatured(product.id)}
+                        >
+                          <Star className={`h-4 w-4 ml-1 ${isFeatured ? 'fill-white' : ''}`} />
+                          {isFeatured ? 'مميز' : 'تمييز'}
+                        </Button>
+                        
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedProduct(product)}
+                        >
+                          تخصيص
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               );
             })}
           </div>
@@ -353,7 +453,7 @@ const StorefrontProductsManagePage = () => {
               <div className="text-center py-12 space-y-3">
                 <Package className="h-16 w-16 mx-auto text-muted-foreground opacity-50" />
                 <p className="text-muted-foreground">لا توجد منتجات في متجرك</p>
-                <p className="text-xs text-muted-foreground">اضغط "أضف للمتجر" لإضافة منتج</p>
+                <p className="text-xs text-muted-foreground">اضغط "أضف" لإضافة منتج</p>
               </div>
             ) : (
               <div className="space-y-3 max-h-[600px] overflow-y-auto">
@@ -361,26 +461,45 @@ const StorefrontProductsManagePage = () => {
                   const firstVariant = product.variants?.[0];
                   const imageUrl = firstVariant?.images?.[0] || '/placeholder.png';
                   const isFeatured = customDescriptions[product.id]?.is_featured;
+                  const { colors, sizes } = getAvailableVariants(product);
                   
                   return (
                     <div 
                       key={product.id}
-                      className="flex items-center gap-3 p-3 bg-white dark:bg-gray-900 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-700"
+                      className="p-3 bg-white dark:bg-gray-900 rounded-xl shadow-lg hover:shadow-xl transition-all cursor-pointer border-2 border-transparent hover:border-purple-300 dark:hover:border-purple-700"
                       onClick={() => setSelectedProduct(product)}
                     >
-                      <div className="relative">
-                        <img 
-                          src={imageUrl} 
-                          alt={product.name}
-                          className="w-16 h-16 rounded-lg object-cover shadow"
-                        />
-                        {isFeatured && (
-                          <Star className="absolute -top-1 -right-1 h-5 w-5 text-yellow-500 fill-yellow-500" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold truncate text-sm">{product.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">{product.brand}</p>
+                      <div className="flex items-center gap-3">
+                        <div className="relative">
+                          <img 
+                            src={imageUrl} 
+                            alt={product.name}
+                            className="w-16 h-16 rounded-lg object-cover shadow"
+                          />
+                          {isFeatured && (
+                            <Star className="absolute -top-1 -right-1 h-5 w-5 text-yellow-500 fill-yellow-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-bold truncate text-sm">{product.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {product.base_price?.toLocaleString('ar-IQ')} IQD
+                          </p>
+                          {/* الألوان والقياسات المصغرة */}
+                          <div className="flex gap-1 mt-1">
+                            {colors.slice(0, 3).map(([name, { hex }]) => (
+                              <span 
+                                key={name}
+                                className="w-3 h-3 rounded-full border border-gray-300"
+                                style={{ backgroundColor: hex || '#ccc' }}
+                                title={name}
+                              />
+                            ))}
+                            {sizes.slice(0, 2).map(([name]) => (
+                              <span key={name} className="text-[8px] bg-muted px-1 rounded">{name}</span>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
