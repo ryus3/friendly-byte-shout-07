@@ -35,3 +35,7 @@ verify_jwt = false
 # City benefit notifications
 [functions.send-city-benefit-notification]
 verify_jwt = false
+
+# Smart invoice synchronization - supports smart and comprehensive modes
+[functions.smart-invoice-sync]
+verify_jwt = true
