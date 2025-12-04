@@ -6,8 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// ✅ CORRECT AlWaseet API Base URL
-const ALWASEET_API_BASE = 'https://api.alwaseet-iq.net/v1/merchant';
+// AlWaseet API Base URL
+const ALWASEET_API_BASE = 'https://tpostapi.alwaseetiraq.com/api/v2';
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
@@ -37,8 +37,7 @@ interface InvoiceOrder {
 // Fetch invoices from AlWaseet API
 async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
   try {
-    console.log('📡 Fetching invoices from AlWaseet API...');
-    const response = await fetch(`${ALWASEET_API_BASE}/merchant-invoices`, {
+    const response = await fetch(`${ALWASEET_API_BASE}/Merchant/GetMerchantInvoices`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -52,7 +51,6 @@ async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
     }
 
     const data = await response.json();
-    console.log(`📥 API Response: success=${data.success}, count=${data.data?.length || 0}`);
     
     if (data.success && Array.isArray(data.data)) {
       return data.data;
@@ -65,10 +63,10 @@ async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
   }
 }
 
-// Fetch invoice orders from AlWaseet API
+// ✅ NEW: Fetch invoice orders from AlWaseet API
 async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Promise<InvoiceOrder[]> {
   try {
-    const response = await fetch(`${ALWASEET_API_BASE}/invoice-orders?invoiceId=${invoiceId}`, {
+    const response = await fetch(`${ALWASEET_API_BASE}/Merchant/GetInvoiceOrders?invoiceId=${invoiceId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -203,7 +201,7 @@ serve(async (req) => {
             } else {
               employeeInvoicesSynced++;
               
-              // ✅ Sync invoice orders if requested
+              // ✅ NEW: Sync invoice orders if requested
               if (sync_orders && upsertedInvoice?.id) {
                 try {
                   const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
@@ -220,7 +218,7 @@ serve(async (req) => {
                           raw: order,
                           status: order.status,
                           amount: order.price || order.amount || 0,
-                          owner_user_id: employeeId,
+                          owner_user_id: employeeId, // ✅ Track which employee this order belongs to
                         }, {
                           onConflict: 'invoice_id,external_order_id',
                           ignoreDuplicates: false,
