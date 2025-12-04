@@ -1,5 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { History, Loader2, X, Plus, Minus, Package, ShoppingCart, ArrowUpRight, ArrowDownRight, Wrench, Edit3, RefreshCw, Filter, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  History, Loader2, X, Plus, Minus, Package, ShoppingCart, 
+  ArrowUpRight, ArrowDownRight, Wrench, Edit3, RefreshCw, 
+  Filter, Calendar, TrendingUp, TrendingDown, Clock, User,
+  Hash, FileText
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -12,7 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, isToday, isYesterday, differenceInDays, parseISO } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const InventoryOperationsLog = ({ isAdmin }) => {
@@ -21,7 +26,6 @@ const InventoryOperationsLog = ({ isAdmin }) => {
   const [showDialog, setShowDialog] = useState(false);
   const [filterType, setFilterType] = useState('all');
 
-  // لا يظهر للموظفين العاديين
   if (!isAdmin) return null;
 
   const fetchLogs = async () => {
@@ -53,69 +57,133 @@ const InventoryOperationsLog = ({ isAdmin }) => {
     }
   }, [showDialog, filterType]);
 
-  const getOperationConfig = (type) => {
+  // تجميع السجلات حسب التاريخ
+  const groupedLogs = useMemo(() => {
+    const groups = {};
+    
+    logs.forEach(log => {
+      if (!log.performed_at) return;
+      
+      const date = parseISO(log.performed_at);
+      let dateKey;
+      
+      if (isToday(date)) {
+        dateKey = 'اليوم';
+      } else if (isYesterday(date)) {
+        dateKey = 'أمس';
+      } else if (differenceInDays(new Date(), date) < 7) {
+        dateKey = format(date, 'EEEE', { locale: ar });
+      } else {
+        dateKey = format(date, 'dd MMMM yyyy', { locale: ar });
+      }
+      
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(log);
+    });
+    
+    return groups;
+  }, [logs]);
+
+  // إحصائيات سريعة
+  const stats = useMemo(() => {
+    const todayLogs = logs.filter(log => log.performed_at && isToday(parseISO(log.performed_at)));
+    
+    return {
+      totalToday: todayLogs.length,
+      soldToday: todayLogs.filter(l => l.operation_type === 'sold').length,
+      reservedToday: todayLogs.filter(l => l.operation_type === 'reserved').length,
+    };
+  }, [logs]);
+
+  const getOperationConfig = (type, quantityChange) => {
     const configs = {
       stock_added: {
         label: 'إضافة مخزون',
         icon: Plus,
-        color: 'text-emerald-500',
-        bgColor: 'bg-emerald-500/10',
-        borderColor: 'border-emerald-500/30',
+        color: 'text-emerald-600',
+        bgColor: 'bg-emerald-50 dark:bg-emerald-950/30',
+        borderColor: 'border-emerald-200 dark:border-emerald-800',
+        dotColor: 'bg-emerald-500',
       },
       stock_reduced: {
         label: 'تقليل مخزون',
         icon: Minus,
-        color: 'text-red-500',
-        bgColor: 'bg-red-500/10',
-        borderColor: 'border-red-500/30',
+        color: 'text-red-600',
+        bgColor: 'bg-red-50 dark:bg-red-950/30',
+        borderColor: 'border-red-200 dark:border-red-800',
+        dotColor: 'bg-red-500',
       },
       reserved: {
         label: 'حجز للطلب',
         icon: Package,
-        color: 'text-blue-500',
-        bgColor: 'bg-blue-500/10',
-        borderColor: 'border-blue-500/30',
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+        borderColor: 'border-blue-200 dark:border-blue-800',
+        dotColor: 'bg-blue-500',
       },
       released: {
         label: 'تحرير محجوز',
         icon: ArrowUpRight,
-        color: 'text-amber-500',
-        bgColor: 'bg-amber-500/10',
-        borderColor: 'border-amber-500/30',
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+        borderColor: 'border-amber-200 dark:border-amber-800',
+        dotColor: 'bg-amber-500',
       },
       sold: {
         label: 'تسجيل مبيع',
         icon: ShoppingCart,
-        color: 'text-purple-500',
-        bgColor: 'bg-purple-500/10',
-        borderColor: 'border-purple-500/30',
+        color: 'text-purple-600',
+        bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+        borderColor: 'border-purple-200 dark:border-purple-800',
+        dotColor: 'bg-purple-500',
       },
       returned: {
         label: 'إرجاع للمخزون',
         icon: ArrowDownRight,
-        color: 'text-cyan-500',
-        bgColor: 'bg-cyan-500/10',
-        borderColor: 'border-cyan-500/30',
+        color: 'text-cyan-600',
+        bgColor: 'bg-cyan-50 dark:bg-cyan-950/30',
+        borderColor: 'border-cyan-200 dark:border-cyan-800',
+        dotColor: 'bg-cyan-500',
       },
       audit_correction: {
         label: 'تصحيح فحص',
         icon: Wrench,
-        color: 'text-orange-500',
-        bgColor: 'bg-orange-500/10',
-        borderColor: 'border-orange-500/30',
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-50 dark:bg-orange-950/30',
+        borderColor: 'border-orange-200 dark:border-orange-800',
+        dotColor: 'bg-orange-500',
       },
       manual_edit: {
         label: 'تعديل يدوي',
         icon: Edit3,
-        color: 'text-gray-500',
-        bgColor: 'bg-gray-500/10',
-        borderColor: 'border-gray-500/30',
+        color: 'text-gray-600',
+        bgColor: 'bg-gray-50 dark:bg-gray-950/30',
+        borderColor: 'border-gray-200 dark:border-gray-800',
+        dotColor: 'bg-gray-500',
       },
     };
     return configs[type] || configs.manual_edit;
   };
 
-  // تصميم الزر الفاخر
+  // حساب التغيير بوضوح
+  const formatChange = (before, after, label) => {
+    if (before === null || after === null || before === after) return null;
+    
+    const diff = after - before;
+    const isPositive = diff > 0;
+    
+    return {
+      label,
+      diff,
+      isPositive,
+      display: isPositive ? `+${diff}` : `${diff}`,
+      before,
+      after
+    };
+  };
+
   const luxuryButtonStyle = {
     background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)',
     color: 'white',
@@ -137,7 +205,6 @@ const InventoryOperationsLog = ({ isAdmin }) => {
 
   return (
     <>
-      {/* زر السجل - تصميم بنفسجي فاخر */}
       <button
         onClick={() => setShowDialog(true)}
         style={luxuryButtonStyle}
@@ -160,9 +227,8 @@ const InventoryOperationsLog = ({ isAdmin }) => {
         <span>سجل العمليات</span>
       </button>
 
-      {/* Dialog السجل */}
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden bg-gradient-to-br from-background via-background to-muted/30 border-border/50">
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden bg-background border-border">
           {/* Header */}
           <div className="relative bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 p-4 sm:p-6">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-50" />
@@ -172,13 +238,30 @@ const InventoryOperationsLog = ({ isAdmin }) => {
                   <History className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
                 <span>سجل عمليات المخزون</span>
-                {logs.length > 0 && (
-                  <span className="text-sm font-normal bg-white/20 px-3 py-1 rounded-full">
-                    {logs.length} عملية
-                  </span>
-                )}
               </DialogTitle>
             </DialogHeader>
+            
+            {/* إحصائيات سريعة */}
+            {logs.length > 0 && (
+              <div className="flex items-center gap-4 mt-4 text-white/90 text-sm">
+                <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
+                  <FileText className="w-4 h-4" />
+                  <span>{logs.length} عملية</span>
+                </div>
+                {stats.totalToday > 0 && (
+                  <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
+                    <Clock className="w-4 h-4" />
+                    <span>{stats.totalToday} اليوم</span>
+                  </div>
+                )}
+                {stats.soldToday > 0 && (
+                  <div className="flex items-center gap-2 bg-purple-400/30 rounded-lg px-3 py-1.5">
+                    <ShoppingCart className="w-4 h-4" />
+                    <span>{stats.soldToday} مبيع</span>
+                  </div>
+                )}
+              </div>
+            )}
             
             <button 
               onClick={() => setShowDialog(false)}
@@ -189,7 +272,7 @@ const InventoryOperationsLog = ({ isAdmin }) => {
           </div>
 
           {/* الفلاتر */}
-          <div className="flex items-center gap-3 p-4 border-b bg-muted/30">
+          <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/30">
             <Filter className="w-4 h-4 text-muted-foreground" />
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="w-[180px]">
@@ -220,8 +303,8 @@ const InventoryOperationsLog = ({ isAdmin }) => {
             </Button>
           </div>
 
-          {/* المحتوى */}
-          <ScrollArea className="flex-1 max-h-[calc(90vh-200px)]">
+          {/* المحتوى - Timeline */}
+          <ScrollArea className="flex-1 max-h-[calc(90vh-280px)]">
             {isLoading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
@@ -235,91 +318,171 @@ const InventoryOperationsLog = ({ isAdmin }) => {
                 </p>
               </div>
             ) : (
-              <div className="p-4 space-y-2">
-                {logs.map((log, idx) => {
-                  const config = getOperationConfig(log.operation_type);
-                  const Icon = config.icon;
-                  
-                  return (
-                    <div 
-                      key={log.id || idx}
-                      className={cn(
-                        "flex items-start gap-3 p-3 rounded-xl border transition-all hover:shadow-md",
-                        config.bgColor,
-                        config.borderColor
-                      )}
-                    >
-                      {/* أيقونة العملية */}
-                      <div className={cn(
-                        "p-2 rounded-lg shrink-0",
-                        config.bgColor
-                      )}>
-                        <Icon className={cn("w-4 h-4", config.color)} />
+              <div className="p-4">
+                {Object.entries(groupedLogs).map(([dateGroup, groupLogs]) => (
+                  <div key={dateGroup} className="mb-6">
+                    {/* عنوان المجموعة */}
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="flex items-center gap-2 bg-primary/10 text-primary px-3 py-1.5 rounded-full text-sm font-semibold">
+                        <Calendar className="w-4 h-4" />
+                        {dateGroup}
                       </div>
-                      
-                      {/* التفاصيل */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className={cn("font-semibold text-sm", config.color)}>
-                            {config.label}
-                          </span>
-                          <span className="text-xs text-muted-foreground">•</span>
-                          <span className="text-sm font-medium text-foreground truncate">
-                            {log.product_name}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground">
-                          <span>{log.color_name}</span>
-                          <span>-</span>
-                          <span>{log.size_value}</span>
-                        </div>
-                        
-                        {/* التغييرات */}
-                        <div className="flex flex-wrap items-center gap-3 mt-2 text-xs">
-                          {log.quantity_before !== null && log.quantity_after !== null && log.quantity_before !== log.quantity_after && (
-                            <span className="bg-background/50 px-2 py-1 rounded">
-                              مخزون: {log.quantity_before} → {log.quantity_after}
-                            </span>
-                          )}
-                          {log.reserved_before !== null && log.reserved_after !== null && log.reserved_before !== log.reserved_after && (
-                            <span className="bg-background/50 px-2 py-1 rounded">
-                              محجوز: {log.reserved_before} → {log.reserved_after}
-                            </span>
-                          )}
-                          {log.sold_before !== null && log.sold_after !== null && log.sold_before !== log.sold_after && (
-                            <span className="bg-background/50 px-2 py-1 rounded">
-                              مباع: {log.sold_before} → {log.sold_after}
-                            </span>
-                          )}
-                        </div>
-                        
-                        {log.notes && (
-                          <p className="text-xs text-muted-foreground mt-1 italic">
-                            {log.notes}
-                          </p>
-                        )}
-                      </div>
-                      
-                      {/* التوقيت */}
-                      <div className="text-left shrink-0">
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                          <Calendar className="w-3 h-3" />
-                          {log.performed_at && format(new Date(log.performed_at), 'dd/MM', { locale: ar })}
-                        </div>
-                        <div className="text-xs text-muted-foreground/70 mt-0.5">
-                          {log.performed_at && format(new Date(log.performed_at), 'hh:mm a', { locale: ar })}
-                        </div>
-                      </div>
+                      <div className="h-px flex-1 bg-border" />
+                      <span className="text-xs text-muted-foreground">
+                        {groupLogs.length} عملية
+                      </span>
                     </div>
-                  );
-                })}
+                    
+                    {/* Timeline */}
+                    <div className="relative pr-4">
+                      {/* خط Timeline */}
+                      <div className="absolute right-[7px] top-2 bottom-2 w-0.5 bg-border" />
+                      
+                      {groupLogs.map((log, idx) => {
+                        const config = getOperationConfig(log.operation_type);
+                        const Icon = config.icon;
+                        
+                        // حساب التغييرات
+                        const changes = [
+                          formatChange(log.quantity_before, log.quantity_after, 'مخزون'),
+                          formatChange(log.reserved_before, log.reserved_after, 'محجوز'),
+                          formatChange(log.sold_before, log.sold_after, 'مباع'),
+                        ].filter(Boolean);
+                        
+                        return (
+                          <div 
+                            key={log.id || idx}
+                            className="relative pr-8 pb-4 last:pb-0"
+                          >
+                            {/* نقطة Timeline */}
+                            <div className={cn(
+                              "absolute right-0 top-1 w-[14px] h-[14px] rounded-full border-2 border-background z-10",
+                              config.dotColor
+                            )} />
+                            
+                            {/* بطاقة العملية */}
+                            <div className={cn(
+                              "rounded-xl border p-4 transition-all hover:shadow-md",
+                              config.bgColor,
+                              config.borderColor
+                            )}>
+                              {/* الصف العلوي */}
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                  <div className={cn(
+                                    "p-2 rounded-lg",
+                                    "bg-white/50 dark:bg-black/20"
+                                  )}>
+                                    <Icon className={cn("w-5 h-5", config.color)} />
+                                  </div>
+                                  <div>
+                                    <div className={cn("font-bold text-sm", config.color)}>
+                                      {config.label}
+                                    </div>
+                                    <div className="text-foreground font-medium mt-0.5">
+                                      {log.product_name}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                      <span className="bg-background/60 px-2 py-0.5 rounded">
+                                        {log.color_name}
+                                      </span>
+                                      <span className="bg-background/60 px-2 py-0.5 rounded">
+                                        {log.size_value}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                {/* التوقيت */}
+                                <div className="text-left shrink-0">
+                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                    <Clock className="w-3.5 h-3.5" />
+                                    {log.performed_at && format(parseISO(log.performed_at), 'hh:mm a', { locale: ar })}
+                                  </div>
+                                  <div className="text-[10px] text-muted-foreground/70 mt-1 text-left">
+                                    {log.performed_at && format(parseISO(log.performed_at), 'dd/MM/yyyy', { locale: ar })}
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* التغييرات - بتصميم احترافي */}
+                              {changes.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-border/50">
+                                  {changes.map((change, i) => (
+                                    <div 
+                                      key={i}
+                                      className={cn(
+                                        "flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium",
+                                        change.isPositive 
+                                          ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                                          : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                      )}
+                                    >
+                                      {change.isPositive ? (
+                                        <TrendingUp className="w-4 h-4" />
+                                      ) : (
+                                        <TrendingDown className="w-4 h-4" />
+                                      )}
+                                      <span>{change.label}:</span>
+                                      <span className="font-bold">{change.display}</span>
+                                      <span className="text-xs opacity-70">
+                                        ({change.before} ← {change.after})
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              
+                              {/* معلومات إضافية */}
+                              <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-muted-foreground">
+                                {log.tracking_number && (
+                                  <div className="flex items-center gap-1.5 bg-background/60 px-2 py-1 rounded">
+                                    <Hash className="w-3.5 h-3.5" />
+                                    <span>رقم التتبع: {log.tracking_number}</span>
+                                  </div>
+                                )}
+                                {log.order_id && !log.tracking_number && (
+                                  <div className="flex items-center gap-1.5 bg-background/60 px-2 py-1 rounded">
+                                    <FileText className="w-3.5 h-3.5" />
+                                    <span>طلب مرتبط</span>
+                                  </div>
+                                )}
+                                {log.performed_by_name && (
+                                  <div className="flex items-center gap-1.5 bg-background/60 px-2 py-1 rounded">
+                                    <User className="w-3.5 h-3.5" />
+                                    <span>{log.performed_by_name}</span>
+                                  </div>
+                                )}
+                                {log.source_type && log.source_type !== 'order' && (
+                                  <div className="flex items-center gap-1.5 bg-background/60 px-2 py-1 rounded">
+                                    <span>المصدر: {
+                                      log.source_type === 'manual' ? 'يدوي' :
+                                      log.source_type === 'audit' ? 'فحص' :
+                                      log.source_type === 'return' ? 'إرجاع' :
+                                      log.source_type
+                                    }</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              {log.notes && (
+                                <div className="mt-2 text-xs text-muted-foreground italic bg-background/40 px-2 py-1 rounded">
+                                  💬 {log.notes}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </ScrollArea>
 
           {/* Footer */}
-          <div className="flex justify-end p-4 border-t bg-muted/20">
+          <div className="flex justify-end p-4 border-t border-border bg-muted/20">
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               إغلاق
             </Button>
