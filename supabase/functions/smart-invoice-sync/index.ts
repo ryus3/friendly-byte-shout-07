@@ -27,6 +27,13 @@ interface Invoice {
   [key: string]: any;
 }
 
+interface InvoiceOrder {
+  id: number;
+  price?: number;
+  status?: string;
+  [key: string]: any;
+}
+
 // Fetch invoices from AlWaseet API
 async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
   try {
@@ -52,6 +59,40 @@ async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
     return [];
   } catch (error) {
     console.error('Error fetching invoices:', error);
+    return [];
+  }
+}
+
+// ✅ NEW: Fetch invoice orders from AlWaseet API
+async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Promise<InvoiceOrder[]> {
+  try {
+    const response = await fetch(`${ALWASEET_API_BASE}/Merchant/GetInvoiceOrders?invoiceId=${invoiceId}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`API Error fetching orders for invoice ${invoiceId}: ${response.status}`);
+      return [];
+    }
+
+    const data = await response.json();
+    
+    if (data.success && Array.isArray(data.data)) {
+      return data.data;
+    }
+    
+    // Handle different response structures
+    if (Array.isArray(data.orders)) {
+      return data.orders;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error(`Error fetching orders for invoice ${invoiceId}:`, error);
     return [];
   }
 }
@@ -85,7 +126,7 @@ serve(async (req) => {
       force_refresh = false 
     } = body;
 
-    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}`);
+    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}`);
 
     let totalInvoicesSynced = 0;
     let totalOrdersUpdated = 0;
@@ -122,6 +163,7 @@ serve(async (req) => {
           console.log(`  📥 Fetched ${apiInvoices.length} invoices from API`);
 
           let employeeInvoicesSynced = 0;
+          let employeeOrdersSynced = 0;
 
           for (const invoice of apiInvoices) {
             const externalId = String(invoice.id);
@@ -129,7 +171,7 @@ serve(async (req) => {
             const isReceived = statusNormalized === 'received' || invoice.received === true;
 
             // Upsert invoice with correct owner_user_id
-            const { error: upsertError } = await supabase
+            const { data: upsertedInvoice, error: upsertError } = await supabase
               .from('delivery_invoices')
               .upsert({
                 external_id: externalId,
@@ -150,22 +192,64 @@ serve(async (req) => {
               }, {
                 onConflict: 'external_id,partner',
                 ignoreDuplicates: false,
-              });
+              })
+              .select('id')
+              .single();
 
             if (upsertError) {
               console.error(`  ❌ Error upserting invoice ${externalId}:`, upsertError.message);
             } else {
               employeeInvoicesSynced++;
+              
+              // ✅ NEW: Sync invoice orders if requested
+              if (sync_orders && upsertedInvoice?.id) {
+                try {
+                  const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
+                  
+                  if (invoiceOrders.length > 0) {
+                    console.log(`    📦 Syncing ${invoiceOrders.length} orders for invoice ${externalId}`);
+                    
+                    for (const order of invoiceOrders) {
+                      const { error: orderError } = await supabase
+                        .from('delivery_invoice_orders')
+                        .upsert({
+                          invoice_id: upsertedInvoice.id,
+                          external_order_id: String(order.id),
+                          raw: order,
+                          status: order.status,
+                          amount: order.price || order.amount || 0,
+                          owner_user_id: employeeId, // ✅ Track which employee this order belongs to
+                        }, {
+                          onConflict: 'invoice_id,external_order_id',
+                          ignoreDuplicates: false,
+                        });
+                      
+                      if (!orderError) {
+                        employeeOrdersSynced++;
+                      }
+                    }
+                    
+                    // Update orders_last_synced_at
+                    await supabase
+                      .from('delivery_invoices')
+                      .update({ orders_last_synced_at: new Date().toISOString() })
+                      .eq('id', upsertedInvoice.id);
+                  }
+                } catch (ordersError) {
+                  console.error(`    ❌ Error syncing orders for invoice ${externalId}:`, ordersError);
+                }
+              }
             }
           }
 
           employeeResults[employeeId] = {
             invoices: employeeInvoicesSynced,
-            orders: 0,
+            orders: employeeOrdersSynced,
           };
           totalInvoicesSynced += employeeInvoicesSynced;
+          totalOrdersUpdated += employeeOrdersSynced;
 
-          console.log(`  ✅ Synced ${employeeInvoicesSynced} invoices for ${accountUsername}`);
+          console.log(`  ✅ Synced ${employeeInvoicesSynced} invoices, ${employeeOrdersSynced} orders for ${accountUsername}`);
 
         } catch (employeeError) {
           console.error(`  ❌ Error syncing employee ${employeeId}:`, employeeError);
@@ -258,7 +342,7 @@ serve(async (req) => {
           }
         }
 
-        const { error: upsertError } = await supabase
+        const { data: upsertedInvoice, error: upsertError } = await supabase
           .from('delivery_invoices')
           .upsert({
             external_id: externalId,
@@ -278,16 +362,54 @@ serve(async (req) => {
           }, {
             onConflict: 'external_id,partner',
             ignoreDuplicates: false,
-          });
+          })
+          .select('id')
+          .single();
 
         if (!upsertError) {
           totalInvoicesSynced++;
+          
+          // ✅ Sync orders in smart mode too if requested
+          if (sync_orders && upsertedInvoice?.id) {
+            try {
+              const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
+              
+              for (const order of invoiceOrders) {
+                const { error: orderError } = await supabase
+                  .from('delivery_invoice_orders')
+                  .upsert({
+                    invoice_id: upsertedInvoice.id,
+                    external_order_id: String(order.id),
+                    raw: order,
+                    status: order.status,
+                    amount: order.price || order.amount || 0,
+                    owner_user_id: targetEmployeeId,
+                  }, {
+                    onConflict: 'invoice_id,external_order_id',
+                    ignoreDuplicates: false,
+                  });
+                
+                if (!orderError) {
+                  totalOrdersUpdated++;
+                }
+              }
+              
+              if (invoiceOrders.length > 0) {
+                await supabase
+                  .from('delivery_invoices')
+                  .update({ orders_last_synced_at: new Date().toISOString() })
+                  .eq('id', upsertedInvoice.id);
+              }
+            } catch (ordersError) {
+              console.error(`Error syncing orders for invoice ${externalId}:`, ordersError);
+            }
+          }
         }
       }
 
       employeeResults[targetEmployeeId] = {
         invoices: totalInvoicesSynced,
-        orders: 0,
+        orders: totalOrdersUpdated,
       };
     }
 
