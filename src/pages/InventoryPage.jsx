@@ -391,63 +391,106 @@ const InventoryHeaderWithAudit = ({ inventoryItems, filteredItems, selectedItems
       {/* Dialog نتائج الفحص */}
       {showResults && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowResults(false)}>
-          <div className="bg-background rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center gap-2 mb-4">
-              {auditResults?.length === 0 ? (
-                <>
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <h2 className="text-lg font-semibold">المخزون صحيح 100%</h2>
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="w-5 h-5 text-amber-500" />
-                  <h2 className="text-lg font-semibold">فروقات في المخزون ({auditResults?.length || 0})</h2>
-                </>
-              )}
+          <div className="bg-background rounded-lg max-w-4xl w-full max-h-[85vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                {auditResults?.length === 0 ? (
+                  <>
+                    <CheckCircle className="w-6 h-6 text-green-500" />
+                    <h2 className="text-xl font-bold">المخزون صحيح 100%</h2>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle className="w-6 h-6 text-amber-500" />
+                    <h2 className="text-xl font-bold">فروقات في المخزون ({auditResults?.length || 0})</h2>
+                  </>
+                )}
+              </div>
+              <button onClick={() => setShowResults(false)} className="text-muted-foreground hover:text-foreground">✕</button>
             </div>
             
             {auditResults?.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
-                <p>جميع أرقام المخزون متطابقة مع الطلبات الفعلية</p>
+                <CheckCircle className="w-20 h-20 mx-auto text-green-500 mb-4" />
+                <p className="text-lg">جميع أرقام المخزون متطابقة مع الطلبات الفعلية</p>
+                <p className="text-sm mt-2">✅ المحجوز صحيح • ✅ المباع صحيح • ✅ المتاح موجب</p>
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="rounded-lg border overflow-hidden">
+                {/* ملخص المشاكل */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center text-sm">
+                  <div className="p-2 rounded bg-red-100 dark:bg-red-950/30">
+                    <div className="font-bold text-red-600">{auditResults?.filter(r => r.issue_type?.includes('reserved')).length || 0}</div>
+                    <div className="text-xs text-red-600">خطأ في المحجوز</div>
+                  </div>
+                  <div className="p-2 rounded bg-orange-100 dark:bg-orange-950/30">
+                    <div className="font-bold text-orange-600">{auditResults?.filter(r => r.issue_type?.includes('sold')).length || 0}</div>
+                    <div className="text-xs text-orange-600">خطأ في المباع</div>
+                  </div>
+                  <div className="p-2 rounded bg-purple-100 dark:bg-purple-950/30">
+                    <div className="font-bold text-purple-600">{auditResults?.filter(r => r.available < 0).length || 0}</div>
+                    <div className="text-xs text-purple-600">متاح سالب</div>
+                  </div>
+                  <div className="p-2 rounded bg-blue-100 dark:bg-blue-950/30">
+                    <div className="font-bold text-blue-600">{auditResults?.filter(r => r.issue_type === 'reserved_and_sold').length || 0}</div>
+                    <div className="text-xs text-blue-600">أخطاء مركبة</div>
+                  </div>
+                </div>
+
+                <div className="rounded-lg border overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead className="bg-muted">
                       <tr>
-                        <th className="p-2 text-right">المنتج</th>
-                        <th className="p-2 text-center">المحجوز</th>
-                        <th className="p-2 text-center">المباع</th>
+                        <th className="p-2 text-right whitespace-nowrap">المنتج</th>
+                        <th className="p-2 text-center whitespace-nowrap">الكمية</th>
+                        <th className="p-2 text-center whitespace-nowrap">المحجوز</th>
+                        <th className="p-2 text-center whitespace-nowrap">المباع</th>
+                        <th className="p-2 text-center whitespace-nowrap">المتاح</th>
+                        <th className="p-2 text-center whitespace-nowrap">المشكلة</th>
                       </tr>
                     </thead>
                     <tbody>
                       {auditResults?.map((item, idx) => (
-                        <tr key={idx} className="border-t">
+                        <tr key={idx} className="border-t hover:bg-muted/50">
                           <td className="p-2">
                             <div className="font-medium">{item.product_name}</div>
                             <div className="text-xs text-muted-foreground">
                               {item.color_name} - {item.size_value}
                             </div>
                           </td>
+                          <td className="p-2 text-center font-mono">{item.current_quantity}</td>
                           <td className="p-2 text-center">
                             {item.reserved_diff !== 0 ? (
-                              <span className="text-red-500">
-                                {item.current_reserved} → {item.calculated_reserved}
-                              </span>
+                              <div className="space-y-0.5">
+                                <span className="text-red-500 line-through">{item.current_reserved}</span>
+                                <span className="text-green-600 font-bold mr-1">→ {item.calculated_reserved}</span>
+                              </div>
                             ) : (
-                              <span className="text-green-500">✓</span>
+                              <span className="text-green-500">✓ {item.current_reserved}</span>
                             )}
                           </td>
                           <td className="p-2 text-center">
                             {item.sold_diff !== 0 ? (
-                              <span className="text-red-500">
-                                {item.current_sold} → {item.calculated_sold}
-                              </span>
+                              <div className="space-y-0.5">
+                                <span className="text-red-500 line-through">{item.current_sold}</span>
+                                <span className="text-green-600 font-bold mr-1">→ {item.calculated_sold}</span>
+                              </div>
                             ) : (
-                              <span className="text-green-500">✓</span>
+                              <span className="text-green-500">✓ {item.current_sold}</span>
                             )}
+                          </td>
+                          <td className={cn("p-2 text-center font-mono", item.available < 0 ? "text-red-600 font-bold" : "text-green-600")}>
+                            {item.available}
+                          </td>
+                          <td className="p-2 text-center">
+                            <Badge variant={item.issue_type?.includes('negative') ? 'destructive' : 'outline'} className="text-xs">
+                              {item.issue_type === 'reserved_only' && 'محجوز'}
+                              {item.issue_type === 'sold_only' && 'مباع'}
+                              {item.issue_type === 'reserved_and_sold' && 'محجوز+مباع'}
+                              {item.issue_type === 'negative_available' && 'متاح سالب'}
+                              {item.issue_type === 'negative_reserved' && 'محجوز سالب'}
+                              {item.issue_type === 'negative_sold' && 'مباع سالب'}
+                            </Badge>
                           </td>
                         </tr>
                       ))}
