@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Search, Loader2, CheckCircle, AlertTriangle, Wrench, X, Package, TrendingDown, TrendingUp, AlertCircle } from 'lucide-react';
+import { Search, Loader2, CheckCircle, AlertTriangle, Wrench, X, Package, TrendingDown, TrendingUp, AlertCircle, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import {
@@ -101,21 +101,58 @@ const InventoryAuditDialog = ({ isAdmin }) => {
     }
   };
 
+  // تصميم الزر الفاخر بـ inline style لضمان التطبيق
+  const luxuryButtonStyle = {
+    background: 'linear-gradient(135deg, #10b981 0%, #0d9488 50%, #06b6d4 100%)',
+    color: 'white',
+    fontWeight: '600',
+    padding: '10px 20px',
+    borderRadius: '12px',
+    border: 'none',
+    boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4), 0 0 40px rgba(6, 182, 212, 0.2)',
+    cursor: 'pointer',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    transition: 'all 0.3s ease',
+    fontSize: '14px',
+    position: 'relative',
+    overflow: 'hidden',
+  };
+
   return (
     <>
-      {/* زر الفحص - تصميم احترافي مطابق لزر PDF */}
-      <Button 
+      {/* زر الفحص - تصميم فاخر عالمي */}
+      <button
         onClick={handleAuditInventory}
         disabled={isAuditing}
-        className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
+        style={luxuryButtonStyle}
+        className="group hover:scale-105 hover:shadow-[0_6px_30px_rgba(16,185,129,0.5)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'linear-gradient(135deg, #059669 0%, #0f766e 50%, #0891b2 100%)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'linear-gradient(135deg, #10b981 0%, #0d9488 50%, #06b6d4 100%)';
+        }}
       >
+        {/* Shimmer effect */}
+        <span 
+          className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500"
+          style={{
+            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+            animation: 'shimmer 2s infinite',
+          }}
+        />
+        
         {isAuditing ? (
-          <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+          <Loader2 className="w-4 h-4 animate-spin" />
         ) : (
-          <Search className="w-4 h-4 ml-2" />
+          <Search className="w-4 h-4 group-hover:scale-110 transition-transform" />
         )}
-        فحص دقة المخزون
-      </Button>
+        <span>فحص دقة المخزون</span>
+        <Sparkles className="w-3 h-3 opacity-70" />
+      </button>
 
       {/* Dialog احترافي */}
       <Dialog open={showResults} onOpenChange={setShowResults}>
@@ -319,6 +356,14 @@ const InventoryAuditDialog = ({ isAdmin }) => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* CSS للـ shimmer animation */}
+      <style>{`
+        @keyframes shimmer {
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
+        }
+      `}</style>
     </>
   );
 };
