@@ -112,16 +112,37 @@ const EmployeeFollowUpPage = () => {
     
     toast({
       title: "بدء المزامنة الشاملة",
-      description: `مزامنة ${currentFilteredOrders.length} طلب مرئي...`,
+      description: "جاري مزامنة الفواتير والطلبات لجميع الموظفين...",
     });
     
     setSyncing(true);
     try {
+      // ✅ 1. مزامنة الفواتير أولاً عبر Edge Function (شاملة لجميع التوكنات)
+      const { data: invoiceSyncResult, error: invoiceError } = await supabase.functions.invoke('smart-invoice-sync', {
+        body: { 
+          mode: 'comprehensive',
+          sync_invoices: true,
+          sync_orders: true,  // ✅ تفعيل مزامنة طلبات الفواتير أيضاً
+          force_refresh: true
+        }
+      });
+      
+      if (invoiceError) {
+        console.error('❌ خطأ في مزامنة الفواتير:', invoiceError);
+      } else {
+        console.log('✅ نتيجة مزامنة الفواتير:', invoiceSyncResult);
+      }
+      
+      // ✅ 2. مزامنة حالات الطلبات من API
       await syncVisibleOrdersBatch(currentFilteredOrders);
       await refreshOrders();
+      
+      // ✅ 3. إرسال حدث لتحديث الفواتير في الواجهات الأخرى
+      window.dispatchEvent(new CustomEvent('invoicesSynced'));
+      
       toast({
-        title: "✅ اكتملت المزامنة",
-        description: "تم تحديث جميع الطلبات",
+        title: "✅ اكتملت المزامنة الشاملة",
+        description: `تم تحديث الفواتير والطلبات - ${invoiceSyncResult?.invoices_synced || 0} فاتورة`,
       });
     } catch (error) {
       toast({
