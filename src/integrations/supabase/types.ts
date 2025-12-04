@@ -2745,6 +2745,121 @@ export type Database = {
           },
         ]
       }
+      inventory_operations_log: {
+        Row: {
+          color_name: string | null
+          created_at: string | null
+          id: string
+          notes: string | null
+          operation_type: string
+          order_id: string | null
+          performed_at: string | null
+          performed_by: string | null
+          product_id: string | null
+          product_name: string | null
+          quantity_after: number | null
+          quantity_before: number | null
+          quantity_change: number
+          reserved_after: number | null
+          reserved_before: number | null
+          size_value: string | null
+          sold_after: number | null
+          sold_before: number | null
+          source_type: string | null
+          tracking_number: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          color_name?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          operation_type: string
+          order_id?: string | null
+          performed_at?: string | null
+          performed_by?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity_after?: number | null
+          quantity_before?: number | null
+          quantity_change: number
+          reserved_after?: number | null
+          reserved_before?: number | null
+          size_value?: string | null
+          sold_after?: number | null
+          sold_before?: number | null
+          source_type?: string | null
+          tracking_number?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          color_name?: string | null
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          operation_type?: string
+          order_id?: string | null
+          performed_at?: string | null
+          performed_by?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity_after?: number | null
+          quantity_before?: number | null
+          quantity_change?: number
+          reserved_after?: number | null
+          reserved_before?: number | null
+          size_value?: string | null
+          sold_after?: number | null
+          sold_before?: number | null
+          source_type?: string | null
+          tracking_number?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_operations_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_operations_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_operations_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "inventory_operations_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_operations_log_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_operations_log_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invoice_sync_settings: {
         Row: {
           auto_cleanup_enabled: boolean | null
@@ -6874,6 +6989,31 @@ export type Database = {
           reserved_quantity: number
           size_name: string
           variant_id: string
+        }[]
+      }
+      get_inventory_operations_log: {
+        Args: {
+          p_limit?: number
+          p_operation_type?: string
+          p_product_id?: string
+        }
+        Returns: {
+          color_name: string
+          id: string
+          notes: string
+          operation_type: string
+          performed_at: string
+          product_name: string
+          quantity_after: number
+          quantity_before: number
+          quantity_change: number
+          reserved_after: number
+          reserved_before: number
+          size_value: string
+          sold_after: number
+          sold_before: number
+          source_type: string
+          tracking_number: string
         }[]
       }
       get_inventory_stats: {

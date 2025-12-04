@@ -31,6 +31,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import { useSalesStats } from '@/hooks/useSalesStats';
 import InventoryAuditDialog from '@/components/inventory/InventoryAuditDialog';
+import InventoryOperationsLog from '@/components/inventory/InventoryOperationsLog';
 
 const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, onSelectionChange, selectedItems, isMobile, getVariantSoldData: getSoldDataProp }) => {
   if (isLoading) {
@@ -251,9 +252,12 @@ const InventoryHeaderWithAudit = ({ inventoryItems, filteredItems, selectedItems
         <p className="text-muted-foreground mt-1">إدارة مخزون جميع المنتجات والمقاسات</p>
       </div>
       
-      <div className="flex gap-3">
+      <div className="flex flex-wrap gap-2 sm:gap-3">
         {/* زر فحص المخزون - للمديرين فقط */}
         <InventoryAuditDialog isAdmin={isAdmin} />
+        
+        {/* زر سجل العمليات - للمديرين فقط */}
+        <InventoryOperationsLog isAdmin={isAdmin} />
         
         <Button 
           onClick={async () => {
@@ -303,7 +307,7 @@ const InventoryHeaderWithAudit = ({ inventoryItems, filteredItems, selectedItems
           className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
         >
           <Download className="w-4 h-4 ml-2" />
-          تصدير تقرير PDF
+          تصدير PDF
         </Button>
       </div>
     </div>
