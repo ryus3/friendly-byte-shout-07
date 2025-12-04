@@ -6725,7 +6725,6 @@ export type Database = {
       fix_inventory_discrepancies: {
         Args: never
         Returns: {
-          fix_type: string
           new_reserved: number
           new_sold: number
           old_reserved: number
