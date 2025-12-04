@@ -1,13 +1,10 @@
 import React, { forwardRef } from 'react';
 import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
 
-// Register Arabic fonts
+// Register Arabic fonts from CDN
 Font.register({
   family: 'Amiri',
-  fonts: [
-    { src: '/fonts/Amiri-Regular.ttf' },
-    { src: '/fonts/Amiri-Bold.ttf', fontWeight: 'bold' }
-  ]
+  src: 'https://fonts.gstatic.com/s/amiri/v27/J7aRnpd8CGxBHpUrtLMA7w.ttf'
 });
 
 const styles = StyleSheet.create({
