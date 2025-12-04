@@ -150,7 +150,7 @@ const InventoryAuditDialog = ({ isAdmin }) => {
         ) : (
           <Search className="w-4 h-4 group-hover:scale-110 transition-transform" />
         )}
-        <span>فحص دقة المخزون</span>
+        <span>فحص المخزون</span>
         <Sparkles className="w-3 h-3 opacity-70" />
       </button>
 
