@@ -426,12 +426,59 @@ const InventoryOperationsLog = ({ isAdmin }) => {
                                       <span>{change.label}:</span>
                                       <span className="font-bold">{change.display}</span>
                                       <span className="text-xs opacity-70">
-                                        ({change.before} ← {change.after})
+                                        ({change.before} → {change.after})
                                       </span>
                                     </div>
                                   ))}
                                 </div>
                               )}
+                              
+                              {/* الحالة بعد العملية */}
+                              <div className="mt-3 pt-3 border-t border-border/50">
+                                <div className="text-xs text-muted-foreground mb-2 font-medium">📊 الحالة بعد العملية:</div>
+                                <div className="grid grid-cols-4 gap-2 text-center">
+                                  <div className={cn(
+                                    "bg-background/60 rounded-lg p-2",
+                                    log.operation_type === 'stock_added' || log.operation_type === 'stock_reduced' ? "ring-2 ring-primary/50" : ""
+                                  )}>
+                                    <div className="text-[10px] text-muted-foreground">المخزون</div>
+                                    <div className="font-bold text-sm">
+                                      {log.quantity_after ?? '-'}
+                                      {(log.operation_type === 'stock_added' || log.operation_type === 'stock_reduced') && ' ✨'}
+                                    </div>
+                                  </div>
+                                  <div className={cn(
+                                    "bg-background/60 rounded-lg p-2",
+                                    log.operation_type === 'reserved' || log.operation_type === 'released' ? "ring-2 ring-primary/50" : ""
+                                  )}>
+                                    <div className="text-[10px] text-muted-foreground">المتاح</div>
+                                    <div className="font-bold text-sm">
+                                      {(log.quantity_after ?? 0) - (log.reserved_after ?? 0)}
+                                      {(log.operation_type === 'reserved' || log.operation_type === 'released') && ' ✨'}
+                                    </div>
+                                  </div>
+                                  <div className={cn(
+                                    "bg-background/60 rounded-lg p-2",
+                                    log.operation_type === 'reserved' || log.operation_type === 'released' ? "ring-2 ring-amber-500/50" : ""
+                                  )}>
+                                    <div className="text-[10px] text-muted-foreground">المحجوز</div>
+                                    <div className="font-bold text-sm">
+                                      {log.reserved_after ?? 0}
+                                      {(log.operation_type === 'reserved' || log.operation_type === 'released') && ' ✨'}
+                                    </div>
+                                  </div>
+                                  <div className={cn(
+                                    "bg-background/60 rounded-lg p-2",
+                                    log.operation_type === 'sold' || log.operation_type === 'returned' ? "ring-2 ring-purple-500/50" : ""
+                                  )}>
+                                    <div className="text-[10px] text-muted-foreground">المباع</div>
+                                    <div className="font-bold text-sm">
+                                      {log.sold_after ?? 0}
+                                      {(log.operation_type === 'sold' || log.operation_type === 'returned') && ' ✨'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
                               
                               {/* معلومات إضافية */}
                               <div className="flex flex-wrap items-center gap-3 mt-3 text-xs text-muted-foreground">
@@ -453,12 +500,14 @@ const InventoryOperationsLog = ({ isAdmin }) => {
                                     <span>{log.performed_by_name}</span>
                                   </div>
                                 )}
-                                {log.source_type && log.source_type !== 'order' && (
+                                {log.source_type && (
                                   <div className="flex items-center gap-1.5 bg-background/60 px-2 py-1 rounded">
                                     <span>المصدر: {
+                                      log.source_type === 'system' ? 'النظام (تلقائي)' :
+                                      log.source_type === 'order' ? 'طلب' :
                                       log.source_type === 'manual' ? 'يدوي' :
                                       log.source_type === 'audit' ? 'فحص' :
-                                      log.source_type === 'return' ? 'إرجاع' :
+                                      log.source_type === 'return' ? 'إرجاع للتاجر' :
                                       log.source_type
                                     }</span>
                                   </div>
