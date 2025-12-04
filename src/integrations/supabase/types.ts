@@ -7002,7 +7002,10 @@ export type Database = {
           id: string
           notes: string
           operation_type: string
+          order_id: string
           performed_at: string
+          performed_by: string
+          performed_by_name: string
           product_name: string
           quantity_after: number
           quantity_before: number
