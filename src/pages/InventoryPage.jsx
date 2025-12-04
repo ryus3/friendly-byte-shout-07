@@ -10,7 +10,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useSearchParams } from 'react-router-dom';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Button } from '@/components/ui/button';
-import { Download, Package, ChevronDown, Archive, Shirt, ShoppingBag, PackageOpen, Crown, QrCode } from 'lucide-react';
+import { Download, Package, ChevronDown, Archive, Shirt, ShoppingBag, PackageOpen, Crown, QrCode, Search, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import InventoryStats from '@/components/inventory/InventoryStats';
@@ -239,6 +239,238 @@ const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, on
   );
 };
 
+
+// مكون Header مع زر الفحص
+const InventoryHeaderWithAudit = ({ inventoryItems, filteredItems, selectedItemsForExport }) => {
+  const [isAuditing, setIsAuditing] = useState(false);
+  const [auditResults, setAuditResults] = useState(null);
+  const [showResults, setShowResults] = useState(false);
+
+  const handleAuditInventory = async () => {
+    setIsAuditing(true);
+    try {
+      const { data, error } = await supabase.rpc('audit_inventory_accuracy');
+      
+      if (error) throw error;
+      
+      setAuditResults(data || []);
+      setShowResults(true);
+      
+      if (!data || data.length === 0) {
+        toast({
+          title: "✅ المخزون صحيح",
+          description: "جميع الأرقام متطابقة مع الطلبات الفعلية",
+        });
+      } else {
+        toast({
+          title: "⚠️ تم اكتشاف فروقات",
+          description: `${data.length} منتج يحتاج مراجعة`,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Audit error:', error);
+      toast({
+        title: "خطأ في الفحص",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
+  const handleFixDiscrepancies = async () => {
+    try {
+      const { data, error } = await supabase.rpc('fix_inventory_discrepancies');
+      
+      if (error) throw error;
+      
+      toast({
+        title: "✅ تم الإصلاح",
+        description: `تم تصحيح ${data?.length || 0} منتج`,
+      });
+      
+      setShowResults(false);
+      setAuditResults(null);
+    } catch (error) {
+      console.error('Fix error:', error);
+      toast({
+        title: "خطأ في الإصلاح",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">الجرد المفصل</h1>
+          <p className="text-muted-foreground mt-1">إدارة مخزون جميع المنتجات والمقاسات</p>
+        </div>
+        
+        <div className="flex gap-3">
+          <Button 
+            onClick={handleAuditInventory}
+            disabled={isAuditing}
+            variant="outline"
+            className="border-amber-500/50 text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+          >
+            {isAuditing ? (
+              <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+            ) : (
+              <Search className="w-4 h-4 ml-2" />
+            )}
+            فحص دقة المخزون
+          </Button>
+          
+          <Button 
+            onClick={async () => {
+               try {
+                 let productsToExport = [];
+                 
+                 if (selectedItemsForExport.length > 0) {
+                   productsToExport = inventoryItems.filter(item => selectedItemsForExport.includes(item.id));
+                 } else {
+                   productsToExport = filteredItems;
+                 }
+                 
+                 const exportData = productsToExport.flatMap(product => {
+                   if (!product?.variants || !Array.isArray(product.variants)) {
+                     return [];
+                   }
+                   
+                   return product.variants.map(variant => ({
+                     name: product.name || product.product_name || 'غير محدد',
+                     color: variant.color_name || variant.color || 'غير محدد',
+                     size: variant.size_name || variant.size || 'غير محدد', 
+                     quantity: variant.quantity || 0,
+                     price: variant.selling_price || variant.sale_price || variant.price || 0
+                   }));
+                 });
+                 
+                 if (exportData.length === 0) {
+                   toast({ 
+                     title: "تحذير", 
+                     description: "لا توجد منتجات للتصدير",
+                     variant: "destructive" 
+                   });
+                   return;
+                 }
+                 
+                 const fileName = selectedItemsForExport.length > 0 
+                   ? `الجرد_المحدد_${new Date().toISOString().split('T')[0]}`
+                   : `الجرد_الكامل_${new Date().toISOString().split('T')[0]}`;
+                 
+                 await generateInventoryReportPDF(exportData, fileName);
+                 
+                 toast({ 
+                   title: "تم بنجاح", 
+                   description: `تم تصدير ${exportData.length} عنصر إلى PDF`,
+                   variant: "success" 
+                 });
+               } catch (error) {
+                 console.error('Error exporting inventory:', error);
+                 toast({ 
+                   title: "خطأ في التصدير", 
+                   description: "فشل في تصدير البيانات للـ PDF",
+                   variant: "destructive" 
+                 });
+               }
+             }}
+             className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
+          >
+            <Download className="w-4 h-4 ml-2" />
+            تصدير تقرير PDF
+          </Button>
+        </div>
+      </div>
+
+      {/* Dialog نتائج الفحص */}
+      {showResults && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowResults(false)}>
+          <div className="bg-background rounded-lg max-w-2xl w-full max-h-[80vh] overflow-y-auto p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-4">
+              {auditResults?.length === 0 ? (
+                <>
+                  <CheckCircle className="w-5 h-5 text-green-500" />
+                  <h2 className="text-lg font-semibold">المخزون صحيح 100%</h2>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="w-5 h-5 text-amber-500" />
+                  <h2 className="text-lg font-semibold">فروقات في المخزون ({auditResults?.length || 0})</h2>
+                </>
+              )}
+            </div>
+            
+            {auditResults?.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <CheckCircle className="w-16 h-16 mx-auto text-green-500 mb-4" />
+                <p>جميع أرقام المخزون متطابقة مع الطلبات الفعلية</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="rounded-lg border overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-muted">
+                      <tr>
+                        <th className="p-2 text-right">المنتج</th>
+                        <th className="p-2 text-center">المحجوز</th>
+                        <th className="p-2 text-center">المباع</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {auditResults?.map((item, idx) => (
+                        <tr key={idx} className="border-t">
+                          <td className="p-2">
+                            <div className="font-medium">{item.product_name}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {item.color_name} - {item.size_value}
+                            </div>
+                          </td>
+                          <td className="p-2 text-center">
+                            {item.reserved_diff !== 0 ? (
+                              <span className="text-red-500">
+                                {item.current_reserved} → {item.calculated_reserved}
+                              </span>
+                            ) : (
+                              <span className="text-green-500">✓</span>
+                            )}
+                          </td>
+                          <td className="p-2 text-center">
+                            {item.sold_diff !== 0 ? (
+                              <span className="text-red-500">
+                                {item.current_sold} → {item.calculated_sold}
+                              </span>
+                            ) : (
+                              <span className="text-green-500">✓</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setShowResults(false)}>
+                    إغلاق
+                  </Button>
+                  <Button onClick={handleFixDiscrepancies} className="bg-green-600 hover:bg-green-700">
+                    إصلاح الفروقات تلقائياً
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
 
 const InventoryPage = () => {
   const { products: allProducts, orders, loading, settings, updateVariantStock } = useInventory();
@@ -693,78 +925,11 @@ const InventoryPage = () => {
         <meta name="description" content="عرض وإدارة المخزون بشكل تفصيلي." />
       </Helmet>
       <div className="space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">الجرد المفصل</h1>
-            <p className="text-muted-foreground mt-1">إدارة مخزون جميع المنتجات والمقاسات</p>
-          </div>
-          
-          <div className="flex gap-3">
-            <Button 
-              onClick={async () => {
-                 try {
-                   // تحضير البيانات للتصدير بالتنسيق الصحيح
-                   let productsToExport = [];
-                   
-                   if (selectedItemsForExport.length > 0) {
-                     // إذا كان هناك عناصر محددة، نأخذها من المخزون
-                     productsToExport = inventoryItems.filter(item => selectedItemsForExport.includes(item.id));
-                   } else {
-                     // وإلا نأخذ جميع العناصر المفلترة
-                     productsToExport = filteredItems;
-                   }
-                   
-                   // تحويل المنتجات إلى متغيرات مسطحة
-                   const exportData = productsToExport.flatMap(product => {
-                     if (!product?.variants || !Array.isArray(product.variants)) {
-                       return [];
-                     }
-                     
-                     return product.variants.map(variant => ({
-                       name: product.name || product.product_name || 'غير محدد',
-                       color: variant.color_name || variant.color || 'غير محدد',
-                       size: variant.size_name || variant.size || 'غير محدد', 
-                       quantity: variant.quantity || 0,
-                       price: variant.selling_price || variant.sale_price || variant.price || 0
-                     }));
-                   });
-                   
-                   if (exportData.length === 0) {
-                     toast({ 
-                       title: "تحذير", 
-                       description: "لا توجد منتجات للتصدير",
-                       variant: "destructive" 
-                     });
-                     return;
-                   }
-                   
-                   const fileName = selectedItemsForExport.length > 0 
-                     ? `الجرد_المحدد_${new Date().toISOString().split('T')[0]}`
-                     : `الجرد_الكامل_${new Date().toISOString().split('T')[0]}`;
-                   
-                   await generateInventoryReportPDF(exportData, fileName);
-                   
-                   toast({ 
-                     title: "تم بنجاح", 
-                     description: `تم تصدير ${exportData.length} عنصر إلى PDF`,
-                     variant: "success" 
-                   });
-                 } catch (error) {
-                   console.error('Error exporting inventory:', error);
-                   toast({ 
-                     title: "خطأ في التصدير", 
-                     description: "فشل في تصدير البيانات للـ PDF",
-                     variant: "destructive" 
-                   });
-                 }
-               }}
-               className="bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 border-0"
-            >
-              <Download className="w-4 h-4 ml-2" />
-              تصدير تقرير PDF
-            </Button>
-          </div>
-        </div>
+        <InventoryHeaderWithAudit 
+          inventoryItems={inventoryItems}
+          filteredItems={filteredItems}
+          selectedItemsForExport={selectedItemsForExport}
+        />
 
         {/* النظام الموحد للإحصائيات وكروت الأقسام + بطاقة الأرشيف بنفس السطر */}
         <UnifiedInventoryStats 
