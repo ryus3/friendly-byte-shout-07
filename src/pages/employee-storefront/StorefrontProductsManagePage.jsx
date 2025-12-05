@@ -53,7 +53,11 @@ const StorefrontProductsManagePage = () => {
   const fetchAllowedProducts = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      console.log('📦 Fetching allowed products for user:', user?.id);
+      if (!user) {
+        console.log('❌ No user found');
+        return;
+      }
 
       // جلب IDs المنتجات المسموحة
       const { data: allowedData, error: allowedError } = await supabase
@@ -62,12 +66,16 @@ const StorefrontProductsManagePage = () => {
         .eq('employee_id', user.id)
         .eq('is_active', true);
 
+      console.log('📋 Allowed products data:', allowedData, 'Error:', allowedError);
+
       if (allowedError) throw allowedError;
 
       const productIds = allowedData?.map(ap => ap.product_id) || [];
       setAllowedProductIds(productIds);
+      console.log('📋 Product IDs:', productIds);
 
       if (productIds.length === 0) {
+        console.log('⚠️ No allowed products found for this employee');
         setProducts([]);
         return;
       }
@@ -82,27 +90,61 @@ const StorefrontProductsManagePage = () => {
             price,
             images,
             color:colors(id, name, hex_code),
-            size:sizes(id, name),
-            inventory!inventory_variant_id_fkey(quantity, reserved_quantity)
+            size:sizes(id, name)
           )
         `)
         .in('id', productIds)
         .eq('is_active', true);
 
+      console.log('📦 Products data:', productsData, 'Error:', productsError);
+
       if (productsError) throw productsError;
 
+      if (!productsData || productsData.length === 0) {
+        console.log('⚠️ No products found');
+        setProducts([]);
+        return;
+      }
+
+      // جلب المخزون بشكل منفصل للتأكد من عدم فشل الـ join
+      const variantIds = productsData.flatMap(p => p.variants?.map(v => v.id) || []);
+      console.log('📦 Variant IDs:', variantIds);
+
+      const { data: inventoryData, error: inventoryError } = await supabase
+        .from('inventory')
+        .select('variant_id, quantity, reserved_quantity')
+        .in('variant_id', variantIds);
+
+      console.log('📦 Inventory data:', inventoryData, 'Error:', inventoryError);
+
+      // إنشاء خريطة المخزون
+      const inventoryMap = {};
+      inventoryData?.forEach(inv => {
+        inventoryMap[inv.variant_id] = inv;
+      });
+
+      // دمج المخزون مع المنتجات وفلترة المتاح فقط
+      const productsWithInventory = productsData.map(p => ({
+        ...p,
+        variants: p.variants?.map(v => ({
+          ...v,
+          inventory: inventoryMap[v.id] || { quantity: 0, reserved_quantity: 0 }
+        }))
+      }));
+
       // فلترة المنتجات التي لديها مخزون متاح
-      const available = productsData?.filter(p =>
+      const available = productsWithInventory.filter(p =>
         p.variants?.some(v => {
           const qty = v.inventory?.quantity || 0;
           const reserved = v.inventory?.reserved_quantity || 0;
           return (qty - reserved) > 0;
         })
-      ) || [];
+      );
 
+      console.log('✅ Available products with stock:', available.length);
       setProducts(available);
     } catch (err) {
-      console.error('Error fetching allowed products:', err);
+      console.error('❌ Error fetching allowed products:', err);
       toast({
         title: 'خطأ',
         description: 'حدث خطأ في جلب المنتجات المسموحة',

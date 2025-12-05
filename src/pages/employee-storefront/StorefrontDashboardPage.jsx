@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target } from 'lucide-react';
+import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target, Copy, Check, Globe } from 'lucide-react';
 import StorefrontAnalytics from '@/components/employee-storefront/StorefrontAnalytics';
 import PremiumButton from '@/components/storefront/ui/PremiumButton';
 import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
 import GradientText from '@/components/storefront/ui/GradientText';
 import StatCard from '@/components/storefront/dashboard/StatCard';
 import { toast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 
 const StorefrontDashboardPage = () => {
   const navigate = useNavigate();
@@ -17,6 +18,24 @@ const StorefrontDashboardPage = () => {
   const [loading, setLoading] = useState(true);
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  // رابط المتجر العام الكامل
+  const getStoreUrl = () => {
+    const baseUrl = window.location.origin;
+    return `${baseUrl}/storefront/${settings?.slug}`;
+  };
+
+  const copyStoreLink = async () => {
+    try {
+      await navigator.clipboard.writeText(getStoreUrl());
+      setCopied(true);
+      toast({ title: 'تم نسخ الرابط!' });
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      toast({ title: 'خطأ في النسخ', variant: 'destructive' });
+    }
+  };
 
   useEffect(() => {
     fetchStorefrontData();
@@ -152,6 +171,44 @@ const StorefrontDashboardPage = () => {
           إدارة متجرك الإلكتروني الاحترافي
         </p>
       </div>
+
+      {/* رابط المتجر العام - بارز جداً */}
+      <Card className="mb-6 sm:mb-8 border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-purple-500/5">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white">
+                <Globe className="h-6 w-6" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">رابط متجرك العام</p>
+                <p className="font-mono text-sm sm:text-base break-all text-primary font-semibold">
+                  {getStoreUrl()}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyStoreLink}
+                className="flex-1 sm:flex-none"
+              >
+                {copied ? <Check className="h-4 w-4 ml-2" /> : <Copy className="h-4 w-4 ml-2" />}
+                {copied ? 'تم النسخ' : 'نسخ الرابط'}
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => window.open(getStoreUrl(), '_blank')}
+                className="flex-1 sm:flex-none bg-gradient-to-r from-primary to-purple-600 hover:opacity-90"
+              >
+                <ExternalLink className="h-4 w-4 ml-2" />
+                افتح المتجر
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Quick Actions - تصميم كروت احترافية 2x2 */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
