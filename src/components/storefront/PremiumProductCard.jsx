@@ -53,7 +53,7 @@ const PremiumProductCard = ({ product, slug }) => {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Image Container */}
-      <Link to={`/storefront/${slug}/products/${product.id}`} className="block">
+      <Link to={`/storefront/${slug}/product/${product.id}`} className="block">
         <div className="relative aspect-square overflow-hidden bg-muted">
           {/* Main Image */}
           <img
@@ -109,7 +109,7 @@ const PremiumProductCard = ({ product, slug }) => {
         </span>
 
         {/* Title */}
-        <Link to={`/storefront/${slug}/products/${product.id}`}>
+        <Link to={`/storefront/${slug}/product/${product.id}`}>
           <h3 className="text-lg font-bold text-foreground line-clamp-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-blue-600 group-hover:to-purple-600 transition-all">
             {product.name}
           </h3>
