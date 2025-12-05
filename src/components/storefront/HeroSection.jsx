@@ -154,7 +154,7 @@ const HeroSection = ({ slug, banners = [] }) => {
 // Default Hero when no banners
 const DefaultHero = ({ slug }) => {
   return (
-    <section className="h-screen relative overflow-hidden">
+    <section className="min-h-[60vh] md:min-h-[70vh] relative overflow-hidden">
       {/* Background Image */}
       <div className="absolute inset-0">
         <img
