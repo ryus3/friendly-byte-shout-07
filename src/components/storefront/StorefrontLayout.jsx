@@ -1,11 +1,10 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
 import StorefrontHeader from './StorefrontHeader';
 import StorefrontFooter from './StorefrontFooter';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import PremiumLoader from './ui/PremiumLoader';
 
-const StorefrontLayout = ({ products = [] }) => {
+const StorefrontLayout = ({ products = [], children }) => {
   const { settings, settingsLoading, error } = useStorefront();
 
   if (settingsLoading) {
@@ -35,7 +34,7 @@ const StorefrontLayout = ({ products = [] }) => {
     <div className="min-h-screen bg-gradient-to-b from-background to-muted/20" style={customColors}>
       <StorefrontHeader products={products} />
       <main className="min-h-[calc(100vh-400px)]">
-        <Outlet />
+        {children}
       </main>
       <StorefrontFooter />
     </div>

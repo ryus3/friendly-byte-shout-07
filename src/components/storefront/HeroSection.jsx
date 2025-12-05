@@ -153,32 +153,42 @@ const HeroSection = ({ slug, banners = [] }) => {
 
 // Default Hero when no banners
 const DefaultHero = ({ slug }) => {
+  const [imageLoaded, setImageLoaded] = React.useState(false);
+  const [imageError, setImageError] = React.useState(false);
+
   return (
     <section className="min-h-[60vh] md:min-h-[70vh] relative overflow-hidden">
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <img
-          src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920"
-          alt="Hero"
-          className="w-full h-full object-cover"
-        />
-      </div>
+      {/* Background - Gradient fallback always visible */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900 via-pink-800 to-blue-900" />
+      
+      {/* Background Image - only show if loaded successfully */}
+      {!imageError && (
+        <div className="absolute inset-0">
+          <img
+            src="https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1920&q=80"
+            alt="Hero"
+            className={`w-full h-full object-cover transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+            onLoad={() => setImageLoaded(true)}
+            onError={() => setImageError(true)}
+          />
+        </div>
+      )}
 
       {/* Gradient Overlay */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/70 via-pink-800/60 to-blue-900/70" />
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/60 via-pink-800/50 to-blue-900/60" />
 
       {/* Content */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center text-center container mx-auto px-4">
+      <div className="relative z-10 h-full min-h-[60vh] md:min-h-[70vh] flex flex-col items-center justify-center text-center container mx-auto px-4 py-16">
         <GradientText
           variant="gold"
-          className="text-6xl md:text-8xl font-black mb-6"
+          className="text-5xl sm:text-6xl md:text-8xl font-black mb-6"
           as="h1"
           animate
         >
           اكتشف الموضة العالمية
         </GradientText>
 
-        <p className="text-2xl md:text-3xl text-white/90 mb-8 max-w-3xl">
+        <p className="text-xl sm:text-2xl md:text-3xl text-white/90 mb-8 max-w-3xl">
           أحدث صيحات الموضة 2024 بجودة استثنائية وأسعار لا تُقاوم
         </p>
 
