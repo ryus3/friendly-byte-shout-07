@@ -58,6 +58,7 @@ const CustomersManagementPage = () => {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
 const [showExportDialog, setShowExportDialog] = useState(false);
+  const [showTopProvincesDialog, setShowTopProvincesDialog] = useState(false);
   const [activeTab, setActiveTab] = useState('customers');
   const [cityDiscountsData, setCityDiscountsData] = useState({ cityDiscounts: [], monthlyBenefits: [], topCities: [] });
   const [currentPage, setCurrentPage] = useState(1);
