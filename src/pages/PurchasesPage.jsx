@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useImprovedPurchases } from '@/hooks/useImprovedPurchases';
@@ -12,6 +12,7 @@ import UnifiedPurchasesStats from '@/components/purchases/UnifiedPurchasesStats'
 import UnifiedPurchasesToolbar from '@/components/purchases/UnifiedPurchasesToolbar';
 import PurchasesList from '@/components/purchases/PurchasesList';
 import PurchasesGrid from '@/components/purchases/PurchasesGrid';
+import SmartPagination from '@/components/ui/SmartPagination';
 
 import AddPurchaseDialog from '@/components/purchases/AddPurchaseDialog';
 import PurchaseDetailsDialog from '@/components/purchases/PurchaseDetailsDialog';
@@ -37,6 +38,9 @@ const PurchasesPage = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [purchaseToDelete, setPurchaseToDelete] = useState(null);
+  
+  const ITEMS_PER_PAGE = 15;
+  const [currentPage, setCurrentPage] = useState(1);
 
   // حفظ إعدادات العرض عند تغييرها
   React.useEffect(() => {
@@ -87,6 +91,16 @@ const PurchasesPage = () => {
 
     return filtered;
   }, [purchases, filters]);
+
+  // إعادة تعيين الصفحة عند تغيير الفلاتر
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  // حساب الصفحات
+  const totalPages = Math.ceil(filteredPurchases.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedPurchases = filteredPurchases.slice(startIndex, startIndex + ITEMS_PER_PAGE);
 
   const handleViewDetails = (purchase) => {
     setSelectedPurchase(purchase);
@@ -188,19 +202,27 @@ const PurchasesPage = () => {
         
         {viewMode === 'table' ? (
           <PurchasesList 
-            purchases={filteredPurchases} 
+            purchases={paginatedPurchases} 
             isLoading={loading}
             onViewDetails={handleViewDetails}
             onDelete={handleDeletePurchase}
           />
         ) : (
           <PurchasesGrid 
-            purchases={filteredPurchases} 
+            purchases={paginatedPurchases} 
             isLoading={loading}
             onViewDetails={handleViewDetails}
             onDelete={handleDeletePurchase}
           />
         )}
+        
+        <SmartPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredPurchases.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+        />
       </div>
 
       <AddPurchaseDialog 

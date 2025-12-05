@@ -7,6 +7,7 @@ import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifie
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { useVariants } from '@/contexts/VariantsContext';
+import SmartPagination from '@/components/ui/SmartPagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -128,6 +129,9 @@ const ProductsPage = () => {
     }
   }, [location]);
 
+  const ITEMS_PER_PAGE = 15;
+  const [currentPage, setCurrentPage] = useState(1);
+
   const filteredProducts = useMemo(() => {
     // دائماً نخفي المنتجات غير النشطة من واجهة العرض والاستخدام
     let tempProducts = permissionFilteredProducts.filter(p => p.is_active !== false);
@@ -194,6 +198,16 @@ const ProductsPage = () => {
 
     return tempProducts;
   }, [permissionFilteredProducts, filters]);
+
+  // إعادة تعيين الصفحة عند تغيير الفلاتر
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  // حساب الصفحات
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedProducts = filteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   
   const handleCreateOrder = (product, variant, quantity) => {
     clearCart();
@@ -320,11 +334,20 @@ const ProductsPage = () => {
         </header>
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           {filteredProducts.length > 0 ? (
-            viewMode === 'grid' ? (
-              <PermissionBasedProductGrid products={filteredProducts} onProductSelect={handleProductSelect} onCreateOrder={handleCreateOrder} />
-            ) : (
-              <ProductList products={filteredProducts} onProductSelect={handleProductSelect} />
-            )
+            <>
+              {viewMode === 'grid' ? (
+                <PermissionBasedProductGrid products={paginatedProducts} onProductSelect={handleProductSelect} onCreateOrder={handleCreateOrder} />
+              ) : (
+                <ProductList products={paginatedProducts} onProductSelect={handleProductSelect} />
+              )}
+              <SmartPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredProducts.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+              />
+            </>
           ) : (
             <div className="text-center py-16">
               <h2 className="text-2xl font-bold mb-2">لا توجد منتجات مطابقة</h2>
