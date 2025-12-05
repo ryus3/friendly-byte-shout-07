@@ -28,6 +28,7 @@ const StorefrontHome = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
+        console.log('🏪 Fetching storefront data for employee:', settings.employee_id);
 
         // جلب البانرات
         const { data: bannersData } = await supabase
@@ -38,35 +39,42 @@ const StorefrontHome = () => {
           .order('display_order');
 
         setBanners(bannersData || []);
+        console.log('🎨 Banners:', bannersData?.length || 0);
 
         // === النظام الهجين: جلب المنتجات المسموحة التي هي في المتجر ===
         
         // 1. جلب IDs المنتجات المسموحة للموظف
-        const { data: allowedProductsData } = await supabase
+        const { data: allowedProductsData, error: allowedError } = await supabase
           .from('employee_allowed_products')
           .select('product_id')
           .eq('employee_id', settings.employee_id)
           .eq('is_active', true);
 
+        console.log('📋 Allowed products:', allowedProductsData, 'Error:', allowedError);
         const allowedProductIds = allowedProductsData?.map(ap => ap.product_id) || [];
 
         if (allowedProductIds.length === 0) {
+          console.log('⚠️ No allowed products for this employee');
           setProducts([]);
           setIsLoading(false);
           return;
         }
 
         // 2. جلب المنتجات المعروضة في المتجر (is_in_storefront = true) + المميزة
-        const { data: storefrontDescriptions } = await supabase
+        const { data: storefrontDescriptions, error: descError } = await supabase
           .from('employee_product_descriptions')
           .select('product_id, is_featured, display_order')
           .eq('employee_id', settings.employee_id)
           .eq('is_in_storefront', true);
 
+        console.log('🏪 Storefront descriptions:', storefrontDescriptions, 'Error:', descError);
+
         // المنتجات التي يجب عرضها = المسموحة و في المتجر
         const storefrontProductIds = storefrontDescriptions
           ?.filter(d => allowedProductIds.includes(d.product_id))
           .map(d => d.product_id) || [];
+
+        console.log('📦 Storefront product IDs:', storefrontProductIds);
 
         // المنتجات المميزة (للصفحة الرئيسية)
         const featuredProductIds = storefrontDescriptions
@@ -78,13 +86,16 @@ const StorefrontHome = () => {
           ? featuredProductIds 
           : storefrontProductIds.slice(0, 8);
 
+        console.log('🎯 Product IDs to fetch:', productIdsToFetch);
+
         if (productIdsToFetch.length === 0) {
+          console.log('⚠️ No products to display in storefront');
           setProducts([]);
           setIsLoading(false);
           return;
         }
 
-        const { data: productsData } = await supabase
+        const { data: productsData, error: prodError } = await supabase
           .from('products')
           .select(`
             *,
@@ -95,25 +106,57 @@ const StorefrontHome = () => {
               price,
               images,
               color:colors(id, name, hex_code),
-              size:sizes(id, name),
-              inventory!inventory_variant_id_fkey(quantity, reserved_quantity)
+              size:sizes(id, name)
             )
           `)
           .in('id', productIdsToFetch)
           .eq('is_active', true);
 
+        console.log('📦 Products:', productsData, 'Error:', prodError);
+
+        if (!productsData || productsData.length === 0) {
+          setProducts([]);
+          setIsLoading(false);
+          return;
+        }
+
+        // جلب المخزون بشكل منفصل
+        const variantIds = productsData.flatMap(p => p.variants?.map(v => v.id) || []);
+        const { data: inventoryData } = await supabase
+          .from('inventory')
+          .select('variant_id, quantity, reserved_quantity')
+          .in('variant_id', variantIds);
+
+        console.log('📊 Inventory:', inventoryData?.length || 0, 'items');
+
+        // إنشاء خريطة المخزون
+        const inventoryMap = {};
+        inventoryData?.forEach(inv => {
+          inventoryMap[inv.variant_id] = inv;
+        });
+
+        // دمج المخزون مع المنتجات
+        const productsWithInventory = productsData.map(p => ({
+          ...p,
+          variants: p.variants?.map(v => ({
+            ...v,
+            inventory: inventoryMap[v.id] || { quantity: 0, reserved_quantity: 0 }
+          }))
+        }));
+
         // فلترة المنتجات المتاحة فقط (التي لديها مخزون)
-        const availableProducts = productsData?.filter(p => 
+        const availableProducts = productsWithInventory.filter(p => 
           p.variants?.some(v => {
-            const qty = v.inventory?.quantity ?? v.quantity ?? 0;
-            const reserved = v.inventory?.reserved_quantity ?? v.reserved_quantity ?? 0;
+            const qty = v.inventory?.quantity ?? 0;
+            const reserved = v.inventory?.reserved_quantity ?? 0;
             return (qty - reserved) > 0;
           })
-        ) || [];
+        );
 
+        console.log('✅ Available products:', availableProducts.length);
         setProducts(availableProducts);
       } catch (err) {
-        console.error('Error fetching storefront data:', err);
+        console.error('❌ Error fetching storefront data:', err);
       } finally {
         setIsLoading(false);
       }
