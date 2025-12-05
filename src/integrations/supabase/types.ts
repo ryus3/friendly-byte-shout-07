@@ -6583,14 +6583,16 @@ export type Database = {
       audit_inventory_accuracy: {
         Args: never
         Returns: {
-          available: number
+          calculated_available: number
           calculated_reserved: number
           calculated_sold: number
           color_name: string
+          current_available: number
           current_quantity: number
           current_reserved: number
           current_sold: number
           issue_type: string
+          product_id: string
           product_name: string
           reserved_diff: number
           size_value: string
@@ -6840,6 +6842,8 @@ export type Database = {
       fix_inventory_discrepancies: {
         Args: never
         Returns: {
+          fixed_reserved: boolean
+          fixed_sold: boolean
           new_reserved: number
           new_sold: number
           old_reserved: number
@@ -7032,6 +7036,18 @@ export type Database = {
           total_inventory_value: number
           total_products: number
           total_variants: number
+        }[]
+      }
+      get_inventory_summary_stats: {
+        Args: never
+        Returns: {
+          active_orders_count: number
+          delivered_orders_count: number
+          total_available: number
+          total_products: number
+          total_quantity: number
+          total_reserved: number
+          total_sold: number
         }[]
       }
       get_last_cities_regions_sync: {
