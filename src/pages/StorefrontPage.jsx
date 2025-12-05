@@ -2,15 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import StorefrontLayout from '@/components/storefront/StorefrontLayout';
-import HeroSection from '@/components/storefront/HeroSection';
-import CategoryCircles from '@/components/storefront/CategoryCircles';
-import BrandBanners from '@/components/storefront/BrandBanners';
-import FlashSaleBar from '@/components/storefront/FlashSaleBar';
-import PromoPopup from '@/components/storefront/PromoPopup';
+import HeroSlider from '@/components/storefront/HeroSlider';
+import ProfessionalCategories from '@/components/storefront/ProfessionalCategories';
+import ProfessionalBanners from '@/components/storefront/ProfessionalBanners';
+import FlashSaleSection from '@/components/storefront/FlashSaleSection';
+import MobileBottomNav from '@/components/storefront/MobileBottomNav';
 import PremiumProductCard from '@/components/storefront/PremiumProductCard';
 import GradientText from '@/components/storefront/ui/GradientText';
 import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
 import { supabase } from '@/integrations/supabase/client';
+import { ArrowLeft, Star, TrendingUp, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 
 const StorefrontHome = () => {
   const { settings, trackPageView } = useStorefront();
@@ -50,7 +53,7 @@ const StorefrontHome = () => {
           .eq('employee_id', settings.employee_id)
           .eq('is_active', true);
 
-        console.log('📋 Allowed products:', allowedProductsData, 'Error:', allowedError);
+        console.log('📋 Allowed products:', allowedProductsData?.length || 0, 'Error:', allowedError);
         const allowedProductIds = allowedProductsData?.map(ap => ap.product_id) || [];
 
         if (allowedProductIds.length === 0) {
@@ -60,21 +63,21 @@ const StorefrontHome = () => {
           return;
         }
 
-        // 2. جلب المنتجات المعروضة في المتجر (is_in_storefront = true) + المميزة
+        // 2. جلب المنتجات المعروضة في المتجر (is_in_storefront = true)
         const { data: storefrontDescriptions, error: descError } = await supabase
           .from('employee_product_descriptions')
           .select('product_id, is_featured, display_order')
           .eq('employee_id', settings.employee_id)
           .eq('is_in_storefront', true);
 
-        console.log('🏪 Storefront descriptions:', storefrontDescriptions, 'Error:', descError);
+        console.log('🏪 Storefront descriptions:', storefrontDescriptions?.length || 0, 'Error:', descError);
 
         // المنتجات التي يجب عرضها = المسموحة و في المتجر
         const storefrontProductIds = storefrontDescriptions
           ?.filter(d => allowedProductIds.includes(d.product_id))
           .map(d => d.product_id) || [];
 
-        console.log('📦 Storefront product IDs:', storefrontProductIds);
+        console.log('📦 Storefront product IDs:', storefrontProductIds.length);
 
         // المنتجات المميزة (للصفحة الرئيسية)
         const featuredProductIds = storefrontDescriptions
@@ -84,9 +87,9 @@ const StorefrontHome = () => {
         // جلب المنتجات المميزة أو أحدث المنتجات من المتجر
         const productIdsToFetch = featuredProductIds.length > 0 
           ? featuredProductIds 
-          : storefrontProductIds.slice(0, 8);
+          : storefrontProductIds.slice(0, 12);
 
-        console.log('🎯 Product IDs to fetch:', productIdsToFetch);
+        console.log('🎯 Product IDs to fetch:', productIdsToFetch.length);
 
         if (productIdsToFetch.length === 0) {
           console.log('⚠️ No products to display in storefront');
@@ -112,7 +115,7 @@ const StorefrontHome = () => {
           .in('id', productIdsToFetch)
           .eq('is_active', true);
 
-        console.log('📦 Products:', productsData, 'Error:', prodError);
+        console.log('📦 Products fetched:', productsData?.length || 0, 'Error:', prodError);
 
         if (!productsData || productsData.length === 0) {
           setProducts([]);
@@ -170,53 +173,99 @@ const StorefrontHome = () => {
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Flash Sale Bar */}
-      <FlashSaleBar />
+    <div className="min-h-screen pb-20 md:pb-0">
+      {/* Hero Slider */}
+      <HeroSlider slug={settings?.slug} banners={banners} products={products} />
 
-      {/* Hero Section */}
-      <HeroSection slug={settings?.slug} banners={banners} />
+      {/* الفئات الاحترافية */}
+      <ProfessionalCategories slug={settings?.slug} />
 
-      {/* Category Circles */}
-      <CategoryCircles slug={settings?.slug} />
+      {/* Flash Sale */}
+      <FlashSaleSection slug={settings?.slug} products={products.slice(0, 6)} />
 
-      {/* Featured Products Section */}
-      <section className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <GradientText 
-            gradient="from-purple-600 via-pink-600 to-blue-600" 
-            className="text-3xl sm:text-4xl md:text-5xl font-black mb-4"
-          >
-            المنتجات المميزة ⭐
-          </GradientText>
-          <p className="text-lg sm:text-xl text-muted-foreground">
-            اكتشف أحدث وأفضل المنتجات المختارة خصيصاً لك
-          </p>
+      {/* البنرات الاحترافية */}
+      <ProfessionalBanners slug={settings?.slug} banners={banners} />
+
+      {/* المنتجات المميزة */}
+      <section className="py-8 bg-background">
+        <div className="container mx-auto px-4">
+          {/* العنوان */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-orange-500 rounded-xl flex items-center justify-center">
+                <Sparkles className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black">المنتجات المميزة</h2>
+                <p className="text-sm text-muted-foreground">اختيارنا لك من أفضل المنتجات</p>
+              </div>
+            </div>
+            <Link to={`/storefront/${settings?.slug}/products`}>
+              <Button variant="ghost" size="sm" className="gap-1">
+                عرض الكل
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+          
+          {products.length === 0 ? (
+            <div className="text-center py-16 bg-muted/30 rounded-2xl">
+              <div className="w-20 h-20 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="h-10 w-10 text-muted-foreground" />
+              </div>
+              <p className="text-xl font-bold mb-2">قريباً!</p>
+              <p className="text-muted-foreground">سيتم إضافة المنتجات قريباً</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+              {products.slice(0, 10).map((product) => (
+                <PremiumProductCard 
+                  key={product.id} 
+                  product={product} 
+                  slug={settings?.slug}
+                />
+              ))}
+            </div>
+          )}
         </div>
-        
-        {products.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-xl text-muted-foreground mb-4">لا توجد منتجات مميزة حالياً</p>
-            <p className="text-muted-foreground">تحقق مرة أخرى قريباً!</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-            {products.map((product) => (
-              <PremiumProductCard 
-                key={product.id} 
-                product={product} 
-                slug={settings?.slug}
-              />
-            ))}
-          </div>
-        )}
       </section>
 
-      {/* Brand Banners */}
-      <BrandBanners slug={settings?.slug} />
+      {/* قسم الترند */}
+      {products.length > 0 && (
+        <section className="py-8 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black">الأكثر مبيعاً</h2>
+                  <p className="text-sm text-muted-foreground">المنتجات الأكثر طلباً هذا الأسبوع</p>
+                </div>
+              </div>
+            </div>
 
-      {/* Promo Popup */}
-      <PromoPopup code="WELCOME20" discount="20%" delay={3000} />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+              {products.slice(0, 5).map((product, idx) => (
+                <div key={product.id} className="relative">
+                  {/* رقم الترتيب */}
+                  <div className="absolute top-2 right-2 z-10 w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-black text-sm shadow-lg">
+                    {idx + 1}
+                  </div>
+                  <PremiumProductCard 
+                    product={product} 
+                    slug={settings?.slug}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* شريط التنقل السفلي للموبايل */}
+      <MobileBottomNav />
     </div>
   );
 };

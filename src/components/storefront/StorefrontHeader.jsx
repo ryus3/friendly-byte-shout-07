@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ShoppingCart, Search, Menu, Phone } from 'lucide-react';
+import { ShoppingCart, Search, Menu, Heart, Camera, User, Home, X } from 'lucide-react';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,9 +8,7 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { 
   extractSocialLinks, 
   formatWhatsAppUrl, 
-  formatInstagramUrl, 
-  formatFacebookUrl, 
-  formatTelegramUrl 
+  formatInstagramUrl 
 } from '@/utils/extractSocialLinks';
 
 // أيقونات التواصل الاجتماعي
@@ -28,244 +26,216 @@ const SocialIcon = ({ type, className = "h-5 w-5" }) => {
           <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
         </svg>
       );
-    case 'facebook':
-      return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-          <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-        </svg>
-      );
-    case 'telegram':
-      return (
-        <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-        </svg>
-      );
     default:
       return null;
   }
 };
 
+// الفئات الافتراضية
+const defaultCategories = [
+  { id: 'home', name: 'الرئيسية', icon: Home },
+  { id: 'men', name: 'رجال', emoji: '👔' },
+  { id: 'women', name: 'نساء', emoji: '👗' },
+  { id: 'kids', name: 'أطفال', emoji: '🧸' },
+  { id: 'sports', name: 'رياضة', emoji: '⚽' },
+  { id: 'accessories', name: 'إكسسوارات', emoji: '👜' },
+  { id: 'shoes', name: 'أحذية', emoji: '👟' },
+  { id: 'all', name: 'الكل', emoji: '🛍️' },
+];
+
 const StorefrontHeader = () => {
   const { settings, itemCount, updateFilters } = useStorefront();
   const { slug: urlSlug } = useParams();
+  const [searchOpen, setSearchOpen] = useState(false);
   
   const slug = settings?.slug || urlSlug;
   const profile = settings?.profile;
   
-  // استخراج روابط التواصل من business_links array و social_media
+  // استخراج روابط التواصل
   const socialLinks = extractSocialLinks(
     profile?.business_links,
     profile?.social_media
   );
 
+  // اسم المتجر الحقيقي
+  const storeName = settings?.meta_title || profile?.business_page_name || settings?.business_name || 'متجرنا';
+
   if (!settings) return null;
 
-  const hasSocialLinks = socialLinks.whatsapp || socialLinks.phone || socialLinks.instagram;
-
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
-      {/* شريط التواصل السريع */}
-      {hasSocialLinks && (
-        <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-1.5 px-4">
-          <div className="container mx-auto flex items-center justify-center gap-4 text-sm">
-            {socialLinks.whatsapp && (
-              <a 
-                href={formatWhatsAppUrl(socialLinks.whatsapp)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-              >
-                <SocialIcon type="whatsapp" className="h-4 w-4" />
-                <span className="hidden sm:inline">واتساب</span>
-              </a>
-            )}
-            {socialLinks.phone && (
-              <a 
-                href={`tel:${socialLinks.phone}`}
-                className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-              >
-                <Phone className="h-4 w-4" />
-                <span className="hidden sm:inline">{socialLinks.phone}</span>
-              </a>
-            )}
-            {socialLinks.instagram && (
-              <a 
-                href={formatInstagramUrl(socialLinks.instagram)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
-              >
-                <SocialIcon type="instagram" className="h-4 w-4" />
-                <span className="hidden sm:inline">إنستغرام</span>
-              </a>
-            )}
-          </div>
+    <header className="sticky top-0 z-50 bg-background shadow-sm">
+      {/* شريط العروض العلوي */}
+      <div className="bg-gradient-to-r from-pink-500 via-red-500 to-orange-500 text-white py-1.5 overflow-hidden">
+        <div className="animate-marquee whitespace-nowrap flex items-center gap-8">
+          <span className="flex items-center gap-2 text-sm font-medium">
+            🔥 خصم 50% على جميع المنتجات
+          </span>
+          <span className="flex items-center gap-2 text-sm font-medium">
+            🚚 شحن مجاني للطلبات فوق 50,000 د.ع
+          </span>
+          <span className="flex items-center gap-2 text-sm font-medium">
+            ⭐ منتجات أصلية 100%
+          </span>
+          <span className="flex items-center gap-2 text-sm font-medium">
+            🔥 خصم 50% على جميع المنتجات
+          </span>
+          <span className="flex items-center gap-2 text-sm font-medium">
+            🚚 شحن مجاني للطلبات فوق 50,000 د.ع
+          </span>
         </div>
-      )}
+      </div>
 
+      {/* الهيدر الرئيسي */}
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link to={`/storefront/${slug}`} className="flex items-center gap-3">
-            {settings.logo_url && (
+        <div className="flex items-center justify-between h-14 gap-4">
+          {/* Logo و اسم المتجر */}
+          <Link to={`/storefront/${slug}`} className="flex items-center gap-2 shrink-0">
+            {settings.logo_url ? (
               <img 
                 src={settings.logo_url} 
-                alt={settings.business_name}
-                className="h-10 w-10 object-contain rounded-lg"
+                alt={storeName}
+                className="h-8 w-8 object-contain rounded-lg"
               />
+            ) : (
+              <div className="h-8 w-8 bg-gradient-to-br from-pink-500 to-orange-500 rounded-lg flex items-center justify-center text-white font-black text-lg">
+                {storeName.charAt(0)}
+              </div>
             )}
-            <div className="flex flex-col">
-              <span className="text-lg sm:text-xl font-bold text-foreground">
-                {settings.business_name || profile?.business_page_name || 'متجرنا'}
-              </span>
-              {settings.tagline && (
-                <span className="text-xs text-muted-foreground hidden sm:block">
-                  {settings.tagline}
-                </span>
-              )}
-            </div>
+            <span className="text-lg font-black bg-gradient-to-r from-pink-600 to-orange-600 bg-clip-text text-transparent hidden sm:block">
+              {storeName}
+            </span>
           </Link>
 
-          {/* Search Bar - Desktop */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
+          {/* شريط البحث - Desktop */}
+          <div className="hidden md:flex flex-1 max-w-xl">
             <div className="relative w-full">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
                 placeholder="ابحث عن المنتجات..."
-                className="pr-10 border-2 focus:border-primary"
+                className="w-full pr-10 pl-12 h-10 rounded-full border-2 border-muted bg-muted/50 focus:border-pink-500 focus:bg-background transition-all"
                 onChange={(e) => updateFilters?.({ search: e.target.value })}
               />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <button className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8 bg-gradient-to-r from-pink-500 to-orange-500 rounded-full flex items-center justify-center text-white hover:opacity-90 transition-opacity">
+                <Camera className="h-4 w-4" />
+              </button>
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 sm:gap-4">
-            {/* Social Links - Desktop */}
-            <div className="hidden lg:flex items-center gap-2">
-              {socialLinks.whatsapp && (
-                <a 
-                  href={formatWhatsAppUrl(socialLinks.whatsapp)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-full hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 transition-colors"
-                >
-                  <SocialIcon type="whatsapp" className="h-5 w-5" />
-                </a>
-              )}
-              {socialLinks.instagram && (
-                <a 
-                  href={formatInstagramUrl(socialLinks.instagram)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-full hover:bg-pink-100 dark:hover:bg-pink-900/30 text-pink-600 transition-colors"
-                >
-                  <SocialIcon type="instagram" className="h-5 w-5" />
-                </a>
-              )}
-              {socialLinks.facebook && (
-                <a 
-                  href={formatFacebookUrl(socialLinks.facebook)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 transition-colors"
-                >
-                  <SocialIcon type="facebook" className="h-5 w-5" />
-                </a>
-              )}
-              {socialLinks.telegram && (
-                <a 
-                  href={formatTelegramUrl(socialLinks.telegram)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-full hover:bg-sky-100 dark:hover:bg-sky-900/30 text-sky-600 transition-colors"
-                >
-                  <SocialIcon type="telegram" className="h-5 w-5" />
-                </a>
-              )}
-            </div>
+          {/* الأزرار */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            {/* بحث للموبايل */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="md:hidden"
+              onClick={() => setSearchOpen(!searchOpen)}
+            >
+              {searchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
+            </Button>
 
-            {/* Cart */}
+            {/* المفضلة */}
+            <Button variant="ghost" size="icon" className="relative">
+              <Heart className="h-5 w-5" />
+            </Button>
+
+            {/* السلة */}
             <Link to={`/storefront/${slug}/cart`}>
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="h-5 w-5" />
                 {itemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold">
+                  <span className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-orange-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold animate-pulse">
                     {itemCount}
                   </span>
                 )}
               </Button>
             </Link>
 
-            {/* Mobile Menu */}
+            {/* حسابي */}
+            <Button variant="ghost" size="icon" className="hidden sm:flex">
+              <User className="h-5 w-5" />
+            </Button>
+
+            {/* القائمة الجانبية */}
             <Sheet>
-              <SheetTrigger asChild className="md:hidden">
-                <Button variant="ghost" size="icon">
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-80">
-                <div className="flex flex-col gap-4 mt-8">
-                  {/* Store Info */}
-                  <div className="text-center pb-4 border-b">
-                    {settings.logo_url && (
-                      <img 
-                        src={settings.logo_url} 
-                        alt={settings.business_name}
-                        className="h-16 w-16 object-contain mx-auto mb-2 rounded-xl"
-                      />
-                    )}
-                    <h3 className="font-bold text-lg">{settings.business_name || profile?.business_page_name}</h3>
+              <SheetContent side="right" className="w-80 p-0">
+                <div className="flex flex-col h-full">
+                  {/* معلومات المتجر */}
+                  <div className="bg-gradient-to-br from-pink-500 to-orange-500 p-6 text-white">
+                    <div className="flex items-center gap-3">
+                      {settings.logo_url ? (
+                        <img 
+                          src={settings.logo_url} 
+                          alt={storeName}
+                          className="h-14 w-14 object-contain rounded-xl bg-white/20 p-1"
+                        />
+                      ) : (
+                        <div className="h-14 w-14 bg-white/20 rounded-xl flex items-center justify-center text-2xl font-black">
+                          {storeName.charAt(0)}
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="font-black text-lg">{storeName}</h3>
+                        {settings.tagline && (
+                          <p className="text-sm text-white/80">{settings.tagline}</p>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Search */}
-                  <div className="relative">
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      type="search"
-                      placeholder="ابحث..."
-                      className="pr-10"
-                      onChange={(e) => updateFilters?.({ search: e.target.value })}
-                    />
-                  </div>
-
-                  {/* Navigation */}
-                  <nav className="flex flex-col gap-2">
+                  {/* التنقل */}
+                  <nav className="flex-1 p-4 space-y-1">
                     <Link to={`/storefront/${slug}`}>
-                      <Button variant="ghost" className="w-full justify-start">
+                      <Button variant="ghost" className="w-full justify-start gap-3 h-12">
+                        <Home className="h-5 w-5" />
                         الرئيسية
                       </Button>
                     </Link>
                     <Link to={`/storefront/${slug}/products`}>
-                      <Button variant="ghost" className="w-full justify-start">
-                        المنتجات
+                      <Button variant="ghost" className="w-full justify-start gap-3 h-12">
+                        <span className="text-lg">🛍️</span>
+                        جميع المنتجات
                       </Button>
                     </Link>
-                    <Link to={`/storefront/${slug}/about`}>
-                      <Button variant="ghost" className="w-full justify-start">
-                        من نحن
+                    <Link to={`/storefront/${slug}/products?category=رجال`}>
+                      <Button variant="ghost" className="w-full justify-start gap-3 h-12">
+                        <span className="text-lg">👔</span>
+                        رجال
                       </Button>
                     </Link>
-                    <Link to={`/storefront/${slug}/contact`}>
-                      <Button variant="ghost" className="w-full justify-start">
-                        اتصل بنا
+                    <Link to={`/storefront/${slug}/products?category=نساء`}>
+                      <Button variant="ghost" className="w-full justify-start gap-3 h-12">
+                        <span className="text-lg">👗</span>
+                        نساء
+                      </Button>
+                    </Link>
+                    <Link to={`/storefront/${slug}/products?category=أطفال`}>
+                      <Button variant="ghost" className="w-full justify-start gap-3 h-12">
+                        <span className="text-lg">🧸</span>
+                        أطفال
                       </Button>
                     </Link>
                   </nav>
 
-                  {/* Social Links */}
-                  {(socialLinks.whatsapp || socialLinks.instagram || socialLinks.facebook || socialLinks.telegram) && (
-                    <div className="pt-4 border-t">
+                  {/* روابط التواصل */}
+                  {(socialLinks.whatsapp || socialLinks.instagram) && (
+                    <div className="border-t p-4">
                       <p className="text-sm text-muted-foreground mb-3">تواصل معنا</p>
-                      <div className="flex items-center justify-center gap-3">
+                      <div className="flex items-center gap-3">
                         {socialLinks.whatsapp && (
                           <a 
                             href={formatWhatsAppUrl(socialLinks.whatsapp)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-3 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600"
+                            className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-green-100 dark:bg-green-900/30 text-green-600 hover:bg-green-200 transition-colors"
                           >
                             <SocialIcon type="whatsapp" />
+                            <span className="font-medium">واتساب</span>
                           </a>
                         )}
                         {socialLinks.instagram && (
@@ -273,29 +243,10 @@ const StorefrontHeader = () => {
                             href={formatInstagramUrl(socialLinks.instagram)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-3 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-600"
+                            className="flex-1 flex items-center justify-center gap-2 p-3 rounded-xl bg-pink-100 dark:bg-pink-900/30 text-pink-600 hover:bg-pink-200 transition-colors"
                           >
                             <SocialIcon type="instagram" />
-                          </a>
-                        )}
-                        {socialLinks.facebook && (
-                          <a 
-                            href={formatFacebookUrl(socialLinks.facebook)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600"
-                          >
-                            <SocialIcon type="facebook" />
-                          </a>
-                        )}
-                        {socialLinks.telegram && (
-                          <a 
-                            href={formatTelegramUrl(socialLinks.telegram)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="p-3 rounded-full bg-sky-100 dark:bg-sky-900/30 text-sky-600"
-                          >
-                            <SocialIcon type="telegram" />
+                            <span className="font-medium">إنستغرام</span>
                           </a>
                         )}
                       </div>
@@ -307,22 +258,71 @@ const StorefrontHeader = () => {
           </div>
         </div>
 
-        {/* Navigation - Desktop */}
-        <nav className="hidden md:flex items-center gap-6 py-3 border-t border-border">
-          <Link to={`/storefront/${slug}`}>
-            <Button variant="ghost">الرئيسية</Button>
-          </Link>
-          <Link to={`/storefront/${slug}/products`}>
-            <Button variant="ghost">جميع المنتجات</Button>
-          </Link>
-          <Link to={`/storefront/${slug}/about`}>
-            <Button variant="ghost">من نحن</Button>
-          </Link>
-          <Link to={`/storefront/${slug}/contact`}>
-            <Button variant="ghost">اتصل بنا</Button>
-          </Link>
-        </nav>
+        {/* شريط البحث للموبايل */}
+        {searchOpen && (
+          <div className="md:hidden pb-3">
+            <div className="relative">
+              <Input
+                type="search"
+                placeholder="ابحث عن المنتجات..."
+                className="w-full pr-10 pl-12 h-10 rounded-full border-2 border-muted bg-muted/50 focus:border-pink-500"
+                onChange={(e) => updateFilters?.({ search: e.target.value })}
+                autoFocus
+              />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <button className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-8 bg-gradient-to-r from-pink-500 to-orange-500 rounded-full flex items-center justify-center text-white">
+                <Camera className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* شريط الفئات */}
+      <div className="border-t bg-background/95 backdrop-blur">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center gap-1 py-2 overflow-x-auto scrollbar-hide">
+            {defaultCategories.map((cat) => (
+              <Link
+                key={cat.id}
+                to={cat.id === 'home' ? `/storefront/${slug}` : cat.id === 'all' ? `/storefront/${slug}/products` : `/storefront/${slug}/products?category=${cat.name}`}
+                className="shrink-0"
+              >
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="h-8 px-3 rounded-full text-sm font-medium hover:bg-pink-100 hover:text-pink-600 dark:hover:bg-pink-900/30 transition-colors"
+                >
+                  {cat.icon ? (
+                    <cat.icon className="h-4 w-4 ml-1" />
+                  ) : (
+                    <span className="ml-1">{cat.emoji}</span>
+                  )}
+                  {cat.name}
+                </Button>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* CSS للتمرير */}
+      <style jsx>{`
+        @keyframes marquee {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          animation: marquee 20s linear infinite;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+      `}</style>
     </header>
   );
 };
