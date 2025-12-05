@@ -360,7 +360,7 @@ const InventoryAuditDialog = ({ isAdmin }) => {
                     
                     return (
                       <div 
-                        key={idx}
+                        key={item.out_variant_id || idx}
                         className="relative pr-8 pb-4 last:pb-0"
                       >
                         {/* نقطة Timeline */}
