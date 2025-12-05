@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { 
-  Search, Loader2, CheckCircle, AlertTriangle, Wrench, X, Package, 
+  Search, Loader2, CheckCircle, AlertTriangle, Wrench, Package, 
   TrendingUp, AlertCircle, Sparkles, ShoppingCart, Box, Warehouse,
   FileCheck, BadgeCheck, RefreshCw, ArrowRight
 } from 'lucide-react';
@@ -217,10 +217,10 @@ const InventoryAuditDialog = ({ isAdmin }) => {
 
       {/* Dialog الفاخر */}
       <Dialog open={showResults} onOpenChange={setShowResults}>
-        <DialogContent className="max-w-5xl max-h-[90vh] p-0 overflow-hidden bg-background border-border">
+        <DialogContent className="max-w-5xl max-h-[90vh] p-0 bg-background border-border">
           {/* Header مع تدرج فيروزي */}
-          <div className="relative bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-4 sm:p-6">
-            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-50" />
+          <div className="relative bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-4 sm:p-6 rounded-t-lg">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-50 rounded-t-lg" />
             <DialogHeader className="relative">
               <DialogTitle className="flex items-center gap-3 text-white text-lg sm:text-xl font-bold">
                 {auditResults?.length === 0 ? (
@@ -262,13 +262,6 @@ const InventoryAuditDialog = ({ isAdmin }) => {
                 </div>
               </div>
             )}
-            
-            <button 
-              onClick={() => setShowResults(false)}
-              className="absolute top-4 left-4 p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
-            >
-              <X className="w-4 h-4" />
-            </button>
           </div>
           
           {auditResults?.length === 0 ? (
