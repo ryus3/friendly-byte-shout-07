@@ -6592,12 +6592,12 @@ export type Database = {
           current_reserved: number
           current_sold: number
           issue_type: string
-          product_id: string
+          out_product_id: string
+          out_variant_id: string
           product_name: string
           reserved_diff: number
           size_value: string
           sold_diff: number
-          variant_id: string
         }[]
       }
       auth_with_username: {
