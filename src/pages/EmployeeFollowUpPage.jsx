@@ -9,6 +9,7 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useUnifiedAutoSync } from '@/hooks/useUnifiedAutoSync';
 import { UnifiedSyncSettings } from '@/components/delivery/UnifiedSyncSettings';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
+import SmartPagination from '@/components/ui/SmartPagination';
 
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
@@ -211,6 +212,9 @@ const EmployeeFollowUpPage = () => {
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
   const [isUnifiedSyncSettingsOpen, setIsUnifiedSyncSettingsOpen] = useState(false);
+  
+  const ITEMS_PER_PAGE = 15;
+  const [currentPage, setCurrentPage] = useState(1);
   // إزالة الحالة القديمة - استخدام النظام الجديد
   const [lastComprehensiveSync, setLastComprehensiveSync] = useState(() => 
     localStorage.getItem('last-comprehensive-sync')
@@ -475,6 +479,16 @@ const filteredOrders = useMemo(() => {
   
   return filtered;
 }, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
+
+// إعادة تعيين الصفحة عند تغيير الفلاتر
+useEffect(() => {
+  setCurrentPage(1);
+}, [filters]);
+
+// حساب الصفحات للطلبات
+const totalPagesOrders = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
+const startIndexOrders = (currentPage - 1) * ITEMS_PER_PAGE;
+const paginatedOrders = filteredOrders.slice(startIndexOrders, startIndexOrders + ITEMS_PER_PAGE);
 
 // ✅ الطلبات القابلة للمزامنة - فقط النشطة (ليست مكتملة أو مرجعة)
 const syncableOrders = useMemo(() => {
@@ -1116,7 +1130,7 @@ useEffect(() => {
 
               {/* قائمة الطلبات */}
               <OrderList 
-                orders={filteredOrders} 
+                orders={paginatedOrders} 
                 isLoading={loading} 
                 onViewOrder={handleViewOrder}
                 onUpdateStatus={handleUpdateStatus}
@@ -1127,6 +1141,14 @@ useEffect(() => {
                 profits={profits}
                 viewMode="grid"
                 showEmployeeName={filters.employeeId === 'all'}
+              />
+              
+              <SmartPagination
+                currentPage={currentPage}
+                totalPages={totalPagesOrders}
+                onPageChange={setCurrentPage}
+                totalItems={filteredOrders.length}
+                itemsPerPage={ITEMS_PER_PAGE}
               />
             </div>
           </TabsContent>

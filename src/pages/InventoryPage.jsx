@@ -9,6 +9,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { toast } from '@/components/ui/use-toast';
 import { useSearchParams } from 'react-router-dom';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
+import SmartPagination from '@/components/ui/SmartPagination';
 import { Button } from '@/components/ui/button';
 import { Download, Package, ChevronDown, Archive, Shirt, ShoppingBag, PackageOpen, Crown, QrCode, Search, Loader2, CheckCircle, AlertTriangle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -359,6 +360,9 @@ const InventoryPage = () => {
   const [isBarcodeScannerOpen, setIsBarcodeScannerOpen] = useState(false);
   const [isReservedStockDialogOpen, setIsReservedStockDialogOpen] = useState(false);
   const [selectedItemsForExport, setSelectedItemsForExport] = useState([]);
+  
+  const ITEMS_PER_PAGE = 15;
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Scroll to top when page loads
   useEffect(() => {
@@ -661,6 +665,16 @@ const InventoryPage = () => {
     return items;
   }, [inventoryItems, filters]);
 
+  // إعادة تعيين الصفحة عند تغيير الفلاتر
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  // حساب الصفحات
+  const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedItems = filteredItems.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
   // تم نقل حسابات الإحصائيات إلى useInventoryStats Hook
 
   const handleEditStock = (product, variant) => {
@@ -803,7 +817,7 @@ const InventoryPage = () => {
         />
 
         <InventoryList
-          items={filteredItems}
+          items={paginatedItems}
           isLoading={loading}
           onEditStock={handleEditStock}
           canEdit={hasPermission('edit_stock')}
@@ -812,6 +826,14 @@ const InventoryPage = () => {
           selectedItems={selectedItemsForExport}
           isMobile={isMobile}
           getVariantSoldData={getVariantSoldData}
+        />
+        
+        <SmartPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={filteredItems.length}
+          itemsPerPage={ITEMS_PER_PAGE}
         />
       </div>
 

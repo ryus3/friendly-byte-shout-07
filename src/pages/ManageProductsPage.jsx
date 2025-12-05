@@ -16,6 +16,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { toast } from '@/components/ui/use-toast';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
+import SmartPagination from '@/components/ui/SmartPagination';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -38,6 +39,9 @@ const ManageProductsPage = () => {
   // استخدام hook الفلترة المحسن
   const filteredProducts = useFilteredProducts(products);
   
+  const ITEMS_PER_PAGE = 15;
+  const [currentPage, setCurrentPage] = useState(1);
+  
   // فلترة إضافية للبحث - محسنة للأداء
   const searchFilteredProducts = useMemo(() => {
     if (!searchTerm.trim()) return filteredProducts;
@@ -52,6 +56,16 @@ const ManageProductsPage = () => {
       )
     );
   }, [filteredProducts, searchTerm]);
+
+  // إعادة تعيين الصفحة عند تغيير البحث
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  // حساب الصفحات
+  const totalPages = Math.ceil(searchFilteredProducts.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const paginatedProducts = searchFilteredProducts.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   
 
   // إزالة الإجبار على وضع الشبكة في الهاتف - دع المستخدم يختار
@@ -247,7 +261,7 @@ const ManageProductsPage = () => {
         <AnimatePresence>
           {viewMode === 'list' ? (
             <motion.div layout className="space-y-3">
-              {searchFilteredProducts && searchFilteredProducts.length > 0 && searchFilteredProducts.map((product) => (
+              {paginatedProducts && paginatedProducts.length > 0 && paginatedProducts.map((product) => (
                 <motion.div layout key={product.id}>
                    <ManageProductListItem 
                      product={product} 
@@ -261,7 +275,7 @@ const ManageProductsPage = () => {
             </motion.div>
           ) : (
             <motion.div layout className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {searchFilteredProducts && searchFilteredProducts.length > 0 && searchFilteredProducts.map((product) => (
+              {paginatedProducts && paginatedProducts.length > 0 && paginatedProducts.map((product) => (
                 <motion.div layout key={product.id}>
                    <ManageProductCard
                      product={product}
@@ -273,6 +287,14 @@ const ManageProductsPage = () => {
             </motion.div>
           )}
         </AnimatePresence>
+        
+        <SmartPagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          totalItems={searchFilteredProducts.length}
+          itemsPerPage={ITEMS_PER_PAGE}
+        />
       </div>
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
