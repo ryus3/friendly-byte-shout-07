@@ -111,12 +111,17 @@ function ProtectedRoute({ children, permission }) {
   return children;
 }
 
-// مكون للتمرير لأعلى الصفحة عند تغيير المسار
+// مكون للتمرير لأعلى الصفحة عند تغيير المسار - محسّن لجميع الصفحات
 function ScrollToTop() {
   const location = useLocation();
   
   useEffect(() => {
+    // تمرير فوري لأعلى الصفحة عند تغيير المسار
     scrollToTopInstant();
+    // تأكيد إضافي للتمرير
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    document.documentElement.scrollTop = 0;
+    document.body.scrollTop = 0;
   }, [location.pathname]);
   
   return null;

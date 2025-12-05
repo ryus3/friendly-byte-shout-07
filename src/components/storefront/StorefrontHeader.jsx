@@ -1,10 +1,17 @@
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { ShoppingCart, Search, Menu, Phone, MessageCircle } from 'lucide-react';
+import { ShoppingCart, Search, Menu, Phone } from 'lucide-react';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { 
+  extractSocialLinks, 
+  formatWhatsAppUrl, 
+  formatInstagramUrl, 
+  formatFacebookUrl, 
+  formatTelegramUrl 
+} from '@/utils/extractSocialLinks';
 
 // أيقونات التواصل الاجتماعي
 const SocialIcon = ({ type, className = "h-5 w-5" }) => {
@@ -44,19 +51,26 @@ const StorefrontHeader = () => {
   
   const slug = settings?.slug || urlSlug;
   const profile = settings?.profile;
-  const socialMedia = profile?.social_media || {};
+  
+  // استخراج روابط التواصل من business_links array و social_media
+  const socialLinks = extractSocialLinks(
+    profile?.business_links,
+    profile?.social_media
+  );
 
   if (!settings) return null;
+
+  const hasSocialLinks = socialLinks.whatsapp || socialLinks.phone || socialLinks.instagram;
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
       {/* شريط التواصل السريع */}
-      {(socialMedia.whatsapp || socialMedia.phone) && (
+      {hasSocialLinks && (
         <div className="bg-gradient-to-r from-primary to-primary/80 text-primary-foreground py-1.5 px-4">
           <div className="container mx-auto flex items-center justify-center gap-4 text-sm">
-            {socialMedia.whatsapp && (
+            {socialLinks.whatsapp && (
               <a 
-                href={`https://wa.me/${socialMedia.whatsapp.replace(/[^0-9]/g, '')}`}
+                href={formatWhatsAppUrl(socialLinks.whatsapp)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
@@ -65,18 +79,18 @@ const StorefrontHeader = () => {
                 <span className="hidden sm:inline">واتساب</span>
               </a>
             )}
-            {socialMedia.phone && (
+            {socialLinks.phone && (
               <a 
-                href={`tel:${socialMedia.phone}`}
+                href={`tel:${socialLinks.phone}`}
                 className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
               >
                 <Phone className="h-4 w-4" />
-                <span className="hidden sm:inline">{socialMedia.phone}</span>
+                <span className="hidden sm:inline">{socialLinks.phone}</span>
               </a>
             )}
-            {socialMedia.instagram && (
+            {socialLinks.instagram && (
               <a 
-                href={socialMedia.instagram.startsWith('http') ? socialMedia.instagram : `https://instagram.com/${socialMedia.instagram}`}
+                href={formatInstagramUrl(socialLinks.instagram)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
@@ -129,9 +143,9 @@ const StorefrontHeader = () => {
           <div className="flex items-center gap-2 sm:gap-4">
             {/* Social Links - Desktop */}
             <div className="hidden lg:flex items-center gap-2">
-              {socialMedia.whatsapp && (
+              {socialLinks.whatsapp && (
                 <a 
-                  href={`https://wa.me/${socialMedia.whatsapp.replace(/[^0-9]/g, '')}`}
+                  href={formatWhatsAppUrl(socialLinks.whatsapp)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-full hover:bg-green-100 dark:hover:bg-green-900/30 text-green-600 transition-colors"
@@ -139,9 +153,9 @@ const StorefrontHeader = () => {
                   <SocialIcon type="whatsapp" className="h-5 w-5" />
                 </a>
               )}
-              {socialMedia.instagram && (
+              {socialLinks.instagram && (
                 <a 
-                  href={socialMedia.instagram.startsWith('http') ? socialMedia.instagram : `https://instagram.com/${socialMedia.instagram}`}
+                  href={formatInstagramUrl(socialLinks.instagram)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-full hover:bg-pink-100 dark:hover:bg-pink-900/30 text-pink-600 transition-colors"
@@ -149,9 +163,9 @@ const StorefrontHeader = () => {
                   <SocialIcon type="instagram" className="h-5 w-5" />
                 </a>
               )}
-              {socialMedia.facebook && (
+              {socialLinks.facebook && (
                 <a 
-                  href={socialMedia.facebook.startsWith('http') ? socialMedia.facebook : `https://facebook.com/${socialMedia.facebook}`}
+                  href={formatFacebookUrl(socialLinks.facebook)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 transition-colors"
@@ -159,9 +173,9 @@ const StorefrontHeader = () => {
                   <SocialIcon type="facebook" className="h-5 w-5" />
                 </a>
               )}
-              {socialMedia.telegram && (
+              {socialLinks.telegram && (
                 <a 
-                  href={socialMedia.telegram.startsWith('http') ? socialMedia.telegram : `https://t.me/${socialMedia.telegram}`}
+                  href={formatTelegramUrl(socialLinks.telegram)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-2 rounded-full hover:bg-sky-100 dark:hover:bg-sky-900/30 text-sky-600 transition-colors"
@@ -240,13 +254,13 @@ const StorefrontHeader = () => {
                   </nav>
 
                   {/* Social Links */}
-                  {Object.keys(socialMedia).length > 0 && (
+                  {(socialLinks.whatsapp || socialLinks.instagram || socialLinks.facebook || socialLinks.telegram) && (
                     <div className="pt-4 border-t">
                       <p className="text-sm text-muted-foreground mb-3">تواصل معنا</p>
                       <div className="flex items-center justify-center gap-3">
-                        {socialMedia.whatsapp && (
+                        {socialLinks.whatsapp && (
                           <a 
-                            href={`https://wa.me/${socialMedia.whatsapp.replace(/[^0-9]/g, '')}`}
+                            href={formatWhatsAppUrl(socialLinks.whatsapp)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-3 rounded-full bg-green-100 dark:bg-green-900/30 text-green-600"
@@ -254,9 +268,9 @@ const StorefrontHeader = () => {
                             <SocialIcon type="whatsapp" />
                           </a>
                         )}
-                        {socialMedia.instagram && (
+                        {socialLinks.instagram && (
                           <a 
-                            href={socialMedia.instagram.startsWith('http') ? socialMedia.instagram : `https://instagram.com/${socialMedia.instagram}`}
+                            href={formatInstagramUrl(socialLinks.instagram)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-3 rounded-full bg-pink-100 dark:bg-pink-900/30 text-pink-600"
@@ -264,9 +278,9 @@ const StorefrontHeader = () => {
                             <SocialIcon type="instagram" />
                           </a>
                         )}
-                        {socialMedia.facebook && (
+                        {socialLinks.facebook && (
                           <a 
-                            href={socialMedia.facebook.startsWith('http') ? socialMedia.facebook : `https://facebook.com/${socialMedia.facebook}`}
+                            href={formatFacebookUrl(socialLinks.facebook)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600"
@@ -274,9 +288,9 @@ const StorefrontHeader = () => {
                             <SocialIcon type="facebook" />
                           </a>
                         )}
-                        {socialMedia.telegram && (
+                        {socialLinks.telegram && (
                           <a 
-                            href={socialMedia.telegram.startsWith('http') ? socialMedia.telegram : `https://t.me/${socialMedia.telegram}`}
+                            href={formatTelegramUrl(socialLinks.telegram)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="p-3 rounded-full bg-sky-100 dark:bg-sky-900/30 text-sky-600"

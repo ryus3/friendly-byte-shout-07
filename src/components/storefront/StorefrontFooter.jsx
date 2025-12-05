@@ -2,7 +2,13 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import { Facebook, Instagram, MessageCircle, Send } from 'lucide-react';
-import { formatWhatsAppLink } from '@/utils/phoneUtils';
+import { 
+  extractSocialLinks, 
+  formatWhatsAppUrl, 
+  formatInstagramUrl, 
+  formatFacebookUrl, 
+  formatTelegramUrl 
+} from '@/utils/extractSocialLinks';
 
 const StorefrontFooter = () => {
   const { settings } = useStorefront();
@@ -11,14 +17,12 @@ const StorefrontFooter = () => {
 
   const slug = settings.slug;
   const businessName = settings.profile?.business_page_name || settings.business_name || 'متجرنا';
-  const businessLinks = settings.profile?.business_links || {};
-  const socialMedia = settings.profile?.social_media || {};
-
-  // استخراج روابط التواصل
-  const whatsappLink = businessLinks.whatsapp || socialMedia.whatsapp;
-  const telegramLink = businessLinks.telegram || socialMedia.telegram;
-  const instagramLink = businessLinks.instagram || socialMedia.instagram;
-  const facebookLink = businessLinks.facebook || socialMedia.facebook;
+  
+  // استخراج روابط التواصل من business_links array و social_media
+  const socialLinks = extractSocialLinks(
+    settings.profile?.business_links,
+    settings.profile?.social_media
+  );
 
   return (
     <footer className="bg-muted/50 border-t border-border mt-16">
@@ -85,9 +89,9 @@ const StorefrontFooter = () => {
           <div className="col-span-1">
             <h4 className="font-semibold mb-4">تواصل معنا</h4>
             <div className="flex gap-3">
-              {whatsappLink && (
+              {socialLinks.whatsapp && (
                 <a 
-                  href={formatWhatsAppLink(whatsappLink)}
+                  href={formatWhatsAppUrl(socialLinks.whatsapp)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-10 w-10 rounded-full bg-green-600 hover:bg-green-700 transition-colors flex items-center justify-center text-white"
@@ -96,9 +100,9 @@ const StorefrontFooter = () => {
                   <MessageCircle className="h-5 w-5" />
                 </a>
               )}
-              {telegramLink && (
+              {socialLinks.telegram && (
                 <a 
-                  href={telegramLink}
+                  href={formatTelegramUrl(socialLinks.telegram)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-10 w-10 rounded-full bg-blue-500 hover:bg-blue-600 transition-colors flex items-center justify-center text-white"
@@ -107,9 +111,9 @@ const StorefrontFooter = () => {
                   <Send className="h-5 w-5" />
                 </a>
               )}
-              {instagramLink && (
+              {socialLinks.instagram && (
                 <a 
-                  href={instagramLink}
+                  href={formatInstagramUrl(socialLinks.instagram)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-10 w-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 transition-colors flex items-center justify-center text-white"
@@ -118,9 +122,9 @@ const StorefrontFooter = () => {
                   <Instagram className="h-5 w-5" />
                 </a>
               )}
-              {facebookLink && (
+              {socialLinks.facebook && (
                 <a 
-                  href={facebookLink}
+                  href={formatFacebookUrl(socialLinks.facebook)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="h-10 w-10 rounded-full bg-blue-600 hover:bg-blue-700 transition-colors flex items-center justify-center text-white"
