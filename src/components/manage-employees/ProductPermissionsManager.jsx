@@ -13,21 +13,9 @@ import {
   TabsList,
   TabsTrigger,
 } from '@/components/ui/tabs';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import { Package, Palette, Ruler, Building, Tag, Calendar, CheckCircle, XCircle, Store, Search, Plus, Trash2, ChevronDown, Check } from 'lucide-react';
+import { Package, Palette, Ruler, Building, Tag, Calendar, CheckCircle, XCircle, Store, Search, Plus, Trash2 } from 'lucide-react';
 import { useFiltersData } from '@/hooks/useFiltersData';
+import ProductSelectionDialog from './ProductSelectionDialog';
 
 const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) => {
   const [loading, setLoading] = useState(true);
@@ -47,10 +35,9 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
   const [productSearchTerm, setProductSearchTerm] = useState('');
   const [loadingProducts, setLoadingProducts] = useState(false);
   
-  // حالات Multi-select dropdown
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+  // حالة نافذة اختيار المنتجات الجديدة
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState([]);
-  const [dropdownSearch, setDropdownSearch] = useState('');
 
   const [availableOptions, setAvailableOptions] = useState({
     categories: [],
@@ -251,13 +238,19 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
     }
   };
 
-  // تبديل اختيار منتج في dropdown
+  // تبديل اختيار منتج في Dialog
   const toggleProductSelection = (productId) => {
     setSelectedProducts(prev => 
       prev.includes(productId) 
         ? prev.filter(id => id !== productId)
         : [...prev, productId]
     );
+  };
+
+  // تأكيد إضافة المنتجات المحددة
+  const handleConfirmSelection = async () => {
+    await addSelectedProducts();
+    setDialogOpen(false);
   };
 
   // حذف منتج من القائمة المسموحة
@@ -387,12 +380,10 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
     return isNotAllowed && matchesSearch;
   });
 
-  // فلترة المنتجات للـ dropdown
-  const dropdownFilteredProducts = allProducts.filter(p => {
-    const isNotAllowed = !allowedProducts.some(ap => ap.product_id === p.id);
-    const matchesSearch = p.name?.toLowerCase().includes(dropdownSearch.toLowerCase());
-    return isNotAllowed && matchesSearch;
-  });
+  // المنتجات غير المضافة للـ Dialog
+  const availableForSelection = allProducts.filter(p => 
+    !allowedProducts.some(ap => ap.product_id === p.id)
+  );
 
   if (loading) {
     return (
@@ -457,96 +448,21 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
-              {/* Multi-select Dropdown لإضافة منتجات متعددة */}
+              {/* زر فتح نافذة اختيار المنتجات الاحترافية */}
               <div className="space-y-3">
-                <h4 className="text-sm font-medium">إضافة منتجات جديدة</h4>
-                
-                <Popover open={dropdownOpen} onOpenChange={setDropdownOpen}>
-                  <PopoverTrigger asChild>
-                    <Button 
-                      variant="outline" 
-                      className="w-full justify-between border-2 border-purple-200 hover:border-purple-400"
-                    >
-                      <span className="flex items-center gap-2">
-                        <Package className="h-4 w-4" />
-                        {selectedProducts.length > 0 
-                          ? `${selectedProducts.length} منتج محدد`
-                          : 'اختر المنتجات للإضافة...'
-                        }
-                      </span>
-                      <ChevronDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-[400px] p-0" align="start">
-                    <Command>
-                      <CommandInput 
-                        placeholder="ابحث عن منتج..." 
-                        value={dropdownSearch}
-                        onValueChange={setDropdownSearch}
-                      />
-                      <CommandList className="max-h-60">
-                        <CommandEmpty>لا توجد منتجات مطابقة</CommandEmpty>
-                        <CommandGroup>
-                          {dropdownFilteredProducts.slice(0, 50).map(product => {
-                            const isSelected = selectedProducts.includes(product.id);
-                            const { colors, sizes } = getAvailableVariants(product);
-                            
-                            return (
-                              <CommandItem
-                                key={product.id}
-                                onSelect={() => toggleProductSelection(product.id)}
-                                className="cursor-pointer"
-                              >
-                                <div className="flex items-center gap-3 w-full">
-                                  <Checkbox 
-                                    checked={isSelected}
-                                    className="pointer-events-none"
-                                  />
-                                  {product.images?.[0] && (
-                                    <img src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
-                                  )}
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-medium text-sm truncate">{product.name}</p>
-                                    <div className="flex flex-wrap gap-1 mt-1">
-                                      {colors.slice(0, 3).map(([name, { hex }]) => (
-                                        <span 
-                                          key={name} 
-                                          className="w-4 h-4 rounded-full border border-gray-300"
-                                          style={{ backgroundColor: hex || '#ccc' }}
-                                          title={name}
-                                        />
-                                      ))}
-                                      {sizes.slice(0, 3).map(([name]) => (
-                                        <span key={name} className="text-[10px] bg-muted px-1 rounded">{name}</span>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  <span className="text-xs text-muted-foreground">
-                                    {product.base_price?.toLocaleString('ar-IQ')} IQD
-                                  </span>
-                                </div>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                    {selectedProducts.length > 0 && (
-                      <div className="p-2 border-t">
-                        <Button 
-                          className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white"
-                          onClick={addSelectedProducts}
-                        >
-                          <Plus className="h-4 w-4 ml-2" />
-                          إضافة {selectedProducts.length} منتج
-                        </Button>
-                      </div>
-                    )}
-                  </PopoverContent>
-                </Popover>
+                <Button 
+                  onClick={() => {
+                    setSelectedProducts([]);
+                    setDialogOpen(true);
+                  }}
+                  className="w-full h-14 bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 hover:opacity-90 text-base font-medium"
+                >
+                  <Plus className="h-5 w-5 ml-2" />
+                  إضافة منتجات للمتجر
+                </Button>
               </div>
 
-              {/* البحث المباشر (يبقى موجوداً) */}
+              {/* البحث المباشر السريع */}
               <div className="space-y-3">
                 <h4 className="text-sm font-medium">أو ابحث وأضف منتج واحد</h4>
                 <div className="relative">
@@ -772,6 +688,18 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
           </TabsContent>
         ))}
       </Tabs>
+
+      {/* نافذة اختيار المنتجات الاحترافية */}
+      <ProductSelectionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        products={availableForSelection}
+        selectedProducts={selectedProducts}
+        onToggleProduct={toggleProductSelection}
+        onConfirm={handleConfirmSelection}
+        loading={loadingProducts}
+        title="اختر المنتجات لإضافتها للمتجر"
+      />
     </div>
   );
 };
