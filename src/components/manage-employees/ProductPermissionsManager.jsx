@@ -230,7 +230,7 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
 
       toast({ title: `تمت إضافة ${selectedProducts.length} منتج بنجاح` });
       setSelectedProducts([]);
-      setDropdownOpen(false);
+      setDialogOpen(false);
       await fetchAllowedProducts();
     } catch (error) {
       console.error('خطأ في إضافة المنتجات:', error);
