@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useScrollToTop } from '@/hooks/useScrollToTop';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -132,6 +132,9 @@ const AddProductPage = () => {
   const [preloadedSeasonsOccasionsData, setPreloadedSeasonsOccasionsData] = useState(null);
   const [preloadedDepartmentsData, setPreloadedDepartmentsData] = useState(null);
   
+  // حماية ضد توليد المتغيرات قبل اكتمال تحميل بيانات التعديل
+  const isInitialEditLoadComplete = useRef(false);
+  
   const isUploading = useMemo(() => uploadProgress > 0 && uploadProgress < 100, [uploadProgress]);
 
   const allSizesForType = useMemo(() => {
@@ -259,14 +262,14 @@ const AddProductPage = () => {
           setSelectedColors(uniqueColors);
           setColorImages(colorImages);
           
-          // تحديد نوع القياس الافتراضي من أول متغير
-          if (editProductData.variants[0]?.sizes?.type) {
-            setSizeType(editProductData.variants[0].sizes.type);
-          }
+          // ⚠️ مهم جداً: تحديد نوع القياس أولاً قبل أي شيء آخر
+          const firstVariantSizeType = editProductData.variants[0]?.sizes?.type || 'letter';
+          console.log('🔧 نوع القياس المستخرج من البيانات:', firstVariantSizeType);
+          setSizeType(firstVariantSizeType);
           
-          // تعيين أنواع القياسات المستخرجة
+          // تعيين أنواع القياسات المستخرجة لكل لون
           setColorSizeTypes(extractedColorSizeTypes);
-          console.log('🎨 أنواع القياسات المستخرجة:', extractedColorSizeTypes);
+          console.log('🎨 أنواع القياسات المستخرجة لكل لون:', extractedColorSizeTypes);
           
           // تحويل المتغيرات للتنسيق المطلوب مع تحميل الكمية من المخزون
           const formattedVariants = editProductData.variants.map(variant => {
@@ -299,7 +302,11 @@ const AddProductPage = () => {
           setVariants(formattedVariants);
         }
         
-        console.log('✅ تم تحميل بيانات المنتج بنجاح للتعديل');
+        // ✅ تأخير تفعيل الحماية للتأكد من اكتمال جميع setState
+        setTimeout(() => {
+          isInitialEditLoadComplete.current = true;
+          console.log('✅ تم تحميل بيانات المنتج بنجاح للتعديل - الحماية مفعلة');
+        }, 100);
       } catch (error) {
         console.error('❌ خطأ في تحميل بيانات المنتج للتعديل:', error);
         toast({
@@ -366,6 +373,12 @@ const AddProductPage = () => {
   // إضافة effect منفصل لتوليد المتغيرات عند إضافة لون جديد في وضع التعديل
   useEffect(() => {
     if (!isEditMode) return;
+    
+    // ⚠️ لا نولّد متغيرات جديدة حتى يكتمل التحميل الأولي
+    if (!isInitialEditLoadComplete.current) {
+      console.log('⏳ انتظار اكتمال التحميل الأولي قبل توليد متغيرات جديدة...');
+      return;
+    }
     
     const generateVariantsForNewColors = () => {
       setVariants(currentVariants => {
