@@ -436,6 +436,95 @@ const AddProductPage = () => {
     }
   }, [selectedColors, sizes, colorSizeTypes, sizeType, isEditMode, productInfo.name, productInfo.price, productInfo.costPrice]);
 
+  // ref لتتبع القيم السابقة لـ colorSizeTypes
+  const prevColorSizeTypesRef = useRef({});
+
+  // Effect لإعادة توليد المتغيرات عند تغيير نوع القياس في وضع التعديل
+  useEffect(() => {
+    if (!isEditMode) return;
+    if (!isInitialEditLoadComplete.current) return;
+    if (sizes.length === 0) return;
+    
+    // التحقق من وجود تغيير حقيقي في colorSizeTypes
+    const hasRealChange = Object.keys(colorSizeTypes).some(colorId => {
+      const prev = prevColorSizeTypesRef.current[colorId] || [];
+      const current = colorSizeTypes[colorId] || [];
+      return JSON.stringify([...prev].sort()) !== JSON.stringify([...current].sort());
+    });
+    
+    // تحديث القيم السابقة
+    const shouldUpdate = Object.keys(prevColorSizeTypesRef.current).length > 0;
+    prevColorSizeTypesRef.current = { ...colorSizeTypes };
+    
+    if (!hasRealChange || !shouldUpdate) return;
+    
+    console.log('🔄 تم اكتشاف تغيير في نوع القياس، إعادة توليد المتغيرات...');
+    
+    setVariants(currentVariants => {
+      const newVariants = [];
+      
+      selectedColors.forEach(color => {
+        // الحصول على نوع القياس الجديد لهذا اللون
+        const newSizeTypes = colorSizeTypes[color.id] || [sizeType];
+        
+        // الحصول على المتغيرات الحالية لهذا اللون
+        const existingColorVariants = currentVariants.filter(v => 
+          (v.colorId === color.id || v.color_id === color.id)
+        );
+        
+        // التحقق من أن أنواع القياسات الحالية تتطابق مع الأنواع الجديدة
+        const existingTypes = [...new Set(existingColorVariants.map(v => 
+          v.sizeType || v.sizes?.type || 'letter'
+        ))];
+        
+        const needsRegeneration = !newSizeTypes.every(t => existingTypes.includes(t)) ||
+                                   !existingTypes.every(t => newSizeTypes.includes(t));
+        
+        if (needsRegeneration) {
+          console.log(`🔧 إعادة توليد متغيرات اللون ${color.name} من ${existingTypes} إلى ${newSizeTypes}`);
+          
+          // إعادة توليد المتغيرات بنوع القياس الجديد
+          newSizeTypes.forEach(sizeTypeForColor => {
+            const sizesForThisType = sizes.filter(s => s.type === sizeTypeForColor);
+            
+            sizesForThisType.forEach(size => {
+              // البحث عن متغير موجود بنفس القياس للحفاظ على الكمية
+              const existingVariant = existingColorVariants.find(v => 
+                (v.sizeId === size.id || v.size_id === size.id)
+              );
+              
+              const barcode = generateUniqueBarcode(
+                productInfo.name || 'منتج',
+                color.name,
+                size.name
+              );
+              
+              newVariants.push({
+                colorId: color.id,
+                sizeId: size.id,
+                color: color.name,
+                color_hex: color.hex_code,
+                size: size.name,
+                sizeType: sizeTypeForColor,
+                quantity: existingVariant?.quantity || 0,
+                price: parseFloat(productInfo.price) || 0,
+                costPrice: parseFloat(productInfo.costPrice) || 0,
+                barcode: barcode,
+                hint: existingVariant?.hint || ''
+              });
+            });
+          });
+        } else {
+          // الإبقاء على المتغيرات الحالية
+          newVariants.push(...existingColorVariants);
+        }
+      });
+      
+      console.log('✅ تم إعادة توليد المتغيرات:', newVariants.length);
+      return newVariants;
+    });
+  }, [colorSizeTypes, isEditMode, selectedColors, sizes, sizeType, productInfo.name, productInfo.price, productInfo.costPrice]);
+
   // حفظ البيانات تلقائياً كلما تغيرت مع debouncing محسن
   useEffect(() => {
     if (!isEditMode && (productInfo.name?.trim() || selectedColors.length > 0)) {
