@@ -2608,23 +2608,11 @@ export const AlWaseetProvider = ({ children }) => {
         devLog.warn('⚠️ خطأ في حذف الخصومات:', discountError);
       }
       
-      // 2. تحرير المخزون المحجوز
-      if (orderToDelete.order_items && orderToDelete.order_items.length > 0) {
-        for (const item of orderToDelete.order_items) {
-          try {
-            await supabase.rpc('release_stock_item', {
-              p_product_id: item.product_id,
-              p_variant_id: item.variant_id,
-              p_quantity: item.quantity
-            });
-            devLog.log(`📦 تم تحرير ${item.quantity} قطعة من المنتج ${item.product_id}`);
-          } catch (releaseError) {
-            devLog.warn('⚠️ تعذر تحرير المخزون للعنصر:', item.product_id, releaseError);
-          }
-        }
-      }
+      // ⚠️ ملاحظة مهمة: تحرير المخزون المحجوز يتم تلقائياً عبر trigger: auto_release_stock_on_order_delete
+      // لا نستدعي release_stock_item يدوياً لأن ذلك يسبب تعارض ونقص خاطئ في المخزون
+      // الـ trigger يُنقص reserved_quantity فقط بشكل صحيح
       
-      // 3. حذف الطلب من قاعدة البيانات (✅ الصيغة الصحيحة من Supabase)
+      // 2. حذف الطلب من قاعدة البيانات (✅ الصيغة الصحيحة من Supabase)
       const { error: deleteError, data } = await supabase
         .from('orders')
         .delete()
