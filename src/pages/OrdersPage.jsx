@@ -44,7 +44,7 @@ const OrdersPage = () => {
   // ✅ إضافة syncVisibleOrdersBatch للمزامنة الدُفعية
   const { syncAndApplyOrders, syncOrderByTracking, fastSyncPendingOrders, performDeletionPassAfterStatusSync, autoSyncEnabled, setAutoSyncEnabled, correctionComplete, syncVisibleOrdersBatch } = useAlWaseet();
   const { user, allUsers } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isAdmin } = usePermissions();
   const { profitData, allProfits } = useUnifiedProfits();
   const { userUUID } = useUnifiedUserData();
   const navigate = useNavigate();
@@ -372,8 +372,8 @@ const OrdersPage = () => {
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
     
-    // للمدير العام: إظهار طلباته الشخصية فقط (أو طلبات موظف محدد)
-    if (hasPermission('view_all_orders')) {
+    // ✅ المدير العام فقط (super_admin أو admin) - وليس مدير القسم
+    if (isAdmin) {
       if (selectedEmployeeId && selectedEmployeeId !== 'all') {
         return orders.filter(order => order.created_by === selectedEmployeeId);
       }
@@ -381,10 +381,10 @@ const OrdersPage = () => {
       return orders.filter(order => order.created_by === ADMIN_ID);
     }
     
-    // لمدير القسم والموظفين: إظهار طلباتهم الشخصية فقط
-    // صفحة طلباتي = طلبات الشخص نفسه فقط
+    // ✅ مدير القسم والموظفين: طلباتهم الشخصية فقط
+    // صفحة "طلباتي" = طلبات الشخص نفسه دائماً
     return orders.filter(order => order.created_by === userUUID);
-  }, [orders, userUUID, hasPermission, selectedEmployeeId]);
+  }, [orders, userUUID, isAdmin, selectedEmployeeId]);
   
   const userAiOrders = useMemo(() => {
     if (!Array.isArray(aiOrders)) return [];
