@@ -31,7 +31,6 @@ const ManageEmployeesPage = () => {
   const [employeeStats, setEmployeeStats] = useState({});
   const [teamManagementEmployee, setTeamManagementEmployee] = useState(null);
   const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
-  const [employeeStats, setEmployeeStats] = useState({});
 
   const handleFilterChange = (e) => {
     setFilters({ ...filters, [e.target.name]: e.target.value });
