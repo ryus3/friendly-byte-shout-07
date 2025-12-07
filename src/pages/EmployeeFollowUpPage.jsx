@@ -382,15 +382,27 @@ const EmployeeFollowUpPage = () => {
   const employees = useMemo(() => {
     if (!allUsers || !Array.isArray(allUsers)) return [];
     
-    let filteredEmployees = allUsers.filter(u => u && u.status === 'active' && u.user_id !== ADMIN_ID);
-    
-    // مدير القسم: إظهار فقط الموظفين المشرف عليهم
-    if (isDepartmentManager && !isAdmin && supervisedEmployeeIds.length > 0) {
-      filteredEmployees = filteredEmployees.filter(u => supervisedEmployeeIds.includes(u.user_id));
+    // ✅ المدير العام: يرى جميع الموظفين النشطين
+    if (isAdmin) {
+      return allUsers.filter(u => u && u.status === 'active' && u.user_id !== ADMIN_ID);
     }
     
-    return filteredEmployees;
-  }, [allUsers, isDepartmentManager, isAdmin, supervisedEmployeeIds]);
+    // ✅ مدير القسم: يرى فقط الموظفين المشرف عليهم (وليس نفسه)
+    if (isDepartmentManager) {
+      if (supervisedEmployeeIds.length > 0) {
+        return allUsers.filter(u => 
+          u && 
+          u.status === 'active' && 
+          u.user_id !== user?.user_id && // استبعاد نفسه
+          supervisedEmployeeIds.includes(u.user_id)
+        );
+      }
+      // مدير قسم بدون موظفين تحت إشرافه
+      return [];
+    }
+    
+    return [];
+  }, [allUsers, isAdmin, isDepartmentManager, supervisedEmployeeIds, user?.user_id]);
 
   // خريطة الموظفين للأسماء
   const usersMap = useMemo(() => {
