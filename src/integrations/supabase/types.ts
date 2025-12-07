@@ -2495,6 +2495,64 @@ export type Database = {
           },
         ]
       }
+      employee_supervisors: {
+        Row: {
+          assigned_at: string | null
+          assigned_by: string | null
+          created_at: string | null
+          employee_id: string
+          id: string
+          is_active: boolean | null
+          notes: string | null
+          supervisor_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          employee_id: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          supervisor_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          assigned_at?: string | null
+          assigned_by?: string | null
+          created_at?: string | null
+          employee_id?: string
+          id?: string
+          is_active?: boolean | null
+          notes?: string | null
+          supervisor_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_supervisors_assigned_by_fkey"
+            columns: ["assigned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "employee_supervisors_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "employee_supervisors_supervisor_id_fkey"
+            columns: ["supervisor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       employee_telegram_codes: {
         Row: {
           created_at: string

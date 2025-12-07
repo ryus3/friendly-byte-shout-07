@@ -372,16 +372,17 @@ const OrdersPage = () => {
   const userOrders = useMemo(() => {
     if (!Array.isArray(orders)) return [];
     
-    // للمدير: إظهار طلباته الشخصية فقط في صفحة /my-orders (استبعاد طلبات الموظفين)
+    // للمدير العام: إظهار طلباته الشخصية فقط (أو طلبات موظف محدد)
     if (hasPermission('view_all_orders')) {
       if (selectedEmployeeId && selectedEmployeeId !== 'all') {
         return orders.filter(order => order.created_by === selectedEmployeeId);
       }
-      // فلترة طلبات المدير الشخصية فقط - استبعاد طلبات الموظفين
+      // فلترة طلبات المدير الشخصية فقط
       return orders.filter(order => order.created_by === ADMIN_ID);
     }
     
-    // للموظفين: إظهار طلباتهم فقط
+    // لمدير القسم والموظفين: إظهار طلباتهم الشخصية فقط
+    // صفحة طلباتي = طلبات الشخص نفسه فقط
     return orders.filter(order => order.created_by === userUUID);
   }, [orders, userUUID, hasPermission, selectedEmployeeId]);
   

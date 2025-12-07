@@ -35,14 +35,15 @@ import { toast } from '@/hooks/use-toast';
 
 const EmployeeFollowUpPage = () => {
   const navigate = useNavigate();
-  const { allUsers } = useAuth();
-  const { hasPermission, isAdmin } = usePermissions();
+  const { allUsers, user } = useAuth();
+  const { hasPermission, isAdmin, isDepartmentManager } = usePermissions();
   
   const { syncVisibleOrdersBatch } = useAlWaseet();
   const { autoSyncVisibleOrders } = useUnifiedAutoSync();
   
   const [syncing, setSyncing] = useState(false);
   const [syncingEmployee, setSyncingEmployee] = useState(null);
+  const [supervisedEmployeeIds, setSupervisedEmployeeIds] = useState([]);
   
   const { 
     orders, 
@@ -57,6 +58,34 @@ const EmployeeFollowUpPage = () => {
     expenses,
     profits
   } = useInventory();
+  
+  // جلب الموظفين الذين يشرف عليهم مدير القسم
+  useEffect(() => {
+    const fetchSupervisedEmployees = async () => {
+      if (!isDepartmentManager || !user?.user_id) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('employee_supervisors')
+          .select('employee_id')
+          .eq('supervisor_id', user.user_id)
+          .eq('is_active', true);
+        
+        if (error) {
+          console.error('خطأ في جلب الموظفين المشرف عليهم:', error);
+          return;
+        }
+        
+        if (data && data.length > 0) {
+          setSupervisedEmployeeIds(data.map(d => d.employee_id));
+        }
+      } catch (err) {
+        console.error('خطأ:', err);
+      }
+    };
+    
+    fetchSupervisedEmployees();
+  }, [isDepartmentManager, user?.user_id]);
   
   const [searchParams] = useSearchParams();
   
@@ -349,11 +378,19 @@ const EmployeeFollowUpPage = () => {
   // معرف المدير الرئيسي - تصفية طلباته
   const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
-  // قائمة الموظفين النشطين (استبعاد المدير العام)
+  // قائمة الموظفين النشطين - تفلتر حسب المشرف لمدير القسم
   const employees = useMemo(() => {
     if (!allUsers || !Array.isArray(allUsers)) return [];
-    return allUsers.filter(u => u && u.status === 'active' && u.user_id !== ADMIN_ID);
-  }, [allUsers]);
+    
+    let filteredEmployees = allUsers.filter(u => u && u.status === 'active' && u.user_id !== ADMIN_ID);
+    
+    // مدير القسم: إظهار فقط الموظفين المشرف عليهم
+    if (isDepartmentManager && !isAdmin && supervisedEmployeeIds.length > 0) {
+      filteredEmployees = filteredEmployees.filter(u => supervisedEmployeeIds.includes(u.user_id));
+    }
+    
+    return filteredEmployees;
+  }, [allUsers, isDepartmentManager, isAdmin, supervisedEmployeeIds]);
 
   // خريطة الموظفين للأسماء
   const usersMap = useMemo(() => {

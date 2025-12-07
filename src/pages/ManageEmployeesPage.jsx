@@ -12,11 +12,12 @@ import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { 
   Search, UserPlus, ArrowRight, Shield, LayoutGrid, List, 
-  Eye, Edit2, Hash, Send, Mail, User, TrendingUp, Target, ShoppingCart, Store, ExternalLink
+  Eye, Edit2, Hash, Send, Mail, User, TrendingUp, Target, ShoppingCart, Store, ExternalLink, Users
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import UnifiedEmployeeDialog from '@/components/manage-employees/UnifiedEmployeeDialog';
 import UpdateRolePermissionsDialog from '@/components/manage-employees/UpdateRolePermissionsDialog';
+import TeamManagementDialog from '@/components/employees/TeamManagementDialog';
 import { motion } from 'framer-motion';
 
 const ManageEmployeesPage = () => {
@@ -27,6 +28,9 @@ const ManageEmployeesPage = () => {
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isBulkUpdateOpen, setIsBulkUpdateOpen] = useState(false);
+  const [employeeStats, setEmployeeStats] = useState({});
+  const [teamManagementEmployee, setTeamManagementEmployee] = useState(null);
+  const [isTeamDialogOpen, setIsTeamDialogOpen] = useState(false);
   const [employeeStats, setEmployeeStats] = useState({});
 
   const handleFilterChange = (e) => {
@@ -414,6 +418,22 @@ const ManageEmployeesPage = () => {
                         تعديل
                       </Button>
                     </div>
+                    
+                    {/* Team Management Button - لمدراء الأقسام فقط */}
+                    {employee.roles?.includes('department_manager') && (
+                      <Button 
+                        variant="secondary" 
+                        size="sm" 
+                        className="w-full mt-2"
+                        onClick={() => {
+                          setTeamManagementEmployee(employee);
+                          setIsTeamDialogOpen(true);
+                        }}
+                      >
+                        <Users className="w-4 h-4 ml-2" />
+                        إدارة فريقه
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               </motion.div>
@@ -514,6 +534,14 @@ const ManageEmployeesPage = () => {
         <UpdateRolePermissionsDialog 
           open={isBulkUpdateOpen}
           onOpenChange={setIsBulkUpdateOpen}
+        />
+        
+        {/* Team Management Dialog */}
+        <TeamManagementDialog
+          open={isTeamDialogOpen}
+          onOpenChange={setIsTeamDialogOpen}
+          supervisor={teamManagementEmployee}
+          onUpdate={() => window.location.reload()}
         />
       </div>
     </>
