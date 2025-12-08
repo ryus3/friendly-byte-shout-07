@@ -1663,6 +1663,87 @@ export type Database = {
         }
         Relationships: []
       }
+      department_manager_profit_rules: {
+        Row: {
+          category_id: string | null
+          created_at: string | null
+          created_by: string | null
+          department_id: string | null
+          department_manager_id: string
+          id: string
+          is_active: boolean | null
+          product_id: string | null
+          profit_amount: number
+          profit_percentage: number | null
+          profit_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department_id?: string | null
+          department_manager_id: string
+          id?: string
+          is_active?: boolean | null
+          product_id?: string | null
+          profit_amount?: number
+          profit_percentage?: number | null
+          profit_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          department_id?: string | null
+          department_manager_id?: string
+          id?: string
+          is_active?: boolean | null
+          product_id?: string | null
+          profit_amount?: number
+          profit_percentage?: number | null
+          profit_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "department_manager_profit_rules_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_manager_profit_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "department_manager_profit_rules_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "department_manager_profit_rules_department_manager_id_fkey"
+            columns: ["department_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "department_manager_profit_rules_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       departments: {
         Row: {
           color: string | null
@@ -2142,6 +2223,7 @@ export type Database = {
       employee_profit_rules: {
         Row: {
           created_at: string
+          created_by: string | null
           employee_id: string
           id: string
           is_active: boolean
@@ -2153,6 +2235,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           employee_id: string
           id?: string
           is_active?: boolean
@@ -2164,6 +2247,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           employee_id?: string
           id?: string
           is_active?: boolean
@@ -2173,7 +2257,15 @@ export type Database = {
           target_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "employee_profit_rules_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       employee_promo_codes: {
         Row: {
