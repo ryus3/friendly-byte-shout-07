@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { useSuper } from '@/contexts/SuperProvider';
 import { useUnifiedStats } from '@/hooks/useUnifiedStats';
+import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,9 +28,10 @@ import SmartPagination from '@/components/ui/SmartPagination';
 
 const SalesPage = () => {
   const { user } = useAuth();
-  const { hasPermission } = usePermissions();
+  const { hasPermission, isAdmin, isDepartmentManager } = usePermissions();
   const { orders, loading, users } = useSuper();
   const { formatCurrency } = useUnifiedStats();
+  const { supervisedEmployeeIds, filterByCreator } = useSupervisedEmployees();
   const [selectedEmployee, setSelectedEmployee] = useState(user?.id || 'all');
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -50,10 +52,9 @@ const SalesPage = () => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, receiptFilter, dateFilter, selectedEmployee]);
 
-  // Permission check - managers can view all employees
-  const canViewAllEmployees = hasPermission('view_all_orders') || 
-    user?.roles?.includes('super_admin') || 
-    user?.roles?.includes('admin');
+  // Permission check - only admins can view ALL employees
+  // مدير القسم يرى موظفيه فقط، ليس الكل
+  const canViewAllEmployees = isAdmin;
 
   // Filter orders based on delivery status (delivered orders only)
   const deliveredOrders = useMemo(() => {
@@ -108,14 +109,26 @@ const SalesPage = () => {
   }, [searchTerm, statusFilter, receiptFilter, dateFilter, selectedEmployee]);
 
   const filteredOrders = useMemo(() => {
+    // ✅ فلترة المبيعات حسب الصلاحيات أولاً
     let filtered = deliveredOrders;
+    
+    // 1. تطبيق فلترة الصلاحيات الأساسية
+    if (isAdmin) {
+      // المدير العام يرى الكل
+      filtered = deliveredOrders;
+    } else if (isDepartmentManager) {
+      // مدير القسم يرى مبيعاته + مبيعات موظفيه فقط
+      filtered = deliveredOrders.filter(order => 
+        order.created_by === user?.id || supervisedEmployeeIds.includes(order.created_by)
+      );
+    } else {
+      // الموظف العادي يرى مبيعاته فقط
+      filtered = deliveredOrders.filter(order => order.created_by === user?.id);
+    }
 
-    // Employee filter
+    // 2. فلتر الموظف المحدد (إذا اختار موظف معين)
     if (selectedEmployee && selectedEmployee !== 'all') {
       filtered = filtered.filter(order => order.created_by === selectedEmployee);
-    } else if (!canViewAllEmployees) {
-      // If not manager, show only own orders
-      filtered = filtered.filter(order => order.created_by === user?.id);
     }
 
     // Search filter
@@ -152,7 +165,7 @@ const SalesPage = () => {
     }
 
     return filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  }, [deliveredOrders, selectedEmployee, searchTerm, statusFilter, receiptFilter, dateFilter, canViewAllEmployees, user?.id, getDateRange]);
+  }, [deliveredOrders, selectedEmployee, searchTerm, statusFilter, receiptFilter, dateFilter, isAdmin, isDepartmentManager, supervisedEmployeeIds, user?.id, getDateRange]);
 
   // Pagination
   const ITEMS_PER_PAGE = 20; // ثابت واضح
@@ -180,15 +193,24 @@ const SalesPage = () => {
   }, [filteredOrders]);
 
   // Get employee options from profiles table
+  // مدير القسم يرى فقط موظفيه في القائمة المنسدلة
   const employeeOptions = useMemo(() => {
-    if (!canViewAllEmployees) return [];
+    // تحديد الطلبات المسموحة حسب الصلاحية
+    let allowedOrders = deliveredOrders;
+    if (!isAdmin && isDepartmentManager) {
+      allowedOrders = deliveredOrders.filter(order => 
+        order.created_by === user?.id || supervisedEmployeeIds.includes(order.created_by)
+      );
+    } else if (!isAdmin) {
+      return []; // الموظف العادي لا يرى قائمة الموظفين
+    }
     
     const employeesWithOrders = Array.from(
-      new Set(deliveredOrders.map(order => order.created_by))
+      new Set(allowedOrders.map(order => order.created_by))
     ).map(employeeId => {
       // Look for employee in profiles table
       const employee = users?.find(u => u.user_id === employeeId || u.id === employeeId);
-      const employeeOrders = deliveredOrders.filter(order => order.created_by === employeeId);
+      const employeeOrders = allowedOrders.filter(order => order.created_by === employeeId);
       // Use final_amount minus delivery fees to show actual sales amount after discount
       const totalSales = employeeOrders.reduce((sum, order) => {
         const salesAmount = (order.final_amount || 0) - (order.delivery_fee || 0);
@@ -205,7 +227,7 @@ const SalesPage = () => {
     }).filter(emp => emp.id);
 
     return employeesWithOrders;
-  }, [deliveredOrders, users, canViewAllEmployees]);
+  }, [deliveredOrders, users, isAdmin, isDepartmentManager, supervisedEmployeeIds, user?.id]);
 
 
   // Handle view order details

@@ -40,8 +40,27 @@ export const NotificationsProvider = ({ children }) => {
 
         // فلترة الإشعارات حسب المستخدم
         const isAdmin = user?.roles?.includes('super_admin') || user?.roles?.includes('admin');
-        if (!isAdmin) {
-            // إضافة order_created لقائمة الإشعارات المحظورة للموظفين
+        const isDepartmentManager = user?.roles?.includes('department_manager');
+        
+        if (isAdmin) {
+            // المدير العام يرى كل الإشعارات
+            // لا حاجة لفلتر إضافي
+        } else if (isDepartmentManager) {
+            // مدير القسم: إشعاراته + إشعارات موظفيه تحت إشرافه
+            // نجلب الموظفين تحت إشرافه أولاً
+            const { data: supervisedData } = await supabase
+                .from('employee_supervisors')
+                .select('employee_id')
+                .eq('supervisor_id', user.id)
+                .eq('is_active', true);
+            
+            const supervisedIds = supervisedData?.map(d => d.employee_id) || [];
+            const allAllowedIds = [user.id, ...supervisedIds];
+            
+            // إشعاراته + إشعارات موظفيه + الإشعارات العامة المسموحة
+            query = query.or(`user_id.in.(${allAllowedIds.join(',')}),and(user_id.is.null,type.not.in.(profit_settlement_request,settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,order_created,cash_correction,balance_correction,main_cash_correction))`);
+        } else {
+            // الموظف العادي
             query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,order_created,cash_correction,balance_correction,main_cash_correction))`);
         }
         

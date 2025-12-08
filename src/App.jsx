@@ -193,7 +193,7 @@ function AppContent() {
           <Route path="/employee-follow-up" element={<ProtectedRoute permission="view_all_orders">{childrenWithProps(EmployeeFollowUpPage)}</ProtectedRoute>} />
           <Route path="/my-orders" element={<ProtectedRoute permission="view_orders">{childrenWithProps(OrdersPage)}</ProtectedRoute>} />
 
-          <Route path="/purchases" element={<ProtectedRoute permission="view_purchases">{childrenWithProps(PurchasesPage)}</ProtectedRoute>} />
+          <Route path="/purchases" element={<ProtectedRoute permission="manage_purchases">{childrenWithProps(PurchasesPage)}</ProtectedRoute>} />
           <Route path="/settings" element={<ProtectedRoute permission="view_settings">{childrenWithProps(SettingsPage)}</ProtectedRoute>} />
           <Route path="/appearance-settings" element={<ProtectedRoute>{childrenWithProps(AppearanceSettingsPage)}</ProtectedRoute>} />
           <Route path="/notifications" element={<ProtectedRoute>{childrenWithProps(NotificationsPage)}</ProtectedRoute>} />
