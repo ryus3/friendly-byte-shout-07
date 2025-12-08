@@ -328,6 +328,7 @@ const UnifiedProfitDisplay = ({
       managerProfitFromEmployees: systemProfit,
       totalEmployeeProfits,
       totalSettledDues,
+      deliveredOrders, // إضافة الطلبات المستلمة للاستخدام في buildCards
       ...personalData // إضافة البيانات الشخصية للموظف
     };
   }, [orders, accounting, allProfits, effectiveDateRange, currentUser, settlementInvoices]);
@@ -440,14 +441,14 @@ const UnifiedProfitDisplay = ({
       // الأرباح المعلقة من جدول profits (للطلبات المسلمة مع فواتير مستلمة)
       const pendingProfitsFromTable = allProfits
         .filter(p => {
-          const isInDateRange = deliveredOrders.some(o => o.id === p.order_id);
+          const isInDateRange = unifiedFinancialData.deliveredOrders?.some(o => o.id === p.order_id) || false;
           return p.status === 'pending' && isInDateRange;
         })
         .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
 
       console.log('🔍 الأرباح المعلقة الصحيحة:', {
         pendingProfitsFromTable,
-        deliveredOrdersCount: deliveredOrders.length,
+        deliveredOrdersCount: unifiedFinancialData.deliveredOrders?.length || 0,
         pendingProfitsCount: allProfits.filter(p => p.status === 'pending').length
       });
 
