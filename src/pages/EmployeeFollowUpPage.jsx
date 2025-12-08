@@ -477,8 +477,17 @@ const filteredOrders = useMemo(() => {
       const byProfit = profits?.some(p => p.order_id === order.id && (p.employee_id === employeeIdSelected || p.employee_id === selectedEmployeeCode));
       employeeMatch = byCreator || byProfit;
     } else {
-      // عند عدم تحديد موظف معين (جميع الموظفين)، استبعاد طلبات المدير نهائياً
+      // ✅ عند عدم تحديد موظف معين (جميع الموظفين)
+      // استبعاد طلبات المدير نهائياً
       if (isAdminCreated) return false;
+      
+      // ✅ مدير القسم: يرى فقط طلبات الموظفين تحت إشرافه (وليس طلباته)
+      if (isDepartmentManager && !isAdmin) {
+        // استبعاد طلبات مدير القسم نفسه
+        if (order.created_by === user?.user_id) return false;
+        // فقط طلبات الموظفين تحت إشرافه
+        if (!supervisedEmployeeIds.includes(order.created_by)) return false;
+      }
     }
 
     // استبعاد طلبات المدير فقط إذا لم تكن مرتبطة بالموظف عبر الأرباح (للموظف المحدد)
@@ -644,7 +653,15 @@ useEffect(() => {
       // استبعاد طلبات المدير
       if (order.created_by === ADMIN_ID) return false;
       
-      // فلتر الموظف
+      // ✅ مدير القسم: فقط طلبات الموظفين تحت إشرافه (وليس طلباته)
+      if (isDepartmentManager && !isAdmin) {
+        // استبعاد طلبات مدير القسم نفسه
+        if (order.created_by === user?.user_id) return false;
+        // فقط طلبات الموظفين تحت إشرافه
+        if (!supervisedEmployeeIds.includes(order.created_by)) return false;
+      }
+      
+      // فلتر الموظف المحدد
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
         employeeMatch = order.created_by === effectiveEmployeeId;
