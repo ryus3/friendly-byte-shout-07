@@ -35,6 +35,7 @@ export const useUnifiedPermissionsSystem = () => {
       // فحص الصلاحيات
       hasPermission: () => false,
       canViewAllData: false,
+      canViewSupervisedData: false,
       canManageEmployees: false,
       canManageFinances: false,
       canManageProducts: false,
@@ -90,9 +91,15 @@ export const useUnifiedPermissionsSystem = () => {
     };
   }, [userPermissions, isAdmin]);
 
+  // ✅ فقط المدير العام يرى جميع البيانات - مدير القسم يرى فقط بياناته وموظفيه
   const canViewAllData = useMemo(() => {
-    return isAdmin || isDepartmentManager;
-  }, [isAdmin, isDepartmentManager]);
+    return isAdmin; // فقط المدير العام
+  }, [isAdmin]);
+
+  // ✅ صلاحية جديدة لمدير القسم
+  const canViewSupervisedData = useMemo(() => {
+    return isDepartmentManager && !isAdmin;
+  }, [isDepartmentManager, isAdmin]);
 
   const canManageEmployees = useMemo(() => {
     return isAdmin || hasPermission('manage_employees');
@@ -221,6 +228,7 @@ export const useUnifiedPermissionsSystem = () => {
     // فحص الصلاحيات
     hasPermission,
     canViewAllData,
+    canViewSupervisedData,
     canManageEmployees,
     canManageFinances,
     canManageProducts,
