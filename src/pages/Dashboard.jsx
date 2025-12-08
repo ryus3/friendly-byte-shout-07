@@ -91,7 +91,9 @@ const Dashboard = () => {
     const { 
         loading,
         isAdmin,
+        isDepartmentManager,
         canViewAllData,
+        canViewSupervisedData,
         canManageEmployees,
         hasPermission,
         filterDataByUser
@@ -277,13 +279,49 @@ const Dashboard = () => {
         setDialog({ open: false, type: '', orders: [] });
     }, [navigate, periods.totalOrders]);
 
+    // ✅ جلب الموظفين المشرف عليهم لمدير القسم
+    const [supervisedEmployeeIds, setSupervisedEmployeeIds] = useState([]);
+    
+    useEffect(() => {
+        const fetchSupervisedEmployees = async () => {
+            if (!isDepartmentManager || !user?.user_id || isAdmin) return;
+            
+            try {
+                const { data, error } = await supabase
+                    .from('employee_supervisors')
+                    .select('employee_id')
+                    .eq('supervisor_id', user.user_id)
+                    .eq('is_active', true);
+                
+                if (!error && data) {
+                    setSupervisedEmployeeIds(data.map(d => d.employee_id));
+                }
+            } catch (err) {
+                console.error('خطأ في جلب الموظفين المشرف عليهم:', err);
+            }
+        };
+        
+        fetchSupervisedEmployees();
+    }, [isDepartmentManager, user?.user_id, isAdmin]);
+
     const visibleOrders = useMemo(() => {
         if (!orders) return [];
+        const userUUID = getUserUUID(user);
         
-        return canViewAllData 
-            ? orders 
-            : orders.filter(order => order.created_by === getUserUUID(user));
-    }, [orders, canViewAllData, user?.id, user?.user_id]);
+        // ✅ المدير العام: يرى كل الطلبات
+        if (isAdmin) return orders;
+        
+        // ✅ مدير القسم: يرى طلباته + طلبات موظفيه
+        if (isDepartmentManager && supervisedEmployeeIds.length > 0) {
+            return orders.filter(order => 
+                order.created_by === userUUID || 
+                supervisedEmployeeIds.includes(order.created_by)
+            );
+        }
+        
+        // ✅ موظف عادي: يرى طلباته فقط
+        return orders.filter(order => order.created_by === userUUID);
+    }, [orders, isAdmin, isDepartmentManager, supervisedEmployeeIds, user]);
     
     const [userEmployeeCode, setUserEmployeeCode] = useState(null);
 

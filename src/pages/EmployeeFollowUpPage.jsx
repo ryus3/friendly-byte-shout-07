@@ -136,43 +136,54 @@ const EmployeeFollowUpPage = () => {
   const syncSpecificEmployeeSmart = syncEmployeeOrders;
 
   const syncAllEmployeesOrders = async () => {
-    if (!isAdmin) return;
+    // ✅ تعديل: السماح لمدير القسم أيضاً (يزامن فقط طلبات موظفيه)
+    if (!isAdmin && !isDepartmentManager) return;
     
     const currentFilteredOrders = filteredOrders || [];
     
+    const description = isDepartmentManager && !isAdmin 
+      ? "جاري مزامنة طلبات الموظفين تحت إشرافك..."
+      : "جاري مزامنة الفواتير والطلبات لجميع الموظفين...";
+    
     toast({
       title: "بدء المزامنة الشاملة",
-      description: "جاري مزامنة الفواتير والطلبات لجميع الموظفين...",
+      description,
     });
     
     setSyncing(true);
     try {
-      // ✅ 1. مزامنة الفواتير أولاً عبر Edge Function (شاملة لجميع التوكنات)
-      const { data: invoiceSyncResult, error: invoiceError } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: 'comprehensive',
-          sync_invoices: true,
-          sync_orders: true,  // ✅ تفعيل مزامنة طلبات الفواتير أيضاً
-          force_refresh: true
+      // ✅ المدير العام فقط: مزامنة الفواتير عبر Edge Function
+      if (isAdmin) {
+        const { data: invoiceSyncResult, error: invoiceError } = await supabase.functions.invoke('smart-invoice-sync', {
+          body: { 
+            mode: 'comprehensive',
+            sync_invoices: true,
+            sync_orders: true,
+            force_refresh: true
+          }
+        });
+        
+        if (invoiceError) {
+          console.error('❌ خطأ في مزامنة الفواتير:', invoiceError);
+        } else {
+          console.log('✅ نتيجة مزامنة الفواتير:', invoiceSyncResult);
         }
-      });
-      
-      if (invoiceError) {
-        console.error('❌ خطأ في مزامنة الفواتير:', invoiceError);
-      } else {
-        console.log('✅ نتيجة مزامنة الفواتير:', invoiceSyncResult);
       }
       
-      // ✅ 2. مزامنة حالات الطلبات من API
+      // ✅ 2. مزامنة حالات الطلبات من API (للجميع)
       await syncVisibleOrdersBatch(currentFilteredOrders);
       await refreshOrders();
       
       // ✅ 3. إرسال حدث لتحديث الفواتير في الواجهات الأخرى
       window.dispatchEvent(new CustomEvent('invoicesSynced'));
       
+      const successMsg = isDepartmentManager && !isAdmin
+        ? `تم تحديث ${currentFilteredOrders.length} طلب لموظفيك`
+        : `تم تحديث الفواتير والطلبات`;
+      
       toast({
         title: "✅ اكتملت المزامنة الشاملة",
-        description: `تم تحديث الفواتير والطلبات - ${invoiceSyncResult?.invoices_synced || 0} فاتورة`,
+        description: successMsg,
       });
     } catch (error) {
       toast({
@@ -536,7 +547,7 @@ const filteredOrders = useMemo(() => {
   });
   
   return filtered;
-}, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl]);
+}, [orders, filters, usersMap, profits, showSettlementArchive, employees, employeeFromUrl, supervisedEmployeeIds, isDepartmentManager, isAdmin, user?.user_id]);
 
 // إعادة تعيين الصفحة عند تغيير الفلاتر
 useEffect(() => {
