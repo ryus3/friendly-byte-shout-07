@@ -6,6 +6,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
+import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { getUserUUID } from '@/utils/userIdUtils';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
@@ -50,8 +51,11 @@ const ProfitsSummaryPage = () => {
   const { hasPermission } = usePermissions();
   const { profits, createSettlementRequest, markInvoiceReceived, refreshProfitsData } = useProfits();
   
-  // استخدام النظام الموحد للحصول على صافي الربح الموحد
-  const { profitData: unifiedProfitData } = useUnifiedProfits();
+  // ✅ هوك الموظفين تحت الإشراف لفلترة البيانات حسب الصلاحيات
+  const { supervisedEmployeeIds, isAdmin, isDepartmentManager } = useSupervisedEmployees();
+  
+  // استخدام النظام الموحد للحصول على صافي الربح الموحد - مع تمرير الموظفين المُشرف عليهم
+  const { profitData: unifiedProfitData } = useUnifiedProfits('all', supervisedEmployeeIds);
   const location = useLocation();
   const navigate = useNavigate();
 

@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useSuper } from '@/contexts/SuperProvider';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays, startOfDay, endOfDay } from 'date-fns';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
 
@@ -9,9 +10,10 @@ import { isPendingStatus } from '@/utils/profitStatusHelper';
  * هوك موحد لجلب بيانات الأرباح - يستخدم نفس منطق AccountingPage
  * يضمن عرض نفس البيانات بطريقتين مختلفتين في التصميم
  */
-export const useUnifiedProfits = (timePeriod = 'all') => {
+export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = []) => {
   const { orders, accounting, products, profits: contextProfits } = useSuper();
   const { user: currentUser, allUsers } = useAuth();
+  const { isAdmin, isDepartmentManager } = usePermissions();
   const [profitData, setProfitData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -63,6 +65,21 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
       const safeOrders = Array.isArray(orders) ? orders : [];
       const safeExpenses = Array.isArray(accounting?.expenses) ? accounting.expenses : [];
 
+      // ✅ فلترة الطلبات حسب الصلاحيات أولاً
+      let permissionFilteredOrders = safeOrders;
+      if (!isAdmin) {
+        if (isDepartmentManager && supervisedEmployeeIds.length > 0) {
+          // مدير القسم: طلباته + طلبات موظفيه
+          permissionFilteredOrders = safeOrders.filter(o => 
+            o.created_by === currentUser?.id || supervisedEmployeeIds.includes(o.created_by)
+          );
+        } else {
+          // الموظف العادي: طلباته فقط
+          permissionFilteredOrders = safeOrders.filter(o => o.created_by === currentUser?.id);
+        }
+      }
+      // المدير العام يرى الكل (isAdmin = true)
+
       // تطبيق فلتر الفترة الزمنية
       const now = new Date();
       let dateFrom, dateTo;
@@ -102,25 +119,16 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
       };
 
       // الطلبات المُستلمة الفواتير وضمن الفترة المحددة
-      const deliveredOrders = safeOrders.filter(o => {
+      // ✅ استخدام الطلبات المفلترة حسب الصلاحيات
+      const deliveredOrders = permissionFilteredOrders.filter(o => {
         const isDeliveredStatus = o && (o.status === 'delivered' || o.status === 'completed');
         const isReceiptReceived = o.receipt_received === true;
         const isInDateRange = filterByDate(o.updated_at || o.created_at);
         
-        console.log('🔍 فحص الطلب:', {
-          orderId: o.id,
-          orderNumber: o.order_number,
-          status: o.status,
-          receiptReceived: o.receipt_received,
-          totalAmount: o.total_amount,
-          finalAmount: o.final_amount,
-          isValid: isDeliveredStatus && isReceiptReceived
-        });
-        
         return isDeliveredStatus && isReceiptReceived && isInDateRange;
       });
 
-      console.log('🔍 Unified Profits - Delivered Orders:', deliveredOrders.length);
+      console.log('🔍 Unified Profits - Delivered Orders:', deliveredOrders.length, '(filtered by permissions)');
 
       const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date)); // فلترة المصاريف حسب الفترة
 
@@ -316,7 +324,7 @@ export const useUnifiedProfits = (timePeriod = 'all') => {
     if (orders && Array.isArray(orders) && orders.length > 0) {
       fetchUnifiedProfitData();
     }
-  }, [orders, accounting, currentUser?.id, timePeriod, contextProfits]);
+  }, [orders, accounting, currentUser?.id, timePeriod, contextProfits, isAdmin, isDepartmentManager, supervisedEmployeeIds]);
 
   // دالة لإعادة تحميل البيانات
   const refreshData = () => {
