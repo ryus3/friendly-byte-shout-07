@@ -2782,7 +2782,9 @@ export const SuperProvider = ({ children }) => {
     // وظائف حساب الأرباح الحقيقية - دعم إما عنصر واحد أو طلب كامل
     calculateProfit: (orderOrItem, employeeId = null) => {
       // إذا تم تمرير عنصر واحد مع معرف الموظف
-      if (employeeId && orderOrItem.productId) {
+      // دعم كلا الصيغتين: productId (camelCase) و product_id (snake_case)
+      const itemProductId = orderOrItem.productId || orderOrItem.product_id;
+      if (employeeId && itemProductId) {
         const item = orderOrItem;
         const employeeProfitRules = allData.employeeProfitRules || [];
         
@@ -2791,18 +2793,18 @@ export const SuperProvider = ({ children }) => {
           r.employee_id === employeeId && 
           r.is_active === true &&
           (
-            (r.rule_type === 'product' && r.target_id === item.productId) ||
-            (r.rule_type === 'variant' && r.target_id === item.sku)
+            (r.rule_type === 'product' && r.target_id === itemProductId) ||
+            (r.rule_type === 'variant' && r.target_id === (item.sku || item.variant_id))
           ) &&
           // القاعدة يجب أن تكون موجودة قبل إنشاء الطلب
-          new Date(r.created_at) <= new Date(item.orderDate || Date.now())
+          new Date(r.created_at) <= new Date(item.orderDate || item.created_at || Date.now())
         );
         
         if (rule) {
           if (rule.profit_amount) {
             return rule.profit_amount * (item.quantity || 1);
           } else if (rule.profit_percentage) {
-            const itemRevenue = (item.price || 0) * (item.quantity || 1);
+            const itemRevenue = (item.price || item.unit_price || 0) * (item.quantity || 1);
             return (itemRevenue * rule.profit_percentage / 100);
           }
         }
