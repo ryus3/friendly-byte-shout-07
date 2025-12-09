@@ -46,6 +46,7 @@ const PushNotificationControl = lazy(() => import('@/pages/PushNotificationContr
 const NotificationTemplates = lazy(() => import('@/pages/NotificationTemplates.jsx'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage.jsx'));
 const OrderTrackingPage = lazy(() => import('@/pages/OrderTrackingPage.jsx'));
+const DepartmentManagerSettingsPage = lazy(() => import('@/pages/DepartmentManagerSettingsPage.jsx'));
 
 // Employee Storefront Pages
 const StorefrontDashboardPage = lazy(() => import('@/pages/employee-storefront/StorefrontDashboardPage.jsx'));
@@ -211,6 +212,7 @@ function AppContent() {
           <Route path="/notification-templates" element={<ProtectedRoute>{childrenWithProps(NotificationTemplates)}</ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute>{childrenWithProps(ProfilePage)}</ProtectedRoute>} />
           <Route path="/profile/:identifier" element={<ProtectedRoute>{childrenWithProps(ProfilePage)}</ProtectedRoute>} />
+          <Route path="/department-settings" element={<ProtectedRoute>{childrenWithProps(DepartmentManagerSettingsPage)}</ProtectedRoute>} />
           <Route path="/track" element={<OrderTrackingPage />} />
           <Route path="/track/:trackingNumber" element={<OrderTrackingPage />} />
           
