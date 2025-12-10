@@ -6913,11 +6913,11 @@ export type Database = {
       dmetaphone_alt: { Args: { "": string }; Returns: string }
       expire_old_points: { Args: never; Returns: undefined }
       extract_actual_address:
+        | { Args: { input_text: string }; Returns: string }
         | {
             Args: { p_city_name: string; p_original_text: string }
             Returns: string
           }
-        | { Args: { input_text: string }; Returns: string }
       extract_product_items_from_text: {
         Args: { input_text: string }
         Returns: Json
@@ -6939,16 +6939,16 @@ export type Database = {
       }
       finalize_stock_item:
         | {
-            Args: { p_quantity: number; p_variant_id: string }
-            Returns: boolean
-          }
-        | {
             Args: {
               p_product_id: string
               p_quantity: number
               p_variant_id: string
             }
             Returns: undefined
+          }
+        | {
+            Args: { p_quantity: number; p_variant_id: string }
+            Returns: boolean
           }
       find_city_in_cache: {
         Args: { p_city_text: string }
@@ -7534,6 +7534,7 @@ export type Database = {
         Returns: Json
       }
       migrate_employee_dues_expenses:
+        | { Args: never; Returns: Json }
         | {
             Args: {
               p_employee_id?: string
@@ -7543,7 +7544,6 @@ export type Database = {
             }
             Returns: Json
           }
-        | { Args: never; Returns: Json }
       migrate_existing_customers_to_phone_loyalty: {
         Args: never
         Returns: undefined
@@ -7631,20 +7631,20 @@ export type Database = {
       release_stock_item:
         | {
             Args: {
+              p_product_id: string
+              p_quantity: number
+              p_variant_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
               p_order_id?: string
               p_quantity: number
               p_reason?: string
               p_variant_id: string
             }
             Returns: Json
-          }
-        | {
-            Args: {
-              p_product_id: string
-              p_quantity: number
-              p_variant_id: string
-            }
-            Returns: undefined
           }
       repair_alwaseet_order_mapping: {
         Args: { p_order_id: string }
@@ -7663,20 +7663,20 @@ export type Database = {
       return_stock_item:
         | {
             Args: {
+              p_product_id: string
+              p_quantity: number
+              p_variant_id: string
+            }
+            Returns: undefined
+          }
+        | {
+            Args: {
               p_order_id?: string
               p_quantity: number
               p_reason?: string
               p_variant_id: string
             }
             Returns: Json
-          }
-        | {
-            Args: {
-              p_product_id: string
-              p_quantity: number
-              p_variant_id: string
-            }
-            Returns: undefined
           }
       review_archive_status: { Args: never; Returns: undefined }
       run_maintenance: { Args: never; Returns: Json }
