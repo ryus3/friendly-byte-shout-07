@@ -4421,6 +4421,8 @@ export type Database = {
       }
       product_tracking_log: {
         Row: {
+          available_after: number | null
+          available_before: number | null
           created_at: string | null
           created_by: string | null
           customer_name: string | null
@@ -4431,10 +4433,19 @@ export type Database = {
           order_id: string | null
           order_status: string | null
           quantity: number
+          reserved_after: number | null
+          reserved_before: number | null
+          sold_after: number | null
+          sold_before: number | null
+          stock_after: number | null
+          stock_before: number | null
+          tracking_number: string | null
           unit_price: number | null
           variant_id: string | null
         }
         Insert: {
+          available_after?: number | null
+          available_before?: number | null
           created_at?: string | null
           created_by?: string | null
           customer_name?: string | null
@@ -4445,10 +4456,19 @@ export type Database = {
           order_id?: string | null
           order_status?: string | null
           quantity?: number
+          reserved_after?: number | null
+          reserved_before?: number | null
+          sold_after?: number | null
+          sold_before?: number | null
+          stock_after?: number | null
+          stock_before?: number | null
+          tracking_number?: string | null
           unit_price?: number | null
           variant_id?: string | null
         }
         Update: {
+          available_after?: number | null
+          available_before?: number | null
           created_at?: string | null
           created_by?: string | null
           customer_name?: string | null
@@ -4459,6 +4479,13 @@ export type Database = {
           order_id?: string | null
           order_status?: string | null
           quantity?: number
+          reserved_after?: number | null
+          reserved_before?: number | null
+          sold_after?: number | null
+          sold_before?: number | null
+          stock_after?: number | null
+          stock_before?: number | null
+          tracking_number?: string | null
           unit_price?: number | null
           variant_id?: string | null
         }
@@ -6814,7 +6841,6 @@ export type Database = {
       audit_inventory_accuracy: {
         Args: never
         Returns: {
-          calculated_available: number
           calculated_reserved: number
           calculated_sold: number
           color_name: string
@@ -6822,13 +6848,13 @@ export type Database = {
           current_quantity: number
           current_reserved: number
           current_sold: number
+          has_issue: boolean
           issue_type: string
-          out_product_id: string
-          out_variant_id: string
           product_name: string
           reserved_diff: number
-          size_value: string
+          size_name: string
           sold_diff: number
+          variant_id: string
         }[]
       }
       auth_with_username: {
@@ -7073,12 +7099,14 @@ export type Database = {
       fix_inventory_discrepancies: {
         Args: never
         Returns: {
+          color_name: string
           fixed: boolean
           new_reserved: number
           new_sold: number
           old_reserved: number
           old_sold: number
           product_name: string
+          size_name: string
           variant_id: string
         }[]
       }
