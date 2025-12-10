@@ -4419,6 +4419,87 @@ export type Database = {
           },
         ]
       }
+      product_tracking_log: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          customer_name: string | null
+          delivery_status: string | null
+          id: string
+          notes: string | null
+          operation_type: string
+          order_id: string | null
+          order_status: string | null
+          quantity: number
+          unit_price: number | null
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          customer_name?: string | null
+          delivery_status?: string | null
+          id?: string
+          notes?: string | null
+          operation_type: string
+          order_id?: string | null
+          order_status?: string | null
+          quantity?: number
+          unit_price?: number | null
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          customer_name?: string | null
+          delivery_status?: string | null
+          id?: string
+          notes?: string | null
+          operation_type?: string
+          order_id?: string | null
+          order_status?: string | null
+          quantity?: number
+          unit_price?: number | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_tracking_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_tracking_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_tracking_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "product_tracking_log_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_tracking_log_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_types: {
         Row: {
           created_at: string
@@ -6992,8 +7073,7 @@ export type Database = {
       fix_inventory_discrepancies: {
         Args: never
         Returns: {
-          fixed_reserved: boolean
-          fixed_sold: boolean
+          fixed: boolean
           new_reserved: number
           new_sold: number
           old_reserved: number
