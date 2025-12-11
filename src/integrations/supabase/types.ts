@@ -3819,6 +3819,7 @@ export type Database = {
           refund_amount: number | null
           replacement_pair_id: string | null
           sales_amount: number | null
+          sold_recorded: boolean | null
           source: string | null
           status: string
           status_changed_at: string | null
@@ -3874,6 +3875,7 @@ export type Database = {
           refund_amount?: number | null
           replacement_pair_id?: string | null
           sales_amount?: number | null
+          sold_recorded?: boolean | null
           source?: string | null
           status?: string
           status_changed_at?: string | null
@@ -3929,6 +3931,7 @@ export type Database = {
           refund_amount?: number | null
           replacement_pair_id?: string | null
           sales_amount?: number | null
+          sold_recorded?: boolean | null
           source?: string | null
           status?: string
           status_changed_at?: string | null
@@ -6850,16 +6853,16 @@ export type Database = {
       audit_inventory_accuracy: {
         Args: never
         Returns: {
+          calculated_available: number
           calculated_reserved: number
           calculated_sold: number
           color_name: string
-          current_available: number
           current_quantity: number
           current_reserved: number
           current_sold: number
-          has_issue: boolean
           issue_type: string
           product_name: string
+          quantity_diff: number
           reserved_diff: number
           size_name: string
           sold_diff: number
