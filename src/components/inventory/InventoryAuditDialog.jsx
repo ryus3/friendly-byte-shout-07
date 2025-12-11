@@ -95,8 +95,8 @@ const InventoryAuditDialog = ({ isAdmin }) => {
   const issueStats = useMemo(() => {
     if (!auditResults) return { reserved: 0, sold: 0, negative: 0, complex: 0, total: 0 };
     return {
-      reserved: auditResults.filter(i => i.issue_type === 'reserved_only').length,
-      sold: auditResults.filter(i => i.issue_type === 'sold_only').length,
+      reserved: auditResults.filter(i => i.issue_type === 'reserved_mismatch' || i.issue_type === 'reserved_only').length,
+      sold: auditResults.filter(i => i.issue_type === 'sold_mismatch' || i.issue_type === 'sold_only').length,
       negative: auditResults.filter(i => i.issue_type?.includes('negative')).length,
       complex: auditResults.filter(i => i.issue_type === 'reserved_and_sold').length,
       total: auditResults.length,
@@ -105,6 +105,14 @@ const InventoryAuditDialog = ({ isAdmin }) => {
 
   const getIssueConfig = (type) => {
     const configs = {
+      reserved_mismatch: { 
+        label: 'فرق محجوز', 
+        icon: Package,
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+        borderColor: 'border-amber-200 dark:border-amber-800',
+        dotColor: 'bg-amber-500',
+      },
       reserved_only: { 
         label: 'فرق محجوز', 
         icon: Package,
@@ -112,6 +120,14 @@ const InventoryAuditDialog = ({ isAdmin }) => {
         bgColor: 'bg-amber-50 dark:bg-amber-950/30',
         borderColor: 'border-amber-200 dark:border-amber-800',
         dotColor: 'bg-amber-500',
+      },
+      sold_mismatch: { 
+        label: 'فرق مباع', 
+        icon: ShoppingCart,
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+        borderColor: 'border-blue-200 dark:border-blue-800',
+        dotColor: 'bg-blue-500',
       },
       sold_only: { 
         label: 'فرق مباع', 
@@ -162,7 +178,7 @@ const InventoryAuditDialog = ({ isAdmin }) => {
         dotColor: 'bg-orange-500',
       },
     };
-    return configs[type] || configs.reserved_only;
+    return configs[type] || configs.reserved_mismatch;
   };
 
   const luxuryButtonStyle = {
