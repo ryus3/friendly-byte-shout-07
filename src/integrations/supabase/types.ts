@@ -4433,10 +4433,13 @@ export type Database = {
           order_id: string | null
           order_status: string | null
           quantity: number
+          quantity_change: number | null
+          reference_id: string | null
           reserved_after: number | null
           reserved_before: number | null
           sold_after: number | null
           sold_before: number | null
+          source_type: string | null
           stock_after: number | null
           stock_before: number | null
           tracking_number: string | null
@@ -4456,10 +4459,13 @@ export type Database = {
           order_id?: string | null
           order_status?: string | null
           quantity?: number
+          quantity_change?: number | null
+          reference_id?: string | null
           reserved_after?: number | null
           reserved_before?: number | null
           sold_after?: number | null
           sold_before?: number | null
+          source_type?: string | null
           stock_after?: number | null
           stock_before?: number | null
           tracking_number?: string | null
@@ -4479,10 +4485,13 @@ export type Database = {
           order_id?: string | null
           order_status?: string | null
           quantity?: number
+          quantity_change?: number | null
+          reference_id?: string | null
           reserved_after?: number | null
           reserved_before?: number | null
           sold_after?: number | null
           sold_before?: number | null
+          source_type?: string | null
           stock_after?: number | null
           stock_before?: number | null
           tracking_number?: string | null
