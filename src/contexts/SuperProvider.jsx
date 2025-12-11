@@ -1303,37 +1303,11 @@ export const SuperProvider = ({ children }) => {
         });
         
       } else {
-        for (const orderId of orderIds) {
-          try {
-            const { data: releaseResult, error: releaseError } = await supabase
-              .rpc('release_stock_for_order', { p_order_id: orderId });
-            
-            if (releaseError) {
-              
-              // محاولة بديلة: تحرير العناصر واحد تلو الآخر
-              const { data: orderItems } = await supabase
-                .from('order_items')
-                .select('product_id, variant_id, quantity')
-                .eq('order_id', orderId);
-              
-              if (orderItems) {
-                for (const item of orderItems) {
-                  try {
-                    await supabase.rpc('release_stock_item', {
-                      p_product_id: item.product_id,
-                      p_variant_id: item.variant_id,
-                      p_quantity: item.quantity
-                    });
-                  } catch (itemError) {
-                    console.error('فشل تحرير عنصر:', itemError);
-                  }
-                }
-              }
-            }
-          } catch (stockError) {
-            console.error('خطأ في تحرير المخزون:', stockError);
-          }
-        }
+        // ⚠️ لا تستدعي release_stock_for_order أو release_stock_item هنا!
+        // تحرير المخزون يتم تلقائياً عبر trigger: auto_release_stock_on_order_delete
+        // عند حذف الطلب من قاعدة البيانات، trigger يُنقص reserved_quantity فقط
+        // 🔴 الاستدعاءات اليدوية كانت تسبب تكرار التحرير وتحويل المنتجات للمباع بشكل خاطئ
+        
         (orderIds || []).filter(id => id != null).forEach(id => permanentlyDeletedOrders.add(id));
         // حفظ في localStorage للحماية الدائمة
         try {

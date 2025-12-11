@@ -7745,24 +7745,15 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: undefined
       }
-      release_stock_item:
-        | {
-            Args: {
-              p_product_id: string
-              p_quantity: number
-              p_variant_id: string
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_order_id?: string
-              p_quantity: number
-              p_reason?: string
-              p_variant_id: string
-            }
-            Returns: Json
-          }
+      release_stock_item: {
+        Args: {
+          p_order_id?: string
+          p_quantity: number
+          p_reason?: string
+          p_variant_id: string
+        }
+        Returns: Json
+      }
       repair_alwaseet_order_mapping: {
         Args: { p_order_id: string }
         Returns: Json
