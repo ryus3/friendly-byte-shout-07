@@ -4438,6 +4438,7 @@ export type Database = {
           quantity: number
           quantity_change: number | null
           reference_id: string | null
+          reference_number: string | null
           reserved_after: number | null
           reserved_before: number | null
           sold_after: number | null
@@ -4464,6 +4465,7 @@ export type Database = {
           quantity?: number
           quantity_change?: number | null
           reference_id?: string | null
+          reference_number?: string | null
           reserved_after?: number | null
           reserved_before?: number | null
           sold_after?: number | null
@@ -4490,6 +4492,7 @@ export type Database = {
           quantity?: number
           quantity_change?: number | null
           reference_id?: string | null
+          reference_number?: string | null
           reserved_after?: number | null
           reserved_before?: number | null
           sold_after?: number | null
