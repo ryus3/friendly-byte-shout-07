@@ -2146,6 +2146,74 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_pending_deductions: {
+        Row: {
+          amount: number
+          applied_at: string | null
+          applied_in_settlement_id: string | null
+          created_at: string | null
+          employee_id: string
+          id: string
+          order_id: string | null
+          reason: string | null
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount?: number
+          applied_at?: string | null
+          applied_in_settlement_id?: string | null
+          created_at?: string | null
+          employee_id: string
+          id?: string
+          order_id?: string | null
+          reason?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          applied_at?: string | null
+          applied_in_settlement_id?: string | null
+          created_at?: string | null
+          employee_id?: string
+          id?: string
+          order_id?: string | null
+          reason?: string | null
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_pending_deductions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_pending_deductions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_pending_deductions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "employee_pending_deductions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_product_descriptions: {
         Row: {
           created_at: string | null
@@ -6849,6 +6917,14 @@ export type Database = {
         Returns: Json
       }
       apply_monthly_city_discount_trigger: { Args: never; Returns: undefined }
+      apply_pending_deductions_on_settlement: {
+        Args: {
+          p_employee_id: string
+          p_max_amount?: number
+          p_settlement_id: string
+        }
+        Returns: number
+      }
       approve_employee_complete: {
         Args: { p_full_name: string; p_user_id: string }
         Returns: Json
@@ -7225,6 +7301,14 @@ export type Database = {
         }[]
       }
       get_employee_last_sync: { Args: { p_employee_id: string }; Returns: Json }
+      get_employee_pending_deductions: {
+        Args: { p_employee_id: string }
+        Returns: {
+          deductions: Json
+          deductions_count: number
+          total_pending_deductions: number
+        }[]
+      }
       get_filters_data: {
         Args: never
         Returns: {
