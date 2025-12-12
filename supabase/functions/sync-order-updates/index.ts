@@ -235,6 +235,12 @@ Deno.serve(async (req) => {
               finalStatus = localOrder.status;
             } else if (newStatus === '4') {
               finalStatus = 'delivered';
+            } else if (newStatus === '21') {
+              // ✅ الحالة 21 = تسليم جزئي - تحتاج معالجة يدوية من الموظف
+              finalStatus = 'partial_delivery';
+              updates.order_type = 'partial_delivery';
+              updates.is_partial_delivery = true;
+              console.log(`📦 [PARTIAL-21] ${localOrder.tracking_number} تحويل لتسليم جزئي`);
             } else if (newStatus === '17') {
               finalStatus = 'returned_in_stock';
             } else if (newStatus === '31' || newStatus === '32') {
