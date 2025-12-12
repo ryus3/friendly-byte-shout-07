@@ -191,9 +191,18 @@ const ProfitsSummaryPage = () => {
         }
 
         // فلترة الطلبات الموصلة التي تم استلام فواتيرها في النطاق الزمني المحدد
+        // ✅ تشمل الطلبات المؤرشفة التي لم تُحاسب بعد
         const deliveredOrders = orders?.filter(o => {
             const orderDate = o.created_at ? parseISO(o.created_at) : null;
-            return (o.status === 'delivered' || o.status === 'completed') && o.receipt_received === true && orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
+            const isDelivered = o.status === 'delivered' || o.status === 'completed';
+            const hasReceipt = o.receipt_received === true;
+            const inDateRange = orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
+            
+            // إظهار الطلبات المؤرشفة أيضاً إذا كانت لم تُحاسب بعد
+            const profitRecord = profits?.find(p => p.order_id === o.id);
+            const notSettled = !profitRecord || profitRecord.status !== 'settled';
+            
+            return isDelivered && hasReceipt && inDateRange && notSettled;
         }) || [];
 
         // الطلبات الموصلة بدون فواتير مستلمة (معلقة)
