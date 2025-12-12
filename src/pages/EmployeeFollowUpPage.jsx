@@ -28,6 +28,7 @@ import EmployeeSettlementCard from '@/components/orders/EmployeeSettlementCard';
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 import EmployeeDeliveryInvoicesTab from '@/components/orders/EmployeeDeliveryInvoicesTab';
 import ProfessionalSyncToolbar from '@/components/shared/ProfessionalSyncToolbar';
+import SettlementRequestsDialog from '@/components/dialogs/SettlementRequestsDialog';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -252,6 +253,7 @@ const EmployeeFollowUpPage = () => {
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
   const [isUnifiedSyncSettingsOpen, setIsUnifiedSyncSettingsOpen] = useState(false);
+  const [isSettlementRequestsDialogOpen, setIsSettlementRequestsDialogOpen] = useState(false);
   
   const ITEMS_PER_PAGE = 15;
   const [currentPage, setCurrentPage] = useState(1);
@@ -1111,27 +1113,39 @@ useEffect(() => {
           </CardContent>
         </Card>
 
-        {/* تنبيه طلبات التحاسب المعلقة */}
+        {/* تنبيه طلبات التحاسب المعلقة - تصميم احترافي */}
         {stats.settlementRequestsCount > 0 && (
-          <Card className="border-2 border-orange-500 bg-orange-50 dark:bg-orange-900/20">
-            <CardContent className="p-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <Bell className="w-6 h-6 text-orange-500 animate-pulse" />
-                <div>
-                  <p className="font-bold text-orange-700 dark:text-orange-400">طلبات تحاسب جديدة!</p>
-                  <p className="text-sm text-muted-foreground">{stats.settlementRequestsCount} طلب ينتظر الموافقة والتسوية</p>
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+          >
+            <Card className="overflow-hidden border-0 shadow-lg">
+              <div className="bg-gradient-to-l from-orange-500 via-amber-500 to-yellow-500 p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                      <Bell className="w-7 h-7 text-white animate-pulse" />
+                    </div>
+                    <div className="text-white">
+                      <h3 className="text-lg font-bold">طلبات تحاسب جديدة!</h3>
+                      <p className="text-white/90 text-sm">
+                        {stats.settlementRequestsCount} طلب من الموظفين ينتظر الموافقة والتسوية
+                      </p>
+                    </div>
+                  </div>
+                  <Button 
+                    size="lg" 
+                    className="bg-white text-orange-600 hover:bg-white/90 font-bold shadow-lg"
+                    onClick={() => setIsSettlementRequestsDialogOpen(true)}
+                  >
+                    <Bell className="w-4 h-4 ml-2" />
+                    عرض التفاصيل
+                  </Button>
                 </div>
               </div>
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="border-orange-500 text-orange-600 hover:bg-orange-100"
-                onClick={() => handleFilterChange('profitStatus', 'settlement_requested')}
-              >
-                عرض الطلبات
-              </Button>
-            </CardContent>
-          </Card>
+            </Card>
+          </motion.div>
         )}
 
         {/* الإحصائيات */}
@@ -1156,15 +1170,24 @@ useEffect(() => {
             profits={profits || []}
             timePeriod={filters.timePeriod}
           />
-          <StatCard 
-            title="طلبات تحاسب" 
-            value={stats.settlementRequestsCount || 0}
-            icon={Bell} 
-            colors={['orange-500', 'red-500']} 
-            format="number"
-            onClick={() => handleFilterChange('profitStatus', 'settlement_requested')}
-            description="ينتظر التسوية"
-          />
+          <div 
+            className="relative cursor-pointer group"
+            onClick={() => setIsSettlementRequestsDialogOpen(true)}
+          >
+            {stats.settlementRequestsCount > 0 && (
+              <div className="absolute -top-2 -right-2 z-10 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center animate-bounce">
+                <span className="text-white text-xs font-bold">{stats.settlementRequestsCount}</span>
+              </div>
+            )}
+            <StatCard 
+              title="طلبات تحاسب" 
+              value={stats.settlementRequestsCount || 0}
+              icon={Bell} 
+              colors={['orange-500', 'amber-500']} 
+              format="number"
+              description="ينتظر التسوية"
+            />
+          </div>
           <StatCard 
             title="مستحقات معلقة" 
             value={stats.pendingDues} 
@@ -1313,6 +1336,17 @@ useEffect(() => {
         <UnifiedSyncSettings
           open={isUnifiedSyncSettingsOpen}
           onOpenChange={setIsUnifiedSyncSettingsOpen}
+        />
+
+        {/* Dialog طلبات التحاسب */}
+        <SettlementRequestsDialog
+          open={isSettlementRequestsDialogOpen}
+          onOpenChange={setIsSettlementRequestsDialogOpen}
+          profits={profits || []}
+          orders={orders || []}
+          allUsers={allUsers || []}
+          selectedOrderIds={selectedOrders}
+          onSelectOrders={setSelectedOrders}
         />
 
       </motion.div>
