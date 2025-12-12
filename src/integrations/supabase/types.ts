@@ -7877,6 +7877,10 @@ export type Database = {
           }
       review_archive_status: { Args: never; Returns: undefined }
       run_maintenance: { Args: never; Returns: Json }
+      safe_mark_notifications_read: {
+        Args: { p_notification_ids?: string[]; p_user_id: string }
+        Returns: number
+      }
       scan_and_fix_inventory_consistency: {
         Args: never
         Returns: {
