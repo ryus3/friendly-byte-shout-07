@@ -265,8 +265,8 @@ const OrderCard = React.memo(({
     // 1. الحالة 21 (تم التسليم + استرجاع جزئي) - دائماً
     if (order.delivery_status === '21') return true;
     
-    // 2. ✅ أي طلب نوعه partial_delivery ولم يُعالج بعد
-    if (order.order_type === 'partial_delivery') return true;
+    // 2. ✅ أي طلب نوعه partial_delivery أو is_partial_delivery=true ولم يُعالج بعد
+    if (order.order_type === 'partial_delivery' || order.is_partial_delivery === true) return true;
     
     // 3. الحالة 4 (تم التسليم) - فقط إذا كان هناك تغيير سعر من API
     if (order.delivery_status === '4' && order.price_change_type === 'api_sync') return true;
