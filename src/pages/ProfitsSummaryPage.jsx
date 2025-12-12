@@ -126,10 +126,11 @@ const ProfitsSummaryPage = () => {
   const canViewAll = hasPermission('manage_profit_settlement') || hasPermission('view_all_profits') || hasPermission('view_all_data');
   const canRequestSettlement = hasPermission('request_profit_settlement');
   
-  // تطبيق فلتر المعلقة مباشرة للموظفين
+  // تطبيق فلتر "جاهز للمحاسبة" للموظفين (يشمل pending و invoice_received)
   useEffect(() => {
     if (!canViewAll) {
-      setFilters(prev => ({ ...prev, profitStatus: 'pending' }));
+      // الموظف يرى الطلبات المعلقة والجاهزة للمحاسبة (استبعاد المدفوعة فقط)
+      setFilters(prev => ({ ...prev, profitStatus: 'not_settled' }));
     }
   }, [canViewAll]);
   
@@ -413,7 +414,12 @@ const ProfitsSummaryPage = () => {
     }
     
     if (filters.profitStatus !== 'all') {
-      filtered = filtered.filter(p => (p.profitStatus || 'pending') === filters.profitStatus);
+      if (filters.profitStatus === 'not_settled') {
+        // عرض كل ما ليس مدفوع (pending + invoice_received + settlement_requested)
+        filtered = filtered.filter(p => (p.profitStatus || 'pending') !== 'settled');
+      } else {
+        filtered = filtered.filter(p => (p.profitStatus || 'pending') === filters.profitStatus);
+      }
     }
 
     return filtered;

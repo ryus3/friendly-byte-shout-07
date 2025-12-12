@@ -31,7 +31,9 @@ const ProfitFilters = ({
         <SelectTrigger className="flex-1"><SelectValue placeholder="فلترة حسب حالة الربح" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">الكل</SelectItem>
-          <SelectItem value="pending">معلق</SelectItem>
+          <SelectItem value="not_settled">غير مدفوع (معلق + جاهز)</SelectItem>
+          <SelectItem value="pending">معلق (بانتظار الفاتورة)</SelectItem>
+          <SelectItem value="invoice_received">جاهز للمحاسبة</SelectItem>
           <SelectItem value="settlement_requested">تم طلب تحاسب</SelectItem>
           <SelectItem value="settled">مدفوع</SelectItem>
         </SelectContent>
