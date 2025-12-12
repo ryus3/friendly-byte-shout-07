@@ -80,7 +80,7 @@ const CashManagementPage = () => {
         });
         
         try {
-          const { data: realData, error } = await Promise.race([rpcPromise, timeoutPromise]) as any;
+          const { data: realData, error } = await Promise.race([rpcPromise, timeoutPromise]);
           clearTimeout(timeoutId);
           
           if (!isMounted) return;
