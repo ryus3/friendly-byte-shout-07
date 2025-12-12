@@ -28,7 +28,7 @@ const ALWASEET_STATUS_DEFINITIONS: Record<string, { text: string; localStatus?: 
   '18': { text: 'راجع ( عنوان غير صحيح )', internalStatus: 'delivery', releasesStock: false },
   '19': { text: 'راجع ( يرغب بتغير المنطقة )', internalStatus: 'delivery', releasesStock: false },
   '20': { text: 'راجع ( طلب فحص من قبل التاجر)', internalStatus: 'delivery', releasesStock: false },
-  '21': { text: 'تم التسليم للزبون واستلام منة الاسترجاع', localStatus: 'delivered', internalStatus: 'delivered', releasesStock: false },
+  '21': { text: 'تم التسليم للزبون واستلام منة الاسترجاع', localStatus: 'partial_delivery', internalStatus: 'partial_delivery', releasesStock: false },
   '22': { text: 'راجع ( غير موجود )', internalStatus: 'delivery', releasesStock: false },
   '23': { text: 'ارسال الى مخزن الارجاعات', internalStatus: 'delivery', releasesStock: false },
   '24': { text: 'راجع ( هاتف خطاء )', internalStatus: 'delivery', releasesStock: false },
