@@ -370,211 +370,240 @@ const InventoryOperationsLog = ({ isAdmin }) => {
             </button>
           </div>
 
-          {/* الفلاتر المتقدمة */}
-          <div className="p-4 border-b border-border bg-muted/30 space-y-3">
-            {/* الصف الأول: المنتج واللون والقياس */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {/* فلتر المنتج مع البحث */}
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Package className="w-3 h-3" />
-                  المنتج
-                </label>
-                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="جميع المنتجات" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <div className="p-2 border-b">
-                      <div className="relative">
-                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <Input
-                          placeholder="ابحث عن منتج..."
-                          value={productSearch}
-                          onChange={(e) => setProductSearch(e.target.value)}
-                          className="pr-9 h-8"
-                        />
+          {/* شريط الفلاتر المضغوط */}
+          <div className="p-3 border-b border-border bg-muted/30">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* زر الفلتر المتقدم */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Filter className="w-4 h-4" />
+                    <span>فلتر متقدم</span>
+                    {hasActiveFilters && (
+                      <span className="bg-primary text-primary-foreground text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
+                        {[
+                          filterType !== 'all',
+                          selectedProduct !== 'all',
+                          selectedColor !== 'all',
+                          selectedSize !== 'all',
+                          dateFrom,
+                          dateTo
+                        ].filter(Boolean).length}
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-4" align="start">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold text-sm">فلترة متقدمة</h4>
+                      {hasActiveFilters && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={clearAllFilters}
+                          className="h-7 text-xs text-muted-foreground hover:text-foreground"
+                        >
+                          <XCircle className="w-3 h-3 ml-1" />
+                          مسح الكل
+                        </Button>
+                      )}
+                    </div>
+                    
+                    {/* المنتج */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Package className="w-3 h-3" />
+                        المنتج
+                      </label>
+                      <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                        <SelectTrigger className="w-full h-9">
+                          <SelectValue placeholder="جميع المنتجات" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <div className="p-2 border-b">
+                            <div className="relative">
+                              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                              <Input
+                                placeholder="ابحث عن منتج..."
+                                value={productSearch}
+                                onChange={(e) => setProductSearch(e.target.value)}
+                                className="pr-9 h-8"
+                              />
+                            </div>
+                          </div>
+                          <SelectItem value="all">جميع المنتجات</SelectItem>
+                          {filteredProducts.map(product => (
+                            <SelectItem key={product.id} value={product.id}>
+                              {product.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* اللون والقياس */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Palette className="w-3 h-3" />
+                          اللون
+                        </label>
+                        <Select value={selectedColor} onValueChange={setSelectedColor}>
+                          <SelectTrigger className="w-full h-9">
+                            <SelectValue placeholder="الكل" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">جميع الألوان</SelectItem>
+                            {filterOptions.colors?.map(color => (
+                              <SelectItem key={color} value={color}>{color}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Ruler className="w-3 h-3" />
+                          القياس
+                        </label>
+                        <Select value={selectedSize} onValueChange={setSelectedSize}>
+                          <SelectTrigger className="w-full h-9">
+                            <SelectValue placeholder="الكل" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">جميع القياسات</SelectItem>
+                            {filterOptions.sizes?.map(size => (
+                              <SelectItem key={size} value={size}>{size}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                    <SelectItem value="all">جميع المنتجات</SelectItem>
-                    {filteredProducts.map(product => (
-                      <SelectItem key={product.id} value={product.id}>
-                        {product.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
 
-              {/* فلتر اللون */}
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Palette className="w-3 h-3" />
-                  اللون
-                </label>
-                <Select value={selectedColor} onValueChange={setSelectedColor}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="جميع الألوان" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">جميع الألوان</SelectItem>
-                    {filterOptions.colors?.map(color => (
-                      <SelectItem key={color} value={color}>
-                        {color}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    {/* نوع العملية */}
+                    <div className="space-y-1.5">
+                      <label className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Filter className="w-3 h-3" />
+                        نوع العملية
+                      </label>
+                      <Select value={filterType} onValueChange={setFilterType}>
+                        <SelectTrigger className="w-full h-9">
+                          <SelectValue placeholder="جميع العمليات" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">جميع العمليات</SelectItem>
+                          <SelectItem value="stock_added">إضافة مخزون</SelectItem>
+                          <SelectItem value="stock_reduced">تقليل مخزون</SelectItem>
+                          <SelectItem value="reserved">حجز للطلب</SelectItem>
+                          <SelectItem value="released">تحرير محجوز</SelectItem>
+                          <SelectItem value="sold">تسجيل مبيع</SelectItem>
+                          <SelectItem value="returned">إرجاع للمخزون</SelectItem>
+                          <SelectItem value="audit_correction">تصحيح فحص</SelectItem>
+                          <SelectItem value="manual_edit">تعديل يدوي</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-              {/* فلتر القياس */}
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Ruler className="w-3 h-3" />
-                  القياس
-                </label>
-                <Select value={selectedSize} onValueChange={setSelectedSize}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="جميع القياسات" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">جميع القياسات</SelectItem>
-                    {filterOptions.sizes?.map(size => (
-                      <SelectItem key={size} value={size}>
-                        {size}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                    {/* التواريخ */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          من تاريخ
+                        </label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="w-full justify-start text-right font-normal h-9">
+                              {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : 'اختر'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={dateFrom}
+                              onSelect={setDateFrom}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          إلى تاريخ
+                        </label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="w-full justify-start text-right font-normal h-9">
+                              {dateTo ? format(dateTo, 'dd/MM/yyyy') : 'اختر'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <CalendarComponent
+                              mode="single"
+                              selected={dateTo}
+                              onSelect={setDateTo}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
 
-              {/* فلتر نوع العملية */}
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Filter className="w-3 h-3" />
-                  نوع العملية
-                </label>
-                <Select value={filterType} onValueChange={setFilterType}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="جميع العمليات" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">جميع العمليات</SelectItem>
-                    <SelectItem value="stock_added">إضافة مخزون</SelectItem>
-                    <SelectItem value="stock_reduced">تقليل مخزون</SelectItem>
-                    <SelectItem value="reserved">حجز للطلب</SelectItem>
-                    <SelectItem value="released">تحرير محجوز</SelectItem>
-                    <SelectItem value="sold">تسجيل مبيع</SelectItem>
-                    <SelectItem value="returned">إرجاع للمخزون</SelectItem>
-                    <SelectItem value="audit_correction">تصحيح فحص</SelectItem>
-                    <SelectItem value="manual_edit">تعديل يدوي</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {/* شارات الفلاتر النشطة */}
+              {selectedProduct !== 'all' && (
+                <span className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs rounded-full px-2 py-1">
+                  <Package className="w-3 h-3" />
+                  {filteredProducts.find(p => p.id === selectedProduct)?.name?.substring(0, 15) || 'منتج'}
+                  <button onClick={() => setSelectedProduct('all')} className="hover:text-primary/70">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {filterType !== 'all' && (
+                <span className="inline-flex items-center gap-1 bg-blue-500/10 text-blue-600 text-xs rounded-full px-2 py-1">
+                  {getOperationConfig(filterType).label}
+                  <button onClick={() => setFilterType('all')} className="hover:text-blue-400">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {(dateFrom || dateTo) && (
+                <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-600 text-xs rounded-full px-2 py-1">
+                  <Calendar className="w-3 h-3" />
+                  {dateFrom && format(dateFrom, 'dd/MM')}
+                  {dateFrom && dateTo && ' - '}
+                  {dateTo && format(dateTo, 'dd/MM')}
+                  <button onClick={() => { setDateFrom(null); setDateTo(null); }} className="hover:text-amber-400">
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {/* زر التحديث */}
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={fetchLogs}
+                disabled={isLoading}
+                className="mr-auto"
+              >
+                <RefreshCw className={cn("w-4 h-4", isLoading && "animate-spin")} />
+              </Button>
             </div>
 
-            {/* الصف الثاني: التواريخ والأزرار */}
-            <div className="flex flex-wrap items-end gap-3">
-              {/* من تاريخ */}
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  من تاريخ
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-[140px] justify-start text-right font-normal">
-                      {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : 'اختر التاريخ'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={dateFrom}
-                      onSelect={setDateFrom}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* إلى تاريخ */}
-              <div className="space-y-1">
-                <label className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  إلى تاريخ
-                </label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-[140px] justify-start text-right font-normal">
-                      {dateTo ? format(dateTo, 'dd/MM/yyyy') : 'اختر التاريخ'}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <CalendarComponent
-                      mode="single"
-                      selected={dateTo}
-                      onSelect={setDateTo}
-                      initialFocus
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              {/* أزرار */}
-              <div className="flex items-center gap-2 mr-auto">
-                {hasActiveFilters && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={clearAllFilters}
-                    className="text-muted-foreground hover:text-foreground"
-                  >
-                    <XCircle className="w-4 h-4 ml-1" />
-                    مسح الفلاتر
-                  </Button>
-                )}
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={fetchLogs}
-                  disabled={isLoading}
-                >
-                  <RefreshCw className={cn("w-4 h-4 ml-1", isLoading && "animate-spin")} />
-                  تحديث
-                </Button>
-              </div>
-            </div>
-
-            {/* ملخص المنتج المحدد */}
+            {/* ملخص المنتج المحدد - مضغوط */}
             {selectedProductSummary && (
-              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
-                <div className="flex items-center gap-2 mb-2">
-                  <Package className="w-4 h-4 text-primary" />
-                  <span className="font-semibold text-primary">{selectedProductSummary.name}</span>
-                  {selectedProductSummary.lastOperation && (
-                    <span className="text-xs text-muted-foreground mr-auto">
-                      آخر عملية: {formatDistanceToNow(parseISO(selectedProductSummary.lastOperation), { addSuffix: true, locale: ar })}
-                    </span>
-                  )}
-                </div>
-                <div className="grid grid-cols-4 gap-3 text-center">
-                  <div className="bg-background rounded-lg p-2">
-                    <div className="text-xs text-muted-foreground">المخزون</div>
-                    <div className="font-bold text-lg">{selectedProductSummary.quantity}</div>
-                  </div>
-                  <div className="bg-background rounded-lg p-2">
-                    <div className="text-xs text-muted-foreground">المتاح</div>
-                    <div className="font-bold text-lg text-emerald-600">{selectedProductSummary.available}</div>
-                  </div>
-                  <div className="bg-background rounded-lg p-2">
-                    <div className="text-xs text-muted-foreground">المحجوز</div>
-                    <div className="font-bold text-lg text-amber-600">{selectedProductSummary.reserved}</div>
-                  </div>
-                  <div className="bg-background rounded-lg p-2">
-                    <div className="text-xs text-muted-foreground">المباع</div>
-                    <div className="font-bold text-lg text-purple-600">{selectedProductSummary.sold}</div>
-                  </div>
+              <div className="mt-3 flex items-center gap-4 text-sm bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
+                <span className="font-medium text-primary truncate max-w-[150px]">{selectedProductSummary.name}</span>
+                <div className="flex items-center gap-3 text-xs">
+                  <span>المخزون: <strong>{selectedProductSummary.quantity}</strong></span>
+                  <span className="text-emerald-600">المتاح: <strong>{selectedProductSummary.available}</strong></span>
+                  <span className="text-amber-600">المحجوز: <strong>{selectedProductSummary.reserved}</strong></span>
+                  <span className="text-purple-600">المباع: <strong>{selectedProductSummary.sold}</strong></span>
                 </div>
               </div>
             )}
