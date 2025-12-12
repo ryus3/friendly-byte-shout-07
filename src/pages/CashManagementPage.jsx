@@ -59,7 +59,7 @@ const CashManagementPage = () => {
   // جلب الأرصدة الحقيقية من قاعدة البيانات مع timeout
   useEffect(() => {
     let isMounted = true;
-    let timeoutId: ReturnType<typeof setTimeout>;
+    let timeoutId;
 
     const fetchRealFinancialData = async () => {
       try {
