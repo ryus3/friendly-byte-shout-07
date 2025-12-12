@@ -72,6 +72,10 @@ export const handlePartialDeliveryFinancials = async (
     let employeeProfit = 0;
 
     if (calculateProfit && typeof calculateProfit === 'function') {
+      // ✅ استخدام التاريخ الحالي للتحقق من قواعد الربح
+      // لأن قاعدة الربح قد تُنشأ بعد إنشاء الطلب لكن قبل التسليم الجزئي
+      const processingDate = new Date().toISOString();
+      
       // إنشاء طلب مؤقت يحتوي فقط على المنتجات المسلمة
       const tempOrder = {
         ...order,
@@ -80,13 +84,15 @@ export const handlePartialDeliveryFinancials = async (
           sku: item.variant_id,
           price: item.unit_price,
           quantity: item.quantity,
-          cost_price: item.variant?.cost_price || item.product?.cost_price || 0
+          cost_price: item.variant?.cost_price || item.product?.cost_price || 0,
+          orderDate: processingDate // ✅ تاريخ المعالجة للتحقق من القاعدة
         })),
-        created_at: order.created_at,
+        created_at: processingDate, // ✅ ليست created_at الأصلية
         created_by: employeeId
       };
 
       employeeProfit = calculateProfit(tempOrder, employeeId) || 0;
+      console.log('💰 ربح الموظف المحسوب:', employeeProfit, 'بتاريخ معالجة:', processingDate);
     }
 
     // 5️⃣ حساب ربح النظام
