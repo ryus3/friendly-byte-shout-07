@@ -507,7 +507,7 @@ const filteredOrders = useMemo(() => {
     // فلتر الحالة
     const statusMatch = filters.status === 'all' || order.status === filters.status;
 
-    // فلتر حالة الربح - محدث لدعم "تم طلب تحاسب"
+    // فلتر حالة الربح - محدث لدعم كل الحالات
     let profitStatusMatch = true;
     if (filters.profitStatus !== 'all') {
       const profitRecord = profits?.find(p => p.order_id === order.id);
@@ -515,8 +515,10 @@ const filteredOrders = useMemo(() => {
         profitStatusMatch = profitRecord?.status === 'settlement_requested';
       } else if (filters.profitStatus === 'settled') {
         profitStatusMatch = profitRecord?.status === 'settled';
+      } else if (filters.profitStatus === 'invoice_received') {
+        profitStatusMatch = profitRecord?.status === 'invoice_received';
       } else if (filters.profitStatus === 'pending') {
-        profitStatusMatch = ['pending', 'invoice_received'].includes(profitRecord?.status);
+        profitStatusMatch = profitRecord?.status === 'pending';
       }
     }
 
@@ -524,6 +526,9 @@ const filteredOrders = useMemo(() => {
     const isManuallyArchived = ((order.isarchived === true || order.isArchived === true || order.is_archived === true) && order.status !== 'completed');
     const profitRecord = profits?.find(p => p.order_id === order.id);
     const isSettled = order.status === 'completed' && ((profitRecord?.status === 'settled' || profitRecord?.settled_at) || (order.is_archived === true || order.isArchived === true || order.isarchived === true));
+    
+    // ✅ طلبات "تم طلب التحاسب" تظهر دائماً للمدير حتى لو مؤرشفة
+    const isAwaitingSettlement = profitRecord?.status === 'settlement_requested';
 
     let archiveMatch;
     if (showSettlementArchive) {
@@ -531,7 +536,8 @@ const filteredOrders = useMemo(() => {
     } else if (filters.archived) {
       archiveMatch = isManuallyArchived;
     } else {
-      archiveMatch = !isManuallyArchived && !isSettled;
+      // إظهار طلبات التحاسب المعلقة حتى لو مؤرشفة
+      archiveMatch = (!isManuallyArchived && !isSettled) || isAwaitingSettlement;
     }
 
     return employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
@@ -626,7 +632,9 @@ useEffect(() => {
         totalSales: 0,
         totalManagerProfits: 0,
         pendingDues: 0,
-        paidDues: 0
+        paidDues: 0,
+        settledOrdersCount: 0,
+        settlementRequestsCount: 0
       };
     }
 
@@ -799,13 +807,17 @@ useEffect(() => {
       return employeeMatch && o.status === 'completed' && profitRecord?.status === 'settled';
     }).length;
 
+    // ✅ عدد طلبات التحاسب المعلقة (settlement_requested)
+    const settlementRequestsCount = profits?.filter(p => p.status === 'settlement_requested').length || 0;
+
     return {
       totalOrders: filteredOrders.length,
       totalSales,
       totalManagerProfits,
       pendingDues,
       paidDues,
-      settledOrdersCount
+      settledOrdersCount,
+      settlementRequestsCount
     };
   }, [filteredOrders, orders, filters, profits, calculateProfit, expenses, employeeFromUrl]);
 
@@ -1077,7 +1089,9 @@ useEffect(() => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">كل الأرباح</SelectItem>
-                <SelectItem value="pending">معلقة</SelectItem>
+                <SelectItem value="pending">بانتظار الفاتورة</SelectItem>
+                <SelectItem value="invoice_received">جاهز للتحاسب</SelectItem>
+                <SelectItem value="settlement_requested">🔔 تم طلب التحاسب</SelectItem>
                 <SelectItem value="settled">مسواة</SelectItem>
               </SelectContent>
             </Select>
@@ -1097,8 +1111,31 @@ useEffect(() => {
           </CardContent>
         </Card>
 
+        {/* تنبيه طلبات التحاسب المعلقة */}
+        {stats.settlementRequestsCount > 0 && (
+          <Card className="border-2 border-orange-500 bg-orange-50 dark:bg-orange-900/20">
+            <CardContent className="p-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <Bell className="w-6 h-6 text-orange-500 animate-pulse" />
+                <div>
+                  <p className="font-bold text-orange-700 dark:text-orange-400">طلبات تحاسب جديدة!</p>
+                  <p className="text-sm text-muted-foreground">{stats.settlementRequestsCount} طلب ينتظر الموافقة والتسوية</p>
+                </div>
+              </div>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="border-orange-500 text-orange-600 hover:bg-orange-100"
+                onClick={() => handleFilterChange('profitStatus', 'settlement_requested')}
+              >
+                عرض الطلبات
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* الإحصائيات */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
           <StatCard 
             title="إجمالي الطلبات" 
             value={stats.totalOrders} 
@@ -1120,6 +1157,15 @@ useEffect(() => {
             timePeriod={filters.timePeriod}
           />
           <StatCard 
+            title="طلبات تحاسب" 
+            value={stats.settlementRequestsCount || 0}
+            icon={Bell} 
+            colors={['orange-500', 'red-500']} 
+            format="number"
+            onClick={() => handleFilterChange('profitStatus', 'settlement_requested')}
+            description="ينتظر التسوية"
+          />
+          <StatCard 
             title="مستحقات معلقة" 
             value={stats.pendingDues} 
             icon={Hourglass} 
@@ -1139,7 +1185,7 @@ useEffect(() => {
             title="أرشيف التسوية" 
             value={stats.settledOrdersCount || 0}
             icon={Archive} 
-            colors={['orange-500', 'red-500']} 
+            colors={['gray-500', 'slate-500']} 
             format="number"
             onClick={() => setShowSettlementArchive(!showSettlementArchive)} 
             description="الطلبات المسواة"
