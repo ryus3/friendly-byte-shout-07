@@ -3,7 +3,7 @@ import {
   History, Loader2, X, Plus, Minus, Package, ShoppingCart, 
   ArrowUpRight, ArrowDownRight, Wrench, Edit3, RefreshCw, 
   Filter, Calendar, TrendingUp, TrendingDown, Clock, User,
-  Hash, FileText
+  Hash, FileText, Search, XCircle, Palette, Ruler
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -15,27 +15,69 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-import { format, isToday, isYesterday, differenceInDays, parseISO } from 'date-fns';
+import { format, isToday, isYesterday, differenceInDays, parseISO, formatDistanceToNow } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 const InventoryOperationsLog = ({ isAdmin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState([]);
   const [showDialog, setShowDialog] = useState(false);
+  
+  // الفلاتر
   const [filterType, setFilterType] = useState('all');
+  const [selectedProduct, setSelectedProduct] = useState('all');
+  const [selectedColor, setSelectedColor] = useState('all');
+  const [selectedSize, setSelectedSize] = useState('all');
+  const [dateFrom, setDateFrom] = useState(null);
+  const [dateTo, setDateTo] = useState(null);
+  const [productSearch, setProductSearch] = useState('');
+  
+  // خيارات الفلاتر
+  const [filterOptions, setFilterOptions] = useState({ colors: [], sizes: [], products: [] });
+  const [loadingOptions, setLoadingOptions] = useState(false);
 
   if (!isAdmin) return null;
+
+  // جلب خيارات الفلاتر
+  const fetchFilterOptions = async () => {
+    setLoadingOptions(true);
+    try {
+      const { data, error } = await supabase.rpc('get_log_filter_options');
+      if (error) throw error;
+      
+      if (data && data[0]) {
+        setFilterOptions({
+          colors: data[0].colors || [],
+          sizes: data[0].sizes || [],
+          products: data[0].products || []
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching filter options:', error);
+    } finally {
+      setLoadingOptions(false);
+    }
+  };
 
   const fetchLogs = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .rpc('get_inventory_operations_log', {
-          p_limit: 200,
-          p_operation_type: filterType === 'all' ? null : filterType
-        });
+      const params = {
+        p_limit: 500,
+        p_operation_type: filterType === 'all' ? null : filterType,
+        p_product_id: selectedProduct === 'all' ? null : selectedProduct,
+        p_color_name: selectedColor === 'all' ? null : selectedColor,
+        p_size_value: selectedSize === 'all' ? null : selectedSize,
+        p_date_from: dateFrom ? new Date(dateFrom).toISOString() : null,
+        p_date_to: dateTo ? new Date(new Date(dateTo).setHours(23, 59, 59, 999)).toISOString() : null
+      };
+      
+      const { data, error } = await supabase.rpc('get_inventory_operations_log', params);
       
       if (error) throw error;
       setLogs(data || []);
@@ -53,9 +95,55 @@ const InventoryOperationsLog = ({ isAdmin }) => {
 
   useEffect(() => {
     if (showDialog) {
+      fetchFilterOptions();
       fetchLogs();
     }
-  }, [showDialog, filterType]);
+  }, [showDialog]);
+
+  useEffect(() => {
+    if (showDialog) {
+      fetchLogs();
+    }
+  }, [filterType, selectedProduct, selectedColor, selectedSize, dateFrom, dateTo]);
+
+  // مسح جميع الفلاتر
+  const clearAllFilters = () => {
+    setFilterType('all');
+    setSelectedProduct('all');
+    setSelectedColor('all');
+    setSelectedSize('all');
+    setDateFrom(null);
+    setDateTo(null);
+    setProductSearch('');
+  };
+
+  // التحقق من وجود فلاتر نشطة
+  const hasActiveFilters = filterType !== 'all' || selectedProduct !== 'all' || 
+    selectedColor !== 'all' || selectedSize !== 'all' || dateFrom || dateTo;
+
+  // البحث في المنتجات
+  const filteredProducts = useMemo(() => {
+    if (!filterOptions.products) return [];
+    if (!productSearch) return filterOptions.products;
+    return filterOptions.products.filter(p => 
+      p.name?.toLowerCase().includes(productSearch.toLowerCase())
+    );
+  }, [filterOptions.products, productSearch]);
+
+  // ملخص المنتج المحدد
+  const selectedProductSummary = useMemo(() => {
+    if (selectedProduct === 'all' || logs.length === 0) return null;
+    
+    const latestLog = logs[0];
+    return {
+      name: latestLog?.product_name,
+      quantity: latestLog?.quantity_after ?? 0,
+      reserved: latestLog?.reserved_after ?? 0,
+      available: (latestLog?.quantity_after ?? 0) - (latestLog?.reserved_after ?? 0),
+      sold: latestLog?.sold_after ?? 0,
+      lastOperation: latestLog?.performed_at
+    };
+  }, [selectedProduct, logs]);
 
   // تجميع السجلات حسب التاريخ
   const groupedLogs = useMemo(() => {
@@ -184,6 +272,17 @@ const InventoryOperationsLog = ({ isAdmin }) => {
     };
   };
 
+  // تنسيق الوقت بشكل دقيق
+  const formatDetailedTime = (dateStr) => {
+    if (!dateStr) return { time: '', date: '', relative: '' };
+    const date = parseISO(dateStr);
+    return {
+      time: format(date, 'hh:mm:ss a', { locale: ar }),
+      date: format(date, 'EEEE dd MMMM yyyy', { locale: ar }),
+      relative: formatDistanceToNow(date, { addSuffix: true, locale: ar })
+    };
+  };
+
   const luxuryButtonStyle = {
     background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 50%, #6d28d9 100%)',
     color: 'white',
@@ -228,7 +327,7 @@ const InventoryOperationsLog = ({ isAdmin }) => {
       </button>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden bg-background border-border">
+        <DialogContent className="max-w-5xl max-h-[95vh] p-0 overflow-hidden bg-background border-border">
           {/* Header */}
           <div className="relative bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 p-4 sm:p-6">
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-50" />
@@ -243,7 +342,7 @@ const InventoryOperationsLog = ({ isAdmin }) => {
             
             {/* إحصائيات سريعة */}
             {logs.length > 0 && (
-              <div className="flex items-center gap-4 mt-4 text-white/90 text-sm">
+              <div className="flex items-center gap-4 mt-4 text-white/90 text-sm flex-wrap">
                 <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
                   <FileText className="w-4 h-4" />
                   <span>{logs.length} عملية</span>
@@ -271,40 +370,218 @@ const InventoryOperationsLog = ({ isAdmin }) => {
             </button>
           </div>
 
-          {/* الفلاتر */}
-          <div className="flex items-center gap-3 p-4 border-b border-border bg-muted/30">
-            <Filter className="w-4 h-4 text-muted-foreground" />
-            <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="نوع العملية" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">جميع العمليات</SelectItem>
-                <SelectItem value="stock_added">إضافة مخزون</SelectItem>
-                <SelectItem value="stock_reduced">تقليل مخزون</SelectItem>
-                <SelectItem value="reserved">حجز للطلب</SelectItem>
-                <SelectItem value="released">تحرير محجوز</SelectItem>
-                <SelectItem value="sold">تسجيل مبيع</SelectItem>
-                <SelectItem value="returned">إرجاع للمخزون</SelectItem>
-                <SelectItem value="audit_correction">تصحيح فحص</SelectItem>
-                <SelectItem value="manual_edit">تعديل يدوي</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={fetchLogs}
-              disabled={isLoading}
-              className="mr-auto"
-            >
-              <RefreshCw className={cn("w-4 h-4 ml-1", isLoading && "animate-spin")} />
-              تحديث
-            </Button>
+          {/* الفلاتر المتقدمة */}
+          <div className="p-4 border-b border-border bg-muted/30 space-y-3">
+            {/* الصف الأول: المنتج واللون والقياس */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* فلتر المنتج مع البحث */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Package className="w-3 h-3" />
+                  المنتج
+                </label>
+                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="جميع المنتجات" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <div className="p-2 border-b">
+                      <div className="relative">
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Input
+                          placeholder="ابحث عن منتج..."
+                          value={productSearch}
+                          onChange={(e) => setProductSearch(e.target.value)}
+                          className="pr-9 h-8"
+                        />
+                      </div>
+                    </div>
+                    <SelectItem value="all">جميع المنتجات</SelectItem>
+                    {filteredProducts.map(product => (
+                      <SelectItem key={product.id} value={product.id}>
+                        {product.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* فلتر اللون */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Palette className="w-3 h-3" />
+                  اللون
+                </label>
+                <Select value={selectedColor} onValueChange={setSelectedColor}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="جميع الألوان" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع الألوان</SelectItem>
+                    {filterOptions.colors?.map(color => (
+                      <SelectItem key={color} value={color}>
+                        {color}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* فلتر القياس */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Ruler className="w-3 h-3" />
+                  القياس
+                </label>
+                <Select value={selectedSize} onValueChange={setSelectedSize}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="جميع القياسات" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع القياسات</SelectItem>
+                    {filterOptions.sizes?.map(size => (
+                      <SelectItem key={size} value={size}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* فلتر نوع العملية */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Filter className="w-3 h-3" />
+                  نوع العملية
+                </label>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="جميع العمليات" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">جميع العمليات</SelectItem>
+                    <SelectItem value="stock_added">إضافة مخزون</SelectItem>
+                    <SelectItem value="stock_reduced">تقليل مخزون</SelectItem>
+                    <SelectItem value="reserved">حجز للطلب</SelectItem>
+                    <SelectItem value="released">تحرير محجوز</SelectItem>
+                    <SelectItem value="sold">تسجيل مبيع</SelectItem>
+                    <SelectItem value="returned">إرجاع للمخزون</SelectItem>
+                    <SelectItem value="audit_correction">تصحيح فحص</SelectItem>
+                    <SelectItem value="manual_edit">تعديل يدوي</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* الصف الثاني: التواريخ والأزرار */}
+            <div className="flex flex-wrap items-end gap-3">
+              {/* من تاريخ */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  من تاريخ
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-[140px] justify-start text-right font-normal">
+                      {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : 'اختر التاريخ'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dateFrom}
+                      onSelect={setDateFrom}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* إلى تاريخ */}
+              <div className="space-y-1">
+                <label className="text-xs text-muted-foreground flex items-center gap-1">
+                  <Calendar className="w-3 h-3" />
+                  إلى تاريخ
+                </label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="w-[140px] justify-start text-right font-normal">
+                      {dateTo ? format(dateTo, 'dd/MM/yyyy') : 'اختر التاريخ'}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={dateTo}
+                      onSelect={setDateTo}
+                      initialFocus
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* أزرار */}
+              <div className="flex items-center gap-2 mr-auto">
+                {hasActiveFilters && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={clearAllFilters}
+                    className="text-muted-foreground hover:text-foreground"
+                  >
+                    <XCircle className="w-4 h-4 ml-1" />
+                    مسح الفلاتر
+                  </Button>
+                )}
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchLogs}
+                  disabled={isLoading}
+                >
+                  <RefreshCw className={cn("w-4 h-4 ml-1", isLoading && "animate-spin")} />
+                  تحديث
+                </Button>
+              </div>
+            </div>
+
+            {/* ملخص المنتج المحدد */}
+            {selectedProductSummary && (
+              <div className="bg-primary/5 border border-primary/20 rounded-lg p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Package className="w-4 h-4 text-primary" />
+                  <span className="font-semibold text-primary">{selectedProductSummary.name}</span>
+                  {selectedProductSummary.lastOperation && (
+                    <span className="text-xs text-muted-foreground mr-auto">
+                      آخر عملية: {formatDistanceToNow(parseISO(selectedProductSummary.lastOperation), { addSuffix: true, locale: ar })}
+                    </span>
+                  )}
+                </div>
+                <div className="grid grid-cols-4 gap-3 text-center">
+                  <div className="bg-background rounded-lg p-2">
+                    <div className="text-xs text-muted-foreground">المخزون</div>
+                    <div className="font-bold text-lg">{selectedProductSummary.quantity}</div>
+                  </div>
+                  <div className="bg-background rounded-lg p-2">
+                    <div className="text-xs text-muted-foreground">المتاح</div>
+                    <div className="font-bold text-lg text-emerald-600">{selectedProductSummary.available}</div>
+                  </div>
+                  <div className="bg-background rounded-lg p-2">
+                    <div className="text-xs text-muted-foreground">المحجوز</div>
+                    <div className="font-bold text-lg text-amber-600">{selectedProductSummary.reserved}</div>
+                  </div>
+                  <div className="bg-background rounded-lg p-2">
+                    <div className="text-xs text-muted-foreground">المباع</div>
+                    <div className="font-bold text-lg text-purple-600">{selectedProductSummary.sold}</div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* المحتوى - Timeline */}
-          <ScrollArea className="flex-1 max-h-[calc(90vh-280px)]">
+          <ScrollArea className="flex-1 max-h-[calc(95vh-380px)]">
             {isLoading ? (
               <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-8 h-8 animate-spin text-purple-500" />
@@ -313,9 +590,11 @@ const InventoryOperationsLog = ({ isAdmin }) => {
               <div className="text-center py-20">
                 <History className="w-16 h-16 mx-auto text-muted-foreground/30 mb-4" />
                 <p className="text-muted-foreground">لا توجد عمليات مسجلة</p>
-                <p className="text-xs text-muted-foreground/70 mt-1">
-                  سيتم تسجيل أي تغيير في المخزون تلقائياً
-                </p>
+                {hasActiveFilters && (
+                  <p className="text-xs text-muted-foreground/70 mt-1">
+                    جرب تغيير معايير البحث أو مسح الفلاتر
+                  </p>
+                )}
               </div>
             ) : (
               <div className="p-4">
@@ -341,6 +620,7 @@ const InventoryOperationsLog = ({ isAdmin }) => {
                       {groupLogs.map((log, idx) => {
                         const config = getOperationConfig(log.operation_type);
                         const Icon = config.icon;
+                        const timeInfo = formatDetailedTime(log.performed_at);
                         
                         // حساب التغييرات
                         const changes = [
@@ -393,14 +673,17 @@ const InventoryOperationsLog = ({ isAdmin }) => {
                                   </div>
                                 </div>
                                 
-                                {/* التوقيت */}
+                                {/* التوقيت المفصل */}
                                 <div className="text-left shrink-0">
-                                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                  <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
                                     <Clock className="w-3.5 h-3.5" />
-                                    {log.performed_at && format(parseISO(log.performed_at), 'hh:mm a', { locale: ar })}
+                                    {timeInfo.time}
                                   </div>
-                                  <div className="text-[10px] text-muted-foreground/70 mt-1 text-left">
-                                    {log.performed_at && format(parseISO(log.performed_at), 'dd/MM/yyyy', { locale: ar })}
+                                  <div className="text-[10px] text-muted-foreground mt-0.5 text-left">
+                                    {timeInfo.date}
+                                  </div>
+                                  <div className="text-[10px] text-primary/70 mt-0.5 text-left">
+                                    {timeInfo.relative}
                                   </div>
                                 </div>
                               </div>
@@ -531,7 +814,10 @@ const InventoryOperationsLog = ({ isAdmin }) => {
           </ScrollArea>
 
           {/* Footer */}
-          <div className="flex justify-end p-4 border-t border-border bg-muted/20">
+          <div className="flex justify-between items-center p-4 border-t border-border bg-muted/20">
+            <span className="text-xs text-muted-foreground">
+              {hasActiveFilters && `تم العثور على ${logs.length} عملية`}
+            </span>
             <Button variant="outline" onClick={() => setShowDialog(false)}>
               إغلاق
             </Button>
