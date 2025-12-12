@@ -280,7 +280,7 @@ Deno.serve(async (req) => {
 
           // إعادة حساب الأرباح
           const { data: profitRecord } = await supabase
-            .from('order_employee_profits')
+            .from('profits')
             .select('*')
             .eq('order_id', localOrder.id)
             .maybeSingle();
@@ -290,9 +290,9 @@ Deno.serve(async (req) => {
             const employeeShare = Math.floor(priceDifference * 0.5);
 
             await supabase
-              .from('order_employee_profits')
+              .from('profits')
               .update({
-                order_total_amount: newPrice,
+                total_revenue: newPrice,
                 employee_profit: employeeShare,
                 updated_at: new Date().toISOString()
               })
