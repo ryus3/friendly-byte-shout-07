@@ -11,6 +11,7 @@ import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { getUserUUID } from '@/utils/userIdUtils';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import SmartPagination from '@/components/ui/SmartPagination';
 import { format, startOfMonth, endOfMonth, parseISO, isValid, startOfDay, startOfWeek, startOfYear, endOfDay, endOfWeek, endOfYear } from 'date-fns';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -121,6 +122,10 @@ const ProfitsSummaryPage = () => {
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [isRequesting, setIsRequesting] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState([]);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
 
   // تحديد الصلاحيات بناءً على الدور والصلاحيات
   const canViewAll = hasPermission('manage_profit_settlement') || hasPermission('view_all_profits') || hasPermission('view_all_data');
@@ -425,6 +430,18 @@ const ProfitsSummaryPage = () => {
     return filtered;
   }, [profitData?.detailedProfits, filters, canViewAll, user?.user_id, user?.id, allUsers]);
 
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredDetailedProfits.length / ITEMS_PER_PAGE);
+  const paginatedProfits = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return filteredDetailedProfits.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredDetailedProfits, currentPage, ITEMS_PER_PAGE]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, periodFilter]);
+
   console.log('📋 بيانات مفلترة:', {
     canViewAll,
     canRequestSettlement,
@@ -709,7 +726,7 @@ const ProfitsSummaryPage = () => {
 
             {isMobile ? (
               <ProfitDetailsMobile
-                orders={filteredDetailedProfits}
+                orders={paginatedProfits}
                 canViewAll={canViewAll}
                 canRequestSettlement={canRequestSettlement}
                 selectedOrders={selectedOrders}
@@ -719,7 +736,7 @@ const ProfitsSummaryPage = () => {
               />
             ) : (
              <ProfitDetailsTable
-                orders={filteredDetailedProfits}
+                orders={paginatedProfits}
                 canViewAll={canViewAll}
                 canRequestSettlement={canRequestSettlement}
                 selectedOrders={selectedOrders}
@@ -729,6 +746,18 @@ const ProfitsSummaryPage = () => {
                 onViewInvoice={handleViewInvoice}
                 onMarkReceived={handleMarkReceived}
              />
+            )}
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <SmartPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+                totalItems={filteredDetailedProfits.length}
+                itemsPerPage={ITEMS_PER_PAGE}
+                className="mt-6"
+              />
             )}
           </CardContent>
         </Card>

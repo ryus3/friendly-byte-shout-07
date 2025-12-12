@@ -275,8 +275,9 @@ export const ProfitsProvider = ({ children }) => {
       const employeeName = profileData?.full_name || 'موظف غير محدد';
 
       // إنشاء/تحديث إشعار المدير عبر الدالة المضمونة الأمان
+      let notifResult = null;
       try {
-        const { data: notifResult, error: notifError } = await supabase
+        const { data: notifData, error: notifError } = await supabase
           .rpc('upsert_settlement_request_notification', {
             p_employee_id: currentUserId,
             p_order_ids: eligibleOrderIds,
@@ -285,6 +286,8 @@ export const ProfitsProvider = ({ children }) => {
 
         if (notifError) {
           console.warn('⚠️ فشل استدعاء دالة إشعار التحاسب:', notifError.message || notifError);
+        } else {
+          notifResult = notifData;
         }
       } catch (e) {
         console.warn('⚠️ تعذر إنشاء/تحديث إشعار طلب التحاسب، سيتم المتابعة بدون إشعار:', e?.message || e);

@@ -8,10 +8,15 @@ export const getStatusInfo = (profitStatus) => {
   
   switch (status) {
     case 'pending':
+      return {
+        text: 'بانتظار الفاتورة',
+        variant: 'warning',
+        canSelect: false // لا يمكن المحاسبة حتى تُستلم الفاتورة
+      };
     case 'invoice_received':
       return {
-        text: 'معلق',
-        variant: 'warning',
+        text: 'جاهز للمحاسبة',
+        variant: 'success',
         canSelect: true
       };
     case 'settlement_requested':
