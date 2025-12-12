@@ -1400,7 +1400,7 @@ export const SuperProvider = ({ children }) => {
     }
   }, []);
 
-  // تسوية مستحقات الموظف - نسخة محدثة لتطبيق نفس آلية ORD000004 الناجح
+  // تسوية مستحقات الموظف - نسخة مصححة بالكامل تستخدم قواعد الربح الثابتة
   const settleEmployeeProfits = useCallback(async (employeeId, totalSettlement = 0, employeeName = '', orderIds = []) => {
     try {
       if (!orderIds || orderIds.length === 0) {
@@ -1411,26 +1411,72 @@ export const SuperProvider = ({ children }) => {
 
       const now = new Date().toISOString();
       const ordersMap = new Map((allData.orders || []).map(o => [o.id, o]));
+      
+      // جلب قواعد الربح للموظف
+      const { data: profitRules, error: rulesErr } = await supabase
+        .from('employee_profit_rules')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .eq('is_active', true);
+      
+      if (rulesErr) throw rulesErr;
+      console.debug('📋 قواعد الربح المتوفرة:', profitRules?.length || 0);
 
-      const calcOrderProfit = (order) => {
-        if (!order) return 0;
-        const items = Array.isArray(order.items) ? order.items : [];
-        return items.reduce((sum, it) => {
-          const qty = it.quantity || 1;
-          const price = it.price ?? it.selling_price ?? it.product_variants?.price ?? 0;
-          const cost = it.cost_price ?? it.product_variants?.cost_price ?? 0;
-          return sum + (price - cost) * qty;
-        }, 0);
+      // جلب عناصر الطلبات
+      const { data: orderItems, error: itemsErr } = await supabase
+        .from('order_items')
+        .select('order_id, product_id, quantity')
+        .in('order_id', orderIds);
+      
+      if (itemsErr) throw itemsErr;
+      
+      // تجميع عناصر كل طلب
+      const itemsByOrder = {};
+      (orderItems || []).forEach(item => {
+        if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
+        itemsByOrder[item.order_id].push(item);
+      });
+
+      // دالة حساب ربح الموظف من قواعد الربح الثابتة
+      const calcEmployeeProfitFromRules = (orderId, order) => {
+        const items = itemsByOrder[orderId] || [];
+        if (items.length === 0) return { profit: 0, hasRule: false };
+        
+        const orderDate = new Date(order?.created_at || now);
+        let totalProfit = 0;
+        let hasAnyRule = false;
+        
+        items.forEach(item => {
+          const productId = item.product_id;
+          if (!productId) return;
+          
+          // البحث عن قاعدة ربح سارية وقت إنشاء الطلب
+          const rule = (profitRules || []).find(r => 
+            r.target_id === productId &&
+            r.rule_type === 'product' &&
+            new Date(r.created_at) <= orderDate // القاعدة يجب أن تكون موجودة قبل أو وقت إنشاء الطلب
+          );
+          
+          if (rule) {
+            hasAnyRule = true;
+            totalProfit += (rule.profit_amount || 0) * (item.quantity || 1);
+            console.debug(`✅ قاعدة ربح للمنتج ${productId}: ${rule.profit_amount} × ${item.quantity}`);
+          } else {
+            console.debug(`⚠️ لا توجد قاعدة ربح سارية للمنتج ${productId} وقت الطلب ${orderDate.toISOString()}`);
+          }
+        });
+        
+        // خصم الخصم من ربح الموظف
+        const discount = Number(order?.discount) || 0;
+        // إضافة الزيادة لربح الموظف
+        const priceIncrease = Number(order?.price_increase) || 0;
+        
+        totalProfit = totalProfit - discount + priceIncrease;
+        
+        console.debug(`📊 ربح الموظف للطلب ${order?.tracking_number}: ${totalProfit} (قبل الخصم/الزيادة: ${totalProfit + discount - priceIncrease}, خصم: ${discount}, زيادة: ${priceIncrease})`);
+        
+        return { profit: Math.max(0, totalProfit), hasRule: hasAnyRule };
       };
-
-      const perOrderBase = orderIds.map(id => ({ id, amount: calcOrderProfit(ordersMap.get(id)) }));
-      const baseSum = perOrderBase.reduce((s, r) => s + (r.amount || 0), 0);
-
-      // توزيع مستحقات الموظف على الطلبات بشكل نسبي حسب ربح الطلب
-      const perOrderEmployee = perOrderBase.map(r => ({
-        id: r.id,
-        employee: baseSum > 0 ? Math.round((totalSettlement * (r.amount || 0)) / baseSum) : Math.round((totalSettlement || 0) / orderIds.length)
-      }));
 
       // جلب السجلات الحالية
       const { data: existing, error: existingErr } = await supabase
@@ -1440,72 +1486,121 @@ export const SuperProvider = ({ children }) => {
       if (existingErr) throw existingErr;
       const existingMap = new Map((existing || []).map(e => [e.order_id, e]));
 
+      // حساب المبلغ الفعلي من قواعد الربح
+      let actualTotalSettlement = 0;
+      const settledOrdersDetails = [];
+
       // تحضير upsert
       const upserts = orderIds.map(orderId => {
         const order = ordersMap.get(orderId);
         const existingRow = existingMap.get(orderId);
-
-        // حسابات دقيقة لكل طلب لضمان عدم تمرير قيم null
-        const items = Array.isArray(order?.items) ? order.items : [];
-        const itemsRevenue = items.reduce((sum, it) => {
-          const qty = Number(it.quantity ?? 1) || 0;
-          const price = Number(it.price ?? it.selling_price ?? it.product_variants?.price ?? 0) || 0;
-          return sum + price * qty;
-        }, 0);
-        const itemsCost = items.reduce((sum, it) => {
-          const qty = Number(it.quantity ?? 1) || 0;
-          const cost = Number(it.cost_price ?? it.product_variants?.cost_price ?? 0) || 0;
-          return sum + cost * qty;
-        }, 0);
-
-        const baseProfitFromItems = itemsRevenue - itemsCost;
-        const base = perOrderBase.find(x => x.id === orderId)?.amount;
-        const baseProfit = Number.isFinite(base) ? Number(base) : baseProfitFromItems;
-
-        // الإيراد: final_amount - delivery_fee (كما في ORD000004 الناجح)
-        const finalAmount = Number(order?.final_amount ?? order?.total_amount ?? itemsRevenue ?? 0) || 0;
+        
+        // حساب ربح الموظف من القواعد الثابتة
+        const profitInfo = calcEmployeeProfitFromRules(orderId, order);
+        actualTotalSettlement += profitInfo.profit;
+        
+        // حسابات دقيقة لكل طلب للإيراد والتكلفة
+        const items = itemsByOrder[orderId] || [];
+        const finalAmount = Number(order?.final_amount ?? order?.total_amount ?? 0) || 0;
         const deliveryFee = Number(order?.delivery_fee ?? 0) || 0;
         const revenueWithoutDelivery = finalAmount - deliveryFee;
         
-        const profit_amount = Math.max(0, Number(baseProfit) || 0);
-        const total_cost = Math.max(0, revenueWithoutDelivery - profit_amount);
-
-        const emp = perOrderEmployee.find(x => x.id === orderId)?.employee || 0;
+        // تفاصيل الطلب المسوى
+        settledOrdersDetails.push({
+          order_id: orderId,
+          order_number: order?.order_number,
+          tracking_number: order?.tracking_number,
+          customer_name: order?.customer_name,
+          order_date: order?.created_at,
+          order_total: finalAmount,
+          employee_profit: profitInfo.profit,
+          has_rule: profitInfo.hasRule,
+          discount: order?.discount || 0,
+          price_increase: order?.price_increase || 0
+        });
 
         console.debug('🔧 حساب ربح الطلب:', { 
-          orderId: order?.order_number, 
-          finalAmount, 
-          deliveryFee, 
-          revenueWithoutDelivery, 
-          profit_amount, 
-          total_cost,
-          employee_profit: emp
+          orderId: order?.order_number,
+          trackingNumber: order?.tracking_number,
+          employee_profit: profitInfo.profit,
+          hasRule: profitInfo.hasRule
         });
 
         return {
           ...(existingRow ? { id: existingRow.id } : {}),
           order_id: orderId,
           employee_id: employeeId || order?.created_by,
-          total_revenue: revenueWithoutDelivery, // الإيراد بدون أجور التوصيل
-          total_cost,
-          profit_amount,
-          employee_profit: emp,
-          status: 'settled',
+          total_revenue: revenueWithoutDelivery,
+          total_cost: Math.max(0, revenueWithoutDelivery - profitInfo.profit),
+          profit_amount: profitInfo.profit,
+          employee_profit: profitInfo.profit,
+          status: profitInfo.hasRule ? 'settled' : 'no_rule_settled', // تمييز الطلبات بدون قاعدة
           settled_at: now
         };
       });
+
+      console.debug(`💰 إجمالي المستحقات الفعلية المحسوبة: ${actualTotalSettlement}`);
 
       const { error: upsertErr } = await supabase.from('profits').upsert(upserts);
       if (upsertErr) throw upsertErr;
       console.debug('✅ تم إدراج سجلات الأرباح بنجاح');
 
+      // جلب القاصة الرئيسية
+      const { data: cashSource, error: cashErr } = await supabase
+        .from('cash_sources')
+        .select('id, current_balance, name')
+        .eq('is_active', true)
+        .eq('name', 'القاصة الرئيسية')
+        .maybeSingle();
+      
+      if (cashErr) {
+        console.error('❌ خطأ في جلب القاصة:', cashErr);
+      }
+
+      // جلب كود الموظف
+      const { data: employeeProfile } = await supabase
+        .from('profiles')
+        .select('employee_code')
+        .eq('user_id', employeeId)
+        .maybeSingle();
+      
+      const employeeCode = employeeProfile?.employee_code || 'EMP';
+
+      // إنشاء فاتورة تسوية احترافية
+      const invoiceNumber = `RY-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+
+      const { data: invoice, error: invoiceErr } = await supabase
+        .from('settlement_invoices')
+        .insert({
+          invoice_number: invoiceNumber,
+          employee_id: employeeId,
+          employee_name: employeeName || 'غير محدد',
+          employee_code: employeeCode,
+          order_ids: orderIds,
+          total_amount: actualTotalSettlement, // المبلغ المحسوب من القواعد
+          payment_method: 'cash',
+          status: 'completed',
+          settlement_date: now,
+          settled_orders: settledOrdersDetails,
+          description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - ${orderIds.length} طلب`,
+          created_by: user?.user_id || user?.id
+        })
+        .select()
+        .single();
+
+      if (invoiceErr) {
+        console.error('❌ خطأ في إنشاء فاتورة التسوية:', invoiceErr);
+      } else {
+        console.debug('✅ تم إنشاء فاتورة التسوية:', invoiceNumber);
+      }
+
       // إضافة مصروف مستحقات الموظف
       const expenseData = {
-        amount: totalSettlement,
+        amount: actualTotalSettlement,
         category: 'مستحقات الموظفين',
         expense_type: 'system',
-        description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'}`,
-        receipt_number: `EMP-${Date.now()}`,
+        description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - فاتورة ${invoiceNumber}`,
+        receipt_number: invoiceNumber,
         vendor_name: employeeName || 'موظف',
         status: 'approved',
         created_by: user?.user_id || user?.id,
@@ -1514,8 +1609,11 @@ export const SuperProvider = ({ children }) => {
         metadata: {
           employee_id: employeeId,
           employee_name: employeeName,
+          employee_code: employeeCode,
           order_ids: orderIds,
-          settlement_type: 'employee_dues'
+          settlement_type: 'employee_dues',
+          invoice_id: invoice?.id,
+          invoice_number: invoiceNumber
         }
       };
 
@@ -1531,23 +1629,17 @@ export const SuperProvider = ({ children }) => {
       }
       console.debug('✅ تم إضافة مصروف مستحقات الموظف:', expenseRecord.id);
 
-      // إضافة حركة نقدية (employee_dues)
-      const { data: cashSources } = await supabase
-        .from('cash_sources')
-        .select('id, balance')
-        .eq('is_main', true)
-        .maybeSingle();
-
-      if (cashSources) {
+      // إضافة حركة نقدية (خروج نقد)
+      if (cashSource && actualTotalSettlement > 0) {
         const movementData = {
-          cash_source_id: cashSources.id,
-          amount: totalSettlement,
-          movement_type: 'employee_dues', // كما في ORD000004 الناجح
-          reference_type: 'expense',
-          reference_id: expenseRecord.id,
-          description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'}`,
-          balance_before: cashSources.balance,
-          balance_after: cashSources.balance - totalSettlement,
+          cash_source_id: cashSource.id,
+          amount: actualTotalSettlement,
+          movement_type: 'employee_dues',
+          reference_type: 'settlement_invoice',
+          reference_id: invoice?.id || expenseRecord.id,
+          description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - فاتورة ${invoiceNumber}`,
+          balance_before: cashSource.current_balance,
+          balance_after: cashSource.current_balance - actualTotalSettlement,
           created_by: user?.user_id || user?.id
         };
 
@@ -1563,8 +1655,8 @@ export const SuperProvider = ({ children }) => {
           // تحديث رصيد القاصة
           const { error: updateErr } = await supabase
             .from('cash_sources')
-            .update({ balance: cashSources.balance - totalSettlement })
-            .eq('id', cashSources.id);
+            .update({ current_balance: cashSource.current_balance - actualTotalSettlement })
+            .eq('id', cashSource.id);
           
           if (updateErr) {
             console.error('❌ خطأ في تحديث رصيد القاصة:', updateErr);
@@ -1574,10 +1666,10 @@ export const SuperProvider = ({ children }) => {
         }
       }
 
-      // أرشفة الطلبات بعد التسوية (إصلاح عمود الأرشفة)
+      // أرشفة الطلبات بعد التسوية
       const { error: ordersErr } = await supabase
         .from('orders')
-        .update({ isarchived: true }) // إصلاح: استخدام isarchived بدلاً من is_archived
+        .update({ isarchived: true })
         .in('id', orderIds);
       if (ordersErr) {
         console.error('❌ خطأ في أرشفة الطلبات:', ordersErr);
@@ -1591,11 +1683,11 @@ export const SuperProvider = ({ children }) => {
 
       toast({
         title: 'تم دفع مستحقات الموظف',
-        description: `${employeeName || 'الموظف'} - عدد الطلبات ${orderIds.length} - المبلغ ${totalSettlement.toLocaleString()} دينار`,
+        description: `${employeeName || 'الموظف'} - عدد الطلبات ${orderIds.length} - المبلغ ${actualTotalSettlement.toLocaleString()} دينار`,
         variant: 'success'
       });
 
-      return { success: true };
+      return { success: true, actualAmount: actualTotalSettlement, invoiceNumber };
     } catch (error) {
       console.error('❌ خطأ في تسوية مستحقات الموظف:', error);
       toast({ title: 'خطأ في التسوية', description: error.message, variant: 'destructive' });
