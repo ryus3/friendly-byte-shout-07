@@ -34,7 +34,7 @@ const ProfitDetailsTable = ({
               />
             </TableHead>
           )}
-          <TableHead>رقم الطلب</TableHead>
+          <TableHead>رقم التتبع</TableHead>
           <TableHead>الزبون</TableHead>
           {canViewAll && <TableHead>الموظف</TableHead>}
           <TableHead>تاريخ التسليم</TableHead>
@@ -63,7 +63,7 @@ const ProfitDetailsTable = ({
                     )}
                   </TableCell>
                 )}
-                <TableCell>{order.order_number || 'لا يوجد رقم'}</TableCell>
+                <TableCell>{order.tracking_number || order.order_number || 'لا يوجد رقم'}</TableCell>
                 <TableCell>{order.customer_name || 'غير معروف'}</TableCell>
                 {canViewAll && <TableCell>{order.employeeName}</TableCell>}
                 <TableCell>

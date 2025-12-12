@@ -34,7 +34,7 @@ const ProfitDetailsMobile = ({
                   )}
                   <div>
                     <p className="font-semibold">{order.customer_name || 'غير معروف'}</p>
-                    <p className="text-xs text-muted-foreground">{order.order_number || 'لا يوجد رقم'}</p>
+                    <p className="text-xs text-muted-foreground">{order.tracking_number || order.order_number || 'لا يوجد رقم'}</p>
                   </div>
                 </div>
                 <div className="text-center">
