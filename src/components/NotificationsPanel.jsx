@@ -504,8 +504,9 @@ const NotificationsPanel = () => {
 
   const handleMarkAllAsRead = (e) => {
     e.stopPropagation();
-    // Mark all notifications as read
+    // Mark all notifications as read from both contexts
     markAllAsRead();
+    markAllSystemAsRead();
     toast({ title: "تم تحديد الكل كمقروء" });
   };
 
@@ -737,7 +738,7 @@ const NotificationsPanel = () => {
           <div className="space-y-2 py-2">
             <AnimatePresence>
               {allNotifications.length > 0 ? (
-                allNotifications.slice(0, 8).map(notification => {
+                allNotifications.filter(n => !n.is_read && !n.read).map(notification => {
                   const notificationType = notification.type || 'default';
                   
 // استخدام ألوان الحالات الموحدة للطلبات
