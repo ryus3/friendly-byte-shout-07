@@ -1400,7 +1400,7 @@ export const SuperProvider = ({ children }) => {
     }
   }, []);
 
-  // تسوية مستحقات الموظف - نسخة مصححة بالكامل تستخدم قواعد الربح الثابتة
+  // تسوية مستحقات الموظف - نسخة مصححة بالكامل تستخدم قواعد الربح الثابتة + الخصومات المعلقة
   const settleEmployeeProfits = useCallback(async (employeeId, totalSettlement = 0, employeeName = '', orderIds = []) => {
     try {
       if (!orderIds || orderIds.length === 0) {
@@ -1421,6 +1421,18 @@ export const SuperProvider = ({ children }) => {
       
       if (rulesErr) throw rulesErr;
       console.debug('📋 قواعد الربح المتوفرة:', profitRules?.length || 0);
+
+      // جلب الخصومات المعلقة للموظف
+      const { data: pendingDeductionsData, error: deductionsErr } = await supabase
+        .rpc('get_employee_pending_deductions', { p_employee_id: employeeId });
+      
+      if (deductionsErr) {
+        console.error('⚠️ خطأ في جلب الخصومات المعلقة:', deductionsErr);
+      }
+      
+      const pendingDeductions = pendingDeductionsData?.[0]?.total_pending_deductions || 0;
+      const deductionsCount = pendingDeductionsData?.[0]?.deductions_count || 0;
+      console.debug('💳 الخصومات المعلقة:', { pendingDeductions, deductionsCount });
 
       // جلب عناصر الطلبات
       const { data: orderItems, error: itemsErr } = await supabase
@@ -1466,14 +1478,12 @@ export const SuperProvider = ({ children }) => {
           }
         });
         
-        // خصم الخصم من ربح الموظف
+        // خصم الخصم من ربح الموظف (للمنتجات التي لها قاعدة ربح)
         const discount = Number(order?.discount) || 0;
-        // إضافة الزيادة لربح الموظف
-        const priceIncrease = Number(order?.price_increase) || 0;
         
-        totalProfit = totalProfit - discount + priceIncrease;
+        totalProfit = totalProfit - discount;
         
-        console.debug(`📊 ربح الموظف للطلب ${order?.tracking_number}: ${totalProfit} (قبل الخصم/الزيادة: ${totalProfit + discount - priceIncrease}, خصم: ${discount}, زيادة: ${priceIncrease})`);
+        console.debug(`📊 ربح الموظف للطلب ${order?.tracking_number}: ${totalProfit} (قبل الخصم: ${totalProfit + discount}, خصم: ${discount})`);
         
         return { profit: Math.max(0, totalProfit), hasRule: hasAnyRule };
       };
@@ -1534,12 +1544,16 @@ export const SuperProvider = ({ children }) => {
           total_cost: Math.max(0, revenueWithoutDelivery - profitInfo.profit),
           profit_amount: profitInfo.profit,
           employee_profit: profitInfo.profit,
-          status: profitInfo.hasRule ? 'settled' : 'no_rule_settled', // تمييز الطلبات بدون قاعدة
+          status: profitInfo.hasRule ? 'settled' : 'no_rule_settled',
           settled_at: now
         };
       });
 
-      console.debug(`💰 إجمالي المستحقات الفعلية المحسوبة: ${actualTotalSettlement}`);
+      // حساب المبلغ النهائي بعد خصم الخصومات المعلقة
+      const deductionToApply = Math.min(pendingDeductions, actualTotalSettlement);
+      const finalSettlementAmount = actualTotalSettlement - deductionToApply;
+      
+      console.debug(`💰 إجمالي المستحقات: ${actualTotalSettlement}, الخصومات المطبقة: ${deductionToApply}, المبلغ النهائي: ${finalSettlementAmount}`);
 
       const { error: upsertErr } = await supabase.from('profits').upsert(upserts);
       if (upsertErr) throw upsertErr;
@@ -1577,12 +1591,13 @@ export const SuperProvider = ({ children }) => {
           employee_name: employeeName || 'غير محدد',
           employee_code: employeeCode,
           order_ids: orderIds,
-          total_amount: actualTotalSettlement, // المبلغ المحسوب من القواعد
+          total_amount: finalSettlementAmount, // المبلغ النهائي بعد الخصومات
           payment_method: 'cash',
           status: 'completed',
           settlement_date: now,
           settled_orders: settledOrdersDetails,
-          description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - ${orderIds.length} طلب`,
+          description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - ${orderIds.length} طلب` + 
+            (deductionToApply > 0 ? ` (خصم معلق: ${deductionToApply.toLocaleString()} د.ع)` : ''),
           created_by: user?.user_id || user?.id
         })
         .select()
@@ -1592,14 +1607,31 @@ export const SuperProvider = ({ children }) => {
         console.error('❌ خطأ في إنشاء فاتورة التسوية:', invoiceErr);
       } else {
         console.debug('✅ تم إنشاء فاتورة التسوية:', invoiceNumber);
+        
+        // تطبيق الخصومات المعلقة على هذه التسوية
+        if (deductionToApply > 0 && invoice?.id) {
+          const { data: appliedAmount, error: applyErr } = await supabase
+            .rpc('apply_pending_deductions_on_settlement', {
+              p_employee_id: employeeId,
+              p_settlement_id: invoice.id,
+              p_max_amount: actualTotalSettlement
+            });
+          
+          if (applyErr) {
+            console.error('⚠️ خطأ في تطبيق الخصومات المعلقة:', applyErr);
+          } else {
+            console.debug('✅ تم تطبيق الخصومات المعلقة:', appliedAmount);
+          }
+        }
       }
 
-      // إضافة مصروف مستحقات الموظف
+      // إضافة مصروف مستحقات الموظف (المبلغ النهائي بعد الخصومات)
       const expenseData = {
-        amount: actualTotalSettlement,
+        amount: finalSettlementAmount,
         category: 'مستحقات الموظفين',
         expense_type: 'system',
-        description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - فاتورة ${invoiceNumber}`,
+        description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - فاتورة ${invoiceNumber}` +
+          (deductionToApply > 0 ? ` (بعد خصم ${deductionToApply.toLocaleString()} د.ع)` : ''),
         receipt_number: invoiceNumber,
         vendor_name: employeeName || 'موظف',
         status: 'approved',
@@ -1613,7 +1645,9 @@ export const SuperProvider = ({ children }) => {
           order_ids: orderIds,
           settlement_type: 'employee_dues',
           invoice_id: invoice?.id,
-          invoice_number: invoiceNumber
+          invoice_number: invoiceNumber,
+          original_amount: actualTotalSettlement,
+          deductions_applied: deductionToApply
         }
       };
 
@@ -1629,17 +1663,17 @@ export const SuperProvider = ({ children }) => {
       }
       console.debug('✅ تم إضافة مصروف مستحقات الموظف:', expenseRecord.id);
 
-      // إضافة حركة نقدية (خروج نقد)
-      if (cashSource && actualTotalSettlement > 0) {
+      // إضافة حركة نقدية (خروج نقد) - المبلغ النهائي فقط
+      if (cashSource && finalSettlementAmount > 0) {
         const movementData = {
           cash_source_id: cashSource.id,
-          amount: actualTotalSettlement,
+          amount: finalSettlementAmount,
           movement_type: 'employee_dues',
           reference_type: 'settlement_invoice',
           reference_id: invoice?.id || expenseRecord.id,
           description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - فاتورة ${invoiceNumber}`,
           balance_before: cashSource.current_balance,
-          balance_after: cashSource.current_balance - actualTotalSettlement,
+          balance_after: cashSource.current_balance - finalSettlementAmount,
           created_by: user?.user_id || user?.id
         };
 
@@ -1655,7 +1689,7 @@ export const SuperProvider = ({ children }) => {
           // تحديث رصيد القاصة
           const { error: updateErr } = await supabase
             .from('cash_sources')
-            .update({ current_balance: cashSource.current_balance - actualTotalSettlement })
+            .update({ current_balance: cashSource.current_balance - finalSettlementAmount })
             .eq('id', cashSource.id);
           
           if (updateErr) {
@@ -1681,13 +1715,23 @@ export const SuperProvider = ({ children }) => {
       superAPI.invalidate('all_data');
       await fetchAllData();
 
+      const toastDescription = deductionToApply > 0 
+        ? `${employeeName || 'الموظف'} - عدد الطلبات ${orderIds.length} - المبلغ ${finalSettlementAmount.toLocaleString()} دينار (بعد خصم ${deductionToApply.toLocaleString()} د.ع)`
+        : `${employeeName || 'الموظف'} - عدد الطلبات ${orderIds.length} - المبلغ ${finalSettlementAmount.toLocaleString()} دينار`;
+
       toast({
         title: 'تم دفع مستحقات الموظف',
-        description: `${employeeName || 'الموظف'} - عدد الطلبات ${orderIds.length} - المبلغ ${actualTotalSettlement.toLocaleString()} دينار`,
+        description: toastDescription,
         variant: 'success'
       });
 
-      return { success: true, actualAmount: actualTotalSettlement, invoiceNumber };
+      return { 
+        success: true, 
+        actualAmount: finalSettlementAmount, 
+        originalAmount: actualTotalSettlement,
+        deductionsApplied: deductionToApply,
+        invoiceNumber 
+      };
     } catch (error) {
       console.error('❌ خطأ في تسوية مستحقات الموظف:', error);
       toast({ title: 'خطأ في التسوية', description: error.message, variant: 'destructive' });
