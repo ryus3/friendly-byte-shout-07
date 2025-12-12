@@ -1499,7 +1499,7 @@ export const SuperProvider = ({ children }) => {
       if (upsertErr) throw upsertErr;
       console.debug('✅ تم إدراج سجلات الأرباح بنجاح');
 
-      // إضافة مصروف مستحقات الموظف مع transaction_date (كما في ORD000004 الناجح)
+      // إضافة مصروف مستحقات الموظف
       const expenseData = {
         amount: totalSettlement,
         category: 'مستحقات الموظفين',
@@ -1508,7 +1508,6 @@ export const SuperProvider = ({ children }) => {
         receipt_number: `EMP-${Date.now()}`,
         vendor_name: employeeName || 'موظف',
         status: 'approved',
-        transaction_date: now, // إضافة transaction_date للإظهار الصحيح كمدفوع
         created_by: user?.user_id || user?.id,
         approved_by: user?.user_id || user?.id,
         approved_at: now,
