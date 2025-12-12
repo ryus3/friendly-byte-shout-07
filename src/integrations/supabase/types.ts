@@ -7257,9 +7257,13 @@ export type Database = {
       }
       get_inventory_operations_log: {
         Args: {
+          p_color_name?: string
+          p_date_from?: string
+          p_date_to?: string
           p_limit?: number
           p_operation_type?: string
           p_product_id?: string
+          p_size_value?: string
         }
         Returns: {
           color_name: string
@@ -7328,6 +7332,14 @@ export type Database = {
           regions_count: number
           success: boolean
           sync_duration_seconds: number
+        }[]
+      }
+      get_log_filter_options: {
+        Args: never
+        Returns: {
+          colors: string[]
+          products: Json
+          sizes: string[]
         }[]
       }
       get_products_sold_stats: {
