@@ -738,7 +738,7 @@ const NotificationsPanel = () => {
           <div className="space-y-2 py-2">
             <AnimatePresence>
               {allNotifications.length > 0 ? (
-                allNotifications.filter(n => !n.is_read && !n.read).map(notification => {
+                allNotifications.map(notification => {
                   const notificationType = notification.type || 'default';
                   
 // استخدام ألوان الحالات الموحدة للطلبات
