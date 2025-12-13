@@ -301,11 +301,11 @@ export const SuperProvider = ({ children }) => {
   const fetchAllData = useCallback(async () => {
     if (!user) return;
     
-    // ⚡ إعداد timeout protection لمنع التجمد (8 ثواني بدلاً من 15)
+  // ⚡ إعداد timeout protection لمنع التجمد (5 ثواني)
     const timeoutId = setTimeout(() => {
-      devLog.warn('⚠️ SuperProvider: انتهت مهلة تحميل البيانات - إجبار setLoading(false)');
+      devLog.warn('⚠️ SuperProvider: انتهت مهلة تحميل البيانات');
       setLoading(false);
-    }, 8000);
+    }, 5000);
     
     try {
       setLoading(true);

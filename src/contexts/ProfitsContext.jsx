@@ -1,12 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-// import removed to avoid circular dependency with SuperProvider
 import { useAuth } from './UnifiedAuthContext';
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { linkReturnToOriginalOrder, getOriginalOrderForReturn } from '@/utils/return-order-linker';
-
-// إعادة توجيه ProfitsContext للنظام الموحد
+import devLog from '@/lib/devLogger';
 
 const ProfitsContext = createContext();
 
@@ -46,15 +44,6 @@ export const ProfitsProvider = ({ children }) => {
         });
       }
 
-      const profitRecord = {
-        order_id: order.id,
-        employee_id: order.created_by || currentUserId,
-        total_profit: totalProfit,
-        profit_details: profitDetails,
-        status: 'pending', // قيد التجهيز
-        created_at: new Date().toISOString()
-      };
-
       const { data, error } = await supabase
         .from('profits')
         .insert([{
@@ -63,7 +52,7 @@ export const ProfitsProvider = ({ children }) => {
           total_revenue: order.total_amount || 0,
           total_cost: order.cost_amount || 0,
           profit_amount: totalProfit,
-          employee_percentage: 10, // نسبة افتراضية
+          employee_percentage: 10,
           employee_profit: totalProfit * 0.1,
           status: 'pending'
         }])
@@ -75,7 +64,7 @@ export const ProfitsProvider = ({ children }) => {
       setProfits(prev => [...prev, data]);
       return data;
     } catch (error) {
-      console.error('Error calculating order profit:', error);
+      devLog.error('Error calculating order profit:', error);
       toast({
         title: "خطأ في حساب الأرباح",
         description: error.message,
@@ -93,10 +82,10 @@ export const ProfitsProvider = ({ children }) => {
 
       switch (orderStatus) {
         case 'shipped':
-          profitStatus = 'sales_pending'; // مبيعات معلقة
+          profitStatus = 'sales_pending';
           break;
         case 'delivered':
-          profitStatus = 'profits_pending'; // أرباح معلقة
+          profitStatus = 'profits_pending';
           break;
         case 'returned':
         case 'cancelled':
@@ -105,7 +94,7 @@ export const ProfitsProvider = ({ children }) => {
       }
 
       if (invoiceReceived && orderStatus === 'delivered') {
-        profitStatus = 'invoice_received'; // استُلمت الفاتورة
+        profitStatus = 'invoice_received';
         updateData.invoice_received_at = new Date().toISOString();
       }
 
@@ -126,7 +115,7 @@ export const ProfitsProvider = ({ children }) => {
 
       return data;
     } catch (error) {
-      console.error('Error updating profit status:', error);
+      devLog.error('Error updating profit status:', error);
       return null;
     }
   }, []);
@@ -134,45 +123,38 @@ export const ProfitsProvider = ({ children }) => {
   // طلب تحاسب من الموظف - النظام الموحد
   const createSettlementRequest = useCallback(async (orderIds, notes = '') => {
     try {
-      // التحقق من صحة orderIds
       const validOrderIds = orderIds.filter(id => id != null && id !== '');
       if (validOrderIds.length === 0) {
         throw new Error('لا توجد معرفات طلبات صالحة');
       }
 
-      // الحصول على المستخدم الحالي من auth مباشرة
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser();
       
       if (authError || !authUser) {
-        console.error('مشكلة في المصادقة:', authError);
+        devLog.error('مشكلة في المصادقة:', authError);
         throw new Error('يجب تسجيل الدخول أولاً');
       }
 
       const currentUserId = authUser.id;
       
-      console.log('🔍 طلب التحاسب - المعرفات الواردة:', { 
+      devLog.log('🔍 طلب التحاسب - المعرفات الواردة:', { 
         authUserId: currentUserId,
         userUUID,
         orderIds: validOrderIds,
-        orderIdsTypes: validOrderIds.map(id => typeof id),
         isAdmin
       });
 
-      // التحقق من صحة UUID
       if (!currentUserId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(currentUserId)) {
         throw new Error('معرف المستخدم غير صحيح');
       }
 
-      // **الإصلاح الجذري: تحويل order numbers إلى UUIDs**
       let orderUUIDs = [];
       
-      // التحقق إذا كانت المعرفات UUIDs أم order numbers
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
       const hasUUIDs = validOrderIds.some(id => uuidRegex.test(id));
       const hasOrderNumbers = validOrderIds.some(id => !uuidRegex.test(id));
 
       if (hasOrderNumbers || !hasUUIDs) {
-        // تحويل order numbers إلى UUIDs
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
           .select('id, order_number')
@@ -180,13 +162,13 @@ export const ProfitsProvider = ({ children }) => {
           .eq('created_by', currentUserId);
 
         if (ordersError) {
-          console.error('خطأ في جلب الطلبات:', ordersError);
+          devLog.error('خطأ في جلب الطلبات:', ordersError);
           throw new Error(`فشل في العثور على الطلبات: ${ordersError.message}`);
         }
 
         orderUUIDs = ordersData.map(order => order.id);
         
-        console.log('🔄 تحويل order numbers إلى UUIDs:', {
+        devLog.log('🔄 تحويل order numbers إلى UUIDs:', {
           input: validOrderIds,
           output: orderUUIDs,
           ordersFound: ordersData.length
@@ -199,40 +181,37 @@ export const ProfitsProvider = ({ children }) => {
         orderUUIDs = validOrderIds;
       }
 
-      // جلب أرباح الموظف مع فلترة صريحة (تجاوز RLS)
       const { data: freshProfits, error: profitsError } = await supabase
         .from('profits')
         .select('*')
-        .in('order_id', orderUUIDs) // استخدام UUIDs الآن
+        .in('order_id', orderUUIDs)
         .eq('employee_id', currentUserId);
 
       if (profitsError) {
-        console.error('خطأ في جلب بيانات الأرباح:', profitsError);
+        devLog.error('خطأ في جلب بيانات الأرباح:', profitsError);
         throw new Error(`فشل في جلب بيانات الأرباح: ${profitsError.message}`);
       }
 
-      console.log('📊 الأرباح المجلبة:', { 
+      devLog.log('📊 الأرباح المجلبة:', { 
         orderUUIDs: orderUUIDs,
         profitsFound: freshProfits?.length || 0,
         profits: freshProfits 
       });
 
-      // التحقق من أن جميع الطلبات مؤهلة للتحاسب - الفاتورة مستلمة أو طلب تحاسب معلق
       const eligibleProfits = freshProfits.filter(p => 
         orderUUIDs.includes(p.order_id) &&
         (p.status === 'invoice_received' || p.status === 'settlement_requested') &&
         p.employee_id === currentUserId
       );
 
-      console.log('✅ الأرباح المؤهلة للتحاسب:', eligibleProfits);
+      devLog.log('✅ الأرباح المؤهلة للتحاسب:', eligibleProfits);
       const eligibleOrderIds = eligibleProfits.map(p => p.order_id);
 
       if (eligibleProfits.length === 0) {
-        console.warn('⚠️ لا توجد أرباح مؤهلة للتحاسب في الطلبات المحددة');
+        devLog.warn('⚠️ لا توجد أرباح مؤهلة للتحاسب في الطلبات المحددة');
         return { success: false, message: 'لا توجد أرباح مؤهلة للتحاسب في الطلبات المحددة' };
       }
 
-      // التحقق التفصيلي للطلبات غير المؤهلة
       const ineligibleOrders = orderUUIDs.filter(orderId => {
         const profit = freshProfits.find(p => p.order_id === orderId);
         return !profit || 
@@ -248,33 +227,20 @@ export const ProfitsProvider = ({ children }) => {
           return `الطلب ${orderId}: الحالة ${profit.status} - غير مؤهل للتحاسب`;
         }).join('\n');
         
-        console.warn('⚠️ طلبات غير مؤهلة:', ineligibleMessages);
+        devLog.warn('⚠️ طلبات غير مؤهلة:', ineligibleMessages);
         throw new Error(`بعض الطلبات غير مؤهلة للتحاسب:\n${ineligibleMessages}`);
       }
 
       const totalProfit = eligibleProfits.reduce((sum, p) => sum + (p.employee_profit ?? p.profit_amount ?? 0), 0);
 
-      console.log('💰 إجمالي الأرباح للتحاسب:', totalProfit);
+      devLog.log('💰 إجمالي الأرباح للتحاسب:', totalProfit);
 
-      const requestData = {
-        employee_id: currentUserId,
-        order_ids: eligibleOrderIds,
-        total_profit: totalProfit,
-        status: 'pending',
-        notes,
-        requested_at: new Date().toISOString()
-      };
-
-      // جلب اسم الموظف من جدول الملفات الشخصية
       const { data: profileData } = await supabase
         .from('profiles')
         .select('full_name')
         .eq('user_id', currentUserId)
         .single();
 
-      const employeeName = profileData?.full_name || 'موظف غير محدد';
-
-      // إنشاء/تحديث إشعار المدير عبر الدالة المضمونة الأمان
       let notifResult = null;
       try {
         const { data: notifData, error: notifError } = await supabase
@@ -285,15 +251,14 @@ export const ProfitsProvider = ({ children }) => {
           });
 
         if (notifError) {
-          console.warn('⚠️ فشل استدعاء دالة إشعار التحاسب:', notifError.message || notifError);
+          devLog.warn('⚠️ فشل استدعاء دالة إشعار التحاسب:', notifError.message || notifError);
         } else {
           notifResult = notifData;
         }
       } catch (e) {
-        console.warn('⚠️ تعذر إنشاء/تحديث إشعار طلب التحاسب، سيتم المتابعة بدون إشعار:', e?.message || e);
+        devLog.warn('⚠️ تعذر إنشاء/تحديث إشعار طلب التحاسب:', e?.message || e);
       }
 
-      // تحديث حالة الأرباح إلى طلب تحاسب
       const { error: updateError } = await supabase
         .from('profits')
         .update({ status: 'settlement_requested' })
@@ -301,11 +266,9 @@ export const ProfitsProvider = ({ children }) => {
         .eq('employee_id', currentUserId);
 
       if (updateError) {
-        console.error('خطأ في تحديث حالة الأرباح:', updateError);
-        // لا نرمي خطأ هنا لأن الطلب تم تسجيله بنجاح
+        devLog.error('خطأ في تحديث حالة الأرباح:', updateError);
       }
 
-      // تحديث الحالة المحلية
       setProfits(prev => prev.map(p => 
         eligibleOrderIds.includes(p.order_id) && p.employee_id === currentUserId
           ? { ...p, status: 'settlement_requested' }
@@ -320,7 +283,7 @@ export const ProfitsProvider = ({ children }) => {
 
       return { success: true, notification: notifResult?.notification ?? null };
     } catch (error) {
-      console.error('❌ خطأ في طلب التحاسب:', error);
+      devLog.error('❌ خطأ في طلب التحاسب:', error);
       toast({
         title: "خطأ في طلب التحاسب",
         description: error.message,
@@ -337,7 +300,6 @@ export const ProfitsProvider = ({ children }) => {
       const request = settlementRequests.find(r => r.id === requestId);
       if (!request) throw new Error('طلب التحاسب غير موجود');
 
-      // تحديث حالة الطلب في الإشعارات
       const { data: updatedRequest, error: requestError } = await supabase
         .from('notifications')
         .update({
@@ -355,7 +317,6 @@ export const ProfitsProvider = ({ children }) => {
 
       if (requestError) throw requestError;
 
-      // إنشاء فاتورة التحاسب
       const invoiceNumber = `INV-${Date.now()}`;
       const invoiceData = {
         request_id: requestId,
@@ -368,7 +329,6 @@ export const ProfitsProvider = ({ children }) => {
         generated_by: currentUserId
       };
 
-      // تسجيل التسوية في الإشعارات بدلاً من جدول منفصل
       const { data: invoice, error: invoiceError } = await supabase
         .from('notifications')
         .insert([{
@@ -382,7 +342,6 @@ export const ProfitsProvider = ({ children }) => {
 
       if (invoiceError) throw invoiceError;
 
-      // تحديث حالة الأرباح إلى مدفوعة
       await supabase
         .from('profits')
         .update({ 
@@ -391,7 +350,6 @@ export const ProfitsProvider = ({ children }) => {
         })
         .in('order_id', request.order_ids);
 
-      // أرشفة الطلبات
       await supabase
         .from('orders')
         .update({ isarchived: true })
@@ -415,7 +373,7 @@ export const ProfitsProvider = ({ children }) => {
 
       return { request: updatedRequest, invoice };
     } catch (error) {
-      console.error('Error approving settlement:', error);
+      devLog.error('Error approving settlement:', error);
       toast({
         title: "خطأ في الموافقة",
         description: error.message,
@@ -438,7 +396,6 @@ export const ProfitsProvider = ({ children }) => {
         settled_at: new Date().toISOString()
       };
 
-      // إذا كان مبلغ مختلف عن المتوقع، نسجله
       if (amountReceived && amountReceived !== profitRecord.profit_amount) {
         updateData.actual_amount_received = amountReceived;
       }
@@ -464,7 +421,7 @@ export const ProfitsProvider = ({ children }) => {
 
       return data;
     } catch (error) {
-      console.error('Error marking invoice received:', error);
+      devLog.error('Error marking invoice received:', error);
       toast({
         title: "خطأ في تسجيل الاستلام",
         description: error.message,
@@ -481,7 +438,7 @@ export const ProfitsProvider = ({ children }) => {
       const request = settlementRequests.find(r => r.id === requestId);
       if (!request) throw new Error('طلب التحاسب غير موجود');
 
-      const { data, error } = await supabase
+      const { data: updatedRequest, error } = await supabase
         .from('notifications')
         .update({
           data: {
@@ -498,14 +455,13 @@ export const ProfitsProvider = ({ children }) => {
 
       if (error) throw error;
 
-      // إرجاع حالة الأرباح إلى invoice_received للسماح بطلب التحاسب مجدداً
       await supabase
         .from('profits')
         .update({ status: 'invoice_received' })
         .in('order_id', request.order_ids);
 
       setSettlementRequests(prev => prev.map(r => 
-        r.id === requestId ? data : r
+        r.id === requestId ? updatedRequest : r
       ));
       setProfits(prev => prev.map(p => 
         request.order_ids.includes(p.order_id)
@@ -515,168 +471,61 @@ export const ProfitsProvider = ({ children }) => {
 
       toast({
         title: "تم رفض طلب التحاسب",
-        description: reason || "بدون سبب محدد",
-        variant: "destructive"
+        description: reason || "تم إرجاع الأرباح إلى حالة الانتظار",
+        variant: "default"
       });
 
-      return data;
+      return updatedRequest;
     } catch (error) {
-      console.error('Error rejecting settlement:', error);
+      devLog.error('Error rejecting settlement:', error);
+      toast({
+        title: "خطأ في الرفض",
+        description: error.message,
+        variant: "destructive"
+      });
       return null;
     }
-  }, [settlementRequests, userUUID, isAdmin]);
+  }, [settlementRequests, userUUID]);
 
-  // جلب البيانات - النظام الموحد
+  // جلب بيانات الأرباح وطلبات التحاسب
   const fetchProfitsData = useCallback(async () => {
     if (!userUUID) return;
 
     try {
       setLoading(true);
 
-      const [profitsRes] = await Promise.all([
-        supabase.from('profits').select('*').order('created_at', { ascending: false })
-      ]);
+      let profitsQuery = supabase.from('profits').select('*');
+      
+      if (!canViewAllData) {
+        profitsQuery = profitsQuery.eq('employee_id', userUUID);
+      }
 
-      if (profitsRes.error) throw profitsRes.error;
+      const { data: profitsData, error: profitsError } = await profitsQuery;
 
-      setProfits(profitsRes.data || []);
-      setSettlementRequests([]); // مؤقتاً حتى يتم تطوير النظام
-      setSettlementInvoices([]);  // مؤقتاً حتى يتم تطوير النظام
+      if (profitsError) throw profitsError;
+
+      setProfits(profitsData || []);
+
+      const { data: notificationsData, error: notificationsError } = await supabase
+        .from('notifications')
+        .select('*')
+        .in('type', ['settlement_request', 'settlement_invoice'])
+        .order('created_at', { ascending: false });
+
+      if (notificationsError) throw notificationsError;
+
+      const requests = (notificationsData || []).filter(n => n.type === 'settlement_request');
+      const invoices = (notificationsData || []).filter(n => n.type === 'settlement_invoice');
+
+      setSettlementRequests(requests);
+      setSettlementInvoices(invoices);
+
     } catch (error) {
-      console.error('Error fetching profits data:', error);
-      toast({
-        title: "خطأ في جلب البيانات",
-        description: error.message,
-        variant: "destructive"
-      });
+      devLog.error('Error fetching profits data:', error);
     } finally {
       setLoading(false);
     }
-  }, [userUUID]);
-
-  // تحديث البيانات بدون loading spinner - النظام الموحد
-  const refreshProfitsData = useCallback(async () => {
-    if (!userUUID) return;
-
-    try {
-      const [profitsRes] = await Promise.all([
-        supabase.from('profits').select('*').order('created_at', { ascending: false })
-      ]);
-
-      if (profitsRes.error) throw profitsRes.error;
-      setProfits(profitsRes.data || []);
-    } catch (error) {
-      console.error('Error refreshing profits data:', error);
-    }
-  }, [userUUID]);
-
-  /**
-   * تعديل الأرباح عند إرجاع طلب
-   * @param {string} originalOrderId - معرف الطلب الأصلي
-   * @param {number} refundAmount - مبلغ الإرجاع
-   */
-  const adjustProfitsForReturn = useCallback(async (originalOrderId, refundAmount) => {
-    try {
-      const { data: profitRecord, error: fetchError } = await supabase
-        .from('profits')
-        .select('*')
-        .eq('order_id', originalOrderId)
-        .single();
-
-      if (fetchError || !profitRecord) {
-        console.error('خطأ في جلب سجل الربح:', fetchError);
-        return { success: false, error: 'سجل الربح غير موجود' };
-      }
-
-      const adjustedTotalRevenue = profitRecord.total_revenue - refundAmount;
-      const adjustedProfitAmount = profitRecord.profit_amount - refundAmount;
-      const adjustedEmployeeProfit = profitRecord.employee_profit - (refundAmount * (profitRecord.employee_percentage / 100));
-
-      const { error: updateError } = await supabase
-        .from('profits')
-        .update({
-          total_revenue: Math.max(0, adjustedTotalRevenue),
-          profit_amount: Math.max(0, adjustedProfitAmount),
-          employee_profit: Math.max(0, adjustedEmployeeProfit),
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', profitRecord.id);
-
-      if (updateError) {
-        console.error('خطأ في تعديل الربح:', updateError);
-        return { success: false, error: updateError.message };
-      }
-
-      await refreshProfitsData();
-      return { success: true };
-
-    } catch (error) {
-      console.error('خطأ في adjustProfitsForReturn:', error);
-      return { success: false, error: error.message };
-    }
-  }, [refreshProfitsData]);
-
-  /**
-   * خصم رسوم توصيل التبديل من ربح الموظف
-   */
-  const deductReplacementDeliveryFee = useCallback(async (employeeId, deliveryFee, orderId) => {
-    try {
-      if (!deliveryFee || deliveryFee <= 0) {
-        return { success: true, message: 'لا توجد رسوم توصيل' };
-      }
-
-      // جلب tracking_number للطلب
-      const { data: orderData } = await supabase
-        .from('orders')
-        .select('tracking_number')
-        .eq('id', orderId)
-        .single();
-
-      const { error: expenseError } = await supabase
-        .from('accounting')
-        .insert({
-          type: 'expense',
-          category: 'رسوم توصيل تبديل',
-          amount: deliveryFee,
-          description: `رسوم توصيل تبديل - طلب ${orderData?.tracking_number || orderId}`,
-          payment_method: 'نقدي',
-          created_by: employeeId,
-          expense_type: 'delivery',
-        });
-
-      if (expenseError) {
-        console.error('خطأ في تسجيل مصروف رسوم التوصيل:', expenseError);
-        return { success: false, error: expenseError.message };
-      }
-
-      const { data: employeeProfits } = await supabase
-        .from('profits')
-        .select('id, employee_profit')
-        .eq('employee_id', employeeId)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      if (employeeProfits && employeeProfits.length > 0) {
-        const latestProfit = employeeProfits[0];
-        const adjustedProfit = Math.max(0, latestProfit.employee_profit - deliveryFee);
-
-        await supabase
-          .from('profits')
-          .update({ 
-            employee_profit: adjustedProfit,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', latestProfit.id);
-      }
-
-      return { success: true };
-
-    } catch (error) {
-      console.error('خطأ في deductReplacementDeliveryFee:', error);
-      return { success: false, error: error.message };
-    }
-  }, []);
+  }, [userUUID, canViewAllData]);
 
   useEffect(() => {
     fetchProfitsData();
@@ -693,10 +542,9 @@ export const ProfitsProvider = ({ children }) => {
     approveSettlementRequest,
     rejectSettlementRequest,
     markInvoiceReceived,
-    fetchProfitsData,
-    refreshProfitsData,
-    adjustProfitsForReturn,
-    deductReplacementDeliveryFee,
+    refreshProfits: fetchProfitsData,
+    linkReturnToOriginalOrder,
+    getOriginalOrderForReturn
   };
 
   return (
