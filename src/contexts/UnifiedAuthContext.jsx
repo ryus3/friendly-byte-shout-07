@@ -78,7 +78,6 @@ export const UnifiedAuthProvider = ({ children }) => {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching user profile:', error);
         return null;
       }
 
@@ -149,7 +148,6 @@ export const UnifiedAuthProvider = ({ children }) => {
         `);
       
       if (error) {
-        console.error('Error fetching all users:', error);
         return;
       }
       
@@ -190,7 +188,7 @@ export const UnifiedAuthProvider = ({ children }) => {
       setAllUsers(usersWithRoles);
       setPendingRegistrations(pending);
     } catch (error) {
-      console.error('Admin data fetch failed:', error);
+      // Silent fail
     }
   }, []);
 
@@ -206,8 +204,6 @@ export const UnifiedAuthProvider = ({ children }) => {
     // Set up auth state listener FIRST with better error handling
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        console.log('🔐 Auth state changed:', { event, session: !!session, userId: session?.user?.id });
-        
         // Always update session state immediately
         setSession(session);
         
@@ -218,7 +214,6 @@ export const UnifiedAuthProvider = ({ children }) => {
               const profile = await fetchUserProfile(session.user);
               if (profile?.status === 'active') {
                 setUser(profile);
-                console.log('✅ User profile loaded:', { userId: profile.user_id, email: profile.email });
               } else {
                 setUser(null);
                 if (profile?.status === 'pending') {
@@ -230,8 +225,6 @@ export const UnifiedAuthProvider = ({ children }) => {
                 }
               }
             } catch (error) {
-              console.error('❌ Error fetching user profile:', error);
-              // Keep session but clear user on profile fetch error
               setUser(null);
             } finally {
               setLoading(false);
@@ -250,12 +243,10 @@ export const UnifiedAuthProvider = ({ children }) => {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error('❌ Error getting session:', error);
           setLoading(false);
           return;
         }
 
-        console.log('🔍 Initial session check:', { session: !!session, userId: session?.user?.id });
         setSession(session);
         
         if (session?.user && !isInitialized) {
@@ -264,18 +255,15 @@ export const UnifiedAuthProvider = ({ children }) => {
             const profile = await fetchUserProfile(session.user);
             if (profile?.status === 'active') {
               setUser(profile);
-              console.log('✅ Initial user profile loaded:', { userId: profile.user_id });
             } else {
               setUser(null);
             }
           } catch (error) {
-            console.error('❌ Error fetching initial profile:', error);
             setUser(null);
           }
         }
         setLoading(false);
       } catch (error) {
-        console.error('❌ Session check failed:', error);
         setLoading(false);
       }
     };
@@ -350,7 +338,7 @@ export const UnifiedAuthProvider = ({ children }) => {
         setUserPermissions(permissions || []);
         setProductPermissions(productPermissionsMap);
       } catch (error) {
-        console.error('خطأ في جلب صلاحيات المستخدم:', error);
+        // Silent fail
       }
     };
 
@@ -374,8 +362,6 @@ export const UnifiedAuthProvider = ({ children }) => {
     if (!user?.id) return;
     
     try {
-      console.log('🔄 استعادة الجلسة الافتراضية من قاعدة البيانات...');
-      
       const { data: defaultAccount, error } = await supabase
         .from('delivery_partner_tokens')
         .select('*')
@@ -387,7 +373,6 @@ export const UnifiedAuthProvider = ({ children }) => {
         .maybeSingle();
 
       if (error) {
-        console.error('❌ خطأ في استعادة الجلسة:', error);
         return;
       }
 
@@ -401,15 +386,11 @@ export const UnifiedAuthProvider = ({ children }) => {
           merchant_id: defaultAccount.merchant_id,
           label: defaultAccount.account_label
         }));
-        
-        console.log('✅ تم استعادة جلسة', defaultAccount.partner_name);
-        console.log('🔑 Token preview:', defaultAccount.token.substring(0, 20) + '...');
       } else {
-        console.warn('⚠️ لا يوجد حساب افتراضي');
         localStorage.removeItem('delivery_partner_default_token');
       }
     } catch (error) {
-      console.error('❌ خطأ في restoreDefaultSession:', error);
+      // Silent fail
     }
   }, [user]);
 
@@ -483,7 +464,6 @@ export const UnifiedAuthProvider = ({ children }) => {
 
         if (defaultAccount) {
           localStorage.setItem('active_delivery_partner', defaultAccount.partner_name);
-          console.log('✅ تم حفظ الحساب الافتراضي:', defaultAccount.partner_name);
           
           // ✅ NEW: حفظ Token أيضاً لاستخدامه في AlWaseetContext
           localStorage.setItem('delivery_partner_default_token', JSON.stringify({
@@ -493,10 +473,7 @@ export const UnifiedAuthProvider = ({ children }) => {
             merchant_id: defaultAccount.merchant_id,
             label: defaultAccount.account_label
           }));
-          
-          console.log('✅ تم حفظ بيانات الجلسة الافتراضية للاستخدام التلقائي');
         } else {
-          console.warn('⚠️ لم يتم العثور على حساب افتراضي');
           // مسح البيانات القديمة
           localStorage.removeItem('delivery_partner_default_token');
         }

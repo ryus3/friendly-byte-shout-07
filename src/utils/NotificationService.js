@@ -9,7 +9,6 @@ class NotificationService {
 
   async init() {
     if (!this.isSupported) {
-      console.log('❌ Browser notifications not supported');
       return;
     }
 
@@ -19,8 +18,6 @@ class NotificationService {
         const registration = await navigator.serviceWorker.register('/sw.js', {
           scope: '/'
         });
-        
-        console.log('✅ Service Worker registered:', registration);
         
         // الانتظار حتى يصبح Service Worker جاهزاً
         if (registration.installing) {
@@ -43,7 +40,7 @@ class NotificationService {
         });
       }
     } catch (error) {
-      console.error('❌ Service Worker registration failed:', error);
+      // Silent fail
     }
   }
 
@@ -57,41 +54,27 @@ class NotificationService {
     }
 
     if (this.permission === 'denied') {
-      console.log('❌ Notification permission denied');
       return false;
     }
 
     try {
       const permission = await Notification.requestPermission();
       this.permission = permission;
-      
-      if (permission === 'granted') {
-        console.log('✅ Notification permission granted');
-        return true;
-      } else {
-        console.log('❌ Notification permission not granted');
-        return false;
-      }
+      return permission === 'granted';
     } catch (error) {
-      console.error('❌ Error requesting notification permission:', error);
       return false;
     }
   }
 
   async showNotification(data) {
-    console.log('🔔 Attempting to show notification:', data);
-    
     const hasPermission = await this.requestPermission();
     
     if (!hasPermission) {
-      console.log('❌ Cannot show notification: permission denied');
       return;
     }
 
     // إذا لم يكن Service Worker متاحاً، استخدم Notification API المباشر
     if (!this.worker || !this.worker.active) {
-      console.log('⚠️ Service Worker not available, using direct notification API');
-      
       try {
         const notification = new Notification(data.title || 'إشعار جديد', {
           body: data.message || data.body || '',
@@ -110,7 +93,6 @@ class NotificationService {
 
         return;
       } catch (error) {
-        console.error('❌ Direct notification failed:', error);
         return;
       }
     }
@@ -128,8 +110,6 @@ class NotificationService {
       }
     };
 
-    console.log('📤 Sending notification to Service Worker:', notificationData);
-
     // إرسال بيانات الإشعار إلى Service Worker
     this.worker.active.postMessage({
       type: 'SHOW_NOTIFICATION',
@@ -138,8 +118,6 @@ class NotificationService {
   }
 
   handleNotificationClick(data) {
-    console.log('🔔 Notification clicked in main app:', data);
-    
     // توجيه المستخدم بناءً على نوع الإشعار
     if (data.type === 'new_ai_order') {
       // الانتقال إلى الطلبات الذكية
