@@ -7811,6 +7811,10 @@ export type Database = {
         Args: { p_source_id: string }
         Returns: number
       }
+      recalculate_reserved_for_variant: {
+        Args: { p_variant_id: string }
+        Returns: undefined
+      }
       recompute_cash_source_balances: {
         Args: { p_source_id: string; p_starting_balance?: number }
         Returns: Json
