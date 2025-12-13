@@ -11,9 +11,14 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
 
 const AllEmployeesInvoicesView = () => {
   const { token, isLoggedIn } = useAlWaseet();
+  const { user } = useAuth();
+  const { supervisedEmployeeIds, loading: supervisedLoading } = useSupervisedEmployees();
+  
   const [allInvoices, setAllInvoices] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -27,6 +32,11 @@ const AllEmployeesInvoicesView = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [lastSync, setLastSync] = useState(null);
 
+  // التحقق من الأدوار
+  const isAdmin = user?.roles?.includes('admin') || user?.roles?.includes('super_admin');
+  const isDepartmentManager = user?.roles?.includes('department_manager');
+  const GENERAL_MANAGER_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+
   // جلب جميع فواتير الموظفين مع مزامنة محسنة
   const fetchAllEmployeesInvoices = async (forceSync = false) => {
     setLoading(true);
@@ -36,13 +46,21 @@ const AllEmployeesInvoicesView = () => {
         .from('profiles')
         .select('id, user_id, full_name, username, employee_code')
         .eq('is_active', true)
-        .neq('user_id', '91484496-b887-44f7-9e5d-be9db5567604'); // استبعاد المدير
+        .neq('user_id', GENERAL_MANAGER_ID); // استبعاد المدير العام
 
       if (empError) {
         return;
       }
 
-      setEmployees(employeesData || []);
+      // لمدير القسم: تصفية الموظفين حسب المشرف عليهم فقط
+      let filteredEmployees = employeesData || [];
+      if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
+        filteredEmployees = filteredEmployees.filter(emp => 
+          supervisedEmployeeIds.includes(emp.user_id)
+        );
+      }
+
+      setEmployees(filteredEmployees);
 
       // مزامنة شاملة باستخدام Edge Function (لا نستخدم توكن المدير)
       if (forceSync) {
@@ -89,8 +107,16 @@ const AllEmployeesInvoicesView = () => {
           };
         })
         .filter(invoice => {
-          // استبعاد فواتير المدير فقط
-          return invoice.owner_user_id !== '91484496-b887-44f7-9e5d-be9db5567604';
+          // استبعاد فواتير المدير العام دائماً
+          if (invoice.owner_user_id === GENERAL_MANAGER_ID) return false;
+          
+          // لمدير القسم: عرض فواتير الموظفين المشرف عليهم فقط (استبعاد فواتيره الشخصية)
+          if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
+            return supervisedEmployeeIds.includes(invoice.owner_user_id) && 
+                   invoice.owner_user_id !== user?.user_id;
+          }
+          
+          return true;
         });
 
       setAllInvoices(invoicesWithEmployees);
@@ -105,6 +131,9 @@ const AllEmployeesInvoicesView = () => {
 
   // تأثير التحميل الأولي مع مزامنة تلقائية ومزامنة دورية
   useEffect(() => {
+    // انتظار تحميل الموظفين المشرف عليهم لمدير القسم
+    if (isDepartmentManager && !isAdmin && supervisedLoading) return;
+    
     fetchAllEmployeesInvoices(true); // مع مزامنة فورية
     
     // مزامنة تلقائية كل 30 دقيقة للحصول على أحدث الفواتير
@@ -113,7 +142,7 @@ const AllEmployeesInvoicesView = () => {
     }, 30 * 60 * 1000); // 30 دقيقة
     
     return () => clearInterval(syncInterval);
-  }, [token, isLoggedIn]);
+  }, [token, isLoggedIn, supervisedEmployeeIds, supervisedLoading]);
 
   // فلترة الفواتير مع الفترة الزمنية (محسن)
   const filteredInvoices = useMemo(() => {

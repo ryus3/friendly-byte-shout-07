@@ -47,7 +47,7 @@ const SidebarContent = ({ onClose, isMobile }) => {
     { path: '/sales', icon: TrendingUp, label: 'المبيعات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-cyan-600' },
     { path: '/employee-follow-up', icon: Users, label: 'متابعة الموظفين', roles: ['super_admin', 'admin', 'department_manager'], color: 'text-purple-500' },
     { path: '/products', icon: Package, label: 'المنتجات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-orange-500' },
-    { path: '/manage-products', icon: PackagePlus, label: 'ادارة المنتجات', roles: ['super_admin', 'admin', 'department_manager'], color: 'text-cyan-500' },
+    { path: '/manage-products', icon: PackagePlus, label: 'ادارة المنتجات', roles: ['super_admin', 'admin'], requiresPermission: 'manage_products', color: 'text-cyan-500' },
     { path: '/customers-management', icon: Heart, label: 'إدارة العملاء', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], requiresCustomerAccess: true, color: 'text-rose-500' },
     { path: '/inventory', icon: Warehouse, label: 'الجرد التفصيلي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee'], color: 'text-pink-500' },
     { path: '/purchases', icon: ShoppingBag, label: 'المشتريات', roles: ['super_admin', 'admin'], color: 'text-blue-500' },
@@ -74,6 +74,15 @@ const SidebarContent = ({ onClose, isMobile }) => {
       // فحص الصلاحيات الخاصة - التحقق من صلاحية المتجر الإلكتروني
       if (item.requiresStorefrontAccess) {
         return hasRole && user?.has_storefront_access === true;
+      }
+      
+      // فحص الصلاحيات الخاصة - التحقق من صلاحية إدارة المنتجات
+      if (item.requiresPermission) {
+        // المدير العام والأدمن لديهم الصلاحية تلقائياً
+        const isAdminUser = user?.roles?.includes('admin') || user?.roles?.includes('super_admin');
+        if (isAdminUser) return true;
+        // لمدير القسم: يجب أن يملك الصلاحية
+        return hasRole && hasPermission(item.requiresPermission);
       }
       
       return hasRole;

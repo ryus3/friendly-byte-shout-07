@@ -1375,6 +1375,8 @@ useEffect(() => {
           profits={profits || []} // تمرير بيانات الأرباح
           orders={filteredOrders || orders || []} // تمرير بيانات الطلبات
           timePeriod={filters.timePeriod} // تمرير فلتر الفترة
+          supervisedEmployeeIds={supervisedEmployeeIds} // تمرير الموظفين المشرف عليهم
+          isDepartmentManager={isDepartmentManager && !isAdmin} // تمرير حالة مدير القسم
         />
 
         {/* إعدادات المزامنة التلقائية الموحدة */}
