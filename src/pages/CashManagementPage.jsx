@@ -126,8 +126,6 @@ const CashManagementPage = () => {
           }
         }
       } catch (error) {
-        console.error('❌ خطأ في النظام المالي الحقيقي:', error);
-      } catch (error) {
         console.error('❌ خطأ في النظام المالي:', error);
         if (isMounted) setPageLoading(false);
       }
