@@ -176,11 +176,17 @@ export default defineConfig(async ({ mode }) => {
                     '@babel/types',
                 ],
                 output: {
-                    manualChunks: {
-                        vendor: ['react', 'react-dom'],
-                        ui: ['@radix-ui/react-dialog', '@radix-ui/react-toast', '@radix-ui/react-select'],
-                        utils: ['date-fns', 'lucide-react', 'clsx']
-                    }
+                manualChunks: {
+                    vendor: ['react', 'react-dom'],
+                    ui: ['@radix-ui/react-dialog', '@radix-ui/react-toast', '@radix-ui/react-select'],
+                    utils: ['date-fns', 'lucide-react', 'clsx'],
+                    // تحسينات إضافية لتقليل حجم الحزمة الأولية
+                    'react-pdf': ['@react-pdf/renderer', '@react-pdf/font'],
+                    charts: ['recharts'],
+                    supabase: ['@supabase/supabase-js'],
+                    motion: ['framer-motion'],
+                    dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities']
+                }
                 }
             },
         },
