@@ -7190,13 +7190,13 @@ export type Database = {
       fix_inventory_discrepancies: {
         Args: never
         Returns: {
-          fixed: boolean
+          fix_type: string
+          fixed_variant_id: string
           new_reserved: number
           new_sold: number
           old_reserved: number
           old_sold: number
           product_name: string
-          variant_id: string
         }[]
       }
       fix_partial_delivery_financials_112066293: { Args: never; Returns: Json }
