@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
+// Floating scroll button component - cache bust
 import { Button } from '@/components/ui/button';
 
 const FloatingScrollButton = () => {
