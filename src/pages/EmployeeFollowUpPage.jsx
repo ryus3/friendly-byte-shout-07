@@ -726,36 +726,66 @@ useEffect(() => {
       return sum;
     }, 0);
 
-    // المستحقات المدفوعة (من المصاريف المحاسبية) - مفلترة حسب الفترة الزمنية المحددة
-    const paidDues = expenses && Array.isArray(expenses)
-      ? expenses.filter(expense => {
-          const isPaidDues = (
-            expense.category === 'مستحقات الموظفين' &&
-            expense.expense_type === 'system' &&
-            expense.status === 'approved'
-          );
-          if (!isPaidDues) return false;
-
-          // فلترة حسب الفترة الزمنية المختارة
+    // المستحقات المدفوعة - مفلترة حسب الفترة الزمنية والموظفين المشرف عليهم
+    // ✅ لمدير القسم: نستخدم settlement_invoices للحصول على employee_id
+    let paidDues = 0;
+    if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
+      // مدير القسم: فقط تسويات موظفيه المشرف عليهم
+      const supervisedSettlements = settlementInvoices?.filter(si => 
+        supervisedEmployeeIds.includes(si.employee_id)
+      ) || [];
+      paidDues = supervisedSettlements
+        .filter(si => {
           if (filters.timePeriod === 'all') return true;
-          const createdAt = expense.created_at || expense.date || expense.expense_date;
+          const createdAt = si.created_at;
           if (!createdAt) return false;
-          const expenseDate = new Date(createdAt);
+          const settlementDate = new Date(createdAt);
           const now = new Date();
           switch (filters.timePeriod) {
             case 'today':
-              return expenseDate.toDateString() === now.toDateString();
+              return settlementDate.toDateString() === now.toDateString();
             case 'week':
-              return expenseDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              return settlementDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
             case 'month':
-              return expenseDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              return settlementDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
             case '3months':
-              return expenseDate >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+              return settlementDate >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
             default:
               return true;
           }
-        }).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
-      : 0;
+        })
+        .reduce((sum, si) => sum + (Number(si.total_amount) || 0), 0);
+    } else {
+      // المدير العام: كل المستحقات المدفوعة
+      paidDues = expenses && Array.isArray(expenses)
+        ? expenses.filter(expense => {
+            const isPaidDues = (
+              expense.category === 'مستحقات الموظفين' &&
+              expense.expense_type === 'system' &&
+              expense.status === 'approved'
+            );
+            if (!isPaidDues) return false;
+
+            if (filters.timePeriod === 'all') return true;
+            const createdAt = expense.created_at || expense.date || expense.expense_date;
+            if (!createdAt) return false;
+            const expenseDate = new Date(createdAt);
+            const now = new Date();
+            switch (filters.timePeriod) {
+              case 'today':
+                return expenseDate.toDateString() === now.toDateString();
+              case 'week':
+                return expenseDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              case 'month':
+                return expenseDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              case '3months':
+                return expenseDate >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+              default:
+                return true;
+            }
+          }).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
+        : 0;
+    }
 
     // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
     // ✅ إصلاح: استثناء الطلبات التي employee_profit = 0 (لا يوجد قاعدة ربح)
@@ -792,6 +822,11 @@ useEffect(() => {
       // استبعاد طلبات المدير من الحساب
       if (o.created_by === ADMIN_ID) return false;
       
+      // ✅ لمدير القسم: فقط طلبات موظفيه المشرف عليهم
+      if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
+        if (!supervisedEmployeeIds.includes(o.created_by)) return false;
+      }
+      
       // فلتر الموظف
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
@@ -806,8 +841,18 @@ useEffect(() => {
       return employeeMatch && o.status === 'completed' && profitRecord?.status === 'settled';
     }).length;
 
-    // ✅ عدد طلبات التحاسب المعلقة (settlement_requested)
-    const settlementRequestsCount = profits?.filter(p => p.status === 'settlement_requested').length || 0;
+    // ✅ عدد طلبات التحاسب المعلقة (settlement_requested) - مفلترة لمدير القسم
+    const settlementRequestsCount = profits?.filter(p => {
+      if (p.status !== 'settlement_requested') return false;
+      
+      // لمدير القسم: فقط طلبات موظفيه المشرف عليهم
+      if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
+        const order = orders?.find(o => o.id === p.order_id);
+        return order && supervisedEmployeeIds.includes(order.created_by);
+      }
+      
+      return true;
+    }).length || 0;
 
     return {
       totalOrders: filteredOrders.length,
