@@ -72,8 +72,9 @@ const CashManagementPage = () => {
         // تحديث جميع الحالات من البيانات الحقيقية
         setMainCashBalance(mainBalance);
         setTotalSourcesBalance(totalAllSources);
+        setPageLoading(false); // ⚡ عرض فوري بعد البيانات الأساسية
         
-        // جلب البيانات المالية المتقدمة مع timeout
+        // جلب البيانات المالية المتقدمة في الخلفية
         const rpcPromise = supabase.rpc('calculate_real_main_cash_balance');
         const timeoutPromise = new Promise((_, reject) => {
           timeoutId = setTimeout(() => reject(new Error('Timeout')), 8000);
@@ -126,7 +127,8 @@ const CashManagementPage = () => {
         }
       } catch (error) {
         console.error('❌ خطأ في النظام المالي الحقيقي:', error);
-      } finally {
+      } catch (error) {
+        console.error('❌ خطأ في النظام المالي:', error);
         if (isMounted) setPageLoading(false);
       }
     };
