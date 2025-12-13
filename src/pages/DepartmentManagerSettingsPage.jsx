@@ -338,7 +338,7 @@ const DepartmentManagerSettingsPage = () => {
                           <SelectValue placeholder="كل المنتجات" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">كل المنتجات</SelectItem>
+                          <SelectItem value="all">كل المنتجات</SelectItem>
                           {products.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
                               {p.name}
