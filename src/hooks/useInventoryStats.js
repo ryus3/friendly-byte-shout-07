@@ -27,14 +27,25 @@ const useInventoryStats = () => {
 
   const computeReservedFallback = () => {
     try {
-      const reservedOrders = (orders || []).filter(o => 
-        ['pending', 'shipped', 'delivery', 'returned'].includes(o.status) &&
-        o.status !== 'returned_in_stock' &&
-        o.status !== 'completed'
-      );
+      // ✅ استخدام delivery_status بدلاً من status - القاعدة الذهبية
+      // المحجوز = كل الطلبات ماعدا delivery_status IN ('4', '17')
+      const reservedOrders = (orders || []).filter(o => {
+        // استبعاد الطلبات المكتملة أو المرتجعة للمخزون
+        const deliveryStatus = String(o.delivery_status || '');
+        if (deliveryStatus === '4' || deliveryStatus === '17') return false;
+        
+        // استبعاد المؤرشف
+        if (o.isarchived) return false;
+        
+        // استبعاد طلبات الاسترجاع الواردة
+        if (o.order_type === 'return' && o.order_direction === 'incoming') return false;
+        
+        return true;
+      });
       
       const totalReservedQuantity = reservedOrders.reduce((total, order) => {
         const orderReserved = (order.items || []).reduce((sum, item) => {
+          // استبعاد العناصر المسلمة أو المرتجعة
           if (item.item_status === 'delivered') return sum;
           if (item.item_status === 'returned_in_stock' || item.item_status === 'returned') return sum;
           if (item.item_direction === 'incoming') return sum;
@@ -45,7 +56,7 @@ const useInventoryStats = () => {
         return total + orderReserved;
       }, 0);
       
-      devLog.log('🔢 [InventoryStats] حساب المخزون المحجوز:', {
+      devLog.log('🔢 [InventoryStats] حساب المخزون المحجوز (delivery_status):', {
         reservedOrdersCount: reservedOrders.length,
         totalReservedQuantity
       });
