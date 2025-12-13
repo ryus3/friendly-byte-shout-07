@@ -286,13 +286,16 @@ export const NotificationsSystemProvider = ({ children }) => {
     }
   }, []);
 
-  // قراءة جميع الإشعارات
+  // قراءة جميع الإشعارات - للمستخدم الحالي فقط
   const markAllAsRead = useCallback(async () => {
+    if (!user?.id) return;
+    
     try {
       const { error } = await supabase
         .from('notifications')
         .update({ is_read: true })
-        .neq('is_read', true);
+        .eq('user_id', user.id)  // فلتر بالمستخدم الحالي فقط
+        .eq('is_read', false);
       
       if (error) {
         devLog.error('Error marking all notifications as read:', error);
@@ -304,7 +307,7 @@ export const NotificationsSystemProvider = ({ children }) => {
     } catch (error) {
       devLog.error('Error in markAllAsRead:', error);
     }
-  }, []);
+  }, [user?.id]);
 
   // حذف إشعار
   const deleteNotification = useCallback(async (notificationId) => {
