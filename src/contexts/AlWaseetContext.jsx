@@ -2017,20 +2017,20 @@ export const AlWaseetProvider = ({ children }) => {
             // جلب بيانات الحساب (username + password المشفرة)
             const { data: accountData, error: fetchError } = await supabase
               .from('delivery_partner_tokens')
-              .select('account_username, credentials')
+              .select('account_username, partner_data')
               .eq('user_id', user.id)
               .eq('token', token)
               .single();
             
             if (fetchError) throw fetchError;
             
-            if (accountData?.credentials?.password) {
+            if (accountData?.partner_data?.password) {
               devLog.log('🔐 استخدام كلمة المرور المحفوظة للتجديد...');
               
               // استدعاء تسجيل الدخول للحصول على توكن جديد
               const newTokenData = await AlWaseetAPI.loginToWaseet(
                 accountData.account_username,
-                accountData.credentials.password
+                accountData.partner_data.password
               );
               
               if (!newTokenData?.token) {
