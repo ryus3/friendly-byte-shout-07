@@ -250,34 +250,34 @@ export const SuperProvider = ({ children }) => {
     };
   }, []);
 
-  // دالة الحصول على بيانات المتغير من النظام الموحد
-  const getVariantDetails = useCallback((variantId) => {
-    if (!variantId || !allData.products) return null;
+  // ⚡ المرحلة 2: تحسين getVariantDetails بـ useMemo للبحث السريع
+  const variantLookupMap = useMemo(() => {
+    const map = new Map();
+    if (!allData.products) return map;
     
     for (const product of allData.products) {
-      // البحث في variants (البنية الموحدة) و product_variants (البنية الأصلية)
       const variants = product.variants || product.product_variants || [];
-      const variant = variants.find(v => v.id === variantId);
-      
-      if (variant) {
-        // الوصول الصحيح للبيانات المجلبة من العلاقات
-        const colorName = variant.colors?.name || variant.color_name || 'غير محدد';
-        const sizeName = variant.sizes?.name || variant.size_name || 'غير محدد';
-        const colorHex = variant.colors?.hex_code || variant.color_hex || null;
-        
-        return {
-          ...variant,
-          product_id: product.id,
-          product_name: product.name,
-          color_name: colorName,
-          size_name: sizeName,
-          color_hex: colorHex
-        };
+      for (const variant of variants) {
+        if (variant?.id) {
+          map.set(variant.id, {
+            ...variant,
+            product_id: product.id,
+            product_name: product.name,
+            color_name: variant.colors?.name || variant.color_name || 'غير محدد',
+            size_name: variant.sizes?.name || variant.size_name || 'غير محدد',
+            color_hex: variant.colors?.hex_code || variant.color_hex || null
+          });
+        }
       }
     }
-    
-    return null;
+    return map;
   }, [allData.products]);
+
+  // دالة الحصول على بيانات المتغير من النظام الموحد - محسنة بـ O(1) lookup
+  const getVariantDetails = useCallback((variantId) => {
+    if (!variantId) return null;
+    return variantLookupMap.get(variantId) || null;
+  }, [variantLookupMap]);
   
   // Set للطلبات المحذوفة نهائياً مع localStorage persistence
   const [permanentlyDeletedOrders] = useState(() => {

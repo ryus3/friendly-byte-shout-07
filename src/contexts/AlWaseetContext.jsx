@@ -55,6 +55,10 @@ let globalSyncPromise = null;
 let consecutiveRateLimitErrors = 0;
 const MAX_RATE_LIMIT_ERRORS = 5;
 
+// ⚡ المرحلة 3: Debounce للمزامنة - منع المزامنات المتتالية
+let lastSyncTime = 0;
+const SYNC_DEBOUNCE_MS = 5000; // 5 ثواني minimum بين المزامنات
+
 const AlWaseetContext = createContext();
 
 export const useAlWaseet = () => useContext(AlWaseetContext);
