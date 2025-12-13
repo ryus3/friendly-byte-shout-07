@@ -25,30 +25,37 @@ export const useSupervisedEmployees = () => {
 
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        // استعلام 1: جلب employee_ids من جدول الإشراف
+        const { data: supervisionData, error: supError } = await supabase
           .from('employee_supervisors')
-          .select(`
-            employee_id,
-            employee:profiles!employee_id (
-              user_id,
-              full_name,
-              email,
-              employee_code
-            )
-          `)
+          .select('employee_id')
           .eq('supervisor_id', user.id)
           .eq('is_active', true);
 
-        if (error) {
-          console.error('خطأ في جلب الموظفين تحت الإشراف:', error);
+        if (supError) {
+          console.error('خطأ في جلب علاقات الإشراف:', supError);
           return;
         }
 
-        const ids = data?.map(d => d.employee_id) || [];
-        const employees = data?.map(d => d.employee) || [];
-        
+        const ids = supervisionData?.map(d => d.employee_id) || [];
         setSupervisedEmployeeIds(ids);
-        setSupervisedEmployees(employees);
+
+        // استعلام 2: جلب بيانات الموظفين من profiles باستخدام user_id
+        if (ids.length > 0) {
+          const { data: employeesData, error: empError } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, email, employee_code')
+            .in('user_id', ids);
+
+          if (empError) {
+            console.error('خطأ في جلب بيانات الموظفين:', empError);
+            return;
+          }
+
+          setSupervisedEmployees(employeesData || []);
+        } else {
+          setSupervisedEmployees([]);
+        }
       } catch (err) {
         console.error('خطأ غير متوقع:', err);
       } finally {
