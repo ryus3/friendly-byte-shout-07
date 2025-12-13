@@ -1,14 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
-import { devLog } from '@/lib/devLogger';
+import devLog from '@/lib/devLogger';
 
 export const useImprovedPurchases = () => {
   const [purchases, setPurchases] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processingPurchaseId, setProcessingPurchaseId] = useState(null);
 
-  // جلب جميع فواتير الشراء
   const fetchPurchases = useCallback(async () => {
     try {
       setLoading(true);
@@ -31,17 +30,16 @@ export const useImprovedPurchases = () => {
     }
   }, []);
 
-  // إضافة فاتورة شراء جديدة - محسّنة ومضمونة
   const addPurchase = async (purchaseData) => {
     const startTime = Date.now();
     const uniqueId = `purchase_${startTime}_${Math.random().toString(36).substr(2, 9)}`;
     
-      devLog.info(`🛒 [${uniqueId}] بدء إضافة فاتورة شراء محسّنة`);
-      
-      if (loading || processingPurchaseId) {
-        devLog.warn(`⚠️ [${uniqueId}] تم تجاهل الاستدعاء - عملية قيد التنفيذ`);
-        return { success: false, error: 'عملية إضافة فاتورة قيد التنفيذ بالفعل' };
-      }
+    devLog.info(`🛒 [${uniqueId}] بدء إضافة فاتورة شراء`);
+    
+    if (loading || processingPurchaseId) {
+      devLog.warn(`⚠️ [${uniqueId}] تم تجاهل - عملية قيد التنفيذ`);
+      return { success: false, error: 'عملية إضافة فاتورة قيد التنفيذ بالفعل' };
+    }
     
     setProcessingPurchaseId(uniqueId);
     setLoading(true);
@@ -50,7 +48,6 @@ export const useImprovedPurchases = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('المستخدم غير مصرح له');
 
-      // 1. حساب التكاليف
       const itemsTotal = purchaseData.items.reduce((sum, item) => 
         sum + (Number(item.costPrice) * Number(item.quantity)), 0
       );
@@ -60,12 +57,10 @@ export const useImprovedPurchases = () => {
 
       devLog.info(`💰 [${uniqueId}] حساب التكاليف - إجمالي: ${grandTotal}`);
 
-      // التحقق من صحة البيانات
       if (grandTotal <= 0) {
         throw new Error('إجمالي المبلغ يجب أن يكون أكبر من الصفر');
       }
 
-      // 2. إنشاء الفاتورة
       const { data: newPurchase, error: purchaseError } = await supabase
         .from('purchases')
         .insert({
@@ -80,7 +75,6 @@ export const useImprovedPurchases = () => {
           status: 'completed',
           items: purchaseData.items,
           created_by: user.id,
-          // دعم الدولار
           currency: purchaseData.currency || 'IQD',
           exchange_rate: purchaseData.currency === 'USD' ? purchaseData.exchangeRate : 1.0,
           currency_amount: purchaseData.currency === 'USD' ? purchaseData.totalInUSD : null,
@@ -95,21 +89,15 @@ export const useImprovedPurchases = () => {
         return await processProductImproved(item, newPurchase, user.id, uniqueId);
       });
 
-      // انتظار معالجة جميع المنتجات
       await Promise.all(productProcessingPromises);
 
-      // ✅ النظام الجديد: Trigger سينشئ حركة نقد واحدة تلقائياً
-      // لا حاجة لإنشاء مصاريف منفصلة - كل شيء في حركة واحدة
-      devLog.info(`✅ [${uniqueId}] سيتم إنشاء حركة نقد موحدة بقيمة ${grandTotal.toLocaleString()} د.ع`);
-
-      devLog.info(`🎉 [${uniqueId}] تمت إضافة الفاتورة بنجاح - رقم:`, newPurchase.purchase_number);
+      devLog.info(`🎉 [${uniqueId}] تمت إضافة الفاتورة - رقم:`, newPurchase.purchase_number);
       
       toast({
         title: "نجح الحفظ",
-        description: `تم إنشاء فاتورة رقم ${newPurchase.purchase_number} - إجمالي ${grandTotal.toLocaleString()} د.ع (شراء بضاعة)`,
+        description: `تم إنشاء فاتورة رقم ${newPurchase.purchase_number} - إجمالي ${grandTotal.toLocaleString()} د.ع`,
       });
 
-      // إعادة جلب البيانات
       await fetchPurchases();
       
       return { success: true, purchase: newPurchase };
@@ -128,7 +116,6 @@ export const useImprovedPurchases = () => {
     }
   };
 
-  // حذف فاتورة شراء
   const deletePurchase = async (purchaseId) => {
     try {
       setLoading(true);
@@ -176,23 +163,19 @@ export const useImprovedPurchases = () => {
   };
 };
 
-// ============ دوال المساعدة المحسّنة ============
+// ============ دوال المساعدة ============
 
-// دالة معالجة المنتج - محسّنة ومضمونة
 const processProductImproved = async (item, purchase, userId, uniqueId) => {
-  console.log(`🔄 [${uniqueId}] بدء معالجة منتج محسّن:`, {
+  devLog.log(`🔄 [${uniqueId}] معالجة منتج:`, {
     productName: item.productName,
     variantSku: item.variantSku,
-    quantity: item.quantity,
-    costPrice: item.costPrice
+    quantity: item.quantity
   });
 
   try {
-    // 1. استخراج اسم المنتج الأساسي
     const baseProductName = extractBaseProductName(item.productName);
-    console.log('📝 اسم المنتج الأساسي:', baseProductName);
+    devLog.log('📝 اسم المنتج الأساسي:', baseProductName);
     
-    // 2. البحث عن المنتج الأساسي
     const { data: existingProducts, error: searchError } = await supabase
       .from('products')
       .select('id, name')
@@ -205,11 +188,9 @@ const processProductImproved = async (item, purchase, userId, uniqueId) => {
     let variantId;
 
     if (existingProducts?.length > 0) {
-      // المنتج موجود
       productId = existingProducts[0].id;
-      console.log('✅ المنتج موجود:', existingProducts[0].name);
+      devLog.log('✅ المنتج موجود:', existingProducts[0].name);
       
-      // البحث عن متغير موجود بنفس الباركود/SKU
       const { data: existingVariant } = await supabase
         .from('product_variants')
         .select('id')
@@ -220,7 +201,6 @@ const processProductImproved = async (item, purchase, userId, uniqueId) => {
       if (existingVariant?.length > 0) {
         variantId = existingVariant[0].id;
         
-        // تحديث سعر التكلفة للمتغير الموجود
         await supabase
           .from('product_variants')
           .update({ 
@@ -247,21 +227,15 @@ const processProductImproved = async (item, purchase, userId, uniqueId) => {
   }
 };
 
-// استخراج اسم المنتج الأساسي بطريقة ذكية
 const extractBaseProductName = (fullName) => {
-  // مثال: "سوت شيك ليموني 36" -> "سوت شيك"
   const words = fullName.split(' ');
   
-  // إزالة الألوان والقياسات والأرقام المعروفة
   const colorWords = ['ليموني', 'سمائي', 'سماوي', 'جوزي', 'أسود', 'أبيض', 'أحمر', 'أزرق', 'ازرق', 'أخضر', 'وردي', 'بنفسجي', 'بني', 'رمادي', 'بيج'];
   const sizeWords = ['S', 'M', 'L', 'XL', 'XXL', 'فري', 'صغير', 'متوسط', 'كبير'];
   
   const filteredWords = words.filter(word => {
-    // تجاهل الألوان المعروفة
     if (colorWords.includes(word)) return false;
-    // تجاهل القياسات المعروفة
     if (sizeWords.includes(word)) return false;
-    // تجاهل الأرقام المحتملة للقياسات
     if (/^\d+$/.test(word) && Number(word) >= 30 && Number(word) <= 60) return false;
     return true;
   });
@@ -269,7 +243,6 @@ const extractBaseProductName = (fullName) => {
   return filteredWords.length > 0 ? filteredWords.join(' ').trim() : words[0];
 };
 
-// إنشاء منتج جديد
 const createNewProduct = async (productName, item, userId) => {
   const { data: newProduct, error } = await supabase
     .from('products')
@@ -287,10 +260,7 @@ const createNewProduct = async (productName, item, userId) => {
   return newProduct.id;
 };
 
-// إنشاء متغير لمنتج بطريقة ذكية مع فحص التكرار
 const createVariantForProduct = async (productId, item) => {
-  // استخدام اللون والقياس المختارين من المستخدم (إذا كانوا متوفرين)
-  // بدلاً من الاستخراج من اسم المنتج
   let colorId, sizeId;
   
   if (item.colorId && item.sizeId) {
@@ -302,7 +272,6 @@ const createVariantForProduct = async (productId, item) => {
     sizeId = extracted.sizeId;
   }
   
-  // البحث عن متغير موجود بنفس المنتج واللون والقياس
   const { data: existingVariantByColorSize } = await supabase
     .from('product_variants')
     .select('id')
@@ -328,7 +297,6 @@ const createVariantForProduct = async (productId, item) => {
     return variantId;
   }
   
-  // إنشاء متغير جديد
   const { data: newVariant, error } = await supabase
     .from('product_variants')
     .insert({
@@ -349,8 +317,6 @@ const createVariantForProduct = async (productId, item) => {
 };
 
 const extractAndCreateColorAndSize = async (productName) => {
-  
-  // خريطة الألوان المحسّنة
   const colorMap = {
     'ليموني': { name: 'ليموني', hex: '#FFFF00' },
     'سمائي': { name: 'سمائي', hex: '#87CEEB' },
@@ -369,7 +335,6 @@ const extractAndCreateColorAndSize = async (productName) => {
     'بيج': { name: 'بيج', hex: '#F5F5DC' }
   };
   
-  // خريطة القياسات المحسّنة
   const sizeMap = {
     'S': { name: 'S', type: 'letter' },
     'M': { name: 'M', type: 'letter' },
@@ -382,7 +347,6 @@ const extractAndCreateColorAndSize = async (productName) => {
     'كبير': { name: 'كبير', type: 'letter' }
   };
   
-  // إضافة القياسات الرقمية الشائعة
   for (let i = 30; i <= 50; i++) {
     sizeMap[i.toString()] = { name: i.toString(), type: 'number' };
   }
@@ -391,7 +355,6 @@ const extractAndCreateColorAndSize = async (productName) => {
   let detectedColor = null;
   let detectedSize = null;
   
-  // البحث عن اللون
   for (const word of words) {
     if (colorMap[word]) {
       detectedColor = colorMap[word];
@@ -399,7 +362,6 @@ const extractAndCreateColorAndSize = async (productName) => {
     }
   }
   
-  // البحث عن القياس
   for (const word of words) {
     if (sizeMap[word]) {
       detectedSize = sizeMap[word];
@@ -407,19 +369,14 @@ const extractAndCreateColorAndSize = async (productName) => {
     }
   }
   
-  // إنشاء أو الحصول على اللون
   let colorId = await getOrCreateColor(detectedColor);
-  
-  // إنشاء أو الحصول على القياس
   let sizeId = await getOrCreateSize(detectedSize);
   
   return { colorId, sizeId };
 };
 
-// الحصول على أو إنشاء لون
 const getOrCreateColor = async (colorInfo) => {
   if (colorInfo) {
-    // البحث عن اللون المحدد
     let { data: existingColor } = await supabase
       .from('colors')
       .select('id')
@@ -437,7 +394,6 @@ const getOrCreateColor = async (colorInfo) => {
       return newColor.id;
     }
   } else {
-    // استخدام اللون الافتراضي
     let { data: defaultColor } = await supabase
       .from('colors')
       .select('id')
@@ -456,10 +412,8 @@ const getOrCreateColor = async (colorInfo) => {
   }
 };
 
-// الحصول على أو إنشاء قياس
 const getOrCreateSize = async (sizeInfo) => {
   if (sizeInfo) {
-    // البحث عن القياس المحدد
     let { data: existingSize } = await supabase
       .from('sizes')
       .select('id')
@@ -477,7 +431,6 @@ const getOrCreateSize = async (sizeInfo) => {
       return newSize.id;
     }
   } else {
-    // استخدام القياس الافتراضي
     let { data: defaultSize } = await supabase
       .from('sizes')
       .select('id')
@@ -496,7 +449,6 @@ const getOrCreateSize = async (sizeInfo) => {
   }
 };
 
-// إضافة عنصر للفاتورة
 const addPurchaseItem = async (purchaseId, productId, variantId, item) => {
   const { error } = await supabase
     .from('purchase_items')
@@ -505,53 +457,45 @@ const addPurchaseItem = async (purchaseId, productId, variantId, item) => {
       product_id: productId,
       variant_id: variantId,
       quantity: item.quantity,
-      unit_cost: item.costPrice,
-      total_cost: item.costPrice * item.quantity
+      cost_price: item.costPrice,
+      total_price: item.costPrice * item.quantity
     });
 
   if (error) throw error;
 };
 
-// تحديث المخزون
 const updateInventory = async (productId, variantId, quantity, userId) => {
   const { data: existingInventory } = await supabase
     .from('inventory')
-    .select('quantity')
+    .select('id, quantity')
     .eq('product_id', productId)
     .eq('variant_id', variantId)
-    .maybeSingle();
+    .limit(1);
 
-  if (existingInventory) {
-    // تحديث الكمية الموجودة
+  if (existingInventory?.length > 0) {
     const { error } = await supabase
       .from('inventory')
-      .update({
-        quantity: existingInventory.quantity + quantity,
-        updated_at: new Date().toISOString(),
-        last_updated_by: userId
+      .update({ 
+        quantity: existingInventory[0].quantity + quantity,
+        updated_at: new Date().toISOString()
       })
-      .eq('product_id', productId)
-      .eq('variant_id', variantId);
-
+      .eq('id', existingInventory[0].id);
+    
     if (error) throw error;
   } else {
-    // إنشاء سجل مخزون جديد
     const { error } = await supabase
       .from('inventory')
       .insert({
         product_id: productId,
         variant_id: variantId,
         quantity: quantity,
-        min_stock: 0,
-        reserved_quantity: 0,
-        last_updated_by: userId
+        reserved_quantity: 0
       });
-
+    
     if (error) throw error;
   }
 };
 
-// إضافة سجل التكلفة
 const addCostRecord = async (productId, variantId, purchaseId, item, purchaseDate) => {
   const { error } = await supabase
     .from('purchase_cost_history')
@@ -559,9 +503,8 @@ const addCostRecord = async (productId, variantId, purchaseId, item, purchaseDat
       product_id: productId,
       variant_id: variantId,
       purchase_id: purchaseId,
+      cost_price: item.costPrice,
       quantity: item.quantity,
-      remaining_quantity: item.quantity,
-      unit_cost: item.costPrice,
       purchase_date: purchaseDate
     });
 

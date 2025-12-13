@@ -1,18 +1,17 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { getUserUUID } from '@/utils/userIdUtils';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
+import devLog from '@/lib/devLogger';
 
 /**
  * Hook موحد لجلب جميع إحصائيات الطلبات والعملاء
  * يستخدم البيانات الموحدة من useInventory() بدلاً من الطلبات المنفصلة
- * إصلاح جذري: لا مزيد من استخدام supabase مباشرة!
  */
 const useOrdersAnalytics = (forceUserDataOnly = false) => {
-  // Defensive check to ensure React hooks are available
   if (!React || typeof useState !== 'function') {
-    console.error('React hooks not available in useOrdersAnalytics');
+    devLog.error('React hooks not available in useOrdersAnalytics');
     return {
       analytics: {
         totalOrders: 0,
@@ -33,14 +32,13 @@ const useOrdersAnalytics = (forceUserDataOnly = false) => {
   }
 
   const { canViewAllOrders, user, isAdmin } = usePermissions();
-  const { orders, profits, customers } = useInventory(); // استخدام البيانات الموحدة فقط!
+  const { orders, profits, customers } = useInventory();
   
   const [dateRange, setDateRange] = useState({
     from: null,
     to: null
   });
 
-  // حساب الإحصائيات من البيانات الموحدة - بدون طلبات منفصلة
   const analytics = useMemo(() => {
     if (!orders || !Array.isArray(orders)) {
       return {
@@ -56,16 +54,14 @@ const useOrdersAnalytics = (forceUserDataOnly = false) => {
       };
     }
     
-    console.log('📊 حساب الإحصائيات من البيانات الموحدة - بدون طلبات منفصلة');
+    devLog.log('📊 حساب الإحصائيات من البيانات الموحدة');
     
     const userUUID = getUserUUID(user);
     
-    // فلترة الطلبات حسب الصلاحيات - أو فرض بيانات المستخدم فقط
     const visibleOrders = (canViewAllOrders && !forceUserDataOnly) ? orders : orders.filter(order => 
       order.created_by === userUUID
     );
 
-    // فلترة حسب التاريخ إذا كان محدد
     let filteredOrders = visibleOrders;
     if (dateRange.from && dateRange.to) {
       filteredOrders = visibleOrders.filter(order => {
@@ -74,30 +70,24 @@ const useOrdersAnalytics = (forceUserDataOnly = false) => {
       });
     }
 
-    // تعريف اكتمال الطلب وفق السياسة
     const isOrderCompletedForAnalytics = (order) => {
       const hasReceipt = !!order.receipt_received;
       if (!hasReceipt) return false;
       if (['cancelled', 'returned', 'returned_in_stock'].includes(order.status)) return false;
-      if (isAdmin) return true; // المدير: يكفي استلام الفاتورة
-      // الموظف: يجب أن تُسوى أرباحه لهذا الطلب
+      if (isAdmin) return true;
       return profits?.some(
         (p) => p.order_id === order.id && p.employee_id === userUUID && p.status === 'settled'
       );
     };
 
-    // الطلبات المكتملة حسب السياسة أعلاه
     const completedOrders = filteredOrders.filter(isOrderCompletedForAnalytics);
 
-    // حساب الإيرادات الإجمالية من المكتمل فقط
     const totalRevenue = completedOrders.reduce((sum, order) => {
       const gross = order.final_amount || order.total_amount || 0;
       const delivery = order.delivery_fee || 0;
       return sum + Math.max(0, gross - delivery);
     }, 0);
 
-
-    // أفضل العملاء (تجميع حسب رقم هاتف مُطبع)
     const customerStats = new Map();
     completedOrders.forEach(order => {
       const rawPhone = extractOrderPhone(order);
@@ -134,27 +124,24 @@ const useOrdersAnalytics = (forceUserDataOnly = false) => {
       .sort((a, b) => b.orderCount - a.orderCount)
       .slice(0, 10)
       .map(customer => ({
-        // الحقول الجديدة المتوافقة مع الواجهات
         name: customer.name || customer.label || 'زبون غير محدد',
         phone: customer.phone,
         city: customer.city || 'غير محدد',
         total_orders: customer.orderCount,
         total_spent: customer.totalRevenue,
         last_order_date: customer.lastOrderDate ? customer.lastOrderDate.toISOString() : null,
-        // الحقول القديمة للإبقاء على التوافق العكسي
         label: customer.name || customer.label,
         orderCount: customer.orderCount,
         totalRevenue: customer.totalRevenue,
         value: `${customer.orderCount} طلب`
       }));
 
-    // أفضل المحافظات
     const provinceStats = new Map();
     completedOrders.forEach(order => {
       const regionName = order.customer_city || order.customer_province || 'غير محدد';
       const gross = order.final_amount || order.total_amount || 0;
       const delivery = order.delivery_fee || 0;
-      const revenue = Math.max(0, gross - delivery); // إيرادات صافية بدون توصيل
+      const revenue = Math.max(0, gross - delivery);
       
       if (provinceStats.has(regionName)) {
         const existing = provinceStats.get(regionName);
@@ -174,18 +161,15 @@ const useOrdersAnalytics = (forceUserDataOnly = false) => {
       .sort((a, b) => b.orderCount - a.orderCount)
       .slice(0, 10)
       .map(province => ({
-        // الحقول الجديدة
         city_name: province.city_name || province.label,
         total_orders: province.orderCount,
         total_revenue: province.totalRevenue,
-        // الحقول القديمة للتوافق
         label: province.city_name || province.label,
         orderCount: province.orderCount,
         totalRevenue: province.totalRevenue,
         value: `${province.orderCount} طلبات`
       }));
 
-    // أفضل المنتجات من عناصر الطلبات
     const productStats = new Map();
     completedOrders.forEach(order => {
       if (order.order_items && Array.isArray(order.order_items)) {
@@ -217,18 +201,15 @@ const useOrdersAnalytics = (forceUserDataOnly = false) => {
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 10)
       .map(product => ({
-        // الحقول الجديدة
         product_name: product.label,
         total_sold: product.quantity,
         total_revenue: product.totalRevenue || 0,
         orders_count: product.ordersCount || 0,
-        // الحقول القديمة للتوافق
         label: product.label,
         quantity: product.quantity,
         value: `${product.quantity} قطعة`
       }));
 
-    // الأرباح المعلقة (من البيانات الموحدة) - أو فرض بيانات المستخدم فقط
     const visibleProfits = (canViewAllOrders && !forceUserDataOnly) ? profits : profits?.filter(profit => 
       profit.employee_id === userUUID
     );
@@ -237,7 +218,7 @@ const useOrdersAnalytics = (forceUserDataOnly = false) => {
       profit.status === 'pending'
     ).reduce((sum, profit) => sum + (profit.employee_profit || 0), 0) || 0;
 
-    console.log('✅ تم حساب الإحصائيات من البيانات الموحدة:', {
+    devLog.log('✅ تم حساب الإحصائيات:', {
       totalOrders: filteredOrders.length,
       completedOrders: completedOrders.length,
       totalRevenue,
@@ -259,15 +240,13 @@ const useOrdersAnalytics = (forceUserDataOnly = false) => {
 
   }, [orders, profits, customers, canViewAllOrders, user, dateRange]);
 
-  // دالة تحديث فترة التاريخ
   const refreshAnalytics = () => {
-    console.log('🔄 تحديث الإحصائيات (من البيانات الموحدة الحالية)');
-    // لا حاجة لطلبات منفصلة - البيانات محدثة تلقائياً من useInventory
+    devLog.log('🔄 تحديث الإحصائيات');
   };
 
   return {
     analytics,
-    loading: false, // لا حاجة للتحميل - البيانات متوفرة فوراً
+    loading: false,
     error: null,
     refreshAnalytics,
     setDateRange
