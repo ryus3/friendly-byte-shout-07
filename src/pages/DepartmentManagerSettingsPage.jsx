@@ -88,14 +88,12 @@ const DepartmentManagerSettingsPage = () => {
     const fetchStats = async () => {
       if (!isDepartmentManager || supervisedEmployeeIds.length === 0) return;
       
-      const allIds = [user?.id, ...supervisedEmployeeIds];
-      
+      // ✅ فقط الموظفين المشرف عليهم (بدون مدير القسم نفسه)
       const { data: orders, error } = await supabase
         .from('orders')
-        .select('id, final_amount, delivery_fee, created_by')
-        .in('created_by', allIds)
-        .in('status', ['delivered', 'completed'])
-        .eq('receipt_received', true);
+        .select('id, final_amount, delivery_fee, created_by, delivery_status')
+        .in('created_by', supervisedEmployeeIds)
+        .eq('delivery_status', '4'); // ✅ الطلبات المسلمة فعلياً
       
       if (!error && orders) {
         const totalOrders = orders.length;

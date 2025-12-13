@@ -1160,13 +1160,16 @@ useEffect(() => {
             colors={['purple-500', 'violet-500']} 
             format="currency" 
           />
-          <ManagerProfitsCard 
-            orders={orders || []}
-            allUsers={allUsers || []}
-            calculateProfit={calculateProfit}
-            profits={profits || []}
-            timePeriod={filters.timePeriod}
-          />
+          {/* ✅ عرض بطاقة أرباح المدير للمدير العام فقط */}
+          {isAdmin && (
+            <ManagerProfitsCard 
+              orders={orders || []}
+              allUsers={allUsers || []}
+              calculateProfit={calculateProfit}
+              profits={profits || []}
+              timePeriod={filters.timePeriod}
+            />
+          )}
           <div 
             className="relative cursor-pointer group"
             onClick={() => setIsSettlementRequestsDialogOpen(true)}
