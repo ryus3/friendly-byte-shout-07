@@ -12,10 +12,10 @@ class SuperAPI {
     this.loading = new Set();
     this.subscriptions = new Map();
     
-    // تحسين الأداء: زيادة cache TTL للبيانات الثابتة
-    this.CACHE_TTL = 5 * 60 * 1000; // 5 دقائق للبيانات الثابتة (ألوان، مقاسات، أقسام)
-    this.ORDER_CACHE_TTL = 15 * 1000; // 15 ثانية للطلبات
-    this.STATIC_CACHE_TTL = 10 * 60 * 1000; // 10 دقائق للبيانات الثابتة تماماً
+    // ⚡ تحسين الأداء: زيادة cache TTL للسرعة القصوى
+    this.CACHE_TTL = 10 * 60 * 1000; // ⚡ 10 دقائق بدلاً من 5
+    this.ORDER_CACHE_TTL = 30 * 1000; // ⚡ 30 ثانية بدلاً من 15
+    this.STATIC_CACHE_TTL = 30 * 60 * 1000; // ⚡ 30 دقيقة بدلاً من 10
     
     // مفتاح تخزين محلي
     this.persistPrefix = 'superapi_cache_';

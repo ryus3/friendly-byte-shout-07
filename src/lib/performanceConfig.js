@@ -15,8 +15,12 @@ export const PERFORMANCE_CONFIG = {
   ANIMATION_DELAY_INCREMENT: 0.05, // seconds
   
   // Data fetching optimization
-  DEBOUNCE_SEARCH_MS: 300,
-  THROTTLE_SCROLL_MS: 100,
+  DEBOUNCE_SEARCH_MS: 250, // ⚡ أسرع
+  THROTTLE_SCROLL_MS: 80, // ⚡ أسرع
+  
+  // ⚡ Cache optimization
+  CACHE_TTL_MINUTES: 10,
+  STATIC_CACHE_TTL_MINUTES: 30,
   
   // Component rendering optimization
   VIRTUAL_LIST_THRESHOLD: 50, // Use virtual scrolling when items > 50
