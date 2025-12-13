@@ -337,27 +337,23 @@ const InventoryAuditDialog = ({ isAdmin }) => {
           ) : (
             /* حالة وجود فروقات */
             <div className="flex flex-col h-full max-h-[calc(90vh-200px)]">
-              {/* لوحة إحصائيات الفروقات */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 p-3 sm:p-4 bg-muted/30 border-b">
-                <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-center">
-                  <Package className="w-5 h-5 text-amber-600 dark:text-amber-400 mx-auto mb-1" />
-                  <div className="text-xl sm:text-2xl font-bold text-amber-700 dark:text-amber-300">{issueStats.reserved}</div>
-                  <div className="text-xs text-muted-foreground">فرق محجوز</div>
+              {/* لوحة إحصائيات الفروقات - سطر واحد مصغر */}
+              <div className="flex items-center justify-center gap-2 p-2 bg-muted/30 border-b">
+                <div className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700 rounded-lg px-2 py-1" title="فرق محجوز">
+                  <Package className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  <span className="text-sm font-bold text-amber-700 dark:text-amber-300">{issueStats.reserved}</span>
                 </div>
-                <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/30 dark:to-cyan-950/30 border border-blue-200 dark:border-blue-800 rounded-xl p-3 text-center">
-                  <ShoppingCart className="w-5 h-5 text-blue-600 dark:text-blue-400 mx-auto mb-1" />
-                  <div className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300">{issueStats.sold}</div>
-                  <div className="text-xs text-muted-foreground">فرق مباع</div>
+                <div className="flex items-center gap-1.5 bg-blue-100 dark:bg-blue-950/50 border border-blue-300 dark:border-blue-700 rounded-lg px-2 py-1" title="فرق مباع">
+                  <ShoppingCart className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-sm font-bold text-blue-700 dark:text-blue-300">{issueStats.sold}</span>
                 </div>
-                <div className="bg-gradient-to-br from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30 border border-red-200 dark:border-red-800 rounded-xl p-3 text-center">
-                  <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400 mx-auto mb-1" />
-                  <div className="text-xl sm:text-2xl font-bold text-red-700 dark:text-red-300">{issueStats.negative}</div>
-                  <div className="text-xs text-muted-foreground">قيم سالبة</div>
+                <div className="flex items-center gap-1.5 bg-red-100 dark:bg-red-950/50 border border-red-300 dark:border-red-700 rounded-lg px-2 py-1" title="قيم سالبة">
+                  <AlertTriangle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+                  <span className="text-sm font-bold text-red-700 dark:text-red-300">{issueStats.negative}</span>
                 </div>
-                <div className="bg-gradient-to-br from-purple-50 to-violet-50 dark:from-purple-950/30 dark:to-violet-950/30 border border-purple-200 dark:border-purple-800 rounded-xl p-3 text-center">
-                  <AlertCircle className="w-5 h-5 text-purple-600 dark:text-purple-400 mx-auto mb-1" />
-                  <div className="text-xl sm:text-2xl font-bold text-purple-700 dark:text-purple-300">{issueStats.complex}</div>
-                  <div className="text-xs text-muted-foreground">فرق مركب</div>
+                <div className="flex items-center gap-1.5 bg-purple-100 dark:bg-purple-950/50 border border-purple-300 dark:border-purple-700 rounded-lg px-2 py-1" title="فرق مركب">
+                  <AlertCircle className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
+                  <span className="text-sm font-bold text-purple-700 dark:text-purple-300">{issueStats.complex}</span>
                 </div>
               </div>
               
