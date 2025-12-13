@@ -320,9 +320,9 @@ const DepartmentManagerSettingsPage = () => {
                           <SelectValue placeholder="اختر الموظف" />
                         </SelectTrigger>
                         <SelectContent>
-                          {supervisedEmployees.filter(emp => emp != null).map((emp) => (
-                            <SelectItem key={emp?.user_id || Math.random()} value={emp?.user_id || ''}>
-                              {emp?.full_name || emp?.employee_code || 'موظف'}
+                          {supervisedEmployees.filter(emp => emp?.user_id).map((emp) => (
+                            <SelectItem key={emp.user_id} value={emp.user_id}>
+                              {emp.full_name || emp.employee_code || 'موظف'}
                             </SelectItem>
                           ))}
                         </SelectContent>
