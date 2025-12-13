@@ -252,7 +252,7 @@ const InventoryAuditDialog = ({ isAdmin }) => {
                   </>
                 ) : (
                   <>
-                    <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm animate-pulse">
+                    <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
                       <FileCheck className="w-5 h-5 sm:w-6 sm:h-6" />
                     </div>
                     <span>فحص دقة المخزون - {auditResults?.length || 0} فرق</span>
@@ -396,14 +396,14 @@ const InventoryAuditDialog = ({ isAdmin }) => {
                           {/* رأس البطاقة */}
                           <div className="flex items-start justify-between gap-3 mb-4">
                             <div className="flex items-center gap-3">
-                              {/* أيقونة الحالة مع تأثير pulse */}
+                              {/* أيقونة الحالة */}
                               <div className={cn(
                                 "relative p-2.5 rounded-xl shadow-lg",
                                 config.bgColor
                               )}>
                                 <Icon className={cn("w-5 h-5", config.color)} />
                                 <div className={cn(
-                                  "absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse",
+                                  "absolute -top-1 -right-1 w-3 h-3 rounded-full",
                                   config.dotColor
                                 )} />
                               </div>
@@ -458,17 +458,14 @@ const InventoryAuditDialog = ({ isAdmin }) => {
                               <Package className={cn("w-3.5 h-3.5 mx-auto mb-1", item.reserved_diff !== 0 ? "text-amber-600" : "text-emerald-600")} />
                               <div className="text-[10px] text-muted-foreground">المحجوز</div>
                               {item.reserved_diff !== 0 ? (
-                                <div className="space-y-0.5">
-                                  <div className="text-xs text-red-500 line-through opacity-70">{item.current_reserved}</div>
-                                  <div className="flex items-center justify-center gap-1">
-                                    <ArrowRight className="w-2.5 h-2.5 text-amber-500 animate-pulse" />
-                                    <span className="font-bold text-emerald-600 text-sm">{item.calculated_reserved}</span>
-                                  </div>
+                                <div className="flex items-center justify-center gap-1.5 mt-1">
+                                  <span className="text-red-500 line-through text-base font-medium">{item.current_reserved}</span>
+                                  <span className="text-muted-foreground">←</span>
+                                  <span className="font-bold text-emerald-600 text-lg">{item.calculated_reserved}</span>
                                 </div>
                               ) : (
-                                <div className="font-bold text-emerald-600 flex items-center justify-center gap-1">
-                                  <CheckCircle className="w-3 h-3" />
-                                  {item.current_reserved}
+                                <div className="font-bold text-emerald-600 text-lg flex items-center justify-center gap-1 mt-1">
+                                  ✓ {item.current_reserved}
                                 </div>
                               )}
                             </div>
@@ -483,8 +480,8 @@ const InventoryAuditDialog = ({ isAdmin }) => {
                               <Box className={cn("w-3.5 h-3.5 mx-auto mb-1", item.current_available < 0 ? "text-red-600" : "text-teal-600")} />
                               <div className="text-[10px] text-muted-foreground">المتاح</div>
                               <div className={cn(
-                                "font-bold",
-                                item.current_available < 0 ? "text-red-600 animate-pulse" : "text-teal-700"
+                                "font-bold text-lg mt-1",
+                                item.current_available < 0 ? "text-red-600" : "text-teal-700"
                               )}>
                                 {item.current_available}
                               </div>
@@ -500,17 +497,14 @@ const InventoryAuditDialog = ({ isAdmin }) => {
                               <ShoppingCart className={cn("w-3.5 h-3.5 mx-auto mb-1", item.sold_diff !== 0 ? "text-blue-600" : "text-emerald-600")} />
                               <div className="text-[10px] text-muted-foreground">المباع</div>
                               {item.sold_diff !== 0 ? (
-                                <div className="space-y-0.5">
-                                  <div className="text-xs text-red-500 line-through opacity-70">{item.current_sold}</div>
-                                  <div className="flex items-center justify-center gap-1">
-                                    <ArrowRight className="w-2.5 h-2.5 text-blue-500 animate-pulse" />
-                                    <span className="font-bold text-emerald-600 text-sm">{item.calculated_sold}</span>
-                                  </div>
+                                <div className="flex items-center justify-center gap-1.5 mt-1">
+                                  <span className="text-red-500 line-through text-base font-medium">{item.current_sold}</span>
+                                  <span className="text-muted-foreground">←</span>
+                                  <span className="font-bold text-emerald-600 text-lg">{item.calculated_sold}</span>
                                 </div>
                               ) : (
-                                <div className="font-bold text-emerald-600 flex items-center justify-center gap-1">
-                                  <CheckCircle className="w-3 h-3" />
-                                  {item.current_sold}
+                                <div className="font-bold text-emerald-600 text-lg flex items-center justify-center gap-1 mt-1">
+                                  ✓ {item.current_sold}
                                 </div>
                               )}
                             </div>
