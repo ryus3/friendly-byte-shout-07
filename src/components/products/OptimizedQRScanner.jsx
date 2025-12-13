@@ -108,9 +108,6 @@ const OptimizedQRScanner = ({
         },
         (errorMessage) => {
           // تجاهل أخطاء عدم وجود كود - هذا طبيعي
-          if (!errorMessage.includes('NotFoundException')) {
-            console.log('Scanner error (ignored):', errorMessage);
-          }
         }
       );
 
@@ -122,7 +119,6 @@ const OptimizedQRScanner = ({
       }, 500);
 
     } catch (err) {
-      console.error("خطأ في تشغيل المسح:", err);
       setIsScanning(false);
       
       let errorMessage = 'خطأ في تشغيل الماسح';
@@ -150,7 +146,6 @@ const OptimizedQRScanner = ({
     }
     lastScanTimeRef.current = now;
     
-    console.log("🎯 تم قراءة QR Code:", decodedText);
     setScanCount(prev => prev + 1);
     
     // إضافة اهتزاز للهاتف المحمول
@@ -189,8 +184,6 @@ const OptimizedQRScanner = ({
       }
     } catch (e) {
       // QR Code بسيط
-      console.log("📄 QR Code بسيط:", decodedText);
-      
       if (mode === 'cart') {
         const added = addFromQRScan(decodedText, products);
         if (added) {
@@ -265,7 +258,7 @@ const OptimizedQRScanner = ({
         videoTrackRef.current = null;
       }
     } catch (err) {
-      console.error("خطأ في إيقاف المسح:", err);
+      // تجاهل أخطاء الإيقاف
     }
     setIsScanning(false);
     setFlashEnabled(false);
@@ -282,7 +275,6 @@ const OptimizedQRScanner = ({
       setHasFlash(!!capabilities.torch);
       track.stop();
     } catch (e) {
-      console.log("Flash check failed:", e);
       setHasFlash(false);
     }
   };
@@ -312,7 +304,7 @@ const OptimizedQRScanner = ({
       
       setFlashEnabled(!flashEnabled);
     } catch (err) {
-      console.error("خطأ في الفلاش:", err);
+      // تجاهل أخطاء الفلاش
     }
   };
 
