@@ -31,7 +31,8 @@ const AppStartSync = memo(() => {
   }, [handleVisibleOrdersSync]);
   
   return <GlobalSyncProgress hideAutoSync={true} />;
-};
+});
+
 export const AppProviders = ({ children }) => {
   return (
     <SupabaseProvider>
