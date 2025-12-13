@@ -12,9 +12,10 @@ class SuperAPI {
     this.loading = new Set();
     this.subscriptions = new Map();
     
-    // 30 ثانية cache للطلبات الجديدة - تحسين الأداء
-    this.CACHE_TTL = 30 * 1000;
-    this.ORDER_CACHE_TTL = 10 * 1000; // 10 ثواني للطلبات فقط
+    // تحسين الأداء: زيادة cache TTL للبيانات الثابتة
+    this.CACHE_TTL = 5 * 60 * 1000; // 5 دقائق للبيانات الثابتة (ألوان، مقاسات، أقسام)
+    this.ORDER_CACHE_TTL = 15 * 1000; // 15 ثانية للطلبات
+    this.STATIC_CACHE_TTL = 10 * 60 * 1000; // 10 دقائق للبيانات الثابتة تماماً
     
     // مفتاح تخزين محلي
     this.persistPrefix = 'superapi_cache_';
@@ -22,15 +23,23 @@ class SuperAPI {
     this._invalidateTimer = null;
   }
 
-  // التحقق من صحة البيانات المحفوظة مع cache TTL محسن للطلبات
+  // التحقق من صحة البيانات المحفوظة مع cache TTL محسن حسب نوع البيانات
   isCacheValid(key) {
     if (!this.cache.has(key)) return false;
     
     const timestamp = this.timestamps.get(key);
     const age = Date.now() - timestamp;
     
-    // استخدام cache TTL أقصر للطلبات لضمان التحديث السريع
-    const ttl = (key.includes('order') || key.includes('all_data')) ? this.ORDER_CACHE_TTL : this.CACHE_TTL;
+    // تحديد TTL حسب نوع البيانات
+    let ttl;
+    if (key.includes('order') || key.includes('all_data')) {
+      ttl = this.ORDER_CACHE_TTL; // 15 ثانية للطلبات
+    } else if (key.includes('colors') || key.includes('sizes') || key.includes('categories') || key.includes('departments')) {
+      ttl = this.STATIC_CACHE_TTL; // 10 دقائق للبيانات الثابتة
+    } else {
+      ttl = this.CACHE_TTL; // 5 دقائق للباقي
+    }
+    
     const isValid = age < ttl;
     
     if (!isValid) {

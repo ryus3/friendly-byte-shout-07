@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useState, useCallback } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
@@ -16,8 +16,23 @@ import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 import { useAppStartSync } from '@/hooks/useAppStartSync';
 import AppSplashScreen from '@/components/AppSplashScreen.jsx';
 
-
 import { scrollToTopInstant } from '@/utils/scrollToTop';
+
+// ⚡ Prefetch الصفحات الشائعة عند idle
+const prefetchCommonRoutes = () => {
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => {
+      import('@/pages/Dashboard.jsx');
+      import('@/pages/OrdersPage.jsx');
+      import('@/pages/QuickOrderPage.jsx');
+    });
+  }
+};
+
+// تنفيذ prefetch بعد 3 ثواني من تحميل الصفحة
+if (typeof window !== 'undefined') {
+  setTimeout(prefetchCommonRoutes, 3000);
+}
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
 const UpdatePasswordPage = lazy(() => import('@/pages/UpdatePasswordPage.jsx'));
