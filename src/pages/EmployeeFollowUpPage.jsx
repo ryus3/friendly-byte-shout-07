@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OrderList from '@/components/orders/OrderList';
 import Loader from '@/components/ui/loader';
-import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Calendar, FileText, Truck, RotateCcw } from 'lucide-react';
+import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Calendar, FileText, Truck, RotateCcw, Wallet } from 'lucide-react';
 
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
@@ -758,6 +758,7 @@ useEffect(() => {
       : 0;
 
     // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
+    // ✅ إصلاح: استثناء الطلبات التي employee_profit = 0 (لا يوجد قاعدة ربح)
     const pendingDues = statsOrders
       .filter(order => order.receipt_received === true)
       .reduce((sum, order) => {
@@ -766,14 +767,10 @@ useEffect(() => {
         let employeeProfit = 0;
         
         if (profitRecord && isPendingStatus(profitRecord.status)) {
-          // إذا كان هناك سجل ربح غير مُسوى
+          // إذا كان هناك سجل ربح غير مُسوى وربح الموظف > 0
           employeeProfit = profitRecord.employee_profit || 0;
-        } else if (!profitRecord) {
-          // إذا لم يكن هناك سجل ربح، احسب الربح
-          employeeProfit = (order.items || []).reduce((itemSum, item) => {
-            return itemSum + (calculateProfit ? calculateProfit(item, order.created_by) : 0);
-          }, 0);
         }
+        // ✅ إزالة: لا نحسب ربح تلقائي للطلبات بدون سجل (تعني لا قاعدة ربح)
         
         return sum + employeeProfit;
       }, 0);
@@ -1175,14 +1172,14 @@ useEffect(() => {
             onClick={() => setIsSettlementRequestsDialogOpen(true)}
           >
             {stats.settlementRequestsCount > 0 && (
-              <div className="absolute -top-2 -right-2 z-10 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center animate-bounce">
+              <div className="absolute -top-2 -right-2 z-10 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center animate-bounce shadow-lg shadow-red-500/50">
                 <span className="text-white text-xs font-bold">{stats.settlementRequestsCount}</span>
               </div>
             )}
             <StatCard 
               title="طلبات تحاسب" 
               value={stats.settlementRequestsCount || 0}
-              icon={Bell} 
+              icon={Wallet} 
               colors={['orange-500', 'amber-500']} 
               format="number"
               description="ينتظر التسوية"
