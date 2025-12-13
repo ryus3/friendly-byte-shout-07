@@ -18,7 +18,9 @@ import {
   User,
   MapPin,
   Clock,
-  AlertTriangle
+  AlertTriangle,
+  Bell,
+  Receipt
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -50,6 +52,12 @@ const OrderListItem = ({
   const employeeProfit = calculateProfit ? 
     (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0) : 0;
   const isSettled = profitRecord?.settled_at ? true : false;
+  
+  // تحديد الـ badges الخاصة بالربح والفاتورة
+  const isDelivered = order.delivery_status === '4' || order.status === 'delivered' || order.status === 'completed';
+  const hasNoProfit = isDelivered && (profitRecord?.employee_profit === 0 || !profitRecord || profitRecord?.status === 'no_rule_settled');
+  const isAwaitingInvoice = isDelivered && !order.receipt_received && !hasNoProfit;
+  const isSettlementRequested = profitRecord?.status === 'settlement_requested';
   
   // دالة تحديد ما إذا كان الطلب قابل للتعديل/الحذف (قبل الاستلام من المندوب)
   const isBeforePickup = (order) => {
@@ -235,10 +243,31 @@ const OrderListItem = ({
           </MobileTableGrid>
 
           <MobileTableCell label="التوصيل">
-            <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full shadow-sm`}>
-              <Building className="h-3 w-3 ml-1" />
-              {order.delivery_partner}
-            </Badge>
+            <div className="flex flex-wrap gap-1">
+              <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full shadow-sm`}>
+                <Building className="h-3 w-3 ml-1" />
+                {order.delivery_partner}
+              </Badge>
+              
+              {/* Profit/Invoice Status Badges */}
+              {isSettlementRequested && (
+                <Badge className="bg-orange-500 text-white animate-pulse px-2 py-1 text-xs rounded-full">
+                  <Bell className="h-3 w-3 ml-1" />
+                  طلب تحاسب
+                </Badge>
+              )}
+              {isAwaitingInvoice && (
+                <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 px-2 py-1 text-xs rounded-full">
+                  <Receipt className="h-3 w-3 ml-1" />
+                  بانتظار الفاتورة
+                </Badge>
+              )}
+              {hasNoProfit && (
+                <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300 px-2 py-1 text-xs rounded-full">
+                  لا ربح للموظف
+                </Badge>
+              )}
+            </div>
           </MobileTableCell>
 
           {/* Actions - ترتيب من اليمين لليسار: حذف، تتبع، تعديل، معاينة */}
@@ -396,15 +425,36 @@ const OrderListItem = ({
         </div>
 
         {/* Date & Delivery */}
-        <div className="min-w-[150px] flex-shrink-0">
+        <div className="min-w-[180px] flex-shrink-0">
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <Calendar className="h-3 w-3" />
             {formatDate(order.created_at)}
           </div>
-          <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full mt-1 w-fit shadow-sm`}>
-            <Building className="h-3 w-3 ml-1" />
-            {order.delivery_partner}
-          </Badge>
+          <div className="flex flex-wrap gap-1 mt-1">
+            <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full w-fit shadow-sm`}>
+              <Building className="h-3 w-3 ml-1" />
+              {order.delivery_partner}
+            </Badge>
+            
+            {/* Profit/Invoice Status Badges */}
+            {isSettlementRequested && (
+              <Badge className="bg-orange-500 text-white animate-pulse px-2 py-1 text-xs rounded-full">
+                <Bell className="h-3 w-3 ml-1" />
+                طلب تحاسب
+              </Badge>
+            )}
+            {isAwaitingInvoice && (
+              <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-300 px-2 py-1 text-xs rounded-full">
+                <Receipt className="h-3 w-3 ml-1" />
+                بانتظار الفاتورة
+              </Badge>
+            )}
+            {hasNoProfit && (
+              <Badge variant="outline" className="bg-gray-100 text-gray-600 border-gray-300 px-2 py-1 text-xs rounded-full">
+                لا ربح
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Amount */}
