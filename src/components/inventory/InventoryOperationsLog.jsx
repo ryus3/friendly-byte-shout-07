@@ -393,7 +393,7 @@ const InventoryOperationsLog = ({ isAdmin }) => {
                     )}
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-80 p-4" align="start">
+                <PopoverContent className="w-80 p-4 z-[100000]" align="start">
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <h4 className="font-semibold text-sm">فلترة متقدمة</h4>
@@ -420,7 +420,7 @@ const InventoryOperationsLog = ({ isAdmin }) => {
                         <SelectTrigger className="w-full h-9">
                           <SelectValue placeholder="جميع المنتجات" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[100001]">
                           <div className="p-2 border-b">
                             <div className="relative">
                               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -453,7 +453,7 @@ const InventoryOperationsLog = ({ isAdmin }) => {
                           <SelectTrigger className="w-full h-9">
                             <SelectValue placeholder="الكل" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="z-[100001]">
                             <SelectItem value="all">جميع الألوان</SelectItem>
                             {filterOptions.colors?.map(color => (
                               <SelectItem key={color} value={color}>{color}</SelectItem>
@@ -470,7 +470,7 @@ const InventoryOperationsLog = ({ isAdmin }) => {
                           <SelectTrigger className="w-full h-9">
                             <SelectValue placeholder="الكل" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="z-[100001]">
                             <SelectItem value="all">جميع القياسات</SelectItem>
                             {filterOptions.sizes?.map(size => (
                               <SelectItem key={size} value={size}>{size}</SelectItem>
@@ -490,7 +490,7 @@ const InventoryOperationsLog = ({ isAdmin }) => {
                         <SelectTrigger className="w-full h-9">
                           <SelectValue placeholder="جميع العمليات" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[100001]">
                           <SelectItem value="all">جميع العمليات</SelectItem>
                           <SelectItem value="stock_added">إضافة مخزون</SelectItem>
                           <SelectItem value="stock_reduced">تقليل مخزون</SelectItem>
