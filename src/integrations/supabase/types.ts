@@ -6943,7 +6943,7 @@ export type Database = {
           product_name: string
           quantity_diff: number
           reserved_diff: number
-          size_name: string
+          size_value: string
           sold_diff: number
           variant_id: string
         }[]
@@ -7187,7 +7187,18 @@ export type Database = {
         }[]
       }
       fix_incorrect_price_increase_v2: { Args: never; Returns: Json }
-      fix_inventory_discrepancies: { Args: never; Returns: Json }
+      fix_inventory_discrepancies: {
+        Args: never
+        Returns: {
+          fixed: boolean
+          new_reserved: number
+          new_sold: number
+          old_reserved: number
+          old_sold: number
+          product_name: string
+          variant_id: string
+        }[]
+      }
       fix_partial_delivery_financials_112066293: { Args: never; Returns: Json }
       fix_regions_cities_linking: { Args: never; Returns: Json }
       generate_customer_promo_code: {

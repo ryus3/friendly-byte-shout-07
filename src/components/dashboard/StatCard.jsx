@@ -22,7 +22,8 @@ const gradientMap = {
   'purple-500': 'from-purple-500',
   'violet-500': 'to-violet-500',
   'red-500': 'from-red-500',
-  'orange-500': 'to-orange-500',
+  'orange-500': 'from-orange-500',  // Fixed: was 'to-', now 'from-'
+  'orange-600': 'to-orange-600',
   'rose-500': 'from-rose-500',
   'pink-600': 'to-pink-600',
   'teal-500': 'from-teal-500',
