@@ -31,8 +31,6 @@ if ('serviceWorker' in navigator) {
         updateViaCache: 'none' // ✅ عدم استخدام cache للـ SW نفسه
       })
       .then(registration => {
-        console.log('✅ Service Worker registered:', registration.scope);
-        
         // ✅ التحقق من التحديثات كل ساعة
         setInterval(() => {
           registration.update();
@@ -44,8 +42,6 @@ if ('serviceWorker' in navigator) {
           
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              console.log('🔄 New Service Worker available');
-              
               // ✅ إشعار المستخدم بالتحديث
               if (confirm('يوجد تحديث جديد للتطبيق. هل تريد التحديث الآن؟')) {
                 newWorker.postMessage({ type: 'SKIP_WAITING' });
@@ -55,8 +51,8 @@ if ('serviceWorker' in navigator) {
           });
         });
       })
-      .catch(error => {
-        console.error('❌ Service Worker registration failed:', error);
+      .catch(() => {
+        // Silent fail in production
       });
   });
   
@@ -72,8 +68,7 @@ if ('serviceWorker' in navigator) {
   // ✅ معالجة رسائل SW
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SYNC_PENDING_ORDERS') {
-      console.log('📤 Sync message received from SW');
-      // يمكن إضافة منطق إضافي هنا
+      // Silent handling - no console log
     }
   });
 }
