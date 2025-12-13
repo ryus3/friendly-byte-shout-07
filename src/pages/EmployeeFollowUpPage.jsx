@@ -178,11 +178,6 @@ const EmployeeFollowUpPage = () => {
       // ✅ 3. إرسال حدث لتحديث الفواتير في الواجهات الأخرى
       window.dispatchEvent(new CustomEvent('invoicesSynced'));
       
-      // ✅ 4. تحديث وقت آخر مزامنة شاملة
-      const syncTime = new Date().toISOString();
-      localStorage.setItem('last-comprehensive-sync', syncTime);
-      setLastComprehensiveSync(syncTime);
-      
       const successMsg = isDepartmentManager && !isAdmin
         ? `تم تحديث ${currentFilteredOrders.length} طلب لموظفيك`
         : `تم تحديث الفواتير والطلبات`;
