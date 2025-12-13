@@ -110,79 +110,88 @@ const SyncStatusIndicator = ({ className }) => {
         total={syncProgress.total}
       />
       
-      <div 
-        className={`relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 backdrop-blur-sm bg-white/90 dark:bg-gray-800/90 shadow-lg border ${
-          autoSyncEnabled 
-            ? "border-border/50" 
-            : "border-orange-300 dark:border-orange-600 bg-orange-50/80 dark:bg-orange-950/50"
-        } ${
-          syncMode === 'countdown' || syncMode === 'syncing' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105"
-        } ${className}`}
-        onClick={handleClick}
-        title={
-          syncMode === 'syncing'
-            ? "جاري المزامنة..." 
-            : syncMode === 'countdown'
-              ? `المزامنة خلال ${syncCountdown} ثانية`
-              : lastSyncAt 
-                ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}${autoSyncEnabled ? '' : ' (المزامنة التلقائية معطلة)'}`
-                : `اضغط للمزامنة السريعة${autoSyncEnabled ? '' : ' (المزامنة التلقائية معطلة)'}`
-        }
-      >
-      {/* Background and Progress circles */}
-      <svg className="absolute w-10 h-10 transform -rotate-90" viewBox="0 0 40 40">
-        <defs>
-          <linearGradient id="syncGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="hsl(199, 89%, 58%)" />
-            <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
-            <stop offset="100%" stopColor="hsl(280, 87%, 57%)" />
-          </linearGradient>
-        </defs>
+      <div className={`flex items-center gap-2 ${className}`}>
+        {/* نص آخر مزامنة - مرئي دائماً */}
+        {lastSyncAt && syncMode !== 'syncing' && syncMode !== 'countdown' && (
+          <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:inline">
+            {formatLastSync(lastSyncAt)}
+          </span>
+        )}
         
-        {/* Background track - always visible */}
-        <circle
-          cx="20"
-          cy="20"
-          r={radius}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2.5"
-          className="text-muted-foreground/30"
-        />
-        
-        {/* Progress circle - only shown during countdown */}
-        {syncMode === 'countdown' && syncCountdown > 0 && (
+        <div 
+          className={`relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 backdrop-blur-sm bg-white/90 dark:bg-gray-800/90 shadow-lg border ${
+            autoSyncEnabled 
+              ? "border-border/50" 
+              : "border-orange-300 dark:border-orange-600 bg-orange-50/80 dark:bg-orange-950/50"
+          } ${
+            syncMode === 'countdown' || syncMode === 'syncing' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105"
+          }`}
+          onClick={handleClick}
+          title={
+            syncMode === 'syncing'
+              ? "جاري المزامنة..." 
+              : syncMode === 'countdown'
+                ? `المزامنة خلال ${syncCountdown} ثانية`
+                : lastSyncAt 
+                  ? `آخر مزامنة: ${formatLastSync(lastSyncAt)}${autoSyncEnabled ? '' : ' (المزامنة التلقائية معطلة)'}`
+                  : `اضغط للمزامنة السريعة${autoSyncEnabled ? '' : ' (المزامنة التلقائية معطلة)'}`
+          }
+        >
+        {/* Background and Progress circles */}
+        <svg className="absolute w-10 h-10 transform -rotate-90" viewBox="0 0 40 40">
+          <defs>
+            <linearGradient id="syncGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="hsl(199, 89%, 58%)" />
+              <stop offset="50%" stopColor="hsl(220, 70%, 55%)" />
+              <stop offset="100%" stopColor="hsl(280, 87%, 57%)" />
+            </linearGradient>
+          </defs>
+          
+          {/* Background track - always visible */}
           <circle
             cx="20"
             cy="20"
             r={radius}
             fill="none"
-            stroke="url(#syncGradient)"
+            stroke="currentColor"
             strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-1000 ease-linear"
+            className="text-muted-foreground/30"
           />
-        )}
-      </svg>
+          
+          {/* Progress circle - only shown during countdown */}
+          {syncMode === 'countdown' && syncCountdown > 0 && (
+            <circle
+              cx="20"
+              cy="20"
+              r={radius}
+              fill="none"
+              stroke="url(#syncGradient)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeDasharray={circumference}
+              strokeDashoffset={strokeDashoffset}
+              className="transition-all duration-1000 ease-linear"
+            />
+          )}
+        </svg>
 
-      {/* Center content */}
-      <div className="relative z-10 flex items-center justify-center">
-        {syncMode === 'syncing' ? (
-          <Loader2 className="w-4 h-4 animate-spin text-primary" />
-        ) : syncMode === 'countdown' && syncCountdown > 0 ? (
-          <span className={`text-sm font-medium ${getNumberColor()}`}>
-            {syncCountdown}
-          </span>
-        ) : (
-          <RefreshCw className={`w-4 h-4 transition-all duration-500 ${
-            autoSyncEnabled 
-              ? "text-muted-foreground" 
-              : "text-orange-500 dark:text-orange-400"
-          } ${isSpinning && "animate-[spin_1.5s_ease-in-out]"}`} />
-        )}
-      </div>
+        {/* Center content */}
+        <div className="relative z-10 flex items-center justify-center">
+          {syncMode === 'syncing' ? (
+            <Loader2 className="w-4 h-4 animate-spin text-primary" />
+          ) : syncMode === 'countdown' && syncCountdown > 0 ? (
+            <span className={`text-sm font-medium ${getNumberColor()}`}>
+              {syncCountdown}
+            </span>
+          ) : (
+            <RefreshCw className={`w-4 h-4 transition-all duration-500 ${
+              autoSyncEnabled 
+                ? "text-muted-foreground" 
+                : "text-orange-500 dark:text-orange-400"
+            } ${isSpinning && "animate-[spin_1.5s_ease-in-out]"}`} />
+          )}
+        </div>
+        </div>
       </div>
     </>
   );
