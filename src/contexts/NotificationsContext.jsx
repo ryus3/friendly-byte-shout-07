@@ -387,8 +387,8 @@ export const NotificationsProvider = ({ children }) => {
     }, []);
 
     const markAllAsRead = useCallback(async () => {
-        if (!supabase) {
-            console.error("Supabase client not available");
+        if (!supabase || !user?.id) {
+            console.error("Supabase client not available or user not logged in");
             return;
         }
         
@@ -396,10 +396,11 @@ export const NotificationsProvider = ({ children }) => {
         if (unreadIds.length === 0) return;
         
         try {
-            // تحديث قاعدة البيانات أولاً
+            // تحديث قاعدة البيانات - للمستخدم الحالي فقط
             const { error } = await supabase
                 .from('notifications')
                 .update({ is_read: true })
+                .eq('user_id', user.id)  // فلتر بالمستخدم الحالي فقط
                 .in('id', unreadIds);
             
             if (error) {
@@ -413,7 +414,7 @@ export const NotificationsProvider = ({ children }) => {
         } catch (error) {
             console.error("Error in markAllAsRead:", error);
         }
-    }, [notifications]);
+    }, [notifications, user?.id]);
 
     const clearAll = useCallback(async () => {
         if (!supabase) {
