@@ -9,7 +9,7 @@ import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifie
 
 export const useSupervisedEmployees = () => {
   const { user } = useAuth();
-  const { isAdmin, isDepartmentManager } = usePermissions();
+  const { isAdmin, isDepartmentManager, loading: permissionsLoading } = usePermissions();
   const [supervisedEmployeeIds, setSupervisedEmployeeIds] = useState([]);
   const [supervisedEmployees, setSupervisedEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -17,6 +17,9 @@ export const useSupervisedEmployees = () => {
   // جلب الموظفين تحت الإشراف
   useEffect(() => {
     const fetchSupervisedEmployees = async () => {
+      // انتظر حتى تكتمل تحميل الصلاحيات
+      if (permissionsLoading) return;
+      
       if (!isDepartmentManager || isAdmin || !user?.id) {
         setSupervisedEmployeeIds([]);
         setSupervisedEmployees([]);
@@ -64,7 +67,7 @@ export const useSupervisedEmployees = () => {
     };
 
     fetchSupervisedEmployees();
-  }, [isDepartmentManager, isAdmin, user?.id]);
+  }, [isDepartmentManager, isAdmin, user?.id, permissionsLoading]);
 
   // دالة للتحقق إذا كان المستخدم يستطيع رؤية بيانات موظف معين
   const canViewEmployeeData = useCallback((employeeId) => {
