@@ -268,16 +268,16 @@ const DepartmentManagerSettingsPage = () => {
                   </div>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {supervisedEmployees.map((emp) => (
-                      <Card key={emp.user_id} className="border-2 hover:border-primary/50 transition-colors">
+                    {supervisedEmployees.filter(emp => emp != null).map((emp) => (
+                      <Card key={emp?.user_id || Math.random()} className="border-2 hover:border-primary/50 transition-colors">
                         <CardContent className="p-4">
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
-                              {emp.full_name?.charAt(0) || 'م'}
+                              {emp?.full_name?.charAt(0) || 'م'}
                             </div>
                             <div className="flex-1">
-                              <p className="font-semibold">{emp.full_name || 'موظف'}</p>
-                              <p className="text-sm text-muted-foreground">{emp.employee_code || emp.email}</p>
+                              <p className="font-semibold">{emp?.full_name || 'موظف'}</p>
+                              <p className="text-sm text-muted-foreground">{emp?.employee_code || emp?.email || '-'}</p>
                             </div>
                             <Badge variant="outline">نشط</Badge>
                           </div>
@@ -320,9 +320,9 @@ const DepartmentManagerSettingsPage = () => {
                           <SelectValue placeholder="اختر الموظف" />
                         </SelectTrigger>
                         <SelectContent>
-                          {supervisedEmployees.map((emp) => (
-                            <SelectItem key={emp.user_id} value={emp.user_id}>
-                              {emp.full_name || emp.employee_code}
+                          {supervisedEmployees.filter(emp => emp != null).map((emp) => (
+                            <SelectItem key={emp?.user_id || Math.random()} value={emp?.user_id || ''}>
+                              {emp?.full_name || emp?.employee_code || 'موظف'}
                             </SelectItem>
                           ))}
                         </SelectContent>
