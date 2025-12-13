@@ -337,32 +337,33 @@ const InventoryAuditDialog = ({ isAdmin }) => {
           ) : (
             /* حالة وجود فروقات */
             <div className="flex flex-col h-full max-h-[calc(90vh-200px)]">
-              {/* لوحة إحصائيات الفروقات - سطر واحد مصغر */}
-              <div className="flex items-center justify-center gap-2 p-2 bg-muted/30 border-b">
-                <div className="flex items-center gap-1.5 bg-amber-100 dark:bg-amber-950/50 border border-amber-300 dark:border-amber-700 rounded-lg px-2 py-1" title="فرق محجوز">
-                  <Package className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                  <span className="text-sm font-bold text-amber-700 dark:text-amber-300">{issueStats.reserved}</span>
+              {/* لوحة إحصائيات الفروقات - سطر واحد مصغر مع كتابة */}
+              <div className="flex items-center justify-center gap-3 p-3 bg-gradient-to-r from-muted/20 via-muted/40 to-muted/20 border-b">
+                <div className="flex flex-col items-center gap-0.5 bg-gradient-to-br from-amber-100 to-orange-50 dark:from-amber-950/50 dark:to-orange-950/30 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 min-w-[60px] shadow-sm hover:shadow-md transition-shadow">
+                  <Package className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  <span className="text-lg font-bold text-amber-700 dark:text-amber-300">{issueStats.reserved}</span>
+                  <span className="text-[9px] text-amber-600/80 dark:text-amber-400/80 font-medium">محجوز</span>
                 </div>
-                <div className="flex items-center gap-1.5 bg-blue-100 dark:bg-blue-950/50 border border-blue-300 dark:border-blue-700 rounded-lg px-2 py-1" title="فرق مباع">
-                  <ShoppingCart className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span className="text-sm font-bold text-blue-700 dark:text-blue-300">{issueStats.sold}</span>
+                <div className="flex flex-col items-center gap-0.5 bg-gradient-to-br from-blue-100 to-cyan-50 dark:from-blue-950/50 dark:to-cyan-950/30 border border-blue-300 dark:border-blue-700 rounded-xl px-3 py-2 min-w-[60px] shadow-sm hover:shadow-md transition-shadow">
+                  <ShoppingCart className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-lg font-bold text-blue-700 dark:text-blue-300">{issueStats.sold}</span>
+                  <span className="text-[9px] text-blue-600/80 dark:text-blue-400/80 font-medium">مباع</span>
                 </div>
-                <div className="flex items-center gap-1.5 bg-red-100 dark:bg-red-950/50 border border-red-300 dark:border-red-700 rounded-lg px-2 py-1" title="قيم سالبة">
-                  <AlertTriangle className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                  <span className="text-sm font-bold text-red-700 dark:text-red-300">{issueStats.negative}</span>
+                <div className="flex flex-col items-center gap-0.5 bg-gradient-to-br from-red-100 to-rose-50 dark:from-red-950/50 dark:to-rose-950/30 border border-red-300 dark:border-red-700 rounded-xl px-3 py-2 min-w-[60px] shadow-sm hover:shadow-md transition-shadow">
+                  <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
+                  <span className="text-lg font-bold text-red-700 dark:text-red-300">{issueStats.negative}</span>
+                  <span className="text-[9px] text-red-600/80 dark:text-red-400/80 font-medium">سالبة</span>
                 </div>
-                <div className="flex items-center gap-1.5 bg-purple-100 dark:bg-purple-950/50 border border-purple-300 dark:border-purple-700 rounded-lg px-2 py-1" title="فرق مركب">
-                  <AlertCircle className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
-                  <span className="text-sm font-bold text-purple-700 dark:text-purple-300">{issueStats.complex}</span>
+                <div className="flex flex-col items-center gap-0.5 bg-gradient-to-br from-purple-100 to-violet-50 dark:from-purple-950/50 dark:to-violet-950/30 border border-purple-300 dark:border-purple-700 rounded-xl px-3 py-2 min-w-[60px] shadow-sm hover:shadow-md transition-shadow">
+                  <AlertCircle className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span className="text-lg font-bold text-purple-700 dark:text-purple-300">{issueStats.complex}</span>
+                  <span className="text-[9px] text-purple-600/80 dark:text-purple-400/80 font-medium">مركب</span>
                 </div>
               </div>
               
-              {/* Timeline للنتائج */}
+              {/* بطاقات المنتجات - تصميم عالمي مبهر Grid */}
               <ScrollArea className="flex-1 p-4">
-                <div className="relative pr-4">
-                  {/* خط Timeline */}
-                  <div className="absolute right-[7px] top-2 bottom-2 w-0.5 bg-border" />
-                  
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {auditResults?.map((item, idx) => {
                     const config = getIssueConfig(item.issue_type);
                     const Icon = config.icon;
@@ -370,78 +371,120 @@ const InventoryAuditDialog = ({ isAdmin }) => {
                     return (
                       <div 
                         key={item.out_variant_id || idx}
-                        className="relative pr-8 pb-4 last:pb-0"
+                        className="group relative overflow-hidden rounded-2xl border-2 bg-gradient-to-br from-background via-background to-muted/30 hover:shadow-2xl transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1"
+                        style={{
+                          borderColor: config.dotColor.replace('bg-', 'hsl(var(--') + '))',
+                        }}
                       >
-                        {/* نقطة Timeline */}
+                        {/* شريط علوي ملون */}
                         <div className={cn(
-                          "absolute right-0 top-1 w-[14px] h-[14px] rounded-full border-2 border-background z-10",
+                          "absolute top-0 left-0 right-0 h-1.5",
                           config.dotColor
                         )} />
                         
-                        {/* بطاقة المنتج */}
+                        {/* خلفية متوهجة عند hover */}
                         <div className={cn(
-                          "rounded-xl border p-4 transition-all hover:shadow-md",
-                          config.bgColor,
-                          config.borderColor
-                        )}>
-                          {/* الصف العلوي */}
-                          <div className="flex items-start justify-between gap-3 mb-3">
+                          "absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none",
+                          "bg-gradient-to-br",
+                          config.issue_type?.includes('reserved') ? "from-amber-500/5 to-orange-500/10" :
+                          config.issue_type?.includes('sold') ? "from-blue-500/5 to-cyan-500/10" :
+                          config.issue_type?.includes('negative') ? "from-red-500/5 to-rose-500/10" :
+                          "from-purple-500/5 to-violet-500/10"
+                        )} />
+                        
+                        <div className="relative p-4">
+                          {/* رأس البطاقة */}
+                          <div className="flex items-start justify-between gap-3 mb-4">
                             <div className="flex items-center gap-3">
-                              <div className="p-2 rounded-lg bg-white/50 dark:bg-black/20">
+                              {/* أيقونة الحالة مع تأثير pulse */}
+                              <div className={cn(
+                                "relative p-2.5 rounded-xl shadow-lg",
+                                config.bgColor
+                              )}>
                                 <Icon className={cn("w-5 h-5", config.color)} />
+                                <div className={cn(
+                                  "absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse",
+                                  config.dotColor
+                                )} />
                               </div>
-                              <div>
-                                <div className={cn("font-bold text-sm", config.color)}>
+                              
+                              <div className="flex-1">
+                                {/* شارة نوع الفرق */}
+                                <div className={cn(
+                                  "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold mb-1",
+                                  config.bgColor,
+                                  config.color
+                                )}>
+                                  <Sparkles className="w-3 h-3" />
                                   {config.label}
                                 </div>
-                                <div className="text-foreground font-semibold mt-0.5">
+                                
+                                {/* اسم المنتج */}
+                                <h4 className="font-bold text-foreground text-sm leading-tight line-clamp-2">
                                   {item.product_name}
-                                </div>
-                                <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                                  <span className="bg-background/60 px-2 py-0.5 rounded">
-                                    {item.color_name}
-                                  </span>
-                                  <span className="bg-background/60 px-2 py-0.5 rounded">
-                                    {item.size_value}
-                                  </span>
-                                </div>
+                                </h4>
                               </div>
                             </div>
                           </div>
                           
-                          {/* تفاصيل الأرقام */}
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-border/50">
+                          {/* معلومات اللون والقياس */}
+                          <div className="flex items-center gap-2 mb-4">
+                            <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-muted to-muted/50 px-3 py-1 rounded-full text-xs font-medium">
+                              <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-br from-gray-400 to-gray-600" />
+                              {item.color_name}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 bg-gradient-to-r from-muted to-muted/50 px-3 py-1 rounded-full text-xs font-medium">
+                              📏 {item.size_value}
+                            </span>
+                          </div>
+                          
+                          {/* شبكة الأرقام - تصميم عالمي */}
+                          <div className="grid grid-cols-4 gap-2">
                             {/* المخزون */}
-                            <div className="bg-background/50 rounded-lg p-2 text-center">
-                              <div className="text-[10px] text-muted-foreground mb-1">المخزون</div>
+                            <div className="relative overflow-hidden bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 rounded-xl p-2 text-center group/stat">
+                              <div className="absolute inset-0 bg-gradient-to-t from-slate-200/50 to-transparent dark:from-slate-700/50 opacity-0 group-hover/stat:opacity-100 transition-opacity" />
+                              <Warehouse className="w-3.5 h-3.5 mx-auto mb-1 text-slate-500" />
+                              <div className="text-[10px] text-muted-foreground">المخزون</div>
                               <div className="font-bold text-foreground">{item.current_quantity}</div>
                             </div>
                             
                             {/* المحجوز */}
                             <div className={cn(
-                              "rounded-lg p-2 text-center",
+                              "relative overflow-hidden rounded-xl p-2 text-center group/stat",
                               item.reserved_diff !== 0 
-                                ? "bg-amber-100/50 dark:bg-amber-900/20" 
-                                : "bg-background/50"
+                                ? "bg-gradient-to-br from-amber-100 to-orange-50 dark:from-amber-900/30 dark:to-orange-900/20 ring-2 ring-amber-400/50" 
+                                : "bg-gradient-to-br from-emerald-100 to-green-50 dark:from-emerald-900/30 dark:to-green-900/20"
                             )}>
-                              <div className="text-[10px] text-muted-foreground mb-1">المحجوز</div>
+                              <Package className={cn("w-3.5 h-3.5 mx-auto mb-1", item.reserved_diff !== 0 ? "text-amber-600" : "text-emerald-600")} />
+                              <div className="text-[10px] text-muted-foreground">المحجوز</div>
                               {item.reserved_diff !== 0 ? (
-                                <div className="flex items-center justify-center gap-1 text-sm">
-                                  <span className="text-red-500 line-through">{item.current_reserved}</span>
-                                  <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                                  <span className="font-bold text-emerald-600">{item.calculated_reserved}</span>
+                                <div className="space-y-0.5">
+                                  <div className="text-xs text-red-500 line-through opacity-70">{item.current_reserved}</div>
+                                  <div className="flex items-center justify-center gap-1">
+                                    <ArrowRight className="w-2.5 h-2.5 text-amber-500 animate-pulse" />
+                                    <span className="font-bold text-emerald-600 text-sm">{item.calculated_reserved}</span>
+                                  </div>
                                 </div>
                               ) : (
-                                <div className="font-bold text-emerald-600">✓ {item.current_reserved}</div>
+                                <div className="font-bold text-emerald-600 flex items-center justify-center gap-1">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {item.current_reserved}
+                                </div>
                               )}
                             </div>
                             
                             {/* المتاح */}
-                            <div className="bg-background/50 rounded-lg p-2 text-center">
-                              <div className="text-[10px] text-muted-foreground mb-1">المتاح</div>
+                            <div className={cn(
+                              "relative overflow-hidden rounded-xl p-2 text-center group/stat",
+                              item.current_available < 0 
+                                ? "bg-gradient-to-br from-red-100 to-rose-50 dark:from-red-900/30 dark:to-rose-900/20 ring-2 ring-red-400/50"
+                                : "bg-gradient-to-br from-teal-100 to-cyan-50 dark:from-teal-900/30 dark:to-cyan-900/20"
+                            )}>
+                              <Box className={cn("w-3.5 h-3.5 mx-auto mb-1", item.current_available < 0 ? "text-red-600" : "text-teal-600")} />
+                              <div className="text-[10px] text-muted-foreground">المتاح</div>
                               <div className={cn(
                                 "font-bold",
-                                item.current_available < 0 ? "text-red-500" : "text-foreground"
+                                item.current_available < 0 ? "text-red-600 animate-pulse" : "text-teal-700"
                               )}>
                                 {item.current_available}
                               </div>
@@ -449,23 +492,47 @@ const InventoryAuditDialog = ({ isAdmin }) => {
                             
                             {/* المباع */}
                             <div className={cn(
-                              "rounded-lg p-2 text-center",
+                              "relative overflow-hidden rounded-xl p-2 text-center group/stat",
                               item.sold_diff !== 0 
-                                ? "bg-blue-100/50 dark:bg-blue-900/20" 
-                                : "bg-background/50"
+                                ? "bg-gradient-to-br from-blue-100 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/20 ring-2 ring-blue-400/50" 
+                                : "bg-gradient-to-br from-emerald-100 to-green-50 dark:from-emerald-900/30 dark:to-green-900/20"
                             )}>
-                              <div className="text-[10px] text-muted-foreground mb-1">المباع</div>
+                              <ShoppingCart className={cn("w-3.5 h-3.5 mx-auto mb-1", item.sold_diff !== 0 ? "text-blue-600" : "text-emerald-600")} />
+                              <div className="text-[10px] text-muted-foreground">المباع</div>
                               {item.sold_diff !== 0 ? (
-                                <div className="flex items-center justify-center gap-1 text-sm">
-                                  <span className="text-red-500 line-through">{item.current_sold}</span>
-                                  <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                                  <span className="font-bold text-emerald-600">{item.calculated_sold}</span>
+                                <div className="space-y-0.5">
+                                  <div className="text-xs text-red-500 line-through opacity-70">{item.current_sold}</div>
+                                  <div className="flex items-center justify-center gap-1">
+                                    <ArrowRight className="w-2.5 h-2.5 text-blue-500 animate-pulse" />
+                                    <span className="font-bold text-emerald-600 text-sm">{item.calculated_sold}</span>
+                                  </div>
                                 </div>
                               ) : (
-                                <div className="font-bold text-emerald-600">✓ {item.current_sold}</div>
+                                <div className="font-bold text-emerald-600 flex items-center justify-center gap-1">
+                                  <CheckCircle className="w-3 h-3" />
+                                  {item.current_sold}
+                                </div>
                               )}
                             </div>
                           </div>
+                          
+                          {/* شريط سفلي يوضح الفرق */}
+                          {(item.reserved_diff !== 0 || item.sold_diff !== 0) && (
+                            <div className="mt-3 pt-3 border-t border-border/50 flex items-center justify-center gap-4 text-[10px]">
+                              {item.reserved_diff !== 0 && (
+                                <span className="flex items-center gap-1 text-amber-600 font-medium">
+                                  <TrendingUp className="w-3 h-3" />
+                                  فرق محجوز: {item.reserved_diff > 0 ? '+' : ''}{item.reserved_diff}
+                                </span>
+                              )}
+                              {item.sold_diff !== 0 && (
+                                <span className="flex items-center gap-1 text-blue-600 font-medium">
+                                  <TrendingUp className="w-3 h-3" />
+                                  فرق مباع: {item.sold_diff > 0 ? '+' : ''}{item.sold_diff}
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
