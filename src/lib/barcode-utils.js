@@ -38,10 +38,7 @@ export const detectProductType = (colorName, sizeName, departmentName = '') => {
  */
 export const generateSmartBarcode = (productName, colorName = 'DEFAULT', sizeName = 'DEFAULT', productId = null, departmentName = '') => {
   try {
-    console.log('🏗️ بدء توليد الباركود الذكي:', { productName, colorName, sizeName, departmentName });
-    
     const productType = detectProductType(colorName, sizeName, departmentName);
-    console.log('🎯 نوع المنتج المكتشف:', productType);
     
     // تنظيف النصوص
     const cleanString = (str, maxLength = 3) => {
@@ -87,15 +84,8 @@ export const generateSmartBarcode = (productName, colorName = 'DEFAULT', sizeNam
     // التأكد من أن الباركود لا يتجاوز 20 حرف
     const finalBarcode = barcode.length > 20 ? barcode.substring(0, 20) : barcode;
     
-    console.log('✅ الباركود المولد:', {
-      نوع_المنتج: productType,
-      الباركود_النهائي: finalBarcode,
-      الطول: finalBarcode.length
-    });
-    
     return finalBarcode;
   } catch (error) {
-    console.error('❌ خطأ في توليد الباركود الذكي:', error);
     return generateFallbackBarcode(productName);
   }
 };

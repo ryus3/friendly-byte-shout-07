@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/utils/NotificationService';
+import { devLog } from '@/lib/devLogger';
 
 export const useReliableAiOrderNotifications = (user) => {
   const channelRef = useRef(null);
@@ -13,7 +14,7 @@ export const useReliableAiOrderNotifications = (user) => {
       return;
     }
 
-    console.log('🔄 RELIABLE: Setting up AI orders notifications for user:', {
+    devLog.log('🔄 RELIABLE: Setting up AI orders notifications for user:', {
       userId: user.id,
       roles: user.roles,
       isAdmin: user?.roles?.includes('super_admin')
@@ -30,7 +31,7 @@ export const useReliableAiOrderNotifications = (user) => {
           table: 'ai_orders'
         },
         async (payload) => {
-          console.log('⚡ RELIABLE: New AI order detected:', {
+          devLog.log('⚡ RELIABLE: New AI order detected:', {
             orderId: payload.new?.id,
             source: payload.new?.source,
             createdBy: payload.new?.created_by,
@@ -57,7 +58,7 @@ export const useReliableAiOrderNotifications = (user) => {
             const isCreator = payload.new.created_by === user.id;
             const isManagerOrder = payload.new.created_by === '91484496-b887-44f7-9e5d-be9db5567604';
 
-            console.log('🔍 RELIABLE: Notification logic:', {
+            devLog.log('🔍 RELIABLE: Notification logic:', {
               isAdmin,
               isCreator,
               isManagerOrder,
@@ -92,10 +93,10 @@ export const useReliableAiOrderNotifications = (user) => {
               id: payload.new.id
             });
 
-            console.log('✅ RELIABLE: Notifications sent successfully');
+            devLog.log('✅ RELIABLE: Notifications sent successfully');
 
           } catch (error) {
-            console.error('❌ RELIABLE: Error processing AI order notification:', error);
+            devLog.error('❌ RELIABLE: Error processing AI order notification:', error);
             
             // إشعار احتياطي بسيط
             window.dispatchEvent(new CustomEvent('reliableAiOrderNotification', { 
@@ -109,9 +110,9 @@ export const useReliableAiOrderNotifications = (user) => {
         }
       )
       .subscribe((status) => {
-        console.log('📊 RELIABLE: Subscription status:', status);
+        devLog.log('📊 RELIABLE: Subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ RELIABLE: AI orders notifications ready');
+          devLog.log('✅ RELIABLE: AI orders notifications ready');
           isInitialized.current = true;
         }
       });
@@ -120,7 +121,7 @@ export const useReliableAiOrderNotifications = (user) => {
 
     // تنظيف عند إلغاء التحميل
     return () => {
-      console.log('🧹 RELIABLE: Cleaning up');
+      devLog.log('🧹 RELIABLE: Cleaning up');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;

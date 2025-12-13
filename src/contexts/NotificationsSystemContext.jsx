@@ -3,6 +3,7 @@ import { useAuth } from './UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { devLog } from '@/lib/devLogger';
 
 const NotificationsSystemContext = createContext();
 
@@ -31,7 +32,7 @@ export const NotificationsSystemProvider = ({ children }) => {
         .limit(50);
       
       if (error) {
-        console.error('Error fetching notifications:', error);
+        devLog.error('Error fetching notifications:', error);
         return;
       }
       
@@ -54,7 +55,7 @@ export const NotificationsSystemProvider = ({ children }) => {
       setUnreadCount(formattedNotifications.filter(n => !n.read).length);
       
     } catch (error) {
-      console.error('Error in fetchNotifications:', error);
+      devLog.error('Error in fetchNotifications:', error);
     }
   }, [user]);
 
@@ -71,7 +72,7 @@ export const NotificationsSystemProvider = ({ children }) => {
         schema: 'public',
         table: 'notifications'
       }, (payload) => {
-        console.log('New notification detected:', payload);
+        devLog.log('New notification detected:', payload);
         fetchNotifications(); // إعادة جلب فقط عند إضافة إشعار جديد
       })
       .on('postgres_changes', {
@@ -79,7 +80,7 @@ export const NotificationsSystemProvider = ({ children }) => {
         schema: 'public',
         table: 'notifications'
       }, (payload) => {
-        console.log('Notification updated:', payload);
+        devLog.log('Notification updated:', payload);
         // تحديث محلي للإشعار بدلاً من إعادة جلب الكل
         if (payload.new.is_read !== payload.old.is_read) {
           setNotifications(prev => prev.map(n => 
@@ -133,12 +134,12 @@ export const NotificationsSystemProvider = ({ children }) => {
         }]);
       
       if (insertError) {
-        console.error('Error saving notification to database:', insertError);
+        devLog.error('Error saving notification to database:', insertError);
       }
 
       return notification;
     } catch (error) {
-      console.error('Error creating notification:', error);
+      devLog.error('Error creating notification:', error);
       return null;
     }
   }, []);
@@ -205,7 +206,7 @@ export const NotificationsSystemProvider = ({ children }) => {
         .limit(1);
       
       if (error) {
-        console.error('Error checking notification history:', error);
+        devLog.error('Error checking notification history:', error);
         return;
       }
       
@@ -259,7 +260,7 @@ export const NotificationsSystemProvider = ({ children }) => {
       });
       
     } catch (error) {
-      console.error('Error in notifyLowStock:', error);
+      devLog.error('Error in notifyLowStock:', error);
     }
   }, [createNotification, hasPermission, user?.id]);
 
@@ -272,7 +273,7 @@ export const NotificationsSystemProvider = ({ children }) => {
         .eq('id', notificationId);
       
       if (error) {
-        console.error('Error marking notification as read:', error);
+        devLog.error('Error marking notification as read:', error);
         return;
       }
       
@@ -281,7 +282,7 @@ export const NotificationsSystemProvider = ({ children }) => {
       ));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('Error in markAsRead:', error);
+      devLog.error('Error in markAsRead:', error);
     }
   }, []);
 
@@ -294,14 +295,14 @@ export const NotificationsSystemProvider = ({ children }) => {
         .neq('is_read', true);
       
       if (error) {
-        console.error('Error marking all notifications as read:', error);
+        devLog.error('Error marking all notifications as read:', error);
         return;
       }
       
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (error) {
-      console.error('Error in markAllAsRead:', error);
+      devLog.error('Error in markAllAsRead:', error);
     }
   }, []);
 
@@ -315,7 +316,7 @@ export const NotificationsSystemProvider = ({ children }) => {
         .eq('id', notificationId);
       
       if (error) {
-        console.error('Error deleting notification from database:', error);
+        devLog.error('Error deleting notification from database:', error);
         toast({
           title: "خطأ",
           description: "حدث خطأ أثناء حذف الإشعار",
@@ -334,7 +335,7 @@ export const NotificationsSystemProvider = ({ children }) => {
       });
       
     } catch (error) {
-      console.error('Error in deleteNotification:', error);
+      devLog.error('Error in deleteNotification:', error);
     }
   }, []);
 
