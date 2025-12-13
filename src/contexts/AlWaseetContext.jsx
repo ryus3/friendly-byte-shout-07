@@ -16,8 +16,8 @@ import devLog from '@/lib/devLogger';
 // 🔄 Context Version - لإجبار المتصفح على تحديث الكود
 const CONTEXT_VERSION = '2.9.4';
 
-// 🧠 Smart Cache - Module-level: تخزين الطلبات المجلوبة مؤقتاً لمدة 5 دقائق
-const CACHE_TTL = 5 * 60 * 1000; // 5 دقائق
+// 🧠 Smart Cache - Module-level: تخزين الطلبات المجلوبة مؤقتاً
+const CACHE_TTL = 10 * 60 * 1000; // ⚡ 10 دقائق بدلاً من 5
 
 // ✅ Smart Cache باستخدام sessionStorage للاستمرارية
 const getCachedOrder = (trackingNumber) => {
