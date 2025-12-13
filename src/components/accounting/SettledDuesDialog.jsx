@@ -423,7 +423,7 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
 };
 
 // المكون الرئيسي للمستحقات المدفوعة
-const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [], orders = [], timePeriod: externalTimePeriod = null }) => {
+const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [], orders = [], timePeriod: externalTimePeriod = null, supervisedEmployeeIds = null, isDepartmentManager = false }) => {
   const [selectedEmployeeFilter, setSelectedEmployeeFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
@@ -524,6 +524,11 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
         let query = supabase
           .from('settlement_invoices')
           .select('*');
+
+        // لمدير القسم: تصفية حسب الموظفين المشرف عليهم فقط
+        if (isDepartmentManager && supervisedEmployeeIds?.length > 0) {
+          query = query.in('employee_id', supervisedEmployeeIds);
+        }
 
         // تطبيق فلتر الفترة الزمنية
         const now = new Date();

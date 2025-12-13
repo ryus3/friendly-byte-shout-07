@@ -15,7 +15,9 @@ const UnifiedSettledDuesDialog = ({
   allUsers, 
   profits = [], 
   orders = [],
-  timePeriod = 'all'
+  timePeriod = 'all',
+  supervisedEmployeeIds = null,
+  isDepartmentManager = false
 }) => {
   return (
     <SettledDuesDialog
@@ -26,6 +28,8 @@ const UnifiedSettledDuesDialog = ({
       profits={profits}
       orders={orders}
       timePeriod={timePeriod}
+      supervisedEmployeeIds={supervisedEmployeeIds}
+      isDepartmentManager={isDepartmentManager}
     />
   );
 };
