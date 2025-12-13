@@ -9,7 +9,7 @@ import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifie
 
 export const useSupervisedEmployees = () => {
   const { user } = useAuth();
-  const { isAdmin, isDepartmentManager, loading: permissionsLoading } = usePermissions();
+  const { isAdmin, isDepartmentManager } = usePermissions();
   const [supervisedEmployeeIds, setSupervisedEmployeeIds] = useState([]);
   const [supervisedEmployees, setSupervisedEmployees] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -17,9 +17,6 @@ export const useSupervisedEmployees = () => {
   // جلب الموظفين تحت الإشراف
   useEffect(() => {
     const fetchSupervisedEmployees = async () => {
-      // انتظر حتى تكتمل تحميل الصلاحيات
-      if (permissionsLoading) return;
-      
       if (!isDepartmentManager || isAdmin || !user?.id) {
         setSupervisedEmployeeIds([]);
         setSupervisedEmployees([]);
@@ -28,37 +25,30 @@ export const useSupervisedEmployees = () => {
 
       setLoading(true);
       try {
-        // استعلام 1: جلب employee_ids من جدول الإشراف
-        const { data: supervisionData, error: supError } = await supabase
+        const { data, error } = await supabase
           .from('employee_supervisors')
-          .select('employee_id')
+          .select(`
+            employee_id,
+            employee:profiles!employee_id (
+              user_id,
+              full_name,
+              email,
+              employee_code
+            )
+          `)
           .eq('supervisor_id', user.id)
           .eq('is_active', true);
 
-        if (supError) {
-          console.error('خطأ في جلب علاقات الإشراف:', supError);
+        if (error) {
+          console.error('خطأ في جلب الموظفين تحت الإشراف:', error);
           return;
         }
 
-        const ids = supervisionData?.map(d => d.employee_id) || [];
+        const ids = data?.map(d => d.employee_id) || [];
+        const employees = data?.map(d => d.employee) || [];
+        
         setSupervisedEmployeeIds(ids);
-
-        // استعلام 2: جلب بيانات الموظفين من profiles باستخدام user_id
-        if (ids.length > 0) {
-          const { data: employeesData, error: empError } = await supabase
-            .from('profiles')
-            .select('user_id, full_name, email, employee_code')
-            .in('user_id', ids);
-
-          if (empError) {
-            console.error('خطأ في جلب بيانات الموظفين:', empError);
-            return;
-          }
-
-          setSupervisedEmployees(employeesData || []);
-        } else {
-          setSupervisedEmployees([]);
-        }
+        setSupervisedEmployees(employees);
       } catch (err) {
         console.error('خطأ غير متوقع:', err);
       } finally {
@@ -67,7 +57,7 @@ export const useSupervisedEmployees = () => {
     };
 
     fetchSupervisedEmployees();
-  }, [isDepartmentManager, isAdmin, user?.id, permissionsLoading]);
+  }, [isDepartmentManager, isAdmin, user?.id]);
 
   // دالة للتحقق إذا كان المستخدم يستطيع رؤية بيانات موظف معين
   const canViewEmployeeData = useCallback((employeeId) => {
