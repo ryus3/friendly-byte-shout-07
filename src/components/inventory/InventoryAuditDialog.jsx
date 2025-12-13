@@ -37,19 +37,23 @@ const InventoryAuditDialog = ({ isAdmin }) => {
       if (auditResponse.error) throw auditResponse.error;
       if (statsResponse.error) throw statsResponse.error;
       
-      setAuditResults(auditResponse.data || []);
+      // تصفية الفروقات فقط (issue_type !== 'ok')
+      const allResults = auditResponse.data || [];
+      const discrepancies = allResults.filter(item => item.issue_type !== 'ok');
+      
+      setAuditResults(discrepancies);
       setSummaryStats(statsResponse.data?.[0] || null);
       setShowResults(true);
       
-      if (!auditResponse.data || auditResponse.data.length === 0) {
+      if (discrepancies.length === 0) {
         toast({
           title: "✅ المخزون صحيح 100%",
-          description: "جميع الأرقام متطابقة مع الطلبات الفعلية",
+          description: `جميع ${allResults.length} منتج متطابقة مع الطلبات الفعلية`,
         });
       } else {
         toast({
           title: "⚠️ تم اكتشاف فروقات",
-          description: `${auditResponse.data.length} منتج يحتاج مراجعة`,
+          description: `${discrepancies.length} منتج يحتاج مراجعة من أصل ${allResults.length}`,
           variant: "destructive",
         });
       }
