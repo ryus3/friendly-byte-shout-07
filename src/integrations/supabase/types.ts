@@ -6936,12 +6936,14 @@ export type Database = {
           calculated_reserved: number
           calculated_sold: number
           color_name: string
+          current_available: number
           current_quantity: number
           current_reserved: number
           current_sold: number
+          has_negative: boolean
           issue_type: string
+          product_id: string
           product_name: string
-          quantity_diff: number
           reserved_diff: number
           size_value: string
           sold_diff: number
