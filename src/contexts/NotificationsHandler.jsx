@@ -7,6 +7,7 @@ import { useUnreadNotificationsCheck } from '@/hooks/useUnreadNotificationsCheck
 import { useReliableAiOrderNotifications } from '@/hooks/useReliableAiOrderNotifications';
 import { useAiOrderEventListener } from '@/hooks/useAiOrderEventListener';
 import { useAiOrderFallbackChecker } from '@/hooks/useAiOrderFallbackChecker';
+import { useInstantNotifications } from '@/hooks/useInstantNotifications';
 
 const NotificationsHandler = () => {
   const { user, fetchAdminData } = useAuth();
@@ -23,6 +24,9 @@ const NotificationsHandler = () => {
   
   // نظام احتياطي للتحقق من الطلبات الذكية الجديدة عند فتح الموقع
   useAiOrderFallbackChecker(user);
+  
+  // نظام الإشعارات الفورية - يرسل إشعارات المتصفح الصحيحة بالعربي
+  useInstantNotifications(user?.id, user?.roles);
 
   useEffect(() => {
     // التحقق من الشروط الأساسية
