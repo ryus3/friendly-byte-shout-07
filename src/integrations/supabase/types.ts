@@ -6932,7 +6932,6 @@ export type Database = {
       audit_inventory_accuracy: {
         Args: never
         Returns: {
-          calculated_available: number
           calculated_reserved: number
           calculated_sold: number
           color_name: string
@@ -6940,14 +6939,10 @@ export type Database = {
           current_quantity: number
           current_reserved: number
           current_sold: number
-          has_negative: boolean
           issue_type: string
           product_id: string
           product_name: string
-          reserved_diff: number
           size_value: string
-          sold_diff: number
-          variant_id: string
         }[]
       }
       auth_with_username: {
@@ -7192,8 +7187,13 @@ export type Database = {
       fix_inventory_discrepancies: {
         Args: never
         Returns: {
-          details: Json
-          fixed_count: number
+          fix_type: string
+          fixed_variant_id: string
+          new_reserved: number
+          new_sold: number
+          old_reserved: number
+          old_sold: number
+          product_name: string
         }[]
       }
       fix_partial_delivery_financials_112066293: { Args: never; Returns: Json }
