@@ -52,8 +52,8 @@ Deno.serve(async (req) => {
     // إشعار للمنشئ
     const creatorNotification = {
       type: 'new_ai_order',
-      title: '✅ تم إنشاء طلب ذكي جديد',
-      message: 'تم حفظ طلبك الذكي بنجاح',
+      title: 'طلب ذكي جديد',
+      message: 'استلام طلب جديد من التليغرام يحتاج للمراجعة',
       user_id: record.created_by,
       data: {
         ai_order_id: record.id,
@@ -67,8 +67,8 @@ Deno.serve(async (req) => {
     // إشعار عام للمديرين
     const adminNotification = {
       type: 'new_ai_order',
-      title: `📋 طلب ذكي جديد من ${creatorName}`,
-      message: `عميل: ${record.customer_name || 'غير محدد'} - المبلغ: ${record.total_amount}`,
+      title: `طلب ذكي جديد من ${creatorName}`,
+      message: 'استلام طلب جديد من التليغرام يحتاج للمراجعة',
       user_id: null,
       data: {
         ai_order_id: record.id,
@@ -92,6 +92,33 @@ Deno.serve(async (req) => {
     }
 
     console.log('✅ Notifications saved successfully');
+
+    // إرسال Push Notifications
+    try {
+      // Push للمنشئ
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          title: 'طلب ذكي جديد',
+          body: 'استلام طلب جديد من التليغرام يحتاج للمراجعة',
+          data: { type: 'new_ai_order', orderId: record.id },
+          userId: record.created_by
+        }
+      });
+
+      // Push للمديرين (userId = null يعني المديرين)
+      await supabase.functions.invoke('send-push-notification', {
+        body: {
+          title: `طلب ذكي جديد من ${creatorName}`,
+          body: 'استلام طلب جديد من التليغرام يحتاج للمراجعة',
+          data: { type: 'new_ai_order', orderId: record.id },
+          userId: null
+        }
+      });
+
+      console.log('✅ Push notifications sent');
+    } catch (pushError) {
+      console.log('⚠️ Push notification error (non-critical):', pushError);
+    }
 
     return new Response(JSON.stringify({ 
       success: true, 

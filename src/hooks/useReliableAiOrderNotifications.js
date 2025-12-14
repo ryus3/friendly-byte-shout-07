@@ -74,7 +74,7 @@ export const useReliableAiOrderNotifications = (user) => {
               await addNotification({
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
-                message: `استلام طلب جديد من ${payload.new.source || 'التليغرام'} يحتاج للمراجعة`,
+                message: 'استلام طلب جديد من التليغرام يحتاج للمراجعة',
                 icon: 'MessageSquare',
                 color: 'green',
                 data: { 
@@ -91,7 +91,7 @@ export const useReliableAiOrderNotifications = (user) => {
               await addNotification({
                 type: 'new_ai_order',
                 title: `طلب ذكي جديد من ${creatorName}`,
-                message: `استلام طلب جديد من ${payload.new.source || 'التليغرام'} يحتاج للمراجعة`,
+                message: 'استلام طلب جديد من التليغرام يحتاج للمراجعة',
                 icon: 'MessageSquare',
                 color: 'amber',
                 data: { 
@@ -108,7 +108,7 @@ export const useReliableAiOrderNotifications = (user) => {
             if (isCreator || (isAdmin && !isManagerOrder)) {
               await notificationService.showNotification({
                 title: isCreator ? 'طلب ذكي جديد' : `طلب ذكي جديد من ${creatorName}`,
-                message: `استلام طلب جديد من ${payload.new.source || 'التليغرام'} يحتاج للمراجعة`,
+                message: 'استلام طلب جديد من التليغرام يحتاج للمراجعة',
                 type: 'new_ai_order',
                 id: orderId
               });
