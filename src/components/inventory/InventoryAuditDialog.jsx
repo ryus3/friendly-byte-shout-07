@@ -460,7 +460,7 @@ const InventoryAuditDialog = ({ isAdmin }) => {
                               {item.reserved_diff !== 0 ? (
                                 <div className="flex items-center justify-center gap-1.5 mt-1">
                                   <span className="text-red-500 line-through text-base font-medium">{item.current_reserved}</span>
-                                  <span className="text-muted-foreground">→</span>
+                                  <span className="text-muted-foreground">←</span>
                                   <span className="font-bold text-emerald-600 text-lg">{item.calculated_reserved}</span>
                                 </div>
                               ) : (
@@ -499,7 +499,7 @@ const InventoryAuditDialog = ({ isAdmin }) => {
                               {item.sold_diff !== 0 ? (
                                 <div className="flex items-center justify-center gap-1.5 mt-1">
                                   <span className="text-red-500 line-through text-base font-medium">{item.current_sold}</span>
-                                  <span className="text-muted-foreground">→</span>
+                                  <span className="text-muted-foreground">←</span>
                                   <span className="font-bold text-emerald-600 text-lg">{item.calculated_sold}</span>
                                 </div>
                               ) : (

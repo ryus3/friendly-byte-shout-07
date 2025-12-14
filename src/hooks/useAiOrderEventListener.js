@@ -1,75 +1,83 @@
-// مستمع أحداث الطلبات الذكية - يرسل أحداث UI فقط (الإشعارات من useReliableAiOrderNotifications)
-import { useEffect, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { getProcessedOrders } from './useReliableAiOrderNotifications';
+// مستمع الأحداث المخصص للطلبات الذكية
+import { useEffect } from 'react';
+import { useNotifications } from '@/contexts/NotificationsContext';
 
 export const useAiOrderEventListener = (user) => {
-  const channelRef = useRef(null);
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
-    if (!user || !supabase) {
-      return;
-    }
+    if (!user) return;
 
-    // إنشاء قناة منفصلة لأحداث UI فقط
-    const uiEventsChannel = supabase
-      .channel(`ai-orders-ui-events-${user.id}-${Date.now()}`)
-      .on(
-        'postgres_changes',
-        { 
-          event: 'INSERT', 
-          schema: 'public', 
-          table: 'ai_orders'
-        },
-        async (payload) => {
-          const orderId = payload.new?.id;
-          if (!orderId) return;
-          
-          // جلب اسم الموظف
-          let employeeName = 'موظف';
-          if (payload.new?.created_by) {
-            const { data: profile } = await supabase
-              .from('profiles')
-              .select('full_name')
-              .eq('user_id', payload.new.created_by)
-              .maybeSingle();
-            
-            if (profile?.full_name) {
-              employeeName = profile.full_name;
-            }
-          }
+    console.log('🎧 LISTENER: Setting up AI order event listeners');
 
-          // إرسال أحداث UI لتحديث الواجهة
-          window.dispatchEvent(new CustomEvent('newAiOrderNotification', { 
-            detail: { 
-              orderId,
-              employeeName,
-              createdBy: payload.new.created_by,
-              timestamp: new Date().toISOString()
-            } 
-          }));
+    // مستمع إشعارات الطلبات الذكية الموثوقة
+    const handleReliableNotification = async (event) => {
+      const { detail } = event;
+      console.log('🔔 LISTENER: Reliable AI order notification:', detail);
 
-          window.dispatchEvent(new CustomEvent('aiOrderCreated', { 
-            detail: { ...payload.new, employeeName } 
-          }));
+      try {
+        const isAdmin = user?.roles?.includes('super_admin');
+        const isCreator = detail.createdBy === user.id;
+        const isManagerOrder = detail.createdBy === '91484496-b887-44f7-9e5d-be9db5567604';
 
-          // تحديث الإشعارات
-          if (window.refreshNotifications) {
-            window.refreshNotifications();
-          }
+        // إضافة الإشعار للسياق المحلي
+        if (isCreator) {
+          await addNotification({
+            type: 'new_ai_order',
+            title: 'طلب ذكي جديد',
+            message: `استلام طلب جديد من ${detail.source || 'التليغرام'} يحتاج للمراجعة`,
+            icon: 'MessageSquare',
+            color: 'green',
+            data: { 
+              ai_order_id: detail.orderId,
+              created_by: detail.createdBy,
+              source: detail.source || 'telegram'
+            },
+            user_id: detail.createdBy,
+            is_read: false
+          });
+          console.log('✅ LISTENER: Creator notification added');
         }
-      )
-      .subscribe();
 
-    channelRef.current = uiEventsChannel;
+        if (isAdmin && !isManagerOrder && user.id !== detail.createdBy) {
+          await addNotification({
+            type: 'new_ai_order',
+            title: 'طلب ذكي جديد من موظف',
+            message: `استلام طلب جديد من ${detail.source || 'التليغرام'} بواسطة ${detail.creatorName} يحتاج للمراجعة`,
+            icon: 'MessageSquare',
+            color: 'amber',
+            data: { 
+              ai_order_id: detail.orderId,
+              created_by: detail.createdBy,
+              employee_name: detail.creatorName,
+              source: detail.source || 'telegram'
+            },
+            user_id: null,
+            is_read: false
+          });
+          console.log('✅ LISTENER: Admin notification added');
+        }
 
-    return () => {
-      if (channelRef.current) {
-        supabase.removeChannel(channelRef.current);
-        channelRef.current = null;
+        // تحديث العداد والواجهة
+        if (window.refreshNotifications) {
+          window.refreshNotifications();
+        }
+
+      } catch (error) {
+        console.error('❌ LISTENER: Error handling notification:', error);
       }
     };
-  }, [user?.id]);
+
+    // ربط المستمعات
+    window.addEventListener('reliableAiOrderNotification', handleReliableNotification);
+
+    // تنظيف المستمعات
+    return () => {
+      window.removeEventListener('reliableAiOrderNotification', handleReliableNotification);
+      console.log('🧹 LISTENER: Event listeners cleaned up');
+    };
+
+  }, [user, addNotification]);
 
   return null;
 };
