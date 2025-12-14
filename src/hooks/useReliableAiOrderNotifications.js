@@ -70,19 +70,6 @@ export const useReliableAiOrderNotifications = (user) => {
               }
             }
 
-            // ترجمة المصدر للعربية
-            const getSourceArabic = (source) => {
-              const sources = {
-                'telegram': 'التليغرام',
-                'whatsapp': 'واتساب',
-                'web': 'الموقع',
-                'manual': 'يدوي'
-              };
-              return sources[source?.toLowerCase()] || 'التليغرام';
-            };
-            
-            const sourceArabic = getSourceArabic(payload.new.source);
-
             // منطق الإشعارات
             const isAdmin = user?.roles?.includes('super_admin');
             const isCreator = payload.new.created_by === user.id;
@@ -93,32 +80,32 @@ export const useReliableAiOrderNotifications = (user) => {
               await addNotification({
                 type: 'new_ai_order',
                 title: 'طلب ذكي جديد',
-                message: `استلام طلب جديد من ${sourceArabic} يحتاج للمراجعة`,
+                message: `استلام طلب جديد من ${payload.new.source || 'التليغرام'} يحتاج للمراجعة`,
                 icon: 'MessageSquare',
                 color: 'green',
                 data: { 
                   ai_order_id: orderId,
                   created_by: payload.new.created_by,
-                  source: sourceArabic
+                  source: payload.new.source || 'telegram'
                 },
                 user_id: payload.new.created_by,
                 is_read: false
               });
             }
 
-            // إشعار المدير (ليس منشئ الطلب) - يستلم إشعار عندما يكتب موظف طلب
+            // إشعار المدير (ليس منشئ الطلب)
             if (isAdmin && !isManagerOrder && !isCreator) {
               await addNotification({
                 type: 'new_ai_order',
                 title: `طلب ذكي جديد من ${creatorName}`,
-                message: `استلام طلب جديد من ${sourceArabic} يحتاج للمراجعة`,
+                message: `استلام طلب جديد من ${payload.new.source || 'التليغرام'} يحتاج للمراجعة`,
                 icon: 'MessageSquare',
                 color: 'amber',
                 data: { 
                   ai_order_id: orderId,
                   created_by: payload.new.created_by,
                   employee_name: creatorName,
-                  source: sourceArabic
+                  source: payload.new.source || 'telegram'
                 },
                 user_id: null,
                 is_read: false
@@ -129,7 +116,7 @@ export const useReliableAiOrderNotifications = (user) => {
             if (isCreator || (isAdmin && !isManagerOrder)) {
               await notificationService.showNotification({
                 title: isCreator ? 'طلب ذكي جديد' : `طلب ذكي جديد من ${creatorName}`,
-                message: `استلام طلب جديد من ${sourceArabic} يحتاج للمراجعة`,
+                message: `استلام طلب جديد من ${payload.new.source || 'التليغرام'} يحتاج للمراجعة`,
                 type: 'new_ai_order',
                 id: orderId
               });
