@@ -510,7 +510,6 @@ const filteredOrders = useMemo(() => {
     const statusMatch = filters.status === 'all' || order.status === filters.status;
 
     // فلتر حالة الربح - محدث لدعم كل الحالات
-    // ✅ إصلاح: استثناء الطلبات بدون ربح موظف عند فلتر pending
     let profitStatusMatch = true;
     if (filters.profitStatus !== 'all') {
       const profitRecord = profits?.find(p => p.order_id === order.id);
@@ -519,11 +518,9 @@ const filteredOrders = useMemo(() => {
       } else if (filters.profitStatus === 'settled') {
         profitStatusMatch = profitRecord?.status === 'settled';
       } else if (filters.profitStatus === 'invoice_received') {
-        // ✅ فقط الطلبات التي بها ربح موظف > 0
-        profitStatusMatch = profitRecord?.status === 'invoice_received' && (profitRecord?.employee_profit || 0) > 0;
+        profitStatusMatch = profitRecord?.status === 'invoice_received';
       } else if (filters.profitStatus === 'pending') {
-        // ✅ فقط الطلبات التي بها ربح موظف > 0
-        profitStatusMatch = profitRecord?.status === 'pending' && (profitRecord?.employee_profit || 0) > 0;
+        profitStatusMatch = profitRecord?.status === 'pending';
       }
     }
 
@@ -791,28 +788,22 @@ useEffect(() => {
     }
 
     // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
-    // ✅ إصلاح: استثناء الطلبات التي employee_profit = 0 أو null (لا يوجد قاعدة ربح)
+    // ✅ إصلاح: استثناء الطلبات التي employee_profit = 0 (لا يوجد قاعدة ربح)
     const pendingDues = statsOrders
       .filter(order => order.receipt_received === true)
       .reduce((sum, order) => {
         // البحث عن سجل الربح
         const profitRecord = profits?.find(p => p.order_id === order.id);
+        let employeeProfit = 0;
         
-        // فقط إذا كان هناك سجل ربح غير مُسوى وربح الموظف > 0
-        if (profitRecord && isPendingStatus(profitRecord.status) && (profitRecord.employee_profit || 0) > 0) {
-          return sum + profitRecord.employee_profit;
+        if (profitRecord && isPendingStatus(profitRecord.status)) {
+          // إذا كان هناك سجل ربح غير مُسوى وربح الموظف > 0
+          employeeProfit = profitRecord.employee_profit || 0;
         }
+        // ✅ إزالة: لا نحسب ربح تلقائي للطلبات بدون سجل (تعني لا قاعدة ربح)
         
-        return sum;
+        return sum + employeeProfit;
       }, 0);
-    
-    // ✅ عدد الطلبات ذات المستحقات المعلقة (للعرض في الكارت)
-    const pendingDuesOrdersCount = statsOrders
-      .filter(order => {
-        if (order.receipt_received !== true) return false;
-        const profitRecord = profits?.find(p => p.order_id === order.id);
-        return profitRecord && isPendingStatus(profitRecord.status) && (profitRecord.employee_profit || 0) > 0;
-      }).length;
 
     console.log('📊 الإحصائيات:', {
       totalOrders: filteredOrders.length,
