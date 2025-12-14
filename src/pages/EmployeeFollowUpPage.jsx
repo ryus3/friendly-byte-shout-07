@@ -845,9 +845,9 @@ useEffect(() => {
       // فلتر الفترة
       if (!filterByTimePeriod(o)) return false;
       
-      // الطلبات المكتملة والمدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
+      // الطلبات المدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
       const profitRecord = profits?.find(p => p.order_id === o.id);
-      return employeeMatch && o.status === 'completed' && profitRecord?.status === 'settled';
+      return employeeMatch && (o.status === 'completed' || o.status === 'delivered') && profitRecord?.status === 'settled';
     }).length;
 
     // ✅ عدد طلبات التحاسب المعلقة (settlement_requested) - مفلترة لمدير القسم
