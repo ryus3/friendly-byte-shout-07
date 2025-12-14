@@ -1,12 +1,17 @@
-// نظام الإشعارات المطور للطلبات الذكية - إصدار مبسط وموثوق
+// نظام الإشعارات المطور للطلبات الذكية - إصدار موحد (المصدر الوحيد للإشعارات)
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/utils/NotificationService';
+import { useNotifications } from '@/contexts/NotificationsContext';
 import { devLog } from '@/lib/devLogger';
+
+// متغير عالمي لتتبع آخر طلب تم معالجته (مشترك بين جميع المستمعات)
+const processedOrders = new Set();
 
 export const useReliableAiOrderNotifications = (user) => {
   const channelRef = useRef(null);
   const isInitialized = useRef(false);
+  const { addNotification } = useNotifications();
 
   useEffect(() => {
     // التأكد من وجود المتطلبات الأساسية
@@ -14,15 +19,14 @@ export const useReliableAiOrderNotifications = (user) => {
       return;
     }
 
-    devLog.log('🔄 RELIABLE: Setting up AI orders notifications for user:', {
+    devLog.log('🔄 UNIFIED: Setting up AI orders notifications for user:', {
       userId: user.id,
-      roles: user.roles,
-      isAdmin: user?.roles?.includes('super_admin')
+      roles: user.roles
     });
 
     // إنشاء قناة مخصصة للطلبات الذكية فقط
     const aiOrderChannel = supabase
-      .channel(`reliable-ai-orders-${user.id}-${Date.now()}`)
+      .channel(`unified-ai-orders-${user.id}-${Date.now()}`)
       .on(
         'postgres_changes',
         { 
@@ -31,11 +35,24 @@ export const useReliableAiOrderNotifications = (user) => {
           table: 'ai_orders'
         },
         async (payload) => {
-          devLog.log('⚡ RELIABLE: New AI order detected:', {
-            orderId: payload.new?.id,
+          const orderId = payload.new?.id;
+          
+          // منع التكرار - تجاهل الطلبات المعالجة سابقاً
+          if (!orderId || processedOrders.has(orderId)) {
+            devLog.log('⏭️ UNIFIED: Skipping duplicate order:', orderId);
+            return;
+          }
+          
+          // تسجيل الطلب كمعالج فوراً
+          processedOrders.add(orderId);
+          
+          // تنظيف Set بعد 5 دقائق لتجنب تراكم الذاكرة
+          setTimeout(() => processedOrders.delete(orderId), 5 * 60 * 1000);
+
+          devLog.log('⚡ UNIFIED: New AI order detected:', {
+            orderId,
             source: payload.new?.source,
-            createdBy: payload.new?.created_by,
-            currentUser: user.id
+            createdBy: payload.new?.created_by
           });
 
           try {
@@ -53,66 +70,68 @@ export const useReliableAiOrderNotifications = (user) => {
               }
             }
 
-            // منطق الإشعارات المبسط
+            // منطق الإشعارات
             const isAdmin = user?.roles?.includes('super_admin');
             const isCreator = payload.new.created_by === user.id;
             const isManagerOrder = payload.new.created_by === '91484496-b887-44f7-9e5d-be9db5567604';
 
-            devLog.log('🔍 RELIABLE: Notification logic:', {
-              isAdmin,
-              isCreator,
-              isManagerOrder,
-              willNotify: isCreator || (isAdmin && !isManagerOrder)
-            });
+            // إشعار المنشئ
+            if (isCreator) {
+              await addNotification({
+                type: 'new_ai_order',
+                title: 'طلب ذكي جديد',
+                message: `استلام طلب جديد من ${payload.new.source || 'التليغرام'} يحتاج للمراجعة`,
+                icon: 'MessageSquare',
+                color: 'green',
+                data: { 
+                  ai_order_id: orderId,
+                  created_by: payload.new.created_by,
+                  source: payload.new.source || 'telegram'
+                },
+                user_id: payload.new.created_by,
+                is_read: false
+              });
+            }
 
-            // إشعارات فورية للواجهة (دائماً)
-            const notificationData = {
-              orderId: payload.new.id,
-              creatorName,
-              createdBy: payload.new.created_by,
-              source: payload.new.source || 'telegram',
-              timestamp: new Date().toISOString()
-            };
+            // إشعار المدير (ليس منشئ الطلب)
+            if (isAdmin && !isManagerOrder && !isCreator) {
+              await addNotification({
+                type: 'new_ai_order',
+                title: `طلب ذكي جديد من ${creatorName}`,
+                message: `استلام طلب جديد من ${payload.new.source || 'التليغرام'} يحتاج للمراجعة`,
+                icon: 'MessageSquare',
+                color: 'amber',
+                data: { 
+                  ai_order_id: orderId,
+                  created_by: payload.new.created_by,
+                  employee_name: creatorName,
+                  source: payload.new.source || 'telegram'
+                },
+                user_id: null,
+                is_read: false
+              });
+            }
 
-            // إرسال إشعار للواجهة فوراً
-            window.dispatchEvent(new CustomEvent('reliableAiOrderNotification', { 
-              detail: notificationData
-            }));
+            // إشعار المتصفح (مرة واحدة فقط)
+            if (isCreator || (isAdmin && !isManagerOrder)) {
+              await notificationService.showNotification({
+                title: isCreator ? 'طلب ذكي جديد' : `طلب ذكي جديد من ${creatorName}`,
+                message: `استلام طلب جديد من ${payload.new.source || 'التليغرام'} يحتاج للمراجعة`,
+                type: 'new_ai_order',
+                id: orderId
+              });
+            }
 
-            // إشعار متصفح فوري
-            const browserNotifTitle = isCreator 
-              ? 'طلب ذكي جديد' 
-              : `طلب ذكي جديد من ${creatorName}`;
-            
-            const browserNotifMessage = `استلام طلب جديد من ${payload.new.source || 'التليغرام'} يحتاج للمراجعة`;
-
-            await notificationService.showNotification({
-              title: browserNotifTitle,
-              message: browserNotifMessage,
-              type: 'new_ai_order',
-              id: payload.new.id
-            });
-
-            devLog.log('✅ RELIABLE: Notifications sent successfully');
+            devLog.log('✅ UNIFIED: Notification sent successfully');
 
           } catch (error) {
-            devLog.error('❌ RELIABLE: Error processing AI order notification:', error);
-            
-            // إشعار احتياطي بسيط
-            window.dispatchEvent(new CustomEvent('reliableAiOrderNotification', { 
-              detail: { 
-                orderId: payload.new?.id || 'unknown',
-                creatorName: 'موظف',
-                fallback: true
-              }
-            }));
+            devLog.error('❌ UNIFIED: Error processing notification:', error);
           }
         }
       )
       .subscribe((status) => {
-        devLog.log('📊 RELIABLE: Subscription status:', status);
+        devLog.log('📊 UNIFIED: Subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          devLog.log('✅ RELIABLE: AI orders notifications ready');
           isInitialized.current = true;
         }
       });
@@ -121,7 +140,6 @@ export const useReliableAiOrderNotifications = (user) => {
 
     // تنظيف عند إلغاء التحميل
     return () => {
-      devLog.log('🧹 RELIABLE: Cleaning up');
       if (channelRef.current) {
         supabase.removeChannel(channelRef.current);
         channelRef.current = null;
@@ -129,7 +147,10 @@ export const useReliableAiOrderNotifications = (user) => {
       isInitialized.current = false;
     };
 
-  }, [user?.id, user?.roles]);
+  }, [user?.id, user?.roles, addNotification]);
 
   return null;
 };
+
+// تصدير Set للاستخدام في الأنظمة الأخرى
+export const getProcessedOrders = () => processedOrders;
