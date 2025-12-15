@@ -268,12 +268,12 @@ const ProfitsSummaryPage = () => {
             });
         });
 
-        // ✅ إضافة الطلبات المدفوعة (settled) من جدول profits مباشرة
+        // ✅ إضافة الطلبات المدفوعة (settled) وبدون ربح (no_rule_settled) من جدول profits مباشرة
         const settledProfits = profits?.filter(p => {
             const profitDate = p.settled_at ? parseISO(p.settled_at) : (p.created_at ? parseISO(p.created_at) : null);
-            const isSettled = p.status === 'settled';
+            const isSettledOrNoRule = p.status === 'settled' || p.status === 'no_rule_settled';
             const inDateRange = profitDate && isValid(profitDate) && profitDate >= from && profitDate <= to;
-            return isSettled && inDateRange;
+            return isSettledOrNoRule && inDateRange;
         }) || [];
 
         settledProfits.forEach(profitRecord => {
@@ -294,7 +294,7 @@ const ProfitsSummaryPage = () => {
                 profit: profitRecord.employee_profit || 0,
                 managerProfitShare: (profitRecord.profit_amount || 0) - (profitRecord.employee_profit || 0),
                 employeeName: orderCreator.full_name,
-                profitStatus: 'settled',
+                profitStatus: profitRecord.status, // استخدام الحالة الفعلية (settled أو no_rule_settled)
                 profitRecord,
                 created_by: profitRecord.employee_id,
                 settled_at: profitRecord.settled_at,

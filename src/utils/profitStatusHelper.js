@@ -31,6 +31,12 @@ export const getStatusInfo = (profitStatus) => {
         variant: 'success',
         canSelect: false
       };
+    case 'no_rule_settled':
+      return {
+        text: 'بدون ربح',
+        variant: 'muted',
+        canSelect: false // لا يمكن التحديد للتحاسب لأنه لا يوجد ربح
+      };
     default:
       return {
         text: 'معلق',
