@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -64,57 +64,8 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
     setOrders(dedupedContextOrders);
   }, [dedupedContextOrders]);
   
-  // ⚡ useRef لتجنب إعادة الاشتراك عند تغير processedOrders
-  const processedOrdersRef = useRef(processedOrders);
-  useEffect(() => {
-    processedOrdersRef.current = processedOrders;
-  }, [processedOrders]);
-  
-  // ⚡ اشتراك Real-time مباشر - بدون dependencies لضمان استقرار الاشتراك
-  useEffect(() => {
-    console.log('📡 [AiOrdersManager] إنشاء اشتراك Real-time للطلبات الذكية...');
-    
-    const channel = supabase
-      .channel('ai-orders-manager-realtime-stable')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'ai_orders'
-      }, (payload) => {
-        const newOrder = payload.new;
-        console.log('🔔 [AiOrdersManager] INSERT detected:', newOrder?.id, newOrder?.customer_name);
-        
-        if (newOrder?.id && newOrder.status !== 'approved' && !processedOrdersRef.current.includes(newOrder.id)) {
-          setOrders(prev => {
-            if (prev.some(o => o.id === newOrder.id)) {
-              console.log('⚠️ [AiOrdersManager] الطلب موجود مسبقاً:', newOrder.id);
-              return prev;
-            }
-            console.log('✅ [AiOrdersManager] إضافة طلب جديد:', newOrder.id);
-            return [newOrder, ...prev];
-          });
-        }
-      })
-      .on('postgres_changes', {
-        event: 'DELETE',
-        schema: 'public',
-        table: 'ai_orders'
-      }, (payload) => {
-        const deletedId = payload.old?.id;
-        console.log('🗑️ [AiOrdersManager] DELETE detected:', deletedId);
-        if (deletedId) {
-          setOrders(prev => prev.filter(o => o.id !== deletedId));
-        }
-      })
-      .subscribe((status) => {
-        console.log('📡 [AiOrdersManager] حالة الاشتراك:', status);
-      });
-    
-    return () => {
-      console.log('📡 [AiOrdersManager] إلغاء الاشتراك Real-time');
-      supabase.removeChannel(channel);
-    };
-  }, []); // ⚡ بدون dependencies - يتم الاشتراك مرة واحدة فقط
+  // ⚡ الاعتماد على Context فقط - التحديثات الفورية تأتي من SuperProvider
+  // لا حاجة لاشتراك Real-time مباشر هنا (يتم في SuperProvider)
   
   // إعدادات وجهة الطلبات (تعريفها قبل استخدام أي تأثير يعتمد عليها لتفادي TDZ)
   const [orderDestination, setOrderDestination] = useState({
