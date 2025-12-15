@@ -551,6 +551,11 @@ const filteredOrders = useMemo(() => {
       archiveMatch = (!isManuallyArchived && !isSettled) || isAwaitingSettlement;
     }
 
+    // ✅ الطلبات المرتجعة تتجاوز شرط archiveMatch لأنها تعتبر أرشيف مستقل
+    if (filters.status === 'returned') {
+      return employeeMatch && statusMatch && profitStatusMatch;
+    }
+
     return employeeMatch && statusMatch && profitStatusMatch && archiveMatch;
   }).map(order => ({
     ...order,
@@ -869,8 +874,11 @@ useEffect(() => {
       o.created_by !== ADMIN_ID
     ).length || 0;
 
+    // ✅ إجمالي الطلبات يستبعد المرتجعة (delivery_status=17) لأنها في كارت منفصل
+    const totalOrdersExcludingReturned = filteredOrders.filter(o => o.delivery_status !== '17').length;
+
     return {
-      totalOrders: filteredOrders.length,
+      totalOrders: totalOrdersExcludingReturned,
       totalSales,
       totalManagerProfits,
       pendingDues,
