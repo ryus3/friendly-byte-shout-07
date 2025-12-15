@@ -689,7 +689,15 @@ export const SuperProvider = ({ children }) => {
         
         if (type === 'INSERT') {
           try { pendingAiDeletesRef.current.delete(rowNew.id); } catch {}
-          setAllData(prev => ({ ...prev, aiOrders: [rowNew, ...(prev.aiOrders || [])] }));
+          setAllData(prev => {
+            // تجنب التكرار
+            if (prev.aiOrders?.some(o => o.id === rowNew.id)) return prev;
+            return { ...prev, aiOrders: [rowNew, ...(prev.aiOrders || [])] };
+          });
+          // ⚡ إطلاق حدث فوري للمكونات المستمعة (مهم جداً لـ AiOrdersManager)
+          try { 
+            window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: rowNew })); 
+          } catch {}
         } else if (type === 'UPDATE') {
           setAllData(prev => ({
             ...prev,

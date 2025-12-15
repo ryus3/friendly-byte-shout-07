@@ -64,6 +64,40 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
     setOrders(dedupedContextOrders);
   }, [dedupedContextOrders]);
   
+  // ⚡ اشتراك Real-time مباشر لضمان ظهور الطلبات فوراً
+  useEffect(() => {
+    const channel = supabase
+      .channel('ai-orders-manager-realtime')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'ai_orders'
+      }, (payload) => {
+        const newOrder = payload.new;
+        if (newOrder?.id && newOrder.status !== 'approved' && !processedOrders.includes(newOrder.id)) {
+          setOrders(prev => {
+            if (prev.some(o => o.id === newOrder.id)) return prev;
+            return [newOrder, ...prev];
+          });
+        }
+      })
+      .on('postgres_changes', {
+        event: 'DELETE',
+        schema: 'public',
+        table: 'ai_orders'
+      }, (payload) => {
+        const deletedId = payload.old?.id;
+        if (deletedId) {
+          setOrders(prev => prev.filter(o => o.id !== deletedId));
+        }
+      })
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [processedOrders]);
+  
   // إعدادات وجهة الطلبات (تعريفها قبل استخدام أي تأثير يعتمد عليها لتفادي TDZ)
   const [orderDestination, setOrderDestination] = useState({
     destination: 'local',
