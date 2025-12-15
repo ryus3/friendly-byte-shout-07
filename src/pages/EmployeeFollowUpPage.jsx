@@ -506,8 +506,14 @@ const filteredOrders = useMemo(() => {
     // استبعاد طلبات المدير فقط إذا لم تكن مرتبطة بالموظف عبر الأرباح (للموظف المحدد)
     if (employeeIdSelected && isAdminCreated && !employeeMatch) return false;
 
-    // فلتر الحالة
-    const statusMatch = filters.status === 'all' || order.status === filters.status;
+    // فلتر الحالة - خاص للمرتجعة بناءً على delivery_status
+    let statusMatch = true;
+    if (filters.status === 'returned') {
+      // ✅ فلتر الطلبات المرتجعة بناءً على delivery_status = '17' فقط
+      statusMatch = order.delivery_status === '17';
+    } else {
+      statusMatch = filters.status === 'all' || order.status === filters.status;
+    }
 
     // فلتر حالة الربح - محدث لدعم كل الحالات
     let profitStatusMatch = true;
@@ -875,13 +881,16 @@ useEffect(() => {
     setFilters(prev => ({ ...prev, [name]: value }));
   };
   
-  // معالج النقر على كارت الإحصائيات
+  // معالج النقر على كارت الإحصائيات - ✅ إعادة تعيين جميع الفلاتر
   const handleStatCardClick = (filterType) => {
+    // ✅ إعادة تعيين أرشيف التسوية عند الضغط على أي كارت
+    setShowSettlementArchive(false);
+    
     if (filterType === 'returned') {
-      // فلتر الطلبات المرتجعة بناءً على delivery_status
-      setFilters(prev => ({ ...prev, profitStatus: 'all', status: 'returned' }));
+      // فلتر الطلبات المرتجعة بناءً على delivery_status = '17'
+      setFilters(prev => ({ ...prev, profitStatus: 'all', status: 'returned', archived: false }));
     } else {
-      setFilters(prev => ({ ...prev, profitStatus: filterType, status: 'all' }));
+      setFilters(prev => ({ ...prev, profitStatus: filterType, status: 'all', archived: false }));
     }
   };
 
@@ -1264,7 +1273,11 @@ useEffect(() => {
             icon={Archive} 
             colors={['gray-500', 'slate-500']} 
             format="number"
-            onClick={() => setShowSettlementArchive(!showSettlementArchive)} 
+            onClick={() => {
+              // ✅ إعادة تعيين الفلاتر الأخرى عند تفعيل الأرشيف
+              setFilters(prev => ({ ...prev, profitStatus: 'all', status: 'all', archived: false }));
+              setShowSettlementArchive(!showSettlementArchive);
+            }} 
             description="الطلبات المسواة"
           />
           <StatCard 
