@@ -32,11 +32,12 @@ export const NotificationsProvider = ({ children }) => {
             return;
         }
         
+        // جلب الإشعارات
         let query = supabase
             .from('notifications')
             .select('*')
             .order('created_at', { ascending: false })
-            .limit(30); // Reduced limit to save data
+            .limit(30);
 
         // فلترة الإشعارات حسب المستخدم
         const isAdmin = user?.roles?.includes('super_admin') || user?.roles?.includes('admin');
@@ -44,10 +45,7 @@ export const NotificationsProvider = ({ children }) => {
         
         if (isAdmin) {
             // المدير العام يرى كل الإشعارات
-            // لا حاجة لفلتر إضافي
         } else if (isDepartmentManager) {
-            // مدير القسم: إشعاراته + إشعارات موظفيه تحت إشرافه
-            // نجلب الموظفين تحت إشرافه أولاً
             const { data: supervisedData } = await supabase
                 .from('employee_supervisors')
                 .select('employee_id')
@@ -57,21 +55,40 @@ export const NotificationsProvider = ({ children }) => {
             const supervisedIds = supervisedData?.map(d => d.employee_id) || [];
             const allAllowedIds = [user.id, ...supervisedIds];
             
-            // إشعاراته + إشعارات موظفيه + الإشعارات العامة المسموحة
             query = query.or(`user_id.in.(${allAllowedIds.join(',')}),and(user_id.is.null,type.not.in.(profit_settlement_request,settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,order_created,cash_correction,balance_correction,main_cash_correction))`);
         } else {
-            // الموظف العادي
             query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,order_created,cash_correction,balance_correction,main_cash_correction))`);
         }
         
-        const { data, error } = await query;
+        const { data: notificationsData, error } = await query;
         
         if (error) {
             console.error("Error fetching notifications:", error);
-        } else {
-            setNotifications(data || []);
-            setLastFetch(now);
+            return;
         }
+        
+        // جلب قراءات المستخدم الحالي من جدول notification_reads
+        const notificationIds = (notificationsData || []).map(n => n.id);
+        
+        let userReads = [];
+        if (notificationIds.length > 0) {
+            const { data: readsData } = await supabase
+                .from('notification_reads')
+                .select('notification_id')
+                .eq('user_id', user.id)
+                .in('notification_id', notificationIds);
+            
+            userReads = (readsData || []).map(r => r.notification_id);
+        }
+        
+        // دمج حالة القراءة مع الإشعارات
+        const notificationsWithReadStatus = (notificationsData || []).map(n => ({
+            ...n,
+            is_read: userReads.includes(n.id)
+        }));
+        
+        setNotifications(notificationsWithReadStatus);
+        setLastFetch(now);
     }, [user, lastFetch]);
 
     useEffect(() => {
@@ -313,26 +330,27 @@ export const NotificationsProvider = ({ children }) => {
     }, [user]);
 
     const markAsRead = useCallback(async (id) => {
-        if (!supabase || !id) {
+        if (!supabase || !id || !user?.id) {
             console.error("Supabase client not available or invalid ID");
             return;
         }
         
-        console.log("Marking notification as read:", id);
-        
         try {
-            // تحديث قاعدة البيانات أولاً
+            // إدراج سجل قراءة في جدول notification_reads
             const { error } = await supabase
-                .from('notifications')
-                .update({ is_read: true })
-                .eq('id', id);
+                .from('notification_reads')
+                .upsert({ 
+                    notification_id: id, 
+                    user_id: user.id,
+                    read_at: new Date().toISOString()
+                }, { 
+                    onConflict: 'notification_id,user_id' 
+                });
             
             if (error) {
                 console.error("Error marking notification as read:", error);
                 return;
             }
-            
-            console.log("Successfully marked notification as read:", id);
             
             // تحديث الحالة المحلية فقط عند النجاح
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
@@ -340,7 +358,7 @@ export const NotificationsProvider = ({ children }) => {
         } catch (error) {
             console.error("Error in markAsRead:", error);
         }
-    }, []);
+    }, [user?.id]);
 
     const deleteNotification = useCallback(async (id) => {
         if (!supabase || !id) {
@@ -396,12 +414,18 @@ export const NotificationsProvider = ({ children }) => {
         if (unreadIds.length === 0) return;
         
         try {
-            // تحديث قاعدة البيانات - للمستخدم الحالي فقط
+            // إدراج سجلات قراءة لجميع الإشعارات غير المقروءة
+            const readsToInsert = unreadIds.map(id => ({
+                notification_id: id,
+                user_id: user.id,
+                read_at: new Date().toISOString()
+            }));
+            
             const { error } = await supabase
-                .from('notifications')
-                .update({ is_read: true })
-                .eq('user_id', user.id)  // فلتر بالمستخدم الحالي فقط
-                .in('id', unreadIds);
+                .from('notification_reads')
+                .upsert(readsToInsert, { 
+                    onConflict: 'notification_id,user_id' 
+                });
             
             if (error) {
                 console.error("Error marking all as read:", error);
