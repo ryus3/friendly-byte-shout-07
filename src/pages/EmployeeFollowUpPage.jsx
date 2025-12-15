@@ -526,7 +526,10 @@ const filteredOrders = useMemo(() => {
       } else if (filters.profitStatus === 'invoice_received') {
         profitStatusMatch = profitRecord?.status === 'invoice_received';
       } else if (filters.profitStatus === 'pending') {
-        profitStatusMatch = profitRecord?.status === 'pending';
+        // ✅ مستحقات معلقة: فقط الطلبات التي فيها ربح للموظف > 0
+        profitStatusMatch = profitRecord?.status === 'pending' && 
+                           profitRecord?.employee_profit > 0 &&
+                           order.receipt_received === true;
       }
     }
 
@@ -860,8 +863,11 @@ useEffect(() => {
       return true;
     }).length || 0;
 
-    // ✅ عدد الطلبات المرتجعة (delivery_status = '17')
-    const returnedOrdersCount = statsOrders.filter(o => o.delivery_status === '17').length;
+    // ✅ عدد الطلبات المرتجعة (delivery_status = '17') - من orders مباشرة
+    const returnedOrdersCount = orders?.filter(o => 
+      o.delivery_status === '17' && 
+      o.created_by !== ADMIN_ID
+    ).length || 0;
 
     return {
       totalOrders: filteredOrders.length,
@@ -1215,6 +1221,10 @@ useEffect(() => {
             value={stats.totalOrders} 
             icon={ShoppingCart} 
             colors={['blue-500', 'sky-500']} 
+            onClick={() => {
+              setShowSettlementArchive(false);
+              setFilters(prev => ({ ...prev, status: 'all', profitStatus: 'all', archived: false }));
+            }}
           />
           <StatCard 
             title="إجمالي المبيعات" 
