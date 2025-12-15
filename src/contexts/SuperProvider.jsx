@@ -688,15 +688,21 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
+          console.log('🔔 [SuperProvider] ai_orders INSERT:', rowNew.id, rowNew.customer_name);
           try { pendingAiDeletesRef.current.delete(rowNew.id); } catch {}
           setAllData(prev => {
             // تجنب التكرار
-            if (prev.aiOrders?.some(o => o.id === rowNew.id)) return prev;
+            if (prev.aiOrders?.some(o => o.id === rowNew.id)) {
+              console.log('⚠️ [SuperProvider] الطلب موجود مسبقاً:', rowNew.id);
+              return prev;
+            }
+            console.log('✅ [SuperProvider] إضافة طلب جديد للسياق:', rowNew.id);
             return { ...prev, aiOrders: [rowNew, ...(prev.aiOrders || [])] };
           });
-          // ⚡ إطلاق حدث فوري للمكونات المستمعة (مهم جداً لـ AiOrdersManager)
+          // ⚡ إطلاق حدث فوري للمكونات المستمعة
           try { 
             window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: rowNew })); 
+            console.log('📢 [SuperProvider] تم إطلاق حدث aiOrderCreated:', rowNew.id);
           } catch {}
         } else if (type === 'UPDATE') {
           setAllData(prev => ({
