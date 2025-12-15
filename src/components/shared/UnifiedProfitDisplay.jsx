@@ -169,41 +169,19 @@ const UnifiedProfitDisplay = ({
         .filter(p => ['pending', 'invoice_received', 'settlement_requested'].includes(p.status))
         .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
       
-      // الطلبات المؤرشفة للموظف - حساب صحيح ومطابق للواقع
+      // الطلبات المؤرشفة للموظف = فقط الطلبات المدفوعة (settled)
       const userArchivedCount = safeOrders.filter(o => {
         if (o.created_by !== currentUser.id) return false;
         
-        // الطلبات المؤرشفة يدوياً
-        const isManuallyArchived = o.isArchived === true || o.isarchived === true;
-        
-        // الطلبات المكتملة/المسلمة مع استلام الفاتورة
-        const isDeliveredWithReceipt = (o.status === 'completed' || o.status === 'delivered') && o.receipt_received === true;
-        
-        // الطلبات المسواة (لها profit record بحالة settled)
+        // فقط الطلبات المدفوعة (لها profit record بحالة settled)
         const profitRecord = allProfits.find(p => p.order_id === o.id);
         const hasSettledProfit = profitRecord?.status === 'settled';
-        
-        // الطلبات الراجعة للمخزن
-        const isReturnedToStock = o.status === 'returned_in_stock';
         
         // التحقق من تاريخ النطاق المحدد
         const orderDate = o.updated_at || o.created_at;
         const isInDateRange = orderDate ? filterByDate(orderDate) : true;
         
-        console.log(`🔍 فحص طلب ${o.order_number}:`, {
-          orderId: o.id,
-          status: o.status,
-          isManuallyArchived,
-          isDeliveredWithReceipt,
-          receipt_received: o.receipt_received,
-          hasSettledProfit,
-          profitStatus: profitRecord?.status,
-          isReturnedToStock,
-          isInDateRange,
-          shouldBeArchived: (isManuallyArchived || isDeliveredWithReceipt || hasSettledProfit || isReturnedToStock) && isInDateRange
-        });
-        
-        return (isManuallyArchived || isDeliveredWithReceipt || hasSettledProfit || isReturnedToStock) && isInDateRange;
+        return hasSettledProfit && isInDateRange;
       }).length;
       
       personalData.archivedOrdersCount = userArchivedCount;
