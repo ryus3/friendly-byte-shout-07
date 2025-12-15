@@ -6935,15 +6935,15 @@ export type Database = {
           calculated_reserved: number
           calculated_sold: number
           color_name: string
+          current_available: number
           current_quantity: number
           current_reserved: number
           current_sold: number
           issue_type: string
-          product_id: string
           product_name: string
-          reserved_difference: number
-          size_value: string
-          sold_difference: number
+          reserved_diff: number
+          size_name: string
+          sold_diff: number
           variant_id: string
         }[]
       }

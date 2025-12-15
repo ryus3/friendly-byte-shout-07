@@ -95,14 +95,25 @@ const InventoryAuditDialog = ({ isAdmin }) => {
     }
   };
 
-  // إحصائيات الفروقات المُصنّفة
+  // إحصائيات الفروقات المُصنّفة - تطابق issue_type الفعلي من الدالة
   const issueStats = useMemo(() => {
     if (!auditResults) return { reserved: 0, sold: 0, negative: 0, complex: 0, total: 0 };
     return {
-      reserved: auditResults.filter(i => i.issue_type === 'reserved_mismatch' || i.issue_type === 'reserved_only').length,
-      sold: auditResults.filter(i => i.issue_type === 'sold_mismatch' || i.issue_type === 'sold_only').length,
+      reserved: auditResults.filter(i => 
+        i.issue_type === 'reserved' || 
+        i.issue_type === 'reserved_mismatch' || 
+        i.issue_type === 'reserved_only'
+      ).length,
+      sold: auditResults.filter(i => 
+        i.issue_type === 'sold' || 
+        i.issue_type === 'sold_mismatch' || 
+        i.issue_type === 'sold_only'
+      ).length,
       negative: auditResults.filter(i => i.issue_type?.includes('negative')).length,
-      complex: auditResults.filter(i => i.issue_type === 'reserved_and_sold').length,
+      complex: auditResults.filter(i => 
+        i.issue_type === 'both' || 
+        i.issue_type === 'reserved_and_sold'
+      ).length,
       total: auditResults.length,
     };
   }, [auditResults]);
@@ -117,6 +128,14 @@ const InventoryAuditDialog = ({ isAdmin }) => {
         borderColor: 'border-amber-200 dark:border-amber-800',
         dotColor: 'bg-amber-500',
       },
+      reserved: { 
+        label: 'فرق محجوز', 
+        icon: Package,
+        color: 'text-amber-600',
+        bgColor: 'bg-amber-50 dark:bg-amber-950/30',
+        borderColor: 'border-amber-200 dark:border-amber-800',
+        dotColor: 'bg-amber-500',
+      },
       reserved_only: { 
         label: 'فرق محجوز', 
         icon: Package,
@@ -124,6 +143,14 @@ const InventoryAuditDialog = ({ isAdmin }) => {
         bgColor: 'bg-amber-50 dark:bg-amber-950/30',
         borderColor: 'border-amber-200 dark:border-amber-800',
         dotColor: 'bg-amber-500',
+      },
+      sold: { 
+        label: 'فرق مباع', 
+        icon: ShoppingCart,
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50 dark:bg-blue-950/30',
+        borderColor: 'border-blue-200 dark:border-blue-800',
+        dotColor: 'bg-blue-500',
       },
       sold_mismatch: { 
         label: 'فرق مباع', 
@@ -140,6 +167,14 @@ const InventoryAuditDialog = ({ isAdmin }) => {
         bgColor: 'bg-blue-50 dark:bg-blue-950/30',
         borderColor: 'border-blue-200 dark:border-blue-800',
         dotColor: 'bg-blue-500',
+      },
+      both: { 
+        label: 'فرق مركب', 
+        icon: AlertCircle,
+        color: 'text-purple-600',
+        bgColor: 'bg-purple-50 dark:bg-purple-950/30',
+        borderColor: 'border-purple-200 dark:border-purple-800',
+        dotColor: 'bg-purple-500',
       },
       reserved_and_sold: { 
         label: 'فرق مركب', 
