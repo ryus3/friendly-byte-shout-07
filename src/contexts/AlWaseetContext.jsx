@@ -3997,25 +3997,11 @@ export const AlWaseetProvider = ({ children }) => {
   // دالة الحذف الفردي
   const performAutoDelete = async (order) => {
     try {
-      
-      
-      // تحرير المخزون المحجوز
-      if (order.order_items && order.order_items.length > 0) {
-        for (const item of order.order_items) {
-          try {
-            await supabase.rpc('release_stock_item', {
-              p_product_id: item.product_id,
-              p_variant_id: item.variant_id,
-              p_quantity: item.quantity
-            });
-            console.log(`✅ تم تحرير ${item.quantity} من المنتج ${item.product_id}`);
-          } catch (releaseErr) {
-            console.warn(`⚠️ فشل في تحرير المخزون للعنصر:`, releaseErr);
-          }
-        }
-      }
+      // ⚠️ ملاحظة مهمة: تحرير المخزون المحجوز يتم تلقائياً عبر trigger: auto_release_stock_on_order_delete
+      // لا نستدعي release_stock_item يدوياً لأن ذلك يمنع الـ trigger من العمل وإرسال الإشعارات
+      // الـ trigger يُنقص reserved_quantity ويُسجل في product_tracking_log ويُرسل إشعار تلقائياً
 
-      // حذف الطلب من قاعدة البيانات (مع فصل آمن للحسابات)
+      // حذف الطلب من قاعدة البيانات - الـ trigger يتولى تحرير المخزون والإشعار
       const { error: deleteErr } = await scopeOrdersQuery(
         supabase
           .from('orders')
@@ -4028,7 +4014,7 @@ export const AlWaseetProvider = ({ children }) => {
         return { success: false, error: deleteErr };
       }
 
-      console.log(`✅ تم حذف الطلب ${order.id} تلقائياً`);
+      console.log(`✅ تم حذف الطلب ${order.id} تلقائياً - الـ trigger تولى تحرير المخزون والإشعار`);
       
       // إرسال حدث لتحديث الواجهة فوراً
       window.dispatchEvent(new CustomEvent('orderDeleted', { 
