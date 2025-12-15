@@ -20,9 +20,9 @@ export const useReliableAiOrderNotifications = (user) => {
       isAdmin: user?.roles?.includes('super_admin')
     });
 
-    // إنشاء قناة مخصصة للطلبات الذكية فقط
+    // إنشاء قناة مخصصة للإشعارات فقط (البيانات تأتي من SuperProvider)
     const aiOrderChannel = supabase
-      .channel(`reliable-ai-orders-${user.id}-${Date.now()}`)
+      .channel(`reliable-ai-orders-notif-${user.id}`)
       .on(
         'postgres_changes',
         { 

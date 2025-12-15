@@ -84,9 +84,9 @@ const NotificationsHandler = () => {
     //   )
     //   .subscribe();
 
-    // إشعارات طلبات تليجرام (AI Orders) - نظام مبسط وموثوق
+    // إشعارات طلبات تليجرام (AI Orders) - للإشعارات فقط (البيانات تأتي من SuperProvider)
     const aiOrdersChannel = supabase
-      .channel(`ai-orders-notifications-simplified-${user.id}-${Date.now()}`)
+      .channel(`ai-orders-notifications-${user.id}`)
       .on(
         'postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'ai_orders' },
