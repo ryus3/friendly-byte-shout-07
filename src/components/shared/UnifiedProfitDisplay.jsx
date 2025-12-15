@@ -169,19 +169,20 @@ const UnifiedProfitDisplay = ({
         .filter(p => ['pending', 'invoice_received', 'settlement_requested'].includes(p.status))
         .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
       
-      // الطلبات المؤرشفة للموظف = فقط الطلبات المدفوعة (settled)
+      // الطلبات المؤرشفة للموظف = المدفوعة (settled) + بدون ربح (no_rule_settled)
       const userArchivedCount = safeOrders.filter(o => {
         if (o.created_by !== currentUser.id) return false;
         
-        // فقط الطلبات المدفوعة (لها profit record بحالة settled)
+        // الطلبات المدفوعة أو بدون ربح
         const profitRecord = allProfits.find(p => p.order_id === o.id);
         const hasSettledProfit = profitRecord?.status === 'settled';
+        const hasNoRuleSettled = profitRecord?.status === 'no_rule_settled';
         
         // التحقق من تاريخ النطاق المحدد
         const orderDate = o.updated_at || o.created_at;
         const isInDateRange = orderDate ? filterByDate(orderDate) : true;
         
-        return hasSettledProfit && isInDateRange;
+        return (hasSettledProfit || hasNoRuleSettled) && isInDateRange;
       }).length;
       
       personalData.archivedOrdersCount = userArchivedCount;
