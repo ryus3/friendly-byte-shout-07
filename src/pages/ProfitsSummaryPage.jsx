@@ -268,6 +268,40 @@ const ProfitsSummaryPage = () => {
             });
         });
 
+        // ✅ إضافة الطلبات المدفوعة (settled) من جدول profits مباشرة
+        const settledProfits = profits?.filter(p => {
+            const profitDate = p.settled_at ? parseISO(p.settled_at) : (p.created_at ? parseISO(p.created_at) : null);
+            const isSettled = p.status === 'settled';
+            const inDateRange = profitDate && isValid(profitDate) && profitDate >= from && profitDate <= to;
+            return isSettled && inDateRange;
+        }) || [];
+
+        settledProfits.forEach(profitRecord => {
+            // تجنب التكرار - فحص إذا كان الطلب موجود مسبقاً
+            if (detailedProfits.some(p => p.id === profitRecord.order_id)) return;
+
+            const order = orders?.find(o => o.id === profitRecord.order_id);
+            const orderCreator = allUsers?.find(u => 
+                u.user_id === profitRecord.employee_id || u.id === profitRecord.employee_id
+            );
+            if (!orderCreator) return;
+
+            detailedProfits.push({
+                ...(order || {}),
+                id: profitRecord.order_id,
+                tracking_number: order?.tracking_number || profitRecord.tracking_number,
+                order_number: order?.order_number || profitRecord.order_number,
+                profit: profitRecord.employee_profit || 0,
+                managerProfitShare: (profitRecord.profit_amount || 0) - (profitRecord.employee_profit || 0),
+                employeeName: orderCreator.full_name,
+                profitStatus: 'settled',
+                profitRecord,
+                created_by: profitRecord.employee_id,
+                settled_at: profitRecord.settled_at,
+                created_at: order?.created_at || profitRecord.created_at,
+            });
+        });
+
         // حساب الأرباح من الموظفين للمدير
         const managerProfitFromEmployees = detailedProfits.filter(p => {
             const pUser = allUsers.find(u => u.id === p.created_by);
