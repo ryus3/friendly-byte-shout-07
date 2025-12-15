@@ -435,8 +435,8 @@ return this.fetch('all_data', async () => {
    * اشتراك موحد للتحديثات الفورية
    */
   setupRealtimeSubscriptions(callback) {
-    // ⚡ ai_orders تتم معالجتها في SuperProvider مباشرة - لا invalidate
-    const tables = ['orders', 'order_items', 'products', 'inventory', 'expenses', 'notifications'];
+    // ⚡ ai_orders مُضافة للقائمة مع استثناء خاص لـ invalidate
+    const tables = ['orders', 'order_items', 'products', 'inventory', 'expenses', 'notifications', 'ai_orders'];
     
     tables.forEach(table => {
       const channel = supabase
@@ -451,9 +451,12 @@ return this.fetch('all_data', async () => {
             // إبطال فوري للطلبات لضمان الحصول على أحدث البيانات
             this.invalidate('all_data');
             this.invalidate('orders_only');
+          } else if (table === 'ai_orders') {
+            // ⚡ لا invalidate للطلبات الذكية - التحديث المباشر في SuperProvider يكفي
+            // فقط نُمرر الـ callback بدون مسح البيانات
           } else {
             // حذف البيانات المحفوظة بشكل مجمّع للجداول الأخرى
-            this.debouncedInvalidateAll(50); // تقليل الوقت إلى 50ms للاستجابة السريعة
+            this.debouncedInvalidateAll(50);
           }
           
           if (callback) callback(table, payload);
