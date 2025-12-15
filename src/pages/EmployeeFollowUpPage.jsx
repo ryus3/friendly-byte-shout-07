@@ -527,7 +527,7 @@ const filteredOrders = useMemo(() => {
     // فلتر الأرشيف والتسوية
     const isManuallyArchived = ((order.isarchived === true || order.isArchived === true || order.is_archived === true) && order.status !== 'completed');
     const profitRecord = profits?.find(p => p.order_id === order.id);
-    const isSettled = order.status === 'completed' && ((profitRecord?.status === 'settled' || profitRecord?.settled_at) || (order.is_archived === true || order.isArchived === true || order.isarchived === true));
+    const isSettled = (order.status === 'completed' || order.status === 'delivered') && ((profitRecord?.status === 'settled' || profitRecord?.settled_at) || (order.is_archived === true || order.isArchived === true || order.isarchived === true));
     
     // ✅ طلبات "تم طلب التحاسب" تظهر دائماً للمدير حتى لو مؤرشفة
     const isAwaitingSettlement = profitRecord?.status === 'settlement_requested';
@@ -838,7 +838,7 @@ useEffect(() => {
       
       // الطلبات المكتملة والمدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
       const profitRecord = profits?.find(p => p.order_id === o.id);
-      return employeeMatch && o.status === 'completed' && profitRecord?.status === 'settled';
+      return employeeMatch && (o.status === 'completed' || o.status === 'delivered') && profitRecord?.status === 'settled';
     }).length;
 
     // ✅ عدد طلبات التحاسب المعلقة (settlement_requested) - مفلترة لمدير القسم
