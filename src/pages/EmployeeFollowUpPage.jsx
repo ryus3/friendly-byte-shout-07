@@ -389,7 +389,7 @@ const EmployeeFollowUpPage = () => {
   // المزامنة ستتم تلقائياً مرتين يومياً ولا حاجة للتحديث المستمر
 
   // معرف المدير الرئيسي - تصفية طلباته
-  const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
+  const ADMIN_ID = '012cb9df-132b-4441-902d-5e8aa877e4a5';
 
   // قائمة الموظفين النشطين - تفلتر حسب المشرف لمدير القسم
   const employees = useMemo(() => {
@@ -527,7 +527,7 @@ const filteredOrders = useMemo(() => {
     // فلتر الأرشيف والتسوية
     const isManuallyArchived = ((order.isarchived === true || order.isArchived === true || order.is_archived === true) && order.status !== 'completed');
     const profitRecord = profits?.find(p => p.order_id === order.id);
-    const isSettled = (order.status === 'completed' || order.status === 'delivered') && ((profitRecord?.status === 'settled' || profitRecord?.settled_at) || (order.is_archived === true || order.isArchived === true || order.isarchived === true));
+    const isSettled = profitRecord?.status === 'settled';
     
     // ✅ طلبات "تم طلب التحاسب" تظهر دائماً للمدير حتى لو مؤرشفة
     const isAwaitingSettlement = profitRecord?.status === 'settlement_requested';
@@ -838,7 +838,7 @@ useEffect(() => {
       
       // الطلبات المكتملة والمدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
       const profitRecord = profits?.find(p => p.order_id === o.id);
-      return employeeMatch && (o.status === 'completed' || o.status === 'delivered') && profitRecord?.status === 'settled';
+      return employeeMatch && profitRecord?.status === 'settled';
     }).length;
 
     // ✅ عدد طلبات التحاسب المعلقة (settlement_requested) - مفلترة لمدير القسم
@@ -854,6 +854,9 @@ useEffect(() => {
       return true;
     }).length || 0;
 
+    // ✅ عدد الطلبات المرتجعة (delivery_status = '17')
+    const returnedOrdersCount = statsOrders.filter(o => o.delivery_status === '17').length;
+
     return {
       totalOrders: filteredOrders.length,
       totalSales,
@@ -861,7 +864,8 @@ useEffect(() => {
       pendingDues,
       paidDues,
       settledOrdersCount,
-      settlementRequestsCount
+      settlementRequestsCount,
+      returnedOrdersCount
     };
   }, [filteredOrders, orders, filters, profits, calculateProfit, expenses, employeeFromUrl]);
 
@@ -872,8 +876,13 @@ useEffect(() => {
   };
   
   // معالج النقر على كارت الإحصائيات
-  const handleStatCardClick = (profitStatus) => {
-    setFilters(prev => ({ ...prev, profitStatus, status: 'all' }));
+  const handleStatCardClick = (filterType) => {
+    if (filterType === 'returned') {
+      // فلتر الطلبات المرتجعة بناءً على delivery_status
+      setFilters(prev => ({ ...prev, profitStatus: 'all', status: 'returned' }));
+    } else {
+      setFilters(prev => ({ ...prev, profitStatus: filterType, status: 'all' }));
+    }
   };
 
   // معالج عرض تفاصيل الطلب
@@ -1257,6 +1266,15 @@ useEffect(() => {
             format="number"
             onClick={() => setShowSettlementArchive(!showSettlementArchive)} 
             description="الطلبات المسواة"
+          />
+          <StatCard 
+            title="طلبات مرتجعة" 
+            value={stats.returnedOrdersCount || 0}
+            icon={RotateCcw} 
+            colors={['red-500', 'rose-500']} 
+            format="number"
+            onClick={() => handleStatCardClick('returned')} 
+            description="تم الإرجاع للتاجر"
           />
         </div>
 
