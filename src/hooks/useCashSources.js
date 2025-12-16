@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
-import { useSuper } from '@/components/providers/SuperProvider';
+import { useSuper } from '@/contexts/SuperProvider';
 
 export const useCashSources = () => {
   // ⚡ استخدام SuperProvider للبيانات المحملة مسبقاً
