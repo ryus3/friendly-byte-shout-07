@@ -164,7 +164,8 @@ const AdvancedProfitsAnalysisPage = () => {
     }
   ], [analysisData]);
 
-  if (loading) {
+  // ⚡ شرط تحميل ذكي - ينتظر فقط إذا لا توجد بيانات محملة
+  if (loading && !analysisData) {
     return (
       <div className="container mx-auto p-6 space-y-6">
         <div className="text-center">
