@@ -75,6 +75,32 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   });
   const [preferencesLoaded, setPreferencesLoaded] = useState(false);
 
+  // ⚡ جلب fresh للطلبات الذكية عند فتح النافذة (يتجاوز الـ cache)
+  useEffect(() => {
+    if (open) {
+      const fetchFreshAiOrders = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('ai_orders')
+            .select('*')
+            .order('created_at', { ascending: false });
+          
+          if (!error && data) {
+            // فلترة الطلبات المعتمدة والمعالجة محلياً
+            const filtered = data.filter(o => 
+              o.status !== 'approved' && !processedOrders.includes(o.id)
+            );
+            setOrders(filtered);
+          }
+        } catch (err) {
+          console.error('خطأ في جلب الطلبات الذكية:', err);
+        }
+      };
+      
+      fetchFreshAiOrders();
+    }
+  }, [open, processedOrders]);
+
   // إعدادات الموافقة التلقائية
   const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
   
