@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Clock, Truck, CheckCircle, AlertCircle, CornerDownLeft, Bot, Archive, Package, FolderArchive } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
@@ -7,6 +7,24 @@ import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
 
 const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globalPeriod }) => {
   const { canViewAllData, isSalesEmployee } = usePermissions();
+  
+  // ⚡ حالة لإجبار إعادة حساب العداد عند وصول طلب جديد
+  const [aiOrdersVersion, setAiOrdersVersion] = useState(0);
+  
+  // ⚡ استماع لأحداث الطلبات الذكية (الحدث يُطلق مرة واحدة فقط من SuperProvider)
+  useEffect(() => {
+    const handleAiOrderChange = () => {
+      setAiOrdersVersion(v => v + 1);
+    };
+    
+    window.addEventListener('aiOrderCreated', handleAiOrderChange);
+    window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderChange);
+    
+    return () => {
+      window.removeEventListener('aiOrderCreated', handleAiOrderChange);
+      window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderChange);
+    };
+  }, []);
 
   const handlePeriodChange = (stat, period) => {
     const statusMap = {
@@ -93,7 +111,7 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
       ids.add(String(key));
     }
     return ids.size;
-  }, [aiOrders]);
+  }, [aiOrders, aiOrdersVersion]); // ⚡ إضافة aiOrdersVersion لإجبار إعادة الحساب
   
   const statsData = useMemo(() => [
     { key: 'ai-orders', title: 'طلبات الذكاء الاصطناعي', icon: Bot, colors: ['indigo-500', 'violet-500'], value: aiOrdersCount, onClick: onAiOrdersClick, periods: {all: 'كل الوقت'} },
