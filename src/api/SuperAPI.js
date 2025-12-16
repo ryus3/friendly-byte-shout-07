@@ -189,6 +189,7 @@ return this.fetch('all_data', async () => {
     customerLoyalty,
     loyaltyTiers,
     orderDiscounts,
+    cashMovements, // ⚡ جديد
     
     // بيانات المرشحات
     colors,
@@ -234,7 +235,12 @@ return this.fetch('all_data', async () => {
     supabase.from('purchases').select('*').order('created_at', { ascending: false }),
     supabase.from('expenses').select('*').order('created_at', { ascending: false }),
     supabase.from('profits').select('*').order('created_at', { ascending: false }),
-    supabase.from('cash_sources').select('*').order('created_at', { ascending: false }),
+    supabase.from('cash_sources').select('*').eq('is_active', true).order('created_at', { ascending: false }),
+    // ⚡ إضافة cash_movements للتحميل الفوري
+    supabase.from('cash_movements').select('*, cash_sources(id, name, type, is_active)')
+      .order('effective_at', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(200),
     supabase.from('settings').select('*'),
     supabase.from('employee_profit_rules').select('*'),
     supabase.from('profiles').select('user_id, full_name, employee_code, status'),
@@ -276,6 +282,7 @@ return this.fetch('all_data', async () => {
     expenses: expenses.data || [],
     profits: profits.data || [],
     cashSources: cashSources.data || [],
+    cashMovements: cashMovements.data || [], // ⚡ جديد
     settings: settings.data?.[0] || {},
     aiOrders: aiOrders.data || [],
     profitRules: profitRules.data || [],
@@ -436,7 +443,7 @@ return this.fetch('all_data', async () => {
    */
   setupRealtimeSubscriptions(callback) {
     // ⚡ ai_orders مُضافة للقائمة مع استثناء خاص لـ invalidate
-    const tables = ['orders', 'order_items', 'products', 'inventory', 'expenses', 'notifications', 'ai_orders'];
+    const tables = ['orders', 'order_items', 'products', 'inventory', 'expenses', 'notifications', 'ai_orders', 'cash_sources', 'cash_movements'];
     
     tables.forEach(table => {
       const channel = supabase

@@ -1,71 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
+import { useSuper } from '@/components/providers/SuperProvider';
 
 export const useCashSources = () => {
-  const [cashSources, setCashSources] = useState([]);
-  const [cashMovements, setCashMovements] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  // جلب مصادر النقد
-  const fetchCashSources = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('cash_sources')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at');
-
-      if (error) throw error;
-      setCashSources(data || []);
-    } catch (error) {
-      console.error('خطأ في جلب مصادر النقد:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في جلب بيانات مصادر النقد",
-        variant: "destructive"
-      });
-    }
-  };
-
-  // جلب حركات النقد بطريقة موحدة وشاملة
-  const fetchCashMovements = async (sourceId = null, limit = 100) => {
-    try {
-      let query = supabase
-        .from('cash_movements')
-        .select(`
-          *,
-          cash_sources!inner (
-            id,
-            name,
-            type,
-            is_active
-          )
-        `)
-        .eq('cash_sources.is_active', true)
-        .order('effective_at', { ascending: false })
-        .order('created_at', { ascending: false })
-        .order('balance_after', { ascending: false })
-        .limit(limit);
-
-      if (sourceId) {
-        query = query.eq('cash_source_id', sourceId);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      
-      console.log('📋 حركات النقد المجلبة:', data?.length || 0);
-      setCashMovements(data || []);
-    } catch (error) {
-      console.error('❌ خطأ في جلب حركات النقد:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في جلب حركات النقد",
-        variant: "destructive"
-      });
-    }
-  };
+  // ⚡ استخدام SuperProvider للبيانات المحملة مسبقاً
+  const { allData } = useSuper();
+  
+  // البيانات من الـ cache - تحميل فوري!
+  const cashSources = useMemo(() => {
+    const sources = allData?.cashSources || [];
+    return sources.filter(s => s.is_active !== false);
+  }, [allData?.cashSources]);
+  
+  const cashMovements = useMemo(() => {
+    return allData?.cashMovements || [];
+  }, [allData?.cashMovements]);
+  
+  // حالة التحميل - false لأن البيانات موجودة في الـ cache
+  const loading = !allData;
 
   // إضافة مصدر نقد جديد
   const addCashSource = async (sourceData) => {
@@ -95,7 +48,6 @@ export const useCashSources = () => {
         });
       }
 
-      setCashSources(prev => [...prev, data]);
       toast({
         title: "تم بنجاح",
         description: "تم إضافة مصدر النقد الجديد"
@@ -130,10 +82,6 @@ export const useCashSources = () => {
       });
 
       if (error) throw error;
-
-      // تحديث البيانات
-      await fetchCashSources();
-      await fetchCashMovements();
 
       toast({
         title: "تم بنجاح",
@@ -170,10 +118,6 @@ export const useCashSources = () => {
 
       if (error) throw error;
 
-      // تحديث البيانات
-      await fetchCashSources();
-      await fetchCashMovements();
-
       toast({
         title: "تم بنجاح",
         description: `تم سحب ${amount.toLocaleString()} د.ع من القاصة`
@@ -191,166 +135,55 @@ export const useCashSources = () => {
     }
   };
 
-  // الحصول على إجمالي الرصيد الحقيقي الموحد
-  const getTotalBalance = async () => {
-    const mainBalance = await getMainCashBalance();
-    const othersBalance = getTotalSourcesBalance();
-    return mainBalance + othersBalance;
-  };
-
-  // الحصول على رصيد القاصة الرئيسية من current_balance مباشرة
-  const getMainCashBalance = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('cash_sources')
-        .select('current_balance')
-        .eq('name', 'القاصة الرئيسية')
-        .eq('is_active', true)
-        .single();
-
-      if (error) {
-        console.error('❌ خطأ في جلب رصيد القاصة الرئيسية:', error);
-        return 0;
-      }
-
-      const balance = Number(data?.current_balance || 0);
-      console.log('💰 رصيد القاصة الرئيسية:', balance.toLocaleString());
-      return balance;
-    } catch (error) {
-      console.error('❌ فشل في جلب رصيد القاصة الرئيسية:', error);
-      return 0;
-    }
-  };
+  // الحصول على رصيد القاصة الرئيسية من الـ cache
+  const getMainCashBalance = useCallback(() => {
+    const mainSource = cashSources.find(s => s.name === 'القاصة الرئيسية');
+    return mainSource?.current_balance || 0;
+  }, [cashSources]);
 
   // الحصول على مجموع أرصدة المصادر الفعلية (بدون القاصة الرئيسية)
-  const getTotalSourcesBalance = () => {
+  const getTotalSourcesBalance = useCallback(() => {
     return cashSources
       .filter(source => source.name !== 'القاصة الرئيسية')
       .reduce((total, source) => total + (source.current_balance || 0), 0);
-  };
+  }, [cashSources]);
 
-  // دالة للتوافق مع النسخة السابقة - تعيد مجموع المصادر
-  const getRealCashBalance = () => {
+  // دالة للتوافق مع النسخة السابقة
+  const getRealCashBalance = useCallback(() => {
     return getTotalSourcesBalance();
-  };
+  }, [getTotalSourcesBalance]);
 
   // حساب مجموع جميع المصادر بما في ذلك القاصة الرئيسية
-  const getTotalAllSourcesBalance = () => {
-    // حساب مجموع current_balance لجميع مصادر النقد النشطة
-    const total = cashSources
-      .filter(source => source.is_active)
+  const getTotalAllSourcesBalance = useCallback(() => {
+    return cashSources
+      .filter(source => source.is_active !== false)
       .reduce((sum, source) => sum + (source.current_balance || 0), 0);
-    
-    console.log('💰 مجموع جميع المصادر النشطة:', total.toLocaleString(), 'د.ع');
-    console.log('📊 تفاصيل المصادر:', cashSources.map(s => ({
-      name: s.name, 
-      balance: s.current_balance?.toLocaleString() || '0'
-    })));
-    
-    return total;
-  };
+  }, [cashSources]);
+
+  // الحصول على إجمالي الرصيد
+  const getTotalBalance = useCallback(() => {
+    return getMainCashBalance() + getTotalSourcesBalance();
+  }, [getMainCashBalance, getTotalSourcesBalance]);
 
   // الحصول على القاصة الرئيسية
-  const getMainCashSource = async () => {
+  const getMainCashSource = useCallback(() => {
     const mainSource = cashSources.find(source => source.name === 'القاصة الرئيسية') || cashSources[0];
-    if (mainSource && mainSource.name === 'القاصة الرئيسية') {
-      const calculatedBalance = await getMainCashBalance();
+    if (mainSource) {
       return {
         ...mainSource,
-        calculatedBalance
+        calculatedBalance: mainSource.current_balance || 0
       };
     }
     return mainSource;
-  };
+  }, [cashSources]);
 
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      await Promise.all([
-        fetchCashSources(),
-        fetchCashMovements()
-      ]);
-      setLoading(false);
-    };
+  // دوال إعادة الجلب للتوافق (لكن الآن تعتمد على Real-time)
+  const fetchCashSources = useCallback(() => {
+    // البيانات تُحدث تلقائياً عبر Real-time في SuperProvider
+  }, []);
 
-    loadData();
-
-    // Realtime subscriptions للجداول المالية
-    const cashSourcesSubscription = supabase
-      .channel('cash_sources_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'cash_sources' },
-        () => {
-          console.log('🔄 Cash sources changed, refreshing...');
-          fetchCashSources();
-        }
-      )
-      .subscribe();
-
-    const cashMovementsSubscription = supabase
-      .channel('cash_movements_changes')
-      .on('postgres_changes',
-        { event: '*', schema: 'public', table: 'cash_movements' },
-        () => {
-          console.log('🔄 Cash movements changed, refreshing...');
-          fetchCashMovements();
-        }
-      )
-      .subscribe();
-
-    // Real-time subscription للطلبات لتحديث الأرباح
-    const ordersSubscription = supabase
-      .channel('orders_changes')
-      .on('postgres_changes', 
-        { event: 'UPDATE', schema: 'public', table: 'orders' },
-        (payload) => {
-          console.log('🔄 Order updated, refreshing cash sources...');
-          // إذا تم تحديث حالة الطلب للتسليم، قم بتحديث الأرباح
-          if (payload.new.status === 'delivered' || payload.new.receipt_received) {
-            fetchCashSources();
-          }
-        }
-      )
-      .subscribe();
-
-  // Real-time subscription للمشتريات - تحديث فوري للواجهة
-    const purchasesSubscription = supabase
-      .channel('purchases_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'purchases' },
-        async () => {
-          console.log('🔄 Purchases changed, refreshing cash sources immediately...');
-          // تحديث فوري للبيانات بدون تأخير
-          await Promise.all([
-            fetchCashSources(),
-            fetchCashMovements()
-          ]);
-        }
-      )
-      .subscribe();
-
-    // Real-time subscription للمصاريف - تحديث مبسط لتجنب التكرار
-    const expensesSubscription = supabase
-      .channel('expenses_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'expenses' },
-        (payload) => {
-          console.log('🔄 Expense changed:', payload.eventType, payload.new?.id);
-          // تحديث مؤجل لتجنب التكرار
-          setTimeout(() => {
-            fetchCashMovements();
-          }, 500);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(cashSourcesSubscription);
-      supabase.removeChannel(cashMovementsSubscription);
-      supabase.removeChannel(ordersSubscription);
-      supabase.removeChannel(purchasesSubscription);
-      supabase.removeChannel(expensesSubscription);
-    };
+  const fetchCashMovements = useCallback(() => {
+    // البيانات تُحدث تلقائياً عبر Real-time في SuperProvider
   }, []);
 
   return {
