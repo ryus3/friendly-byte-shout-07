@@ -511,8 +511,11 @@ const filteredOrders = useMemo(() => {
     if (filters.status === 'returned') {
       // ✅ فلتر الطلبات المرتجعة بناءً على delivery_status = '17' فقط
       statusMatch = order.delivery_status === '17';
+    } else if (filters.status === 'all') {
+      // ✅ إجمالي الطلبات يستبعد فقط الطلبات المرتجعة (delivery_status='17')
+      statusMatch = order.delivery_status !== '17';
     } else {
-      statusMatch = filters.status === 'all' || order.status === filters.status;
+      statusMatch = order.status === filters.status;
     }
 
     // فلتر حالة الربح - محدث لدعم كل الحالات
@@ -1353,20 +1356,6 @@ useEffect(() => {
                 </h2>
               </div>
 
-              {/* تنبيه للطلبات الراجعة */}
-              {filters.status === 'returned' && !filters.archived && (
-                <Card className="mb-4 p-4 bg-secondary rounded-lg border">
-                  <div className="flex items-center justify-between">
-                    <p className="font-medium">
-                      {selectedOrders.length} طلبات راجعة محددة
-                    </p>
-                    <Button onClick={handleReceiveReturned} disabled={selectedOrders.length === 0}>
-                      <Archive className="w-4 h-4 ml-2" />
-                      استلام الراجع في المخزن
-                    </Button>
-                  </div>
-                </Card>
-              )}
 
               {/* قائمة الطلبات */}
               <OrderList 
