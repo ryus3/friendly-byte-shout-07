@@ -776,6 +776,51 @@ export const SuperProvider = ({ children }) => {
         return; // لا إعادة جلب نهائياً للطلبات المحذوفة
       }
       
+      // ⚡ تحديث فوري لبيانات المخزون عند تغيير جدول inventory
+      if (table === 'inventory' && payload.eventType === 'UPDATE') {
+        const rowNew = payload.new || {};
+        const variantId = rowNew.variant_id;
+        
+        if (variantId) {
+          devLog.log('📦 تحديث فوري للمخزون - variant:', variantId);
+          
+          setAllData(prev => {
+            const updatedProducts = (prev.products || []).map(product => ({
+              ...product,
+              variants: (product.variants || []).map(variant => 
+                variant.id === variantId 
+                  ? {
+                      ...variant,
+                      quantity: rowNew.quantity ?? variant.quantity,
+                      reserved_quantity: rowNew.reserved_quantity ?? variant.reserved_quantity,
+                      sold_quantity: rowNew.sold_quantity ?? variant.sold_quantity,
+                      inventory: {
+                        ...variant.inventory,
+                        quantity: rowNew.quantity,
+                        reserved_quantity: rowNew.reserved_quantity,
+                        sold_quantity: rowNew.sold_quantity,
+                      }
+                    }
+                  : variant
+              ),
+              product_variants: (product.product_variants || []).map(variant => 
+                variant.id === variantId 
+                  ? {
+                      ...variant,
+                      quantity: rowNew.quantity ?? variant.quantity,
+                      reserved_quantity: rowNew.reserved_quantity ?? variant.reserved_quantity,
+                      sold_quantity: rowNew.sold_quantity ?? variant.sold_quantity,
+                    }
+                  : variant
+              )
+            }));
+            
+            return { ...prev, products: updatedProducts };
+          });
+        }
+        return; // لا إعادة جلب كامل - التحديث المباشر يكفي
+      }
+
       // تحديث محدود للجداول الأخرى فقط
       if (['customers', 'expenses', 'purchases'].includes(table)) {
         if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
