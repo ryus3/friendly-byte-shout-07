@@ -54,31 +54,92 @@ const CashManagementPage = () => {
   const [enhancedFinancialData, setEnhancedFinancialData] = useState(null);
   const [deleteSource, setDeleteSource] = useState(null);
 
-  // ⚡ تحديث فوري من الـ cache - بدون انتظار
+  const [pageLoading, setPageLoading] = useState(true);
+
+  // جلب الأرصدة الحقيقية من قاعدة البيانات مع timeout
   useEffect(() => {
-    // البيانات الأساسية من الـ cache فوراً
-    const mainBalance = getMainCashBalance();
-    const totalAllSources = getTotalAllSourcesBalance();
+    let isMounted = true;
+    let timeoutId;
+
+    const fetchRealFinancialData = async () => {
+      try {
+        // جلب رصيد القاصة الرئيسية من current_balance مباشرة
+        const mainBalance = await getMainCashBalance();
+        const totalAllSources = getTotalAllSourcesBalance();
+        
+        if (!isMounted) return;
+        
+        // تحديث جميع الحالات من البيانات الحقيقية
+        setMainCashBalance(mainBalance);
+        setTotalSourcesBalance(totalAllSources);
+        setPageLoading(false); // ⚡ عرض فوري بعد البيانات الأساسية
+        
+        // جلب البيانات المالية المتقدمة في الخلفية
+        const rpcPromise = supabase.rpc('calculate_real_main_cash_balance');
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('Timeout')), 8000);
+        });
+        
+        try {
+          const { data: realData, error } = await Promise.race([rpcPromise, timeoutPromise]);
+          clearTimeout(timeoutId);
+          
+          if (!isMounted) return;
+          
+          if (!error && realData) {
+            const finalBalance = typeof realData === 'number' ? realData : (realData?.[0]?.final_balance || realData?.final_balance || mainBalance);
+            
+            setEnhancedFinancialData({
+              capitalValue: finalBalance,
+              totalRevenue: finalBalance,
+              totalSales: finalBalance,
+              realSales: finalBalance,
+              deliveryFees: 0,
+              systemProfit: finalBalance,
+              totalExpenses: 0,
+              totalPurchases: 0,
+              employeeDuesPaid: 0,
+              employeeDues: 0,
+              netProfit: finalBalance,
+              finalBalance: mainBalance,
+              grossProfit: finalBalance
+            });
+          }
+        } catch (rpcError) {
+          console.warn('⚠️ RPC timeout/error, using basic data');
+          if (isMounted) {
+            setEnhancedFinancialData({
+              capitalValue: mainBalance,
+              totalRevenue: mainBalance,
+              totalSales: mainBalance,
+              realSales: mainBalance,
+              deliveryFees: 0,
+              systemProfit: mainBalance,
+              totalExpenses: 0,
+              totalPurchases: 0,
+              employeeDuesPaid: 0,
+              employeeDues: 0,
+              netProfit: mainBalance,
+              finalBalance: mainBalance,
+              grossProfit: mainBalance
+            });
+          }
+        }
+      } catch (error) {
+        console.error('❌ خطأ في النظام المالي:', error);
+        if (isMounted) setPageLoading(false);
+      }
+    };
     
-    setMainCashBalance(mainBalance);
-    setTotalSourcesBalance(totalAllSources);
+    fetchRealFinancialData();
     
-    // البيانات المالية الأساسية فوراً
-    setEnhancedFinancialData({
-      capitalValue: mainBalance,
-      totalRevenue: mainBalance,
-      totalSales: mainBalance,
-      realSales: mainBalance,
-      deliveryFees: 0,
-      systemProfit: mainBalance,
-      totalExpenses: 0,
-      totalPurchases: 0,
-      employeeDuesPaid: 0,
-      employeeDues: 0,
-      netProfit: mainBalance,
-      finalBalance: mainBalance,
-      grossProfit: mainBalance
-    });
+    // تحديث كل دقيقة
+    const interval = setInterval(fetchRealFinancialData, 60000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+      clearTimeout(timeoutId);
+    };
   }, [cashSources, getMainCashBalance, getTotalAllSourcesBalance]);
 
   // تم دمج هذه الدالة في useEffect الموحد أعلاه
@@ -234,7 +295,16 @@ const CashManagementPage = () => {
     }
   ];
 
-  // ⚡ لا تحميل - عرض فوري للصفحة
+  if (loading && pageLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">جاري تحميل بيانات القاصة...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
