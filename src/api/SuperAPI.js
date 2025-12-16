@@ -183,13 +183,13 @@ return this.fetch('all_data', async () => {
     expenses,
     profits,
     cashSources,
+    cashMovements, // ⚡ الموقع الصحيح بعد cashSources
     settings,
     profitRules,
     profiles,
     customerLoyalty,
     loyaltyTiers,
     orderDiscounts,
-    cashMovements, // ⚡ جديد
     
     // بيانات المرشحات
     colors,
