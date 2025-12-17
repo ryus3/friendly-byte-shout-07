@@ -10,7 +10,6 @@ import {
   PieChart, 
   TrendingUp, 
   Filter, 
-  Eye,
   Target,
   Palette,
   Ruler,
@@ -18,8 +17,7 @@ import {
   CalendarDays,
   Activity,
   ChevronDown,
-  Users,
-  RefreshCw
+  Users
 } from 'lucide-react';
 import { useAdvancedProfitsAnalysis } from '@/hooks/useAdvancedProfitsAnalysis';
 import { motion } from 'framer-motion';
@@ -52,7 +50,6 @@ const AdvancedProfitsAnalysisPage = () => {
     return savedFilters ? { ...defaultFilters, ...JSON.parse(savedFilters) } : defaultFilters;
   });
 
-  const [viewMode, setViewMode] = useState('overview');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
@@ -70,8 +67,7 @@ const AdvancedProfitsAnalysisPage = () => {
     colors,
     sizes,
     products,
-    employees,
-    refreshData 
+    employees
   } = useAdvancedProfitsAnalysis(dateRange, filters);
 
   const handlePeriodChange = (period) => {
@@ -173,7 +169,7 @@ const AdvancedProfitsAnalysisPage = () => {
         <Card className="border-destructive">
           <CardContent className="p-6">
             <p className="text-destructive">خطأ في تحميل البيانات: {error}</p>
-            <Button onClick={refreshData} className="mt-4">إعادة المحاولة</Button>
+            <Button onClick={() => window.location.reload()} className="mt-4">إعادة المحاولة</Button>
           </CardContent>
         </Card>
       </div>
@@ -193,25 +189,6 @@ const AdvancedProfitsAnalysisPage = () => {
           </p>
         </div>
         
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={refreshData}
-            className="flex items-center gap-1"
-          >
-            <RefreshCw className="w-4 h-4" />
-            تحديث
-          </Button>
-          <Button 
-            variant={viewMode === 'overview' ? 'default' : 'outline'} 
-            size="sm"
-            onClick={() => setViewMode('overview')}
-          >
-            <Eye className="w-4 h-4 ml-1" />
-            نظرة عامة
-          </Button>
-        </div>
       </div>
 
       {/* فلاتر عالمية */}

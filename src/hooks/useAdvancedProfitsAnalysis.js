@@ -1,19 +1,21 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSuper } from '@/contexts/SuperProvider';
+import { supabase } from '@/integrations/supabase/client';
 import devLog from '@/lib/devLogger';
 
 /**
- * هوك تحليل الأرباح المتقدم v2.0 - يستخدم SuperProvider للتحميل الفوري
- * يحلل أرباح كل النظام (ليس فقط المدير) مع دعم فلتر الموظف
+ * هوك تحليل الأرباح المتقدم v3.0 - جلب مباشر مع fallback
+ * يحلل أرباح كل النظام مع دعم فلتر الموظف
  */
 export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
   const { allData, loading: superLoading } = useSuper();
   const [analysisData, setAnalysisData] = useState(null);
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // استخراج البيانات من SuperProvider مباشرة
+  // استخراج البيانات الثابتة من SuperProvider
   const { 
-    orders: cachedOrders, 
     products: cachedProducts,
     employeeProfitRules: cachedProfitRules,
     departments: cachedDepartments,
@@ -24,12 +26,44 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     seasons: cachedSeasons
   } = allData || {};
 
+  // جلب الطلبات مباشرة مع order_items كاملة
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        setLoading(true);
+        const { data, error: fetchError } = await supabase
+          .from('orders')
+          .select(`
+            *,
+            order_items (
+              *,
+              products (*),
+              product_variants (*, colors (*), sizes (*))
+            )
+          `)
+          .eq('receipt_received', true)
+          .in('status', ['delivered', 'completed']);
+
+        if (fetchError) throw fetchError;
+        setOrders(data || []);
+        devLog.log('📊 تم جلب الطلبات للتحليل:', data?.length);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
+
   // استخراج قائمة الموظفين من الطلبات
   const employees = useMemo(() => {
-    if (!cachedOrders?.length) return [];
+    if (!orders?.length) return [];
     
     const employeeMap = new Map();
-    cachedOrders.forEach(order => {
+    orders.forEach(order => {
       if (order.created_by && order.employee_name) {
         employeeMap.set(order.created_by, {
           user_id: order.created_by,
@@ -39,7 +73,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     });
     
     return Array.from(employeeMap.values());
-  }, [cachedOrders]);
+  }, [orders]);
 
   // حساب ربح الموظف والنظام بناءً على القواعد المحددة
   const calculateProfitSplit = useCallback((orderItem, employeeId, profitRules) => {
@@ -102,7 +136,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
   // تحليل الأرباح - حساب مباشر من البيانات المحملة
   const processAnalysis = useCallback(() => {
     try {
-      if (!cachedOrders?.length) {
+      if (!orders?.length) {
         setAnalysisData({
           totalProfit: 0,
           systemProfit: 0,
@@ -124,13 +158,10 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
         return;
       }
 
-      devLog.log('📊 بدء تحليل الأرباح المتقدم من SuperProvider cache...');
+      devLog.log('📊 بدء تحليل الأرباح المتقدم:', orders.length, 'طلب');
 
-      // فلترة الطلبات المُسلمة والمُستلمة الفواتير
-      let filteredOrders = cachedOrders.filter(order => 
-        order.receipt_received === true && 
-        ['delivered', 'completed'].includes(order.status)
-      );
+      // الطلبات جاهزة للتحليل (تم فلترتها مسبقاً في الجلب)
+      let filteredOrders = [...orders];
 
       // تطبيق الفترة الزمنية
       if (filters?.period !== 'all' && dateRange?.from && dateRange?.to) {
@@ -386,14 +417,14 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
       console.error('Error processing advanced profits analysis:', err);
       setError(err.message);
     }
-  }, [cachedOrders, cachedProfitRules, productLookup, dateRange, filters, calculateProfitSplit]);
+  }, [orders, cachedProfitRules, productLookup, dateRange, filters, calculateProfitSplit]);
 
   // تحديث التحليل عند تغيير البيانات أو الفلاتر
   useEffect(() => {
-    if (!superLoading && cachedOrders) {
+    if (orders?.length > 0) {
       processAnalysis();
     }
-  }, [superLoading, cachedOrders, filters, dateRange, processAnalysis]);
+  }, [orders, filters, dateRange, processAnalysis]);
 
   const refreshData = useCallback(() => {
     processAnalysis();
@@ -401,7 +432,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
 
   return {
     analysisData,
-    loading: superLoading && !analysisData,
+    loading: loading && !analysisData,
     error,
     products: cachedProducts || [],
     departments: cachedDepartments || [],
