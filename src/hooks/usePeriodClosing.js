@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { startOfMonth, endOfMonth, startOfYear, endOfYear, format, subMonths, subYears } from 'date-fns';
+import { startOfMonth, endOfMonth, startOfYear, endOfYear, startOfQuarter, endOfQuarter, format, subMonths } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 /**
@@ -12,6 +12,7 @@ export const usePeriodClosing = () => {
   const [closedPeriods, setClosedPeriods] = useState([]);
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
 
   // جلب الفترات المغلقة
   const fetchClosedPeriods = useCallback(async () => {
@@ -39,6 +40,49 @@ export const usePeriodClosing = () => {
   useEffect(() => {
     fetchClosedPeriods();
   }, [fetchClosedPeriods]);
+
+  // حساب التواريخ حسب نوع الفترة
+  const getPeriodDates = (periodType, customRange = null) => {
+    const now = new Date();
+    let startDate, endDate, periodName;
+
+    switch (periodType) {
+      case 'current_month':
+        startDate = startOfMonth(now);
+        endDate = endOfMonth(now);
+        periodName = format(now, 'MMMM yyyy', { locale: ar });
+        break;
+      case 'last_month':
+        const lastMonth = subMonths(now, 1);
+        startDate = startOfMonth(lastMonth);
+        endDate = endOfMonth(lastMonth);
+        periodName = format(lastMonth, 'MMMM yyyy', { locale: ar });
+        break;
+      case 'current_quarter':
+        startDate = startOfQuarter(now);
+        endDate = endOfQuarter(now);
+        const quarterNum = Math.ceil((now.getMonth() + 1) / 3);
+        periodName = `الربع ${quarterNum} - ${now.getFullYear()}`;
+        break;
+      case 'current_year':
+        startDate = startOfYear(now);
+        endDate = endOfYear(now);
+        periodName = `سنة ${now.getFullYear()}`;
+        break;
+      case 'custom':
+        if (!customRange?.from || !customRange?.to) {
+          throw new Error('يرجى تحديد نطاق التواريخ');
+        }
+        startDate = customRange.from;
+        endDate = customRange.to;
+        periodName = `${format(startDate, 'dd/MM/yyyy')} - ${format(endDate, 'dd/MM/yyyy')}`;
+        break;
+      default:
+        throw new Error('نوع الفترة غير معروف');
+    }
+
+    return { startDate, endDate, periodName };
+  };
 
   // حساب بيانات الفترة من الطلبات والحركات
   const calculatePeriodData = async (startDate, endDate) => {
@@ -134,44 +178,33 @@ export const usePeriodClosing = () => {
     };
   };
 
+  // معاينة ذكية قبل الإنشاء
+  const previewPeriod = async (periodType, customRange = null) => {
+    setPreviewing(true);
+    try {
+      const { startDate, endDate, periodName } = getPeriodDates(periodType, customRange);
+      const periodData = await calculatePeriodData(startDate, endDate);
+      
+      return {
+        periodName,
+        startDate,
+        endDate,
+        ...periodData,
+        isEmpty: periodData.delivered_orders === 0 && periodData.total_orders === 0
+      };
+    } catch (error) {
+      console.error('Error previewing period:', error);
+      return null;
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
   // إنشاء فترة جديدة
-  const createPeriod = async (periodType = 'monthly', customRange = null) => {
+  const createPeriod = async (periodType = 'current_month', customRange = null) => {
     setCreating(true);
     try {
-      const now = new Date();
-      let startDate, endDate, periodName;
-
-      switch (periodType) {
-        case 'monthly':
-          const lastMonth = subMonths(now, 1);
-          startDate = startOfMonth(lastMonth);
-          endDate = endOfMonth(lastMonth);
-          periodName = format(lastMonth, 'MMMM yyyy', { locale: ar });
-          break;
-        case 'quarterly':
-          // الربع السابق
-          const quarterMonth = Math.floor(now.getMonth() / 3) * 3;
-          startDate = new Date(now.getFullYear(), quarterMonth - 3, 1);
-          endDate = new Date(now.getFullYear(), quarterMonth, 0);
-          periodName = `الربع ${Math.ceil((quarterMonth) / 3)} - ${now.getFullYear()}`;
-          break;
-        case 'yearly':
-          const lastYear = subYears(now, 1);
-          startDate = startOfYear(lastYear);
-          endDate = endOfYear(lastYear);
-          periodName = `سنة ${lastYear.getFullYear()}`;
-          break;
-        case 'custom':
-          if (!customRange?.from || !customRange?.to) {
-            throw new Error('يرجى تحديد نطاق التواريخ');
-          }
-          startDate = customRange.from;
-          endDate = customRange.to;
-          periodName = `${format(startDate, 'dd/MM/yyyy')} - ${format(endDate, 'dd/MM/yyyy')}`;
-          break;
-        default:
-          throw new Error('نوع الفترة غير معروف');
-      }
+      const { startDate, endDate, periodName } = getPeriodDates(periodType, customRange);
 
       // التحقق من عدم وجود فترة متداخلة
       const { data: existing } = await supabase
@@ -343,7 +376,9 @@ export const usePeriodClosing = () => {
     closedPeriods,
     loading,
     creating,
+    previewing,
     fetchClosedPeriods,
+    previewPeriod,
     createPeriod,
     closePeriod,
     lockPeriod,
