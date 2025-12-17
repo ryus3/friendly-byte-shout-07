@@ -257,30 +257,13 @@ const AccountingPage = () => {
         fetchData();
     }, []);
 
-    // جلب الرصيد النقدي الفعلي (مجموع جميع المصادر الحقيقية)
+    // جلب الرصيد النقدي الفعلي - متزامن من cashSources المحملة
     useEffect(() => {
-        const fetchRealBalance = async () => {
-            try {
-                // استخدام نفس الطريقة المباشرة والموحدة
-                const totalMainBalance = await getMainCashBalance();
-                const otherSourcesBalance = getTotalSourcesBalance();
-                const totalRealBalance = totalMainBalance + otherSourcesBalance;
-                
-                console.log('💰 الرصيد النقدي الفعلي الموحد:', {
-                    mainBalance: totalMainBalance,
-                    otherSources: otherSourcesBalance,
-                    total: totalRealBalance
-                });
-                
-                setRealCashBalance(totalRealBalance);
-            } catch (error) {
-                console.error('❌ خطأ في حساب الرصيد النقدي الفعلي:', error);
-                setRealCashBalance(0);
-            }
-        };
-        
-        fetchRealBalance();
-    }, [getMainCashBalance, getTotalSourcesBalance, initialCapital]); // إضافة getMainCashBalance كـ dependency
+        if (cashSources?.length > 0) {
+            const totalBalance = getTotalAllSourcesBalance();
+            setRealCashBalance(totalBalance);
+        }
+    }, [cashSources, getTotalAllSourcesBalance]);
 
     // حساب قيمة المخزون والمصاريف المفلترة فقط - باقي البيانات من unifiedProfitData
     const inventoryValue = useMemo(() => {
@@ -350,8 +333,8 @@ const AccountingPage = () => {
           key: 'productProfit', 
           title: "تحليل أرباح المنتجات", 
           value: (() => {
-            const totalProductsSold = profitsAnalysis?.totalProductsSold ?? profitsAnalysis?.filteredItemsCount ?? 0;
-            return totalProductsSold > 0 ? `${totalProductsSold} منتجات` : 'لا توجد مبيعات';
+            const totalProductsSold = profitsAnalysis?.totalSoldProducts ?? 0;
+            return totalProductsSold > 0 ? `${totalProductsSold} منتج` : 'لا توجد مبيعات';
           })(),
           icon: PieChart, 
           colors: ['violet-500', 'purple-500'], 

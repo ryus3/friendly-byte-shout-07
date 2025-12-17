@@ -4,13 +4,15 @@ import { supabase } from '@/integrations/supabase/client';
 import devLog from '@/lib/devLogger';
 
 /**
- * هوك تحليل الأرباح المتقدم v3.0 - جلب مباشر مع fallback
+ * هوك تحليل الأرباح المتقدم v4.0 - جلب كامل مع العلاقات
  * يحلل أرباح كل النظام مع دعم فلتر الموظف
  */
 export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
   const { allData, loading: superLoading } = useSuper();
   const [analysisData, setAnalysisData] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [totalSoldProducts, setTotalSoldProducts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -26,54 +28,65 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     seasons: cachedSeasons
   } = allData || {};
 
-  // جلب الطلبات مباشرة مع order_items كاملة
+  // جلب جميع البيانات المطلوبة مرة واحدة
   useEffect(() => {
-    const fetchOrders = async () => {
+    const fetchAllData = async () => {
       try {
         setLoading(true);
-        const { data, error: fetchError } = await supabase
+        
+        // جلب الطلبات مع العلاقات الكاملة + اسم الموظف
+        const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
           .select(`
             *,
+            profiles!created_by (user_id, full_name),
             order_items (
               *,
-              products (*),
+              products (
+                *,
+                product_departments (departments (*)),
+                product_categories (categories (*)),
+                product_product_types (product_types (*)),
+                product_seasons_occasions (seasons_occasions (*))
+              ),
               product_variants (*, colors (*), sizes (*))
             )
           `)
           .eq('receipt_received', true)
           .in('status', ['delivered', 'completed']);
 
-        if (fetchError) throw fetchError;
-        setOrders(data || []);
-        devLog.log('📊 تم جلب الطلبات للتحليل:', data?.length);
+        if (ordersError) throw ordersError;
+        setOrders(ordersData || []);
+        
+        // جلب الموظفين النشطين
+        const { data: employeesData } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .eq('is_active', true);
+        setEmployees(employeesData || []);
+        
+        // جلب عدد المنتجات المباعة الفعلي من inventory
+        const { data: soldData } = await supabase
+          .from('inventory')
+          .select('sold_quantity');
+        const totalSold = soldData?.reduce((sum, i) => sum + (i.sold_quantity || 0), 0) || 0;
+        setTotalSoldProducts(totalSold);
+        
+        devLog.log('📊 تم جلب البيانات الكاملة:', {
+          orders: ordersData?.length,
+          employees: employeesData?.length,
+          totalSold
+        });
       } catch (err) {
-        console.error('Error fetching orders:', err);
+        console.error('Error fetching data:', err);
         setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchOrders();
+    fetchAllData();
   }, []);
-
-  // استخراج قائمة الموظفين من الطلبات
-  const employees = useMemo(() => {
-    if (!orders?.length) return [];
-    
-    const employeeMap = new Map();
-    orders.forEach(order => {
-      if (order.created_by && order.employee_name) {
-        employeeMap.set(order.created_by, {
-          user_id: order.created_by,
-          full_name: order.employee_name
-        });
-      }
-    });
-    
-    return Array.from(employeeMap.values());
-  }, [orders]);
 
   // حساب ربح الموظف والنظام بناءً على القواعد المحددة
   const calculateProfitSplit = useCallback((orderItem, employeeId, profitRules) => {
@@ -408,6 +421,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
         totalRevenue,
         totalCost,
         filteredItemsCount,
+        totalSoldProducts, // عدد المنتجات المباعة الفعلي
         averageProfit: filteredOrders.length > 0 ? totalSystemProfit / filteredOrders.length : 0,
         profitMargin: totalRevenue > 0 ? (totalSystemProfit / totalRevenue) * 100 : 0,
         ...sortedData
@@ -417,7 +431,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
       console.error('Error processing advanced profits analysis:', err);
       setError(err.message);
     }
-  }, [orders, cachedProfitRules, productLookup, dateRange, filters, calculateProfitSplit]);
+  }, [orders, cachedProfitRules, productLookup, dateRange, filters, calculateProfitSplit, totalSoldProducts]);
 
   // تحديث التحليل عند تغيير البيانات أو الفلاتر
   useEffect(() => {
