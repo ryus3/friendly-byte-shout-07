@@ -35,11 +35,13 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
         setLoading(true);
         
         // جلب الطلبات مع العلاقات الكاملة + اسم الموظف
+        // جلب الطلبات مع الأرباح الفعلية من جدول profits
         const { data: ordersData, error: ordersError } = await supabase
           .from('orders')
           .select(`
             *,
             profiles!created_by (user_id, full_name),
+            profits (employee_profit),
             order_items (
               *,
               products (
@@ -258,13 +260,14 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
 
           filteredItemsCount += (item.quantity || 1);
 
-          // حساب الأرباح
+          // حساب الأرباح - استخدام ربح الموظف الفعلي من جدول profits
           const profitSplit = calculateProfitSplit(item, order.created_by, cachedProfitRules);
           
           totalRevenue += profitSplit.revenue;
           totalCost += profitSplit.cost;
           totalSystemProfit += profitSplit.systemProfit;
-          totalEmployeeProfit += profitSplit.employeeProfit;
+          
+          // ⭐ لا نجمع هنا - سنجمع من profits لكل طلب مرة واحدة
 
           // تجميع البيانات للتفصيلات
           const departments = product.product_departments || [];
@@ -392,6 +395,10 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
             productTypeBreakdown[type.id].cost += profitSplit.cost;
           }
         }
+        
+        // ⭐ جمع ربح الموظف الفعلي من جدول profits لهذا الطلب
+        const orderEmployeeProfit = order.profits?.[0]?.employee_profit || 0;
+        totalEmployeeProfit += orderEmployeeProfit;
       }
 
       const sortedData = {
@@ -404,9 +411,9 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
         productTypeBreakdown: Object.values(productTypeBreakdown).sort((a, b) => b.profit - a.profit)
       };
 
-      devLog.log('📊 نتائج تحليل الأرباح (SuperProvider):', {
+      devLog.log('📊 نتائج تحليل الأرباح:', {
         totalSystemProfit,
-        totalEmployeeProfit,
+        totalEmployeeProfit, // ⭐ الآن من جدول profits الفعلي
         totalRevenue,
         totalCost,
         totalOrders: filteredOrders.length,
