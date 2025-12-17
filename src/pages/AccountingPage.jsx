@@ -9,7 +9,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart } from 'lucide-react';
+import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, User, Users, Banknote, Coins as HandCoins, Hourglass, CheckCircle, PieChart, CalendarRange } from 'lucide-react';
 import { format, parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
@@ -34,6 +34,7 @@ import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EnhancedFinancialSummary from '@/components/shared/EnhancedFinancialSummary';
 import FinancialPerformanceCard from '@/components/shared/FinancialPerformanceCard';
 import UnifiedFinancialDisplay from '@/components/financial/UnifiedFinancialDisplay';
+import PeriodClosingManager from '@/components/cash/PeriodClosingManager';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
@@ -461,6 +462,22 @@ const AccountingPage = () => {
                         </Card>
                     </div>
                 </div>
+
+                {/* قسم إغلاق الفترات المالية */}
+                <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="period-closing" className="border rounded-lg">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                            <div className="flex items-center gap-3">
+                                <CalendarRange className="w-5 h-5 text-primary" />
+                                <span className="font-semibold">إغلاق الفترات المالية</span>
+                                <Badge variant="outline" className="mr-2">جديد</Badge>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4">
+                            <PeriodClosingManager />
+                        </AccordionContent>
+                    </AccordionItem>
+                </Accordion>
                 
             </div>
             <ExpensesDialog

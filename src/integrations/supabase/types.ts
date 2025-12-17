@@ -1007,6 +1007,102 @@ export type Database = {
         }
         Relationships: []
       }
+      closed_periods: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          closing_cash_balance: number
+          created_at: string
+          created_by: string | null
+          delivered_orders: number
+          end_date: string
+          gross_profit: number
+          gross_profit_margin: number
+          id: string
+          net_profit: number
+          net_profit_margin: number
+          notes: string | null
+          opening_cash_balance: number
+          period_name: string
+          period_type: string
+          returned_orders: number
+          sales_without_delivery: number
+          start_date: string
+          status: string
+          summary_data: Json | null
+          total_cogs: number
+          total_delivery_fees: number
+          total_employee_dues_paid: number
+          total_employee_profit: number
+          total_general_expenses: number
+          total_orders: number
+          total_revenue: number
+          updated_at: string
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_cash_balance?: number
+          created_at?: string
+          created_by?: string | null
+          delivered_orders?: number
+          end_date: string
+          gross_profit?: number
+          gross_profit_margin?: number
+          id?: string
+          net_profit?: number
+          net_profit_margin?: number
+          notes?: string | null
+          opening_cash_balance?: number
+          period_name: string
+          period_type?: string
+          returned_orders?: number
+          sales_without_delivery?: number
+          start_date: string
+          status?: string
+          summary_data?: Json | null
+          total_cogs?: number
+          total_delivery_fees?: number
+          total_employee_dues_paid?: number
+          total_employee_profit?: number
+          total_general_expenses?: number
+          total_orders?: number
+          total_revenue?: number
+          updated_at?: string
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          closing_cash_balance?: number
+          created_at?: string
+          created_by?: string | null
+          delivered_orders?: number
+          end_date?: string
+          gross_profit?: number
+          gross_profit_margin?: number
+          id?: string
+          net_profit?: number
+          net_profit_margin?: number
+          notes?: string | null
+          opening_cash_balance?: number
+          period_name?: string
+          period_type?: string
+          returned_orders?: number
+          sales_without_delivery?: number
+          start_date?: string
+          status?: string
+          summary_data?: Json | null
+          total_cogs?: number
+          total_delivery_fees?: number
+          total_employee_dues_paid?: number
+          total_employee_profit?: number
+          total_general_expenses?: number
+          total_orders?: number
+          total_revenue?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       colors: {
         Row: {
           created_at: string
