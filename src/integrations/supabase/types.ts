@@ -7135,6 +7135,10 @@ export type Database = {
         Returns: boolean
       }
       can_manage_finances: { Args: never; Returns: boolean }
+      can_view_ai_order: {
+        Args: { order_created_by: string }
+        Returns: boolean
+      }
       can_view_all_orders: { Args: never; Returns: boolean }
       check_and_run_sync: { Args: never; Returns: undefined }
       check_city_benefits: {

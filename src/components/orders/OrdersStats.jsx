@@ -1,30 +1,63 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingCart, Clock, Truck, CheckCircle, AlertCircle, CornerDownLeft, Bot, Archive, Package, FolderArchive } from 'lucide-react';
 import StatCard from '@/components/dashboard/StatCard';
 import { usePermissions } from '@/hooks/usePermissions';
 import { filterOrdersByPeriod } from '@/lib/dashboard-helpers';
+import { supabase } from '@/integrations/supabase/client';
 
 const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globalPeriod }) => {
   const { canViewAllData, isSalesEmployee } = usePermissions();
   
   // ⚡ حالة لإجبار إعادة حساب العداد عند وصول طلب جديد
   const [aiOrdersVersion, setAiOrdersVersion] = useState(0);
+  // ⚡ العدد الفعلي من قاعدة البيانات مباشرة
+  const [liveAiCount, setLiveAiCount] = useState(null);
   
-  // ⚡ استماع لأحداث الطلبات الذكية (الحدث يُطلق مرة واحدة فقط من SuperProvider)
+  // ⚡ دالة جلب العدد مباشرة من قاعدة البيانات
+  const fetchLiveCount = useCallback(async () => {
+    try {
+      const { count, error } = await supabase
+        .from('ai_orders')
+        .select('id', { count: 'exact', head: true })
+        .not('status', 'in', '(approved,processed)');
+      
+      if (!error && count !== null) {
+        setLiveAiCount(count);
+      }
+    } catch (e) {
+      // تجاهل الأخطاء
+    }
+  }, []);
+  
+  // ⚡ جلب العدد عند mount + الاستماع للأحداث
   useEffect(() => {
+    // جلب فوري عند mount
+    fetchLiveCount();
+    
     const handleAiOrderChange = () => {
       setAiOrdersVersion(v => v + 1);
+      // ⚡ جلب فوري من قاعدة البيانات عند أي تغيير
+      fetchLiveCount();
     };
     
     window.addEventListener('aiOrderCreated', handleAiOrderChange);
     window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderChange);
     
+    // ⚡ اشتراك Real-time للتحديث الفوري
+    const channel = supabase
+      .channel('ai_orders_stats_count')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_orders' }, () => {
+        fetchLiveCount();
+      })
+      .subscribe();
+    
     return () => {
       window.removeEventListener('aiOrderCreated', handleAiOrderChange);
       window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderChange);
+      supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchLiveCount]);
 
   const handlePeriodChange = (stat, period) => {
     const statusMap = {
@@ -103,7 +136,13 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
     onStatCardClick(status, globalPeriod);
   };
   
+  // ⚡ استخدام العدد المباشر من قاعدة البيانات إذا كان متاحاً، وإلا من الـ props
   const aiOrdersCount = useMemo(() => {
+    // أولوية للعدد المباشر من قاعدة البيانات
+    if (liveAiCount !== null) {
+      return liveAiCount;
+    }
+    // fallback للـ props
     const list = Array.isArray(aiOrders) ? aiOrders : [];
     const ids = new Set();
     for (const o of list) {
@@ -111,7 +150,7 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
       ids.add(String(key));
     }
     return ids.size;
-  }, [aiOrders, aiOrdersVersion]); // ⚡ إضافة aiOrdersVersion لإجبار إعادة الحساب
+  }, [aiOrders, aiOrdersVersion, liveAiCount]); // ⚡ إضافة liveAiCount
   
   const statsData = useMemo(() => [
     { key: 'ai-orders', title: 'طلبات الذكاء الاصطناعي', icon: Bot, colors: ['indigo-500', 'violet-500'], value: aiOrdersCount, onClick: onAiOrdersClick, periods: {all: 'كل الوقت'} },
