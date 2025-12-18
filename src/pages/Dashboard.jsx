@@ -154,12 +154,22 @@ const Dashboard = () => {
 
     // ⚡ State لإجبار إعادة حساب عداد الطلبات الذكية فوراً
     const [aiOrdersVersion, setAiOrdersVersion] = useState(0);
+    // ⚡ طلبات ذكية جديدة وصلت عبر events (قبل وصولها من SuperProvider)
+    const [localNewAiOrders, setLocalNewAiOrders] = useState([]);
 
     // إضافة listener للتحديثات اللحظية للطلبات الذكية
     useEffect(() => {
         const handleAiOrderCreated = (event) => {
             devLog.log('🔥 AI Order Created Event:', event.detail);
-            setAiOrdersVersion(v => v + 1); // ⚡ إجبار إعادة الحساب فوراً
+            // ⚡ إضافة الطلب الجديد للـ local state فوراً
+            if (event.detail && event.detail.id) {
+                setLocalNewAiOrders(prev => {
+                    // تجنب التكرار
+                    if (prev.some(o => o.id === event.detail.id)) return prev;
+                    return [event.detail, ...prev];
+                });
+            }
+            setAiOrdersVersion(v => v + 1);
         };
 
         const handleAiOrderUpdated = (event) => {
@@ -169,7 +179,11 @@ const Dashboard = () => {
 
         const handleAiOrderDeleted = (event) => {
             devLog.log('🔥 AI Order Deleted Event:', event.detail);
-            setAiOrdersVersion(v => v + 1); // ⚡ إجبار إعادة الحساب فوراً
+            // ⚡ إزالة من local state فوراً
+            if (event.detail?.id) {
+                setLocalNewAiOrders(prev => prev.filter(o => o.id !== event.detail.id));
+            }
+            setAiOrdersVersion(v => v + 1);
         };
 
         window.addEventListener('aiOrderCreated', handleAiOrderCreated);
@@ -184,6 +198,14 @@ const Dashboard = () => {
             window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderDeleted);
         };
     }, []);
+
+    // ⚡ تنظيف الطلبات المحلية عند وصولها من SuperProvider
+    useEffect(() => {
+        if (aiOrders?.length > 0 && localNewAiOrders.length > 0) {
+            const aiOrderIds = new Set(aiOrders.map(o => o.id));
+            setLocalNewAiOrders(prev => prev.filter(o => !aiOrderIds.has(o.id)));
+        }
+    }, [aiOrders]);
     
     const [topProvincesOpen, setTopProvincesOpen] = useState(false);
     const [topProductsOpen, setTopProductsOpen] = useState(false);
@@ -363,7 +385,21 @@ const Dashboard = () => {
     }, [aiOrders, canViewAllData, userEmployeeCode, user?.employee_code, user?.user_id, user?.id]);
 
     const aiOrdersCount = useMemo(() => {
-        const list = (canViewAllData ? (Array.isArray(aiOrders) ? aiOrders : []) : (Array.isArray(userAiOrders) ? userAiOrders : []));
+        // ⚡ دمج طلبات SuperProvider + الطلبات المحلية الجديدة
+        const contextOrders = canViewAllData 
+            ? (Array.isArray(aiOrders) ? aiOrders : []) 
+            : (Array.isArray(userAiOrders) ? userAiOrders : []);
+        
+        // ⚡ دمج مع الطلبات المحلية وإزالة التكرار
+        const mergedOrders = [...localNewAiOrders, ...contextOrders];
+        const uniqueById = new Map();
+        for (const order of mergedOrders) {
+            if (order?.id && !uniqueById.has(order.id)) {
+                uniqueById.set(order.id, order);
+            }
+        }
+        const list = Array.from(uniqueById.values()).filter(o => o.status !== 'approved');
+        
         const lower = (v) => (v ?? '').toString().trim().toLowerCase();
         const normalizeSize = (s) => {
             if (!s) return '';
@@ -403,7 +439,7 @@ const Dashboard = () => {
             keys.add(key);
         }
         return keys.size;
-    }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode, aiOrdersVersion]);
+    }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode, aiOrdersVersion, localNewAiOrders]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
