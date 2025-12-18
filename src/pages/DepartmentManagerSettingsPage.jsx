@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import DepartmentStatsCharts from '@/components/department/DepartmentStatsCharts';
 import { 
   Users, 
   DollarSign, 
@@ -406,22 +407,10 @@ const DepartmentManagerSettingsPage = () => {
 
           {/* تبويب الإحصائيات */}
           <TabsContent value="stats">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="w-5 h-5" />
-                  إحصائيات القسم
-                </CardTitle>
-                <CardDescription>
-                  ملخص أداء قسمك والموظفين تحت إشرافك
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  سيتم إضافة رسوم بيانية تفصيلية قريباً
-                </div>
-              </CardContent>
-            </Card>
+            <DepartmentStatsCharts 
+              supervisedEmployeeIds={supervisedEmployeeIds}
+              supervisedEmployees={supervisedEmployees}
+            />
           </TabsContent>
         </Tabs>
       </div>
