@@ -152,31 +152,36 @@ const Dashboard = () => {
         aiOrders: false,
     });
 
+    // ⚡ State لإجبار إعادة حساب عداد الطلبات الذكية فوراً
+    const [aiOrdersVersion, setAiOrdersVersion] = useState(0);
+
     // إضافة listener للتحديثات اللحظية للطلبات الذكية
     useEffect(() => {
         const handleAiOrderCreated = (event) => {
             devLog.log('🔥 AI Order Created Event:', event.detail);
-            // تحديث فوري للإحصائيات
+            setAiOrdersVersion(v => v + 1); // ⚡ إجبار إعادة الحساب فوراً
         };
 
         const handleAiOrderUpdated = (event) => {
             devLog.log('🔥 AI Order Updated Event:', event.detail);
-            // تحديث فوري للإحصائيات
+            setAiOrdersVersion(v => v + 1);
         };
 
         const handleAiOrderDeleted = (event) => {
             devLog.log('🔥 AI Order Deleted Event:', event.detail);
-            // تحديث فوري للإحصائيات
+            setAiOrdersVersion(v => v + 1); // ⚡ إجبار إعادة الحساب فوراً
         };
 
         window.addEventListener('aiOrderCreated', handleAiOrderCreated);
         window.addEventListener('aiOrderUpdated', handleAiOrderUpdated);
         window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+        window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderDeleted);
 
         return () => {
             window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
             window.removeEventListener('aiOrderUpdated', handleAiOrderUpdated);
             window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+            window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderDeleted);
         };
     }, []);
     
@@ -398,7 +403,7 @@ const Dashboard = () => {
             keys.add(key);
         }
         return keys.size;
-    }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode]);
+    }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode, aiOrdersVersion]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
