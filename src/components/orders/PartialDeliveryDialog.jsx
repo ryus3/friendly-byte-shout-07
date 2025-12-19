@@ -17,15 +17,19 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
 
   useEffect(() => {
     if (open && order) {
-      // ✅ فحص: هل تم معالجة هذا الطلب مسبقاً؟
-      const alreadyProcessed = order.status === 'partial_delivery' && 
-                               order.delivery_status === '21';
+      // ✅ فحص محسّن: هل تم اختيار المنتجات المسلّمة فعلاً؟
+      // الطلب يُعتبر مُعالجاً فقط إذا كانت هناك منتجات بحالة delivered أو pending_return
+      const hasProcessedItems = order.order_items?.some(item => 
+        item.item_status === 'delivered' || item.item_status === 'pending_return'
+      );
+      
+      const alreadyProcessed = order.order_type === 'partial_delivery' && hasProcessedItems;
       
       if (!alreadyProcessed) {
         fetchOrderItems();
         setCustomPrice(null);
       } else {
-        // إغلاق النافذة تلقائياً - الطلب تم معالجته
+        // إغلاق النافذة تلقائياً - الطلب تم معالجته فعلاً
         toast({
           title: 'تنبيه',
           description: 'هذا الطلب تم معالجته كتسليم جزئي مسبقاً',
@@ -34,7 +38,7 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
         onOpenChange(false);
       }
     }
-  }, [open, order?.id, order?.status, order?.delivery_status]);
+  }, [open, order?.id, order?.order_type]);
 
   const fetchOrderItems = async () => {
     const { data, error } = await supabase
