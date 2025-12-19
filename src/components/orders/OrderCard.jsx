@@ -274,12 +274,12 @@ const OrderCard = React.memo(({
     return false;
   }, [order]);
 
-  // ✅ فتح تلقائي عند الحالة 21
+  // ✅ فتح تلقائي عند الحالة 21 فقط إذا الطلب يحتاج فعلاً لاختيار المنتجات
   React.useEffect(() => {
-    if (order.delivery_status === '21' && !showPartialDelivery) {
+    if (needsPartialDeliverySelection && order.delivery_status === '21' && !showPartialDelivery) {
       setShowPartialDelivery(true);
     }
-  }, [order.delivery_status, order.tracking_number]);
+  }, [order.delivery_status, order.tracking_number, needsPartialDeliverySelection]);
 
   const employeeProfit = useMemo(() => {
     if (!calculateProfit || !order.items) return 0;
