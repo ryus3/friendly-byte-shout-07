@@ -503,7 +503,7 @@ const addCostRecord = async (productId, variantId, purchaseId, item, purchaseDat
       product_id: productId,
       variant_id: variantId,
       purchase_id: purchaseId,
-      cost_price: item.costPrice,
+      unit_cost: item.costPrice,
       quantity: item.quantity,
       purchase_date: purchaseDate
     });
