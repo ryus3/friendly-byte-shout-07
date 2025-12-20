@@ -457,8 +457,8 @@ const addPurchaseItem = async (purchaseId, productId, variantId, item) => {
       product_id: productId,
       variant_id: variantId,
       quantity: item.quantity,
-      cost_price: item.costPrice,
-      total_price: item.costPrice * item.quantity
+      unit_cost: item.costPrice,
+      total_cost: item.costPrice * item.quantity
     });
 
   if (error) throw error;
