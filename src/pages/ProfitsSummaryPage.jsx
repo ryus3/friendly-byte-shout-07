@@ -205,8 +205,10 @@ const ProfitsSummaryPage = () => {
             const inDateRange = orderDate && isValid(orderDate) && orderDate >= from && orderDate <= to;
             
             // إظهار الطلبات المؤرشفة أيضاً إذا كانت لم تُحاسب بعد
+            // استثناء الطلبات بدون ربح (no_rule_settled) لأنها لا تحتاج تحاسب
             const profitRecord = profits?.find(p => p.order_id === o.id);
-            const notSettled = !profitRecord || profitRecord.status !== 'settled';
+            const notSettled = !profitRecord || 
+              (profitRecord.status !== 'settled' && profitRecord.status !== 'no_rule_settled');
             
             return isDelivered && hasReceipt && inDateRange && notSettled;
         }) || [];
@@ -455,7 +457,11 @@ const ProfitsSummaryPage = () => {
     if (filters.profitStatus !== 'all') {
       if (filters.profitStatus === 'not_settled') {
         // عرض كل ما ليس مدفوع (pending + invoice_received + settlement_requested)
-        filtered = filtered.filter(p => (p.profitStatus || 'pending') !== 'settled');
+        // استثناء settled و no_rule_settled (الطلبات بدون ربح لا تحتاج تحاسب)
+        filtered = filtered.filter(p => {
+          const status = p.profitStatus || 'pending';
+          return status !== 'settled' && status !== 'no_rule_settled';
+        });
       } else {
         filtered = filtered.filter(p => (p.profitStatus || 'pending') === filters.profitStatus);
       }
