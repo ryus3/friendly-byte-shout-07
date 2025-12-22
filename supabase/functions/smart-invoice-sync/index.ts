@@ -34,11 +34,12 @@ interface InvoiceOrder {
   [key: string]: any;
 }
 
-// Fetch invoices from AlWaseet API
+// ✅ Fetch invoices from AlWaseet API - CORRECTED endpoint
 async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
   try {
     console.log('📡 Fetching invoices from AlWaseet API...');
-    const response = await fetch(`${ALWASEET_API_BASE}/merchant-invoices`, {
+    // ✅ استخدام الـ endpoint الصحيح مع token في query params
+    const response = await fetch(`${ALWASEET_API_BASE}/get_merchant_invoices?token=${encodeURIComponent(token)}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -47,15 +48,21 @@ async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
     });
 
     if (!response.ok) {
-      console.error(`API Error: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      console.error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
       return [];
     }
 
     const data = await response.json();
     console.log(`📥 API Response: success=${data.success}, count=${data.data?.length || 0}`);
     
+    // معالجة الاستجابة - قد تكون في data.data أو data مباشرة
     if (data.success && Array.isArray(data.data)) {
       return data.data;
+    }
+    
+    if (Array.isArray(data)) {
+      return data;
     }
     
     return [];
@@ -65,10 +72,12 @@ async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
   }
 }
 
-// Fetch invoice orders from AlWaseet API
+// ✅ Fetch invoice orders from AlWaseet API - CORRECTED endpoint
 async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Promise<InvoiceOrder[]> {
   try {
-    const response = await fetch(`${ALWASEET_API_BASE}/invoice-orders?invoiceId=${invoiceId}`, {
+    console.log(`📡 Fetching orders for invoice ${invoiceId}...`);
+    // ✅ استخدام الـ endpoint الصحيح مع token و invoice_id في query params
+    const response = await fetch(`${ALWASEET_API_BASE}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${invoiceId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -77,19 +86,25 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Prom
     });
 
     if (!response.ok) {
-      console.error(`API Error fetching orders for invoice ${invoiceId}: ${response.status}`);
+      const errorText = await response.text();
+      console.error(`API Error fetching orders for invoice ${invoiceId}: ${response.status} - ${errorText}`);
       return [];
     }
 
     const data = await response.json();
+    console.log(`📥 Invoice ${invoiceId} orders response: success=${data.success}, count=${data.data?.length || 0}`);
     
+    // معالجة الاستجابة - قد تكون في data.data أو data.orders أو data مباشرة
     if (data.success && Array.isArray(data.data)) {
       return data.data;
     }
     
-    // Handle different response structures
     if (Array.isArray(data.orders)) {
       return data.orders;
+    }
+    
+    if (Array.isArray(data)) {
+      return data;
     }
     
     return [];
