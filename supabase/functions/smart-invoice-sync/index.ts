@@ -415,15 +415,31 @@ serve(async (req) => {
       };
     }
 
+    // ✅ ربط طلبات الفواتير بالطلبات المحلية تلقائياً
+    let linkedCount = 0;
+    let updatedOrdersCount = 0;
+    try {
+      const { data: linkResult, error: linkError } = await supabase.rpc('link_invoice_orders_to_orders');
+      if (linkError) {
+        console.warn('⚠️ Failed to link invoice orders:', linkError.message);
+      } else if (linkResult && linkResult.length > 0) {
+        linkedCount = linkResult[0].linked_count || 0;
+        updatedOrdersCount = linkResult[0].updated_orders_count || 0;
+        console.log(`🔗 Linked ${linkedCount} invoice orders, updated ${updatedOrdersCount} orders`);
+      }
+    } catch (linkErr) {
+      console.warn('⚠️ Error calling link_invoice_orders_to_orders:', linkErr);
+    }
+
     // Log sync result
     await supabase.from('background_sync_logs').insert({
       sync_type: mode === 'comprehensive' ? 'comprehensive_invoice_sync' : 'smart_invoice_sync',
       success: true,
       invoices_synced: totalInvoicesSynced,
-      orders_updated: totalOrdersUpdated,
+      orders_updated: totalOrdersUpdated + linkedCount,
     });
 
-    console.log(`✅ Sync complete - Invoices: ${totalInvoicesSynced}, Orders: ${totalOrdersUpdated}`);
+    console.log(`✅ Sync complete - Invoices: ${totalInvoicesSynced}, Orders: ${totalOrdersUpdated}, Linked: ${linkedCount}`);
 
     return new Response(
       JSON.stringify({
