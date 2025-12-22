@@ -54,17 +54,23 @@ async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
     }
 
     const data = await response.json();
-    console.log(`📥 API Response: success=${data.success}, count=${data.data?.length || 0}`);
-    
-    // معالجة الاستجابة - قد تكون في data.data أو data مباشرة
-    if (data.success && Array.isArray(data.data)) {
+
+    // ✅ AlWaseet عادة يرجّع: { status: true, errNum: "S000", data: [...] }
+    const ok = data?.status === true || data?.errNum === 'S000';
+    const count = Array.isArray(data?.data) ? data.data.length : (Array.isArray(data) ? data.length : 0);
+    console.log(`📥 API Response: status=${data?.status}, errNum=${data?.errNum}, count=${count}`);
+
+    if (ok && Array.isArray(data?.data)) {
       return data.data;
     }
-    
+
+    // بعض الأحيان قد تكون الاستجابة Array مباشرة
     if (Array.isArray(data)) {
       return data;
     }
-    
+
+    // فشل أو صيغة غير متوقعة
+    console.warn('⚠️ Unexpected invoices response shape:', JSON.stringify(data)?.slice(0, 500));
     return [];
   } catch (error) {
     console.error('Error fetching invoices:', error);
@@ -92,21 +98,32 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Prom
     }
 
     const data = await response.json();
-    console.log(`📥 Invoice ${invoiceId} orders response: success=${data.success}, count=${data.data?.length || 0}`);
-    
-    // معالجة الاستجابة - قد تكون في data.data أو data.orders أو data مباشرة
-    if (data.success && Array.isArray(data.data)) {
+
+    const ok = data?.status === true || data?.errNum === 'S000';
+    const count = Array.isArray(data?.data)
+      ? data.data.length
+      : (Array.isArray(data?.orders) ? data.orders.length : (Array.isArray(data) ? data.length : 0));
+
+    console.log(
+      `📥 Invoice ${invoiceId} orders response: status=${data?.status}, errNum=${data?.errNum}, count=${count}`
+    );
+
+    // ✅ الصيغة المتوقعة
+    if (ok && Array.isArray(data?.data)) {
       return data.data;
     }
-    
-    if (Array.isArray(data.orders)) {
+
+    // أحياناً تكون orders
+    if (ok && Array.isArray(data?.orders)) {
       return data.orders;
     }
-    
+
+    // وأحياناً Array مباشرة
     if (Array.isArray(data)) {
       return data;
     }
-    
+
+    console.warn(`⚠️ Unexpected orders response shape for invoice ${invoiceId}:`, JSON.stringify(data)?.slice(0, 500));
     return [];
   } catch (error) {
     console.error(`Error fetching orders for invoice ${invoiceId}:`, error);
