@@ -63,10 +63,21 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
   const [dbStatus, setDbStatus] = useState('saved'); // افتراض الحفظ للفواتير الداخلية
   const [linkedOrdersCount, setLinkedOrdersCount] = useState(0);
   
-  // معالجة محسنة للبيانات سواء من API أو قاعدة البيانات
+  // معالجة محسنة للبيانات سواء من API أو قاعدة البيانات أو raw JSON
   const isReceived = invoice.received || invoice.received_flag || invoice.status === 'تم الاستلام من قبل التاجر';
-  const amount = parseFloat(invoice.amount || invoice.merchant_price) || 0;
-  const ordersCount = parseInt(invoice.linked_orders_count || invoice.orders_count || invoice.delivered_orders_count) || 0;
+  // ✅ قراءة المبلغ من raw إذا كانت القيمة الرئيسية صفر
+  const amount = parseFloat(
+    invoice.amount || 
+    invoice.merchant_price || 
+    invoice.raw?.merchant_price
+  ) || 0;
+  // ✅ قراءة عدد الطلبات من raw إذا كانت القيمة الرئيسية صفر
+  const ordersCount = parseInt(
+    invoice.linked_orders_count || 
+    invoice.orders_count || 
+    invoice.delivered_orders_count || 
+    invoice.raw?.delivered_orders_count
+  ) || 0;
   const calculatedLinkedOrders = invoice.linked_orders?.length || invoice.delivery_invoice_orders?.length || 0;
   
   // تحديث عدد الطلبات المربوطة من البيانات المحملة
