@@ -38,37 +38,72 @@ const SettlementRequestsDialog = ({
   orders = [],
   allUsers = [],
   onSelectOrders,
-  selectedOrderIds = []
+  selectedOrderIds = [],
+  settlementRequests = [] // إضافة طلبات التحاسب من notifications
 }) => {
   const [expandedEmployees, setExpandedEmployees] = useState({});
 
-  // تجميع طلبات التحاسب حسب الموظف
+  // تجميع طلبات التحاسب حسب الموظف - استخدام notifications أولاً ثم profits كـ fallback
   const settlementRequestsByEmployee = useMemo(() => {
-    const requests = profits?.filter(p => p.status === 'settlement_requested') || [];
     const grouped = {};
     
-    requests.forEach(req => {
-      const employeeId = req.employee_id;
-      if (!grouped[employeeId]) {
-        const employee = allUsers?.find(u => u.user_id === employeeId);
-        grouped[employeeId] = {
-          employee: employee || { full_name: 'موظف غير معروف', user_id: employeeId },
-          orders: [],
-          totalAmount: 0
-        };
-      }
-      
-      // البحث عن بيانات الطلب
-      const order = orders?.find(o => o.id === req.order_id);
-      grouped[employeeId].orders.push({
-        ...req,
-        order
+    // ✅ أولاً: استخدام طلبات التحاسب من notifications (الأدق)
+    if (settlementRequests && settlementRequests.length > 0) {
+      settlementRequests.forEach(notification => {
+        const employeeId = notification.user_id;
+        const orderIds = notification.data?.order_ids || [];
+        const totalProfit = notification.data?.total_profit || 0;
+        
+        if (!grouped[employeeId]) {
+          const employee = allUsers?.find(u => u.user_id === employeeId);
+          grouped[employeeId] = {
+            employee: employee || { full_name: 'موظف غير معروف', user_id: employeeId },
+            orders: [],
+            totalAmount: 0,
+            notificationId: notification.id
+          };
+        }
+        
+        // إضافة الطلبات من notification
+        orderIds.forEach(orderId => {
+          const order = orders?.find(o => o.id === orderId);
+          const profitRecord = profits?.find(p => p.order_id === orderId);
+          grouped[employeeId].orders.push({
+            order_id: orderId,
+            employee_profit: profitRecord?.employee_profit || 0,
+            order,
+            profitRecord,
+            created_at: notification.created_at
+          });
+        });
+        grouped[employeeId].totalAmount = totalProfit;
       });
-      grouped[employeeId].totalAmount += (req.employee_profit || 0);
-    });
+    } else {
+      // ⚠️ Fallback: استخدام profits إذا لم تتوفر notifications
+      const requests = profits?.filter(p => p.status === 'settlement_requested') || [];
+      
+      requests.forEach(req => {
+        const employeeId = req.employee_id;
+        if (!grouped[employeeId]) {
+          const employee = allUsers?.find(u => u.user_id === employeeId);
+          grouped[employeeId] = {
+            employee: employee || { full_name: 'موظف غير معروف', user_id: employeeId },
+            orders: [],
+            totalAmount: 0
+          };
+        }
+        
+        const order = orders?.find(o => o.id === req.order_id);
+        grouped[employeeId].orders.push({
+          ...req,
+          order
+        });
+        grouped[employeeId].totalAmount += (req.employee_profit || 0);
+      });
+    }
     
     return Object.values(grouped);
-  }, [profits, orders, allUsers]);
+  }, [profits, orders, allUsers, settlementRequests]);
 
   const totalRequestsCount = settlementRequestsByEmployee.reduce((sum, emp) => sum + emp.orders.length, 0);
   const totalAmount = settlementRequestsByEmployee.reduce((sum, emp) => sum + emp.totalAmount, 0);
