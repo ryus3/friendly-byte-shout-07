@@ -729,6 +729,35 @@ const ProfitsSummaryPage = () => {
                 allUsers={allUsers}
             />
             
+            {/* زر تحديد الكل للموظف - ظاهر فقط للموظفين مع صلاحية طلب التحاسب */}
+            {canRequestSettlement && !canViewAll && (
+              <div className="mb-4 flex flex-wrap items-center gap-3 p-3 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    الطلبات الجاهزة للتحاسب: {filteredDetailedProfits.filter(p => p.profitStatus === 'invoice_received').length} طلب
+                  </p>
+                </div>
+                <Button 
+                  variant="default"
+                  size="sm"
+                  className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
+                  onClick={() => handleSelectAll(true)}
+                  disabled={filteredDetailedProfits.filter(p => p.profitStatus === 'invoice_received').length === 0}
+                >
+                  تحديد الكل للتحاسب
+                </Button>
+                {selectedOrders.length > 0 && (
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedOrders([])}
+                  >
+                    إلغاء التحديد ({selectedOrders.length})
+                  </Button>
+                )}
+              </div>
+            )}
+            
             <UnifiedSettlementRequest
                 canRequestSettlement={canRequestSettlement}
                 isRequesting={isRequesting}

@@ -10,6 +10,7 @@ import { useUnifiedAutoSync } from '@/hooks/useUnifiedAutoSync';
 import { UnifiedSyncSettings } from '@/components/delivery/UnifiedSyncSettings';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
 import SmartPagination from '@/components/ui/SmartPagination';
+import { useProfits } from '@/contexts/ProfitsContext';
 
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
@@ -59,6 +60,9 @@ const EmployeeFollowUpPage = () => {
     expenses,
     profits
   } = useInventory();
+  
+  // جلب طلبات التحاسب من ProfitsContext
+  const { settlementRequests } = useProfits();
   
   // جلب الموظفين الذين يشرف عليهم مدير القسم
   useEffect(() => {
@@ -1432,6 +1436,7 @@ useEffect(() => {
           allUsers={allUsers || []}
           selectedOrderIds={selectedOrders}
           onSelectOrders={setSelectedOrders}
+          settlementRequests={settlementRequests || []}
         />
 
       </motion.div>

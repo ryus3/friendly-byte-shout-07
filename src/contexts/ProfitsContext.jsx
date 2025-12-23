@@ -275,6 +275,11 @@ export const ProfitsProvider = ({ children }) => {
           : p
       ));
 
+      // تحديث قائمة طلبات التحاسب لتظهر الطلب الجديد
+      if (notifResult?.notification) {
+        setSettlementRequests(prev => [...prev, notifResult.notification]);
+      }
+
       toast({
         title: "تم إرسال طلب التحاسب",
         description: `طلب تحاسب بقيمة ${totalProfit.toLocaleString()} د.ع للطلبات: ${eligibleProfits.length}`,
