@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import OrderList from '@/components/orders/OrderList';
 import Loader from '@/components/ui/loader';
-import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Calendar, FileText, Truck, RotateCcw, Wallet } from 'lucide-react';
+import { ShoppingCart, DollarSign, Users, Hourglass, CheckCircle, RefreshCw, Loader2, Archive, Bell, Calendar, FileText, Truck, RotateCcw, Wallet, Sparkles, ChevronLeft } from 'lucide-react';
 
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';
 import StatCard from '@/components/dashboard/StatCard';
@@ -1217,11 +1217,12 @@ useEffect(() => {
                   </div>
                   <Button 
                     size="lg" 
-                    className="bg-white text-orange-600 hover:bg-white/90 font-bold shadow-lg"
+                    className="group bg-white/95 text-orange-600 hover:bg-white hover:scale-105 font-bold shadow-xl transition-all duration-300 border-2 border-white/50 px-6"
                     onClick={() => setIsSettlementRequestsDialogOpen(true)}
                   >
-                    <Bell className="w-4 h-4 ml-2" />
+                    <Sparkles className="w-4 h-4 ml-2 group-hover:animate-spin text-amber-500" />
                     عرض التفاصيل
+                    <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
                   </Button>
                 </div>
               </div>
