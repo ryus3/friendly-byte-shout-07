@@ -50,7 +50,7 @@ const ProfitsSummaryPage = () => {
   const { orders, calculateProfit, accounting, requestProfitSettlement, settlementInvoices, addExpense, deleteExpense, calculateManagerProfit, updateOrder, deleteOrders } = useInventory();
   const { user, allUsers } = useAuth();
   const { hasPermission } = usePermissions();
-  const { profits, createSettlementRequest, markInvoiceReceived, refreshProfitsData } = useProfits();
+  const { profits, createSettlementRequest, markInvoiceReceived, refreshProfits } = useProfits();
   
   // ✅ هوك الموظفين تحت الإشراف لفلترة البيانات حسب الصلاحيات
   const { supervisedEmployeeIds, isAdmin, isDepartmentManager } = useSupervisedEmployees();
@@ -537,8 +537,10 @@ const ProfitsSummaryPage = () => {
 
       console.log('✅ الجلسة صالحة، تحديث البيانات...');
       
-      // تحديث البيانات أولاً مع retry
-      await refreshProfitsData();
+      // تحديث البيانات أولاً مع retry - التحقق من وجود الدالة
+      if (typeof refreshProfits === 'function') {
+        await refreshProfits();
+      }
       
       console.log('✅ تم تحديث البيانات، إرسال طلب التحاسب...');
       
@@ -559,9 +561,21 @@ const ProfitsSummaryPage = () => {
       if (orderIds.length > 0) {
         // استخدام النظام الجديد للتحاسب مع جلب البيانات المحدثة
         const result = await createSettlementRequest(orderIds, '');
-        if (result) {
+        
+        // التحقق من النتيجة بشكل صحيح
+        if (result?.success === true) {
           setSelectedOrders([]);
           // لا حاجة لتوست إضافي لأن createSettlementRequest يرسل توست بالفعل
+        } else if (result?.success === false) {
+          // فشل مع رسالة - عرض الرسالة بدون مسح التحديد
+          toast({
+            title: "تنبيه",
+            description: result.message || "بعض الطلبات غير مؤهلة للتحاسب",
+            variant: "destructive"
+          });
+        } else if (result === null) {
+          // خطأ عام - التوست يُرسل من createSettlementRequest
+          console.log('⚠️ createSettlementRequest returned null');
         }
       } else {
         throw new Error('لا توجد طلبات صالحة للتحاسب');
