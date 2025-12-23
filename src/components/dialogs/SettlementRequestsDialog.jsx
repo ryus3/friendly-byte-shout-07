@@ -50,14 +50,20 @@ const SettlementRequestsDialog = ({
     // ✅ أولاً: استخدام طلبات التحاسب من notifications (الأدق)
     if (settlementRequests && settlementRequests.length > 0) {
       settlementRequests.forEach(notification => {
-        const employeeId = notification.user_id;
+        // ✅ استخدام employee_id من data أولاً (الأصح)
+        const employeeId = notification.data?.employee_id || notification.user_id;
+        const employeeName = notification.data?.employee_name;
         const orderIds = notification.data?.order_ids || [];
         const totalProfit = notification.data?.total_profit || 0;
         
         if (!grouped[employeeId]) {
           const employee = allUsers?.find(u => u.user_id === employeeId);
           grouped[employeeId] = {
-            employee: employee || { full_name: 'موظف غير معروف', user_id: employeeId },
+            // استخدام اسم الموظف من notification.data أولاً
+            employee: employee || { 
+              full_name: employeeName || 'موظف غير معروف', 
+              user_id: employeeId 
+            },
             orders: [],
             totalAmount: 0,
             notificationId: notification.id
