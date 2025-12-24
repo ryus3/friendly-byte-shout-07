@@ -25,7 +25,8 @@ import {
   Banknote,
   Sparkles,
   TrendingUp,
-  Wallet
+  Wallet,
+  Loader2
 } from 'lucide-react';
 
 /**
@@ -39,7 +40,9 @@ const SettlementRequestsDialog = ({
   allUsers = [],
   onSelectOrders,
   selectedOrderIds = [],
-  settlementRequests = [] // إضافة طلبات التحاسب من notifications
+  settlementRequests = [],
+  onProcessSettlement, // دالة معالجة التسوية
+  isProcessing = false // حالة التحميل
 }) => {
   const [expandedEmployees, setExpandedEmployees] = useState({});
 
@@ -241,7 +244,7 @@ const SettlementRequestsDialog = ({
           </div>
 
           {/* قائمة الموظفين */}
-          <ScrollArea className="max-h-[45vh] px-4 pb-2">
+          <ScrollArea className="h-[45vh] px-4 pb-2">
             {settlementRequestsByEmployee.length === 0 ? (
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -427,13 +430,21 @@ const SettlementRequestsDialog = ({
                     إغلاق
                   </Button>
                   <Button
-                    disabled={selectedOrderIds.length === 0}
+                    disabled={selectedOrderIds.length === 0 || isProcessing}
                     className="relative overflow-hidden bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-600 hover:via-orange-600 hover:to-red-600 text-white border-0 shadow-lg shadow-orange-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={() => onOpenChange(false)}
+                    onClick={async () => {
+                      if (onProcessSettlement) {
+                        await onProcessSettlement(selectedOrderIds);
+                      }
+                    }}
                   >
                     <span className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent opacity-0 hover:opacity-100 transition-opacity" />
-                    <Banknote className="w-4 h-4 ml-2" />
-                    متابعة التسوية
+                    {isProcessing ? (
+                      <Loader2 className="w-4 h-4 ml-2 animate-spin" />
+                    ) : (
+                      <Banknote className="w-4 h-4 ml-2" />
+                    )}
+                    {isProcessing ? 'جارٍ المعالجة...' : 'متابعة التسوية'}
                   </Button>
                 </div>
               </div>

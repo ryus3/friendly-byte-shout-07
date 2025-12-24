@@ -58,11 +58,15 @@ const EmployeeFollowUpPage = () => {
     settlementInvoices, 
     deleteOrders,
     expenses,
-    profits
+    profits,
+    settleEmployeeProfits
   } = useInventory();
   
   // جلب طلبات التحاسب من ProfitsContext
-  const { settlementRequests } = useProfits();
+  const { settlementRequests, fetchProfitsData } = useProfits();
+  
+  // حالة معالجة التسوية
+  const [isSettlementProcessing, setIsSettlementProcessing] = useState(false);
   
   // جلب الموظفين الذين يشرف عليهم مدير القسم
   useEffect(() => {
@@ -258,6 +262,83 @@ const EmployeeFollowUpPage = () => {
   const [activeTab, setActiveTab] = useState('orders');
   const [isUnifiedSyncSettingsOpen, setIsUnifiedSyncSettingsOpen] = useState(false);
   const [isSettlementRequestsDialogOpen, setIsSettlementRequestsDialogOpen] = useState(false);
+  
+  // دالة معالجة التسوية من Dialog
+  const handleProcessSettlement = async (selectedOrderIds) => {
+    if (!selectedOrderIds || selectedOrderIds.length === 0) {
+      toast({ title: 'لم يتم تحديد طلبات', variant: 'destructive' });
+      return;
+    }
+    
+    setIsSettlementProcessing(true);
+    
+    try {
+      // جلب معلومات الموظف من الإشعار
+      const notification = settlementRequests?.find(n => 
+        n.data?.order_ids?.some(id => selectedOrderIds.includes(id))
+      );
+      
+      const employeeId = notification?.data?.employee_id;
+      const employeeName = notification?.data?.employee_name || 'غير محدد';
+      const totalAmount = notification?.data?.total_profit || 0;
+      
+      if (!employeeId) {
+        toast({ title: 'لم يتم تحديد الموظف', variant: 'destructive' });
+        return;
+      }
+      
+      // استدعاء settleEmployeeProfits
+      const result = await settleEmployeeProfits(employeeId, totalAmount, employeeName, selectedOrderIds);
+      
+      if (result.success) {
+        // إرسال إشعار للموظف
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: employeeId,
+            type: 'settlement_completed',
+            title: 'تمت تسوية مستحقاتك 💰',
+            message: `تم دفع مبلغ ${result.actualAmount?.toLocaleString() || 0} دينار - فاتورة رقم ${result.invoiceNumber}`,
+            data: {
+              invoice_number: result.invoiceNumber,
+              amount: result.actualAmount,
+              original_amount: result.originalAmount,
+              deductions_applied: result.deductionsApplied,
+              order_count: selectedOrderIds.length,
+              settled_at: new Date().toISOString()
+            },
+            is_read: false
+          });
+        
+        // حذف إشعار طلب التحاسب الأصلي
+        if (notification?.id) {
+          await supabase
+            .from('notifications')
+            .delete()
+            .eq('id', notification.id);
+        }
+        
+        // تحديث البيانات
+        await fetchProfitsData?.();
+        await refreshOrders?.();
+        
+        // إعادة تعيين التحديد وإغلاق النافذة
+        setSelectedOrders([]);
+        setIsSettlementRequestsDialogOpen(false);
+        
+        toast({
+          title: 'تمت التسوية بنجاح ✅',
+          description: `تم دفع ${result.actualAmount?.toLocaleString()} دينار للموظف ${employeeName}`,
+          variant: 'success'
+        });
+      }
+    } catch (error) {
+      console.error('خطأ في معالجة التسوية:', error);
+      toast({ title: 'خطأ في التسوية', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsSettlementProcessing(false);
+    }
+  };
   
   const ITEMS_PER_PAGE = 15;
   const [currentPage, setCurrentPage] = useState(1);
@@ -1438,6 +1519,8 @@ useEffect(() => {
           selectedOrderIds={selectedOrders}
           onSelectOrders={setSelectedOrders}
           settlementRequests={settlementRequests || []}
+          onProcessSettlement={handleProcessSettlement}
+          isProcessing={isSettlementProcessing}
         />
 
       </motion.div>
