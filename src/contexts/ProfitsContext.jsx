@@ -536,6 +536,53 @@ export const ProfitsProvider = ({ children }) => {
     fetchProfitsData();
   }, [fetchProfitsData]);
 
+  // Real-time subscription للإشعارات
+  useEffect(() => {
+    if (!userUUID) return;
+
+    const channel = supabase
+      .channel('settlement-notifications-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `type=eq.settlement_completed`
+        },
+        (payload) => {
+          // عرض toast للموظف فوراً
+          if (payload.new?.user_id === userUUID) {
+            toast({
+              title: payload.new?.title || 'تمت تسوية مستحقاتك 💰',
+              description: payload.new?.message,
+              variant: 'success'
+            });
+          }
+          // تحديث قائمة الإشعارات
+          fetchProfitsData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `type=eq.settlement_request`
+        },
+        () => {
+          // تحديث طلبات التحاسب عند حذف إشعار
+          fetchProfitsData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userUUID, fetchProfitsData]);
+
   const value = {
     profits,
     settlementRequests,
@@ -548,6 +595,7 @@ export const ProfitsProvider = ({ children }) => {
     rejectSettlementRequest,
     markInvoiceReceived,
     refreshProfits: fetchProfitsData,
+    fetchProfitsData, // تصدير مباشر للاستخدام في الصفحات
     linkReturnToOriginalOrder,
     getOriginalOrderForReturn
   };
