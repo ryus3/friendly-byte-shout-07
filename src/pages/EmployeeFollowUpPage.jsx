@@ -944,18 +944,17 @@ useEffect(() => {
     }).length;
 
     // ✅ عدد طلبات التحاسب المعلقة - من settlementRequests مباشرة (نفس مصدر النافذة)
-    const settlementRequestsCount = useMemo(() => {
-      if (!settlementRequests || settlementRequests.length === 0) return 0;
-      
+    let settlementRequestsCount = 0;
+    if (settlementRequests && settlementRequests.length > 0) {
       // لمدير القسم: فقط طلبات موظفيه المشرف عليهم
       if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
-        return settlementRequests.filter(req => 
+        settlementRequestsCount = settlementRequests.filter(req => 
           supervisedEmployeeIds.includes(req.data?.employee_id)
         ).length;
+      } else {
+        settlementRequestsCount = settlementRequests.length;
       }
-      
-      return settlementRequests.length;
-    }, [settlementRequests, isDepartmentManager, isAdmin, supervisedEmployeeIds]);
+    }
 
     // ✅ عدد الطلبات المرتجعة (delivery_status = '17') - من orders مباشرة
     const returnedOrdersCount = orders?.filter(o => 
