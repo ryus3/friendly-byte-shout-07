@@ -94,8 +94,22 @@ export const ProfitsProvider = ({ children }) => {
       }
 
       if (invoiceReceived && orderStatus === 'delivered') {
-        profitStatus = 'invoice_received';
-        updateData.invoice_received_at = new Date().toISOString();
+        // التحقق إذا كان ربح الموظف = 0 → أرشفة مباشرة
+        const { data: currentProfit } = await supabase
+          .from('profits')
+          .select('employee_profit')
+          .eq('order_id', orderId)
+          .single();
+        
+        if (currentProfit?.employee_profit === 0) {
+          // لا يوجد قاعدة ربح للموظف - أرشفة تلقائية
+          profitStatus = 'no_rule_archived';
+          updateData.settled_at = new Date().toISOString();
+          updateData.notes = 'أرشفة تلقائية - لا يوجد ربح للموظف';
+        } else {
+          profitStatus = 'invoice_received';
+          updateData.invoice_received_at = new Date().toISOString();
+        }
       }
 
       updateData.status = profitStatus;

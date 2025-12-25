@@ -1298,12 +1298,12 @@ useEffect(() => {
                   </div>
                   <Button 
                     size="lg" 
-                    className="group bg-white/95 text-orange-600 hover:bg-white hover:scale-105 font-bold shadow-xl transition-all duration-300 border-2 border-white/50 px-6"
+                    className="group bg-gradient-to-l from-amber-50 to-orange-100 text-orange-700 hover:from-orange-100 hover:to-amber-100 hover:scale-105 font-bold shadow-xl transition-all duration-300 border-2 border-orange-200/80 px-6"
                     onClick={() => setIsSettlementRequestsDialogOpen(true)}
                   >
-                    <Sparkles className="w-4 h-4 ml-2 group-hover:animate-spin text-amber-500" />
+                    <Sparkles className="w-4 h-4 ml-2 group-hover:animate-spin text-amber-600" />
                     عرض التفاصيل
-                    <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform" />
+                    <ChevronLeft className="w-4 h-4 mr-1 group-hover:-translate-x-1 transition-transform text-orange-600" />
                   </Button>
                 </div>
               </div>
