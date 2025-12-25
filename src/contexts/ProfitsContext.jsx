@@ -80,12 +80,25 @@ export const ProfitsProvider = ({ children }) => {
       let profitStatus = 'pending';
       let updateData = { status: profitStatus };
 
+      // جلب سجل الربح الحالي للتحقق من قيمة employee_profit
+      const { data: currentProfit } = await supabase
+        .from('profits')
+        .select('employee_profit')
+        .eq('order_id', orderId)
+        .maybeSingle();
+
       switch (orderStatus) {
         case 'shipped':
           profitStatus = 'sales_pending';
           break;
         case 'delivered':
-          profitStatus = 'profits_pending';
+          // ✅ إذا كان ربح الموظف = 0 → أرشفة مباشرة فوراً عند التسليم (بدون انتظار الفاتورة)
+          if (currentProfit?.employee_profit === 0) {
+            profitStatus = 'no_rule_archived';
+            updateData.settled_at = new Date().toISOString();
+          } else {
+            profitStatus = 'profits_pending';
+          }
           break;
         case 'returned':
         case 'cancelled':
@@ -93,14 +106,8 @@ export const ProfitsProvider = ({ children }) => {
           break;
       }
 
+      // ✅ عند استلام الفاتورة والتسليم: تحقق إضافي
       if (invoiceReceived && orderStatus === 'delivered') {
-        // التحقق إذا كان ربح الموظف = 0 → أرشفة مباشرة
-        const { data: currentProfit } = await supabase
-          .from('profits')
-          .select('employee_profit')
-          .eq('order_id', orderId)
-          .single();
-        
         if (currentProfit?.employee_profit === 0) {
           // لا يوجد قاعدة ربح للموظف - أرشفة تلقائية
           profitStatus = 'no_rule_archived';
