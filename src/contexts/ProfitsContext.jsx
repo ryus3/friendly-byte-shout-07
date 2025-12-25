@@ -561,6 +561,22 @@ export const ProfitsProvider = ({ children }) => {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
+          filter: `type=eq.settlement_request`
+        },
+        (payload) => {
+          // ✅ إضافة طلب التحاسب الجديد فوراً للقائمة
+          setSettlementRequests(prev => {
+            if (prev.some(r => r.id === payload.new.id)) return prev;
+            return [payload.new, ...prev];
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
           filter: `type=eq.settlement_completed`
         },
         (payload) => {
