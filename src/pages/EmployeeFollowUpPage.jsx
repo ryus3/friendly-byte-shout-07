@@ -975,7 +975,7 @@ useEffect(() => {
       settlementRequestsCount,
       returnedOrdersCount
     };
-  }, [filteredOrders, orders, filters, profits, calculateProfit, expenses, employeeFromUrl]);
+  }, [filteredOrders, orders, filters, profits, calculateProfit, expenses, employeeFromUrl, settlementRequests, isDepartmentManager, isAdmin, supervisedEmployeeIds]);
 
   // معالج تغيير الفلاتر
   const handleFilterChange = (name, value) => {
