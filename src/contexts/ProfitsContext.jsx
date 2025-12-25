@@ -105,7 +105,6 @@ export const ProfitsProvider = ({ children }) => {
           // لا يوجد قاعدة ربح للموظف - أرشفة تلقائية
           profitStatus = 'no_rule_archived';
           updateData.settled_at = new Date().toISOString();
-          updateData.notes = 'أرشفة تلقائية - لا يوجد ربح للموظف';
         } else {
           profitStatus = 'invoice_received';
           updateData.invoice_received_at = new Date().toISOString();
