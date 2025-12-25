@@ -1537,14 +1537,19 @@ export const SuperProvider = ({ children }) => {
           }
         });
         
-        // خصم الخصم من ربح الموظف (للمنتجات التي لها قاعدة ربح)
+        // خصم الخصم من ربح الموظف (فقط للموظفين الذين لديهم قاعدة ربح)
         const discount = Number(order?.discount) || 0;
         
-        totalProfit = totalProfit - discount;
+        // ✅ المنطق الجديد: الخصم يكون من الموظف فقط إذا كان لديه قاعدة ربح
+        // إذا لا يوجد قاعدة ربح → الخصم يكون من ربح النظام
+        if (hasAnyRule && discount > 0) {
+          totalProfit = totalProfit - discount;
+          console.debug(`📊 ربح الموظف للطلب ${order?.tracking_number}: ${totalProfit} (قبل الخصم: ${totalProfit + discount}, خصم: ${discount})`);
+        } else if (!hasAnyRule && discount > 0) {
+          console.debug(`📊 الخصم ${discount} للطلب ${order?.tracking_number} سيكون من ربح النظام (الموظف بدون قاعدة ربح)`);
+        }
         
-        console.debug(`📊 ربح الموظف للطلب ${order?.tracking_number}: ${totalProfit} (قبل الخصم: ${totalProfit + discount}, خصم: ${discount})`);
-        
-        return { profit: Math.max(0, totalProfit), hasRule: hasAnyRule };
+        return { profit: Math.max(0, totalProfit), hasRule: hasAnyRule, discountFromSystem: !hasAnyRule && discount > 0 };
       };
 
       // جلب السجلات الحالية
