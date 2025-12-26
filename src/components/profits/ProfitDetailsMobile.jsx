@@ -14,6 +14,7 @@ const ProfitDetailsMobile = ({
   onSelectOrder,
   onViewOrder,
   onMarkReceived,
+  showManagerProfit = false, // ✅ فقط المدير العام يرى ربح المدير
 }) => {
   return (
     <div className="space-y-4">
@@ -50,7 +51,8 @@ const ProfitDetailsMobile = ({
                   <p className="text-xs text-muted-foreground">ربح الموظف</p>
                   <p className="font-bold text-sm text-blue-400">{order.profit.toLocaleString()} د.ع</p>
                 </div>
-                {canViewAll && (
+                {/* ✅ فقط المدير العام يرى ربح المدير - إخفاءه عن مديري الأقسام والموظفين */}
+                {showManagerProfit && (
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground">ربح المدير</p>
                     <p className="font-bold text-sm text-green-400">{order.managerProfitShare.toLocaleString()} د.ع</p>

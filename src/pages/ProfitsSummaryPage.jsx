@@ -127,8 +127,10 @@ const ProfitsSummaryPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const ITEMS_PER_PAGE = 15;
 
-  // تحديد الصلاحيات بناءً على الدور والصلاحيات
-  const canViewAll = hasPermission('manage_profit_settlement') || hasPermission('view_all_profits') || hasPermission('view_all_data');
+  // ✅ تصحيح: فقط المدير العام يرى الكل - مديري الأقسام يرون المُشرف عليهم فقط
+  const canViewAll = isAdmin;
+  const canViewSupervised = isDepartmentManager && !isAdmin;
+  const showManagerProfit = isAdmin; // فقط المدير العام يرى ربح المدير
   const canRequestSettlement = hasPermission('request_profit_settlement');
   
   // تطبيق فلتر "جاهز للمحاسبة" للموظفين (يشمل pending و invoice_received)
@@ -355,6 +357,7 @@ const ProfitsSummaryPage = () => {
 
         console.log('📊 [DEBUG] النتائج في ملخص الأرباح:', { generalExpenses });
 
+        // ✅ فلترة المستحقات حسب الإشراف: مدير القسم يرى مستحقات موظفيه فقط
         const employeeSettledDues = expensesInPeriod.filter(e => {
             const isEmployeeDue = (
                 e.category === 'مستحقات الموظفين' ||
@@ -362,6 +365,15 @@ const ProfitsSummaryPage = () => {
                 e.metadata?.category === 'مستحقات الموظفين'
             );
             const isApproved = e.status ? e.status === 'approved' : true;
+            
+            // فلترة حسب الموظف إذا لم يكن مديراً عاماً
+            if (!isAdmin && isDepartmentManager) {
+                const employeeId = e.related_data?.employee_id || e.metadata?.employee_id;
+                const isMyDue = employeeId === (user?.id || user?.user_id);
+                const isSupervisedDue = supervisedEmployeeIds?.includes(employeeId);
+                return isApproved && isEmployeeDue && (isMyDue || isSupervisedDue);
+            }
+            
             return isApproved && isEmployeeDue;
         }).reduce((sum, e) => sum + e.amount, 0);
 
@@ -440,18 +452,33 @@ const ProfitsSummaryPage = () => {
     
     let filtered = profitData.detailedProfits;
     
-        // إذا لم يكن المستخدم مدير، يرى أرباحه فقط
-        if (!canViewAll) {
-            filtered = filtered.filter(p => p.created_by === user?.user_id || p.created_by === user?.id);
-        } else if (filters.employeeId !== 'all') {
-      if (filters.employeeId === 'employees') {
-        filtered = filtered.filter(p => {
-            const pUser = allUsers?.find(u => u.id === p.created_by);
-            return pUser && (pUser.role === 'employee' || pUser.role === 'deputy');
-        });
-      } else {
-        filtered = filtered.filter(p => p.created_by === filters.employeeId);
-      }
+    // ✅ فلترة البيانات حسب الدور والإشراف
+    if (isAdmin) {
+        // المدير العام يرى الكل
+        if (filters.employeeId !== 'all') {
+            if (filters.employeeId === 'employees') {
+                filtered = filtered.filter(p => {
+                    const pUser = allUsers?.find(u => u.id === p.created_by);
+                    return pUser && (pUser.role === 'employee' || pUser.role === 'deputy');
+                });
+            } else {
+                filtered = filtered.filter(p => p.created_by === filters.employeeId);
+            }
+        }
+    } else if (isDepartmentManager) {
+        // ✅ مدير القسم يرى نفسه + الموظفين تحت إشرافه فقط
+        const myId = user?.id || user?.user_id;
+        filtered = filtered.filter(p => 
+            p.created_by === myId || 
+            supervisedEmployeeIds?.includes(p.created_by)
+        );
+        // ثم تطبيق فلتر الموظف إن وُجد
+        if (filters.employeeId !== 'all' && filters.employeeId !== 'employees') {
+            filtered = filtered.filter(p => p.created_by === filters.employeeId);
+        }
+    } else {
+        // موظف عادي يرى نفسه فقط
+        filtered = filtered.filter(p => p.created_by === user?.user_id || p.created_by === user?.id);
     }
     
     if (filters.profitStatus !== 'all') {
@@ -816,6 +843,7 @@ const ProfitsSummaryPage = () => {
                 onSelectOrder={handleSelectOrder}
                 onViewOrder={handleViewOrder}
                 onMarkReceived={handleMarkReceived}
+                showManagerProfit={showManagerProfit}
               />
             ) : (
              <ProfitDetailsTable
@@ -828,6 +856,7 @@ const ProfitsSummaryPage = () => {
                 onViewOrder={handleViewOrder}
                 onViewInvoice={handleViewInvoice}
                 onMarkReceived={handleMarkReceived}
+                showManagerProfit={showManagerProfit}
              />
             )}
             

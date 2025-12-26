@@ -18,6 +18,7 @@ const ProfitDetailsTable = ({
   onViewOrder,
   onViewInvoice,
   onMarkReceived,
+  showManagerProfit = false, // ✅ فقط المدير العام يرى ربح المدير
 }) => {
   const allPendingSelectable = orders.filter(p => getStatusInfo(p.profitStatus).canSelect);
 
@@ -40,7 +41,7 @@ const ProfitDetailsTable = ({
           <TableHead>تاريخ التسليم</TableHead>
           <TableHead>فاتورة التحاسب</TableHead>
           <TableHead>ربح الموظف</TableHead>
-          {canViewAll && <TableHead>ربح المدير</TableHead>}
+          {showManagerProfit && <TableHead>ربح المدير</TableHead>}
           <TableHead>حالة الربح</TableHead>
           <TableHead></TableHead>
         </TableRow>
@@ -77,7 +78,7 @@ const ProfitDetailsTable = ({
                   ) : 'N/A'}
                 </TableCell>
                 <TableCell className="text-blue-400 font-semibold">{order.profit.toLocaleString()} د.ع</TableCell>
-                {canViewAll && <TableCell className="text-green-400 font-semibold">{order.managerProfitShare.toLocaleString()} د.ع</TableCell>}
+                {showManagerProfit && <TableCell className="text-green-400 font-semibold">{order.managerProfitShare.toLocaleString()} د.ع</TableCell>}
                 <TableCell>
                   <Badge variant={statusInfo.variant}>
                     {statusInfo.text}
@@ -106,7 +107,7 @@ const ProfitDetailsTable = ({
           })
         ) : (
           <TableRow>
-            <TableCell colSpan={canViewAll ? 9 : (canRequestSettlement ? 7 : 6)} className="text-center h-24">
+            <TableCell colSpan={showManagerProfit ? 9 : (canViewAll ? 8 : (canRequestSettlement ? 7 : 6))} className="text-center h-24">
               لا توجد أرباح تطابق الفلاتر المحددة.
             </TableCell>
           </TableRow>
