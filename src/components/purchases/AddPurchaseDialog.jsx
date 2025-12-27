@@ -181,45 +181,45 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                         <DialogTitle>إضافة فاتورة شراء جديدة</DialogTitle>
                         <DialogDescription>أدخل تفاصيل الفاتورة والمنتجات المشتراة.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-3 py-4">
                         <div>
-                            <Label htmlFor="supplier">اسم المورد</Label>
-                            <Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} />
+                            <Label htmlFor="supplier" className="text-xs">المورد</Label>
+                            <Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} className="h-9" />
                         </div>
                         <div>
-                            <Label htmlFor="purchaseDate">تاريخ الشراء</Label>
-                            <Input id="purchaseDate" type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} />
+                            <Label htmlFor="purchaseDate" className="text-xs">التاريخ</Label>
+                            <Input id="purchaseDate" type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} className="h-9" />
                         </div>
                         <div>
-                            <Label htmlFor="shippingCost">مصاريف الشحن (د.ع)</Label>
+                            <Label htmlFor="shippingCost" className="text-xs">الشحن (د.ع)</Label>
                             <Input 
                                 id="shippingCost" 
                                 type="number" 
                                 min="0"
-                                step="1"
-                                placeholder="أدخل تكلفة الشحن"
+                                placeholder="0"
                                 value={shippingCost} 
                                 onChange={e => setShippingCost(e.target.value)} 
+                                className="h-9"
                             />
                         </div>
                         <div>
-                            <Label htmlFor="transferCost">تكاليف التحويل (د.ع)</Label>
+                            <Label htmlFor="transferCost" className="text-xs">التحويل (د.ع)</Label>
                             <Input 
                                 id="transferCost" 
                                 type="number" 
                                 min="0"
-                                step="1"
-                                placeholder="أدخل تكلفة التحويل المالي"
+                                placeholder="0"
                                 value={transferCost} 
                                 onChange={e => setTransferCost(e.target.value)} 
+                                className="h-9"
                             />
                         </div>
                     </div>
 
                     {/* اختيار العملة ودعم الدولار */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label>العملة</Label>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <Label className="text-xs">العملة</Label>
                             <Select 
                                 value={currency} 
                                 onValueChange={(val) => {
@@ -228,26 +228,26 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                     if (val === 'IQD') setExchangeRate(1);
                                 }}
                             >
-                                <SelectTrigger>
+                                <SelectTrigger className="h-9">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="IQD">دينار عراقي (IQD)</SelectItem>
-                                    <SelectItem value="USD">دولار أمريكي ($)</SelectItem>
+                                    <SelectItem value="IQD">دينار (IQD)</SelectItem>
+                                    <SelectItem value="USD">دولار ($)</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
 
                         {showExchangeRate && (
-                            <div className="space-y-2">
-                                <Label>سعر الصرف (1$ = ؟ د.ع)</Label>
+                            <div className="space-y-1">
+                                <Label className="text-xs">الصرف (1$ = ؟ د.ع)</Label>
                                 <Input
                                     type="number"
                                     placeholder="1480"
                                     value={exchangeRate}
                                     onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
                                     min="1"
-                                    step="0.01"
+                                    className="h-9"
                                 />
                             </div>
                         )}
