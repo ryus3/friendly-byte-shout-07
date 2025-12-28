@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,10 +8,14 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useImprovedPurchases } from '@/hooks/useImprovedPurchases';
 import { useCashSources } from '@/hooks/useCashSources';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, PlusCircle, Wallet } from 'lucide-react';
+import { 
+    Loader2, PlusCircle, Wallet, X, Receipt, Calendar, 
+    Truck, CreditCard, DollarSign, Package, Sparkles 
+} from 'lucide-react';
 import SelectProductForPurchaseDialog from './SelectProductForPurchaseDialog';
 import PurchaseItemsPreview from './PurchaseItemsPreview';
 import { useLocation } from 'react-router-dom';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
     const { addPurchase } = useImprovedPurchases();
@@ -159,7 +163,7 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
         setSupplier('');
         setPurchaseDate(new Date().toISOString().split('T')[0]);
         setShippingCost('');
-        setTransferCost(''); // إعادة تعيين تكاليف التحويل
+        setTransferCost('');
         setItems([]);
         setCurrency('IQD');
         setExchangeRate(1);
@@ -173,149 +177,276 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
         onOpenChange(isOpen);
     };
 
+    // حساب الإجمالي
+    const itemsTotal = items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0);
+    const grandTotal = currency === 'USD' 
+        ? (itemsTotal * exchangeRate) + Number(shippingCost || 0) + Number(transferCost || 0)
+        : itemsTotal + Number(shippingCost || 0) + Number(transferCost || 0);
+
     return (
         <>
             <Dialog open={open} onOpenChange={handleOpenChange}>
-                <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4">
-                    <DialogHeader>
-                        <DialogTitle>إضافة فاتورة شراء جديدة</DialogTitle>
-                        <DialogDescription>أدخل تفاصيل الفاتورة والمنتجات المشتراة.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid grid-cols-1 gap-3 py-4">
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <Label htmlFor="supplier" className="text-xs">المورد</Label>
-                                <Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} className="h-9" />
+                <DialogContent className="w-[95vw] max-w-[480px] p-0 overflow-hidden gap-0 max-h-[90vh] flex flex-col">
+                    {/* Header متدرج فاخر */}
+                    <div className="relative bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-4 shrink-0">
+                        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-50 rounded-t-lg" />
+                        
+                        <div className="relative flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white/20 rounded-full backdrop-blur-sm">
+                                    <Receipt className="w-5 h-5 text-white" />
+                                </div>
+                                <div>
+                                    <h2 className="text-white font-bold text-base">فاتورة شراء جديدة</h2>
+                                    <p className="text-white/70 text-xs">أدخل تفاصيل الفاتورة والمنتجات</p>
+                                </div>
                             </div>
-                            <div>
-                                <Label htmlFor="purchaseDate" className="text-xs">التاريخ</Label>
-                                <Input id="purchaseDate" type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} className="h-9" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <Label htmlFor="shippingCost" className="text-xs">الشحن (د.ع)</Label>
-                                <Input 
-                                    id="shippingCost" 
-                                    type="number" 
-                                    min="0"
-                                    placeholder="0"
-                                    value={shippingCost} 
-                                    onChange={e => setShippingCost(e.target.value)} 
-                                    className="h-9"
-                                />
-                            </div>
-                            <div>
-                                <Label htmlFor="transferCost" className="text-xs">التحويل (د.ع)</Label>
-                                <Input 
-                                    id="transferCost" 
-                                    type="number" 
-                                    min="0"
-                                    placeholder="0"
-                                    value={transferCost} 
-                                    onChange={e => setTransferCost(e.target.value)} 
-                                    className="h-9"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* اختيار العملة ودعم الدولار */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                            <Label className="text-xs">العملة</Label>
-                            <Select 
-                                value={currency} 
-                                onValueChange={(val) => {
-                                    setCurrency(val);
-                                    setShowExchangeRate(val === 'USD');
-                                    if (val === 'IQD') setExchangeRate(1);
-                                }}
+                            <button 
+                                onClick={() => handleOpenChange(false)}
+                                className="p-1.5 hover:bg-white/20 rounded-full transition-colors"
                             >
-                                <SelectTrigger className="h-9">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="IQD">دينار (IQD)</SelectItem>
-                                    <SelectItem value="USD">دولار ($)</SelectItem>
-                                </SelectContent>
-                            </Select>
+                                <X className="w-5 h-5 text-white" />
+                            </button>
                         </div>
 
-                        {showExchangeRate && (
-                            <div className="space-y-1">
-                                <Label className="text-xs">الصرف (1$ = ؟ د.ع)</Label>
-                                <Input
-                                    type="number"
-                                    placeholder="1480"
-                                    value={exchangeRate}
-                                    onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
-                                    min="1"
-                                    className="h-9"
+                        {/* شريط الإحصائيات */}
+                        <div className="flex items-center gap-2 mt-3 text-white/90 text-xs flex-wrap">
+                            <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-2 py-1">
+                                <Package className="w-3.5 h-3.5" />
+                                <span>{items.length} منتج</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 bg-white/10 rounded-lg px-2 py-1">
+                                <DollarSign className="w-3.5 h-3.5" />
+                                <span>{currency}</span>
+                            </div>
+                            {selectedCashSource && (
+                                <div className="flex items-center gap-1.5 bg-emerald-400/30 rounded-lg px-2 py-1">
+                                    <Wallet className="w-3.5 h-3.5" />
+                                    <span>مصدر محدد</span>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Body مع Scroll */}
+                    <ScrollArea className="flex-1 overflow-y-auto">
+                        <div className="p-4 space-y-4">
+                            {/* قسم بيانات الفاتورة */}
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                    <Receipt className="w-4 h-4 text-primary" />
+                                    <span>بيانات الفاتورة</span>
+                                </div>
+                                
+                                <div className="space-y-3">
+                                    {/* المورد */}
+                                    <div className="space-y-1">
+                                        <Label htmlFor="supplier" className="text-xs text-muted-foreground">المورد</Label>
+                                        <Input 
+                                            id="supplier" 
+                                            value={supplier} 
+                                            onChange={e => setSupplier(e.target.value)} 
+                                            className="h-10 w-full"
+                                            placeholder="اسم المورد"
+                                        />
+                                    </div>
+                                    
+                                    {/* التاريخ */}
+                                    <div className="space-y-1">
+                                        <Label htmlFor="purchaseDate" className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <Calendar className="w-3 h-3" />
+                                            التاريخ
+                                        </Label>
+                                        <Input 
+                                            id="purchaseDate" 
+                                            type="date" 
+                                            value={purchaseDate} 
+                                            onChange={e => setPurchaseDate(e.target.value)} 
+                                            className="h-10 w-full"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* قسم التكاليف */}
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                    <Truck className="w-4 h-4 text-primary" />
+                                    <span>التكاليف الإضافية</span>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <Label htmlFor="shippingCost" className="text-xs text-muted-foreground">الشحن (د.ع)</Label>
+                                        <Input 
+                                            id="shippingCost" 
+                                            type="number" 
+                                            min="0"
+                                            placeholder="0"
+                                            value={shippingCost} 
+                                            onChange={e => setShippingCost(e.target.value)} 
+                                            className="h-10 w-full"
+                                        />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label htmlFor="transferCost" className="text-xs text-muted-foreground">التحويل (د.ع)</Label>
+                                        <Input 
+                                            id="transferCost" 
+                                            type="number" 
+                                            min="0"
+                                            placeholder="0"
+                                            value={transferCost} 
+                                            onChange={e => setTransferCost(e.target.value)} 
+                                            className="h-10 w-full"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* قسم العملة */}
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                    <DollarSign className="w-4 h-4 text-primary" />
+                                    <span>العملة</span>
+                                </div>
+                                
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1">
+                                        <Label className="text-xs text-muted-foreground">نوع العملة</Label>
+                                        <Select 
+                                            value={currency} 
+                                            onValueChange={(val) => {
+                                                setCurrency(val);
+                                                setShowExchangeRate(val === 'USD');
+                                                if (val === 'IQD') setExchangeRate(1);
+                                            }}
+                                        >
+                                            <SelectTrigger className="h-10 w-full min-w-0">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="IQD">دينار (IQD)</SelectItem>
+                                                <SelectItem value="USD">دولار ($)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {showExchangeRate && (
+                                        <div className="space-y-1">
+                                            <Label className="text-xs text-muted-foreground">سعر الصرف</Label>
+                                            <Input
+                                                type="number"
+                                                placeholder="1480"
+                                                value={exchangeRate}
+                                                onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
+                                                min="1"
+                                                className="h-10 w-full"
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* مصدر الأموال */}
+                            <div className="space-y-3">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                    <Wallet className="w-4 h-4 text-primary" />
+                                    <span>مصدر الأموال</span>
+                                </div>
+                                
+                                <Select value={selectedCashSource} onValueChange={setSelectedCashSource}>
+                                    <SelectTrigger className="h-10 w-full min-w-0">
+                                        <SelectValue placeholder="اختر مصدر الأموال" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {cashSources.map(source => {
+                                            const displayBalance = source.name === 'القاصة الرئيسية' 
+                                                ? mainCashSourceBalance
+                                                : source.current_balance;
+                                            const safeBalance = isNaN(displayBalance) ? 0 : Math.max(0, displayBalance);
+                                            return (
+                                                <SelectItem key={source.id} value={source.id}>
+                                                    {source.name} - {safeBalance.toLocaleString()} د.ع
+                                                </SelectItem>
+                                            );
+                                        })}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* قسم المنتجات */}
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                        <Package className="w-4 h-4 text-primary" />
+                                        <span>المنتجات</span>
+                                    </div>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => setIsProductSelectorOpen(true)}
+                                        className="h-8 text-xs"
+                                    >
+                                        <PlusCircle className="w-3.5 h-3.5 ml-1" />
+                                        إضافة
+                                    </Button>
+                                </div>
+                                
+                                <PurchaseItemsPreview 
+                                    items={items} 
+                                    onRemove={handleRemoveItem} 
+                                    onUpdate={handleUpdateItem} 
                                 />
                             </div>
-                        )}
-                    </div>
+                        </div>
+                    </ScrollArea>
 
-                    {/* مصدر الأموال */}
-                    <div className="space-y-1">
-                        <Label htmlFor="cashSource" className="text-xs flex items-center gap-2">
-                            <Wallet className="w-4 h-4" />
-                            مصدر الأموال
-                        </Label>
-                        <Select value={selectedCashSource} onValueChange={setSelectedCashSource}>
-                            <SelectTrigger className="h-9">
-                                <SelectValue placeholder="اختر مصدر الأموال" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {cashSources.map(source => {
-                                    const displayBalance = source.name === 'القاصة الرئيسية' 
-                                        ? mainCashSourceBalance
-                                        : source.current_balance;
-                                    const safeBalance = isNaN(displayBalance) ? 0 : Math.max(0, displayBalance);
-                                    return (
-                                        <SelectItem key={source.id} value={source.id}>
-                                            {source.name} - {safeBalance.toLocaleString()} د.ع
-                                        </SelectItem>
-                                    );
-                                })}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {/* Footer ثابت */}
+                    <div className="border-t bg-muted/30 p-4 space-y-3 shrink-0">
+                        {/* المبلغ الإجمالي */}
+                        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-3 rounded-xl border border-primary/20">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="p-1.5 bg-primary/20 rounded-lg">
+                                        <CreditCard className="w-4 h-4 text-primary" />
+                                    </div>
+                                    <span className="text-sm text-muted-foreground">المبلغ الإجمالي</span>
+                                </div>
+                                <div className="text-left">
+                                    {currency === 'USD' ? (
+                                        <div className="space-y-0.5">
+                                            <p className="text-lg font-bold text-primary">
+                                                ${itemsTotal.toLocaleString()}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                = {grandTotal.toLocaleString()} د.ع
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <p className="text-xl font-bold text-primary">
+                                            {grandTotal.toLocaleString()} <span className="text-sm">د.ع</span>
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
 
-                    <div className="space-y-4">
-                        <h3 className="font-semibold">المنتجات</h3>
-                        <PurchaseItemsPreview items={items} onRemove={handleRemoveItem} onUpdate={handleUpdateItem} />
-                        <Button variant="outline" onClick={() => setIsProductSelectorOpen(true)}>
-                            <PlusCircle className="w-4 h-4 ml-2" />
-                            إضافة منتج
+                        {/* زر الحفظ */}
+                        <Button 
+                            onClick={handleSubmit} 
+                            disabled={isSubmitting || items.length === 0}
+                            className="w-full h-11 text-base font-semibold bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700"
+                        >
+                            {isSubmitting ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                                <>
+                                    <Sparkles className="w-4 h-4 ml-2" />
+                                    حفظ الفاتورة
+                                </>
+                            )}
                         </Button>
                     </div>
-
-                    {/* المبلغ الإجمالي */}
-                    <div className="bg-primary/10 p-4 rounded-lg">
-                        <p className="text-sm text-muted-foreground mb-1">المبلغ الإجمالي</p>
-                        {currency === 'USD' ? (
-                            <>
-                                <p className="text-2xl font-bold">
-                                    ${(items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0)).toLocaleString()}
-                                </p>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    = {(items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0) * exchangeRate + Number(shippingCost || 0) + Number(transferCost || 0)).toLocaleString()} د.ع
-                                </p>
-                            </>
-                        ) : (
-                            <p className="text-2xl font-bold">
-                                {(items.reduce((sum, item) => sum + (Number(item.costPrice) * Number(item.quantity)), 0) + Number(shippingCost || 0) + Number(transferCost || 0)).toLocaleString()} د.ع
-                            </p>
-                        )}
-                    </div>
-
-                    <DialogFooter>
-                        <Button onClick={handleSubmit} disabled={isSubmitting}>
-                            {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ الفاتورة"}
-                        </Button>
-                    </DialogFooter>
                 </DialogContent>
             </Dialog>
             <SelectProductForPurchaseDialog 
