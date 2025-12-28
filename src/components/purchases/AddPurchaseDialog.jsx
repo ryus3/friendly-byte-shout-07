@@ -176,43 +176,47 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
     return (
         <>
             <Dialog open={open} onOpenChange={handleOpenChange}>
-                <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto p-4 sm:p-6">
+                <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto p-4">
                     <DialogHeader>
                         <DialogTitle>إضافة فاتورة شراء جديدة</DialogTitle>
                         <DialogDescription>أدخل تفاصيل الفاتورة والمنتجات المشتراة.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid grid-cols-2 gap-3 py-4">
-                        <div>
-                            <Label htmlFor="supplier" className="text-xs">المورد</Label>
-                            <Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} className="h-9" />
+                    <div className="grid grid-cols-1 gap-3 py-4">
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label htmlFor="supplier" className="text-xs">المورد</Label>
+                                <Input id="supplier" value={supplier} onChange={e => setSupplier(e.target.value)} className="h-9" />
+                            </div>
+                            <div>
+                                <Label htmlFor="purchaseDate" className="text-xs">التاريخ</Label>
+                                <Input id="purchaseDate" type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} className="h-9" />
+                            </div>
                         </div>
-                        <div>
-                            <Label htmlFor="purchaseDate" className="text-xs">التاريخ</Label>
-                            <Input id="purchaseDate" type="date" value={purchaseDate} onChange={e => setPurchaseDate(e.target.value)} className="h-9" />
-                        </div>
-                        <div>
-                            <Label htmlFor="shippingCost" className="text-xs">الشحن (د.ع)</Label>
-                            <Input 
-                                id="shippingCost" 
-                                type="number" 
-                                min="0"
-                                placeholder="0"
-                                value={shippingCost} 
-                                onChange={e => setShippingCost(e.target.value)} 
-                                className="h-9"
-                            />
-                        </div>
-                        <div>
-                            <Label htmlFor="transferCost" className="text-xs">التحويل (د.ع)</Label>
-                            <Input 
-                                id="transferCost" 
-                                type="number" 
-                                min="0"
-                                placeholder="0"
-                                value={transferCost} 
-                                onChange={e => setTransferCost(e.target.value)} 
-                                className="h-9"
-                            />
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label htmlFor="shippingCost" className="text-xs">الشحن (د.ع)</Label>
+                                <Input 
+                                    id="shippingCost" 
+                                    type="number" 
+                                    min="0"
+                                    placeholder="0"
+                                    value={shippingCost} 
+                                    onChange={e => setShippingCost(e.target.value)} 
+                                    className="h-9"
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="transferCost" className="text-xs">التحويل (د.ع)</Label>
+                                <Input 
+                                    id="transferCost" 
+                                    type="number" 
+                                    min="0"
+                                    placeholder="0"
+                                    value={transferCost} 
+                                    onChange={e => setTransferCost(e.target.value)} 
+                                    className="h-9"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -254,25 +258,21 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                     </div>
 
                     {/* مصدر الأموال */}
-                    <div className="space-y-2">
-                        <Label htmlFor="cashSource" className="flex items-center gap-2">
+                    <div className="space-y-1">
+                        <Label htmlFor="cashSource" className="text-xs flex items-center gap-2">
                             <Wallet className="w-4 h-4" />
                             مصدر الأموال
                         </Label>
                         <Select value={selectedCashSource} onValueChange={setSelectedCashSource}>
-                            <SelectTrigger>
+                            <SelectTrigger className="h-9">
                                 <SelectValue placeholder="اختر مصدر الأموال" />
                             </SelectTrigger>
                             <SelectContent>
                                 {cashSources.map(source => {
-                                    // للقاصة الرئيسية، استخدم الرصيد المحسوب (رأس المال + الأرباح)
                                     const displayBalance = source.name === 'القاصة الرئيسية' 
                                         ? mainCashSourceBalance
                                         : source.current_balance;
-                                    
-                                    // التأكد من أن الرصيد ليس سالبًا ولا يُظهر NaN
                                     const safeBalance = isNaN(displayBalance) ? 0 : Math.max(0, displayBalance);
-                                    
                                     return (
                                         <SelectItem key={source.id} value={source.id}>
                                             {source.name} - {safeBalance.toLocaleString()} د.ع
