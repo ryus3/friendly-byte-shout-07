@@ -1,14 +1,18 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Package } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const PurchaseItemsPreview = ({ items, onRemove, onUpdate }) => {
   if (items.length === 0) {
     return (
-      <div className="text-center text-muted-foreground p-4 border border-dashed rounded-lg">
-        لم يتم إضافة أي منتجات بعد.
+      <div className="text-center py-8 border border-dashed border-muted-foreground/30 rounded-xl bg-muted/20">
+        <div className="p-3 bg-muted rounded-full w-fit mx-auto mb-3">
+          <Package className="w-6 h-6 text-muted-foreground" />
+        </div>
+        <p className="text-muted-foreground text-sm">لم يتم إضافة أي منتجات بعد</p>
+        <p className="text-muted-foreground/70 text-xs mt-1">اضغط "إضافة" لاختيار المنتجات</p>
       </div>
     );
   }
@@ -17,49 +21,57 @@ const PurchaseItemsPreview = ({ items, onRemove, onUpdate }) => {
 
   return (
     <div className="space-y-2">
-      <ScrollArea className="h-64 pr-1">
-        <div className="space-y-2">
-          {items.map((item) => (
-            <div key={item.variantSku} className="flex flex-col gap-2 p-3 bg-muted/50 rounded-lg">
+      <ScrollArea className="max-h-48">
+        <div className="space-y-2 pl-1">
+          {items.map((item, index) => (
+            <div 
+              key={item.variantSku} 
+              className="relative p-3 bg-gradient-to-r from-muted/50 to-muted/30 rounded-xl border border-border/50 overflow-hidden"
+            >
+              {/* رقم العنصر */}
+              <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary/10 flex items-center justify-center">
+                <span className="text-[10px] font-bold text-primary">{index + 1}</span>
+              </div>
+              
               {/* اسم المنتج وزر الحذف */}
-              <div className="flex justify-between items-start gap-2">
+              <div className="flex justify-between items-start gap-2 mb-2 pr-6">
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-sm truncate">{item.productName}</p>
-                  <p className="text-xs text-muted-foreground">{item.color}, {item.size}</p>
+                  <p className="font-semibold text-sm truncate text-foreground">{item.productName}</p>
+                  <p className="text-xs text-muted-foreground truncate">{item.color} • {item.size}</p>
                 </div>
                 <Button
                   size="icon"
                   variant="ghost"
                   onClick={() => onRemove(item.variantSku)}
-                  className="w-7 h-7 shrink-0 text-destructive hover:bg-destructive/10"
+                  className="w-7 h-7 shrink-0 text-destructive hover:bg-destructive/10 rounded-full"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </Button>
               </div>
               
               {/* الكمية والسعر والإجمالي */}
               <div className="grid grid-cols-3 gap-2">
-                <div>
-                  <label className="text-[10px] text-muted-foreground block mb-0.5">الكمية</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground block">الكمية</label>
                   <Input 
                     type="number" 
                     value={item.quantity} 
                     onChange={e => onUpdate(item.variantSku, 'quantity', parseInt(e.target.value) || 0)} 
-                    className="h-8 text-center text-sm"
+                    className="h-8 text-center text-sm w-full min-w-0"
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground block mb-0.5">السعر</label>
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground block">السعر</label>
                   <Input 
                     type="number" 
                     value={item.costPrice} 
                     onChange={e => onUpdate(item.variantSku, 'costPrice', parseFloat(e.target.value) || 0)} 
-                    className="h-8 text-center text-sm"
+                    className="h-8 text-center text-sm w-full min-w-0"
                   />
                 </div>
-                <div>
-                  <label className="text-[10px] text-muted-foreground block mb-0.5">الإجمالي</label>
-                  <div className="h-8 flex items-center justify-center bg-background rounded-md border text-sm font-semibold">
+                <div className="space-y-1">
+                  <label className="text-[10px] text-muted-foreground block">الإجمالي</label>
+                  <div className="h-8 flex items-center justify-center bg-primary/10 rounded-md text-sm font-bold text-primary">
                     {(item.costPrice * item.quantity).toLocaleString()}
                   </div>
                 </div>
@@ -68,10 +80,12 @@ const PurchaseItemsPreview = ({ items, onRemove, onUpdate }) => {
           ))}
         </div>
       </ScrollArea>
-      <div className="pt-3 border-t">
+      
+      {/* إجمالي المنتجات */}
+      <div className="pt-2 border-t border-border/50">
         <div className="flex justify-between items-center">
-          <span className="text-sm font-medium">التكلفة الإجمالية</span>
-          <span className="text-lg font-bold text-primary">
+          <span className="text-xs text-muted-foreground">إجمالي المنتجات ({items.length})</span>
+          <span className="text-sm font-bold text-primary">
             {totalCost.toLocaleString()} د.ع
           </span>
         </div>
