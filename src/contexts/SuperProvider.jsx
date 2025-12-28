@@ -2698,11 +2698,19 @@ export const SuperProvider = ({ children }) => {
       // حذف الطلب الذكي بأمان مع الربط
       await deleteAiOrderWithLink(orderId, createdOrder.id);
 
-      // تحديث الذاكرة
-      setAllData(prev => ({
-        ...prev,
-        aiOrders: (prev.aiOrders || []).filter(o => o.id !== orderId)
-      }));
+      // تحديث الذاكرة - إزالة الطلب الذكي وإضافة الطلب الجديد مباشرة
+      setAllData(prev => {
+        // تطبيع الطلب الجديد
+        const normalizedNewOrder = normalizeOrder(createdOrder, prev.users);
+        return {
+          ...prev,
+          aiOrders: (prev.aiOrders || []).filter(o => o.id !== orderId),
+          orders: [normalizedNewOrder, ...(prev.orders || []).filter(o => o.id !== createdOrder.id)]
+        };
+      });
+
+      // إطلاق حدث للمكونات المستمعة
+      window.dispatchEvent(new CustomEvent('orderCreated', { detail: createdOrder }));
 
       // إبطال الكاش
       superAPI.invalidate('all_data');
