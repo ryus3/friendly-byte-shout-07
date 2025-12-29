@@ -286,12 +286,20 @@ const OrdersPage = () => {
       }
     };
 
+    // ✅ مستمع لظهور الطلبات فوراً بعد الموافقة على طلب ذكي
+    const handleOrderCreated = (event) => {
+      devLog.log('⚡ OrdersPage: Order Created Event received:', event.detail);
+      // الانتقال للصفحة الأولى لرؤية الطلب الجديد فوراً
+      setCurrentPage(1);
+    };
+
     // تسجيل المستمعات
     window.addEventListener('orderDeleted', handleOrderDeleted);
     window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
     window.addEventListener('orderDeletedConfirmed', handleOrderDeletedConfirmed);
     window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderDeletedConfirmed);
     window.addEventListener('orderUpdated', handleOrderUpdated);
+    window.addEventListener('orderCreated', handleOrderCreated);
 
     return () => {
       window.removeEventListener('orderDeleted', handleOrderDeleted);
@@ -299,6 +307,7 @@ const OrdersPage = () => {
       window.removeEventListener('orderDeletedConfirmed', handleOrderDeletedConfirmed);
       window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderDeletedConfirmed);
       window.removeEventListener('orderUpdated', handleOrderUpdated);
+      window.removeEventListener('orderCreated', handleOrderCreated);
     };
   }, []);
 

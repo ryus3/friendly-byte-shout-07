@@ -9,13 +9,17 @@ import { useImprovedPurchases } from '@/hooks/useImprovedPurchases';
 import { useCashSources } from '@/hooks/useCashSources';
 import { toast } from '@/hooks/use-toast';
 import { 
-    Loader2, PlusCircle, Wallet, X, Receipt, Calendar, 
-    Truck, CreditCard, DollarSign, Package, Sparkles 
+    Loader2, PlusCircle, Wallet, X, Receipt, 
+    Truck, CreditCard, DollarSign, Package, Sparkles, CalendarIcon 
 } from 'lucide-react';
 import SelectProductForPurchaseDialog from './SelectProductForPurchaseDialog';
 import PurchaseItemsPreview from './PurchaseItemsPreview';
 import { useLocation } from 'react-router-dom';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
+import { ar } from 'date-fns/locale';
 
 const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
     const { addPurchase } = useImprovedPurchases();
@@ -186,7 +190,7 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
     return (
         <>
             <Dialog open={open} onOpenChange={handleOpenChange}>
-                <DialogContent className="w-[95vw] max-w-[480px] p-0 overflow-hidden gap-0 max-h-[90vh] flex flex-col">
+                <DialogContent dir="rtl" className="w-[95vw] max-w-[480px] p-0 overflow-hidden gap-0 max-h-[90vh] flex flex-col">
                     {/* Header متدرج فاخر */}
                     <div className="relative bg-gradient-to-r from-violet-600 via-purple-600 to-indigo-600 p-4 shrink-0">
                         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxjaXJjbGUgY3g9IjIwIiBjeT0iMjAiIHI9IjIiIGZpbGw9InJnYmEoMjU1LDI1NSwyNTUsMC4xKSIvPjwvZz48L3N2Zz4=')] opacity-50 rounded-t-lg" />
@@ -253,22 +257,35 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                     
                                     {/* التاريخ */}
                                     <div className="space-y-1">
-                                        <Label htmlFor="purchaseDate" className="text-xs text-muted-foreground flex items-center gap-1">
-                                            <Calendar className="w-3 h-3" />
+                                        <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <CalendarIcon className="w-3 h-3" />
                                             التاريخ
                                         </Label>
-                                        <Input 
-                                            id="purchaseDate" 
-                                            type="date" 
-                                            value={purchaseDate} 
-                                            onChange={e => setPurchaseDate(e.target.value)} 
-                                            className="h-10 w-full"
-                                        />
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button 
+                                                    variant="outline" 
+                                                    className="w-full h-10 justify-start text-right font-normal"
+                                                >
+                                                    <CalendarIcon className="ml-2 h-4 w-4 opacity-70" />
+                                                    {purchaseDate 
+                                                        ? format(new Date(purchaseDate), 'dd MMMM yyyy', { locale: ar })
+                                                        : 'اختر التاريخ'}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
+                                                <Calendar
+                                                    mode="single"
+                                                    selected={purchaseDate ? new Date(purchaseDate) : undefined}
+                                                    onSelect={(date) => setPurchaseDate(date?.toISOString().split('T')[0] || '')}
+                                                    locale={ar}
+                                                    className="pointer-events-auto"
+                                                />
+                                            </PopoverContent>
+                                        </Popover>
                                     </div>
                                 </div>
                             </div>
-
-                            {/* قسم التكاليف */}
                             <div className="space-y-3">
                                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                                     <Truck className="w-4 h-4 text-primary" />
