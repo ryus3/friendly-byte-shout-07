@@ -265,12 +265,14 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                             <PopoverTrigger asChild>
                                                 <Button 
                                                     variant="outline" 
-                                                    className="w-full h-10 justify-start text-right font-normal"
+                                                    className="w-full h-10 justify-between font-normal"
                                                 >
-                                                    <CalendarIcon className="ml-2 h-4 w-4 opacity-70" />
-                                                    {purchaseDate 
-                                                        ? format(new Date(purchaseDate), 'dd MMMM yyyy', { locale: ar })
-                                                        : 'اختر التاريخ'}
+                                                    <span>
+                                                        {purchaseDate 
+                                                            ? format(new Date(purchaseDate), 'dd MMMM yyyy', { locale: ar })
+                                                            : 'اختر التاريخ'}
+                                                    </span>
+                                                    <CalendarIcon className="h-4 w-4 opacity-70" />
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
@@ -292,21 +294,9 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                     <span>التكاليف الإضافية</span>
                                 </div>
                                 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                        <Label htmlFor="shippingCost" className="text-xs text-muted-foreground">الشحن (د.ع)</Label>
-                                        <Input 
-                                            id="shippingCost" 
-                                            type="number" 
-                                            min="0"
-                                            placeholder="0"
-                                            value={shippingCost} 
-                                            onChange={e => setShippingCost(e.target.value)} 
-                                            className="h-10 w-full"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <Label htmlFor="transferCost" className="text-xs text-muted-foreground">التحويل (د.ع)</Label>
+                                <div className="grid grid-cols-2 gap-3" style={{ direction: 'ltr' }}>
+                                    <div className="space-y-1" dir="rtl">
+                                        <Label htmlFor="transferCost" className="text-xs text-muted-foreground text-right block">التحويل (د.ع)</Label>
                                         <Input 
                                             id="transferCost" 
                                             type="number" 
@@ -314,7 +304,19 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                             placeholder="0"
                                             value={transferCost} 
                                             onChange={e => setTransferCost(e.target.value)} 
-                                            className="h-10 w-full"
+                                            className="h-10 w-full text-right"
+                                        />
+                                    </div>
+                                    <div className="space-y-1" dir="rtl">
+                                        <Label htmlFor="shippingCost" className="text-xs text-muted-foreground text-right block">الشحن (د.ع)</Label>
+                                        <Input 
+                                            id="shippingCost" 
+                                            type="number" 
+                                            min="0"
+                                            placeholder="0"
+                                            value={shippingCost} 
+                                            onChange={e => setShippingCost(e.target.value)} 
+                                            className="h-10 w-full text-right"
                                         />
                                     </div>
                                 </div>
@@ -327,9 +329,22 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                     <span>العملة</span>
                                 </div>
                                 
-                                <div className="grid grid-cols-2 gap-3">
-                                    <div className="space-y-1">
-                                        <Label className="text-xs text-muted-foreground">نوع العملة</Label>
+                                <div className="grid grid-cols-2 gap-3" style={{ direction: 'ltr' }}>
+                                    {showExchangeRate && (
+                                        <div className="space-y-1" dir="rtl">
+                                            <Label className="text-xs text-muted-foreground text-right block">سعر الصرف</Label>
+                                            <Input
+                                                type="number"
+                                                placeholder="1480"
+                                                value={exchangeRate}
+                                                onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
+                                                min="1"
+                                                className="h-10 w-full text-right"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className={`space-y-1 ${!showExchangeRate ? 'col-span-2' : ''}`} dir="rtl">
+                                        <Label className="text-xs text-muted-foreground text-right block">نوع العملة</Label>
                                         <Select 
                                             value={currency} 
                                             onValueChange={(val) => {
@@ -347,20 +362,6 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                             </SelectContent>
                                         </Select>
                                     </div>
-
-                                    {showExchangeRate && (
-                                        <div className="space-y-1">
-                                            <Label className="text-xs text-muted-foreground">سعر الصرف</Label>
-                                            <Input
-                                                type="number"
-                                                placeholder="1480"
-                                                value={exchangeRate}
-                                                onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1)}
-                                                min="1"
-                                                className="h-10 w-full"
-                                            />
-                                        </div>
-                                    )}
                                 </div>
                             </div>
 
