@@ -237,9 +237,9 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                         <div className="p-4 space-y-4">
                             {/* قسم بيانات الفاتورة */}
                             <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end flex-row-reverse">
-                                    <Receipt className="w-4 h-4 text-primary" />
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end">
                                     <span>بيانات الفاتورة</span>
+                                    <Receipt className="w-4 h-4 text-primary" />
                                 </div>
                                 
                                 <div className="space-y-3">
@@ -258,9 +258,9 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                     
                                     {/* التاريخ */}
                                     <div className="space-y-1">
-                                        <Label className="text-xs text-muted-foreground flex items-center gap-1 justify-end flex-row-reverse">
-                                            <CalendarIcon className="w-3 h-3" />
+                                        <Label className="text-xs text-muted-foreground flex items-center gap-1 justify-end">
                                             التاريخ
+                                            <CalendarIcon className="w-3 h-3" />
                                         </Label>
                                         <Popover>
                                             <PopoverTrigger asChild>
@@ -290,9 +290,9 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                 </div>
                             </div>
                             <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end flex-row-reverse">
-                                    <Truck className="w-4 h-4 text-primary" />
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end">
                                     <span>التكاليف الإضافية</span>
+                                    <Truck className="w-4 h-4 text-primary" />
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-3" style={{ direction: 'ltr' }}>
@@ -325,9 +325,9 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
 
                             {/* قسم العملة */}
                             <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end flex-row-reverse">
-                                    <DollarSign className="w-4 h-4 text-primary" />
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end">
                                     <span>العملة</span>
+                                    <DollarSign className="w-4 h-4 text-primary" />
                                 </div>
                                 
                                 <div className="grid grid-cols-2 gap-3" style={{ direction: 'ltr' }}>
@@ -368,9 +368,9 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
 
                             {/* مصدر الأموال */}
                             <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end flex-row-reverse">
-                                    <Wallet className="w-4 h-4 text-primary" />
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end">
                                     <span>مصدر الأموال</span>
+                                    <Wallet className="w-4 h-4 text-primary" />
                                 </div>
                                 
                                 <Select value={selectedCashSource} onValueChange={setSelectedCashSource}>
@@ -395,10 +395,10 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
 
                             {/* قسم المنتجات */}
                             <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end flex-row-reverse">
-                                        <Package className="w-4 h-4 text-primary" />
+                                <div className="flex items-center justify-between flex-row-reverse">
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end">
                                         <span>المنتجات</span>
+                                        <Package className="w-4 h-4 text-primary" />
                                     </div>
                                     <Button 
                                         variant="outline" 
