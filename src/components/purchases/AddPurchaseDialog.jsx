@@ -237,7 +237,7 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                         <div className="p-4 space-y-4">
                             {/* قسم بيانات الفاتورة */}
                             <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end flex-row-reverse">
                                     <Receipt className="w-4 h-4 text-primary" />
                                     <span>بيانات الفاتورة</span>
                                 </div>
@@ -245,19 +245,20 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                 <div className="space-y-3">
                                     {/* المورد */}
                                     <div className="space-y-1">
-                                        <Label htmlFor="supplier" className="text-xs text-muted-foreground">المورد</Label>
+                                        <Label htmlFor="supplier" className="text-xs text-muted-foreground text-right block">المورد</Label>
                                         <Input 
                                             id="supplier" 
                                             value={supplier} 
                                             onChange={e => setSupplier(e.target.value)} 
-                                            className="h-10 w-full"
+                                            className="h-10 w-full text-right"
+                                            dir="rtl"
                                             placeholder="اسم المورد"
                                         />
                                     </div>
                                     
                                     {/* التاريخ */}
                                     <div className="space-y-1">
-                                        <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                                        <Label className="text-xs text-muted-foreground flex items-center gap-1 justify-end flex-row-reverse">
                                             <CalendarIcon className="w-3 h-3" />
                                             التاريخ
                                         </Label>
@@ -289,7 +290,7 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                 </div>
                             </div>
                             <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end flex-row-reverse">
                                     <Truck className="w-4 h-4 text-primary" />
                                     <span>التكاليف الإضافية</span>
                                 </div>
@@ -324,7 +325,7 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
 
                             {/* قسم العملة */}
                             <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end flex-row-reverse">
                                     <DollarSign className="w-4 h-4 text-primary" />
                                     <span>العملة</span>
                                 </div>
@@ -367,7 +368,7 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
 
                             {/* مصدر الأموال */}
                             <div className="space-y-3">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end flex-row-reverse">
                                     <Wallet className="w-4 h-4 text-primary" />
                                     <span>مصدر الأموال</span>
                                 </div>
@@ -395,7 +396,7 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                             {/* قسم المنتجات */}
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-foreground justify-end flex-row-reverse">
                                         <Package className="w-4 h-4 text-primary" />
                                         <span>المنتجات</span>
                                     </div>
