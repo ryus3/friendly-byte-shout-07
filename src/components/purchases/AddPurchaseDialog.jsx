@@ -266,14 +266,15 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                             <PopoverTrigger asChild>
                                                 <Button 
                                                     variant="outline" 
-                                                    className="w-full h-10 justify-between font-normal"
+                                                    className="w-full h-10 justify-end font-normal text-right"
+                                                    dir="rtl"
                                                 >
+                                                    <CalendarIcon className="h-4 w-4 opacity-70 ml-2" />
                                                     <span>
                                                         {purchaseDate 
                                                             ? format(new Date(purchaseDate), 'dd MMMM yyyy', { locale: ar })
                                                             : 'اختر التاريخ'}
                                                     </span>
-                                                    <CalendarIcon className="h-4 w-4 opacity-70" />
                                                 </Button>
                                             </PopoverTrigger>
                                             <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
@@ -354,12 +355,12 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                                 if (val === 'IQD') setExchangeRate(1);
                                             }}
                                         >
-                                            <SelectTrigger className="h-10 w-full min-w-0">
+                                            <SelectTrigger className="h-10 w-full min-w-0 text-right" dir="rtl">
                                                 <SelectValue />
                                             </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="IQD">دينار (IQD)</SelectItem>
-                                                <SelectItem value="USD">دولار ($)</SelectItem>
+                                            <SelectContent dir="rtl">
+                                                <SelectItem value="IQD" className="text-right">دينار (IQD)</SelectItem>
+                                                <SelectItem value="USD" className="text-right">دولار ($)</SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
@@ -374,17 +375,17 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                 </div>
                                 
                                 <Select value={selectedCashSource} onValueChange={setSelectedCashSource}>
-                                    <SelectTrigger className="h-10 w-full min-w-0">
+                                    <SelectTrigger className="h-10 w-full min-w-0 text-right" dir="rtl">
                                         <SelectValue placeholder="اختر مصدر الأموال" />
                                     </SelectTrigger>
-                                    <SelectContent>
+                                    <SelectContent dir="rtl">
                                         {cashSources.map(source => {
                                             const displayBalance = source.name === 'القاصة الرئيسية' 
                                                 ? mainCashSourceBalance
                                                 : source.current_balance;
                                             const safeBalance = isNaN(displayBalance) ? 0 : Math.max(0, displayBalance);
                                             return (
-                                                <SelectItem key={source.id} value={source.id}>
+                                                <SelectItem key={source.id} value={source.id} className="text-right">
                                                     {source.name} - {safeBalance.toLocaleString()} د.ع
                                                 </SelectItem>
                                             );
