@@ -96,14 +96,19 @@ const InvoiceSyncSettings = () => {
     }
   };
 
-  // مزامنة يدوية
+  // مزامنة يدوية باستخدام smart-invoice-sync
   const handleManualSync = async () => {
     setIsManualSyncing(true);
     try {
       console.log('🔄 تشغيل مزامنة يدوية للفواتير...');
       
-      const { data, error } = await supabase.functions.invoke('sync-alwaseet-invoices', {
-        body: { manual: true }
+      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
+        body: { 
+          mode: 'comprehensive',
+          sync_invoices: true,
+          sync_orders: true,
+          force_refresh: true
+        }
       });
 
       if (error) throw error;
@@ -112,7 +117,7 @@ const InvoiceSyncSettings = () => {
       
       toast({
         title: "مزامنة مكتملة",
-        description: `تم مزامنة ${data.total_synced || 0} فاتورة لـ ${data.processed_employees || 0} موظف`,
+        description: `تم مزامنة ${data?.invoices_synced || 0} فاتورة وتحديث ${data?.orders_updated || 0} طلب`,
       });
     } catch (error) {
       console.error('خطأ في المزامنة اليدوية:', error);
@@ -362,13 +367,30 @@ const InvoiceSyncSettings = () => {
           )}
         </div>
 
+        {/* حالة المزامنة في الخلفية */}
+        {settings.daily_sync_enabled && (
+          <div className="flex items-center gap-2 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
+            <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+            <div className="text-xs">
+              <p className="font-medium text-green-700">المزامنة التلقائية في الخلفية نشطة</p>
+              <p className="text-green-600/80">
+                تعمل تلقائياً حتى لو كان الموقع مغلقاً - 
+                {settings.sync_frequency === 'twice_daily' 
+                  ? ` الساعة ${settings.morning_sync_time?.slice(0,5) || '09:00'} و ${settings.evening_sync_time?.slice(0,5) || '21:00'}`
+                  : ` الساعة ${settings.daily_sync_time?.slice(0,5) || '09:00'}`
+                }
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* معلومات إضافية */}
         <div className="text-xs text-muted-foreground bg-muted p-3 rounded">
           <strong>ملاحظات مهمة:</strong>
           <ul className="list-disc list-inside mt-1 space-y-1">
             <li>سيتم الاحتفاظ بآخر {settings.keep_invoices_per_employee} فواتير لكل موظف فقط</li>
             <li>المزامنة التلقائية تتم {settings.sync_frequency === 'twice_daily' ? 'مرتين يومياً' : 'مرة واحدة يومياً'} بدون فتح التطبيق</li>
-            <li>البيانات محفوظة محلياً لتوفير استهلاك الانترنت</li>
+            <li>الفواتير تُربط بالطلبات وتُستلم تلقائياً</li>
             <li>المدير يرى جميع الفواتير، الموظفون يرون فواتيرهم فقط</li>
             <li>يمكن للمدير مزامنة طلبات موظف محدد من صفحة متابعة الموظفين</li>
           </ul>
