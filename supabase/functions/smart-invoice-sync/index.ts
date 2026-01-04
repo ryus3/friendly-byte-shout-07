@@ -15,6 +15,7 @@ interface SyncRequest {
   sync_invoices?: boolean;
   sync_orders?: boolean;
   force_refresh?: boolean;
+  run_reconciliation?: boolean;
 }
 
 interface Invoice {
@@ -22,6 +23,7 @@ interface Invoice {
   amount: number;
   status: string;
   created_at: string;
+  updated_at?: string;
   orders_count?: number;
   received?: boolean;
   [key: string]: any;
@@ -131,13 +133,82 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Prom
   }
 }
 
-// Normalize invoice status
+/**
+ * ✅ تطبيع حالة الفاتورة مع التفريق بين المندوب والتاجر
+ * - "تم الاستلام من قبل المندوب" = pending (معلقة - لم تصل للتاجر بعد)
+ * - "تم الاستلام من قبل التاجر" = received (مستلمة فعلياً)
+ */
 function normalizeStatus(status: string | null): string {
   if (!status) return 'pending';
   const statusLower = status.toLowerCase();
-  if (statusLower.includes('receiv') || statusLower.includes('مستلم')) return 'received';
-  if (statusLower.includes('pend') || statusLower.includes('معلق')) return 'pending';
+  const statusOriginal = status;
+  
+  // ✅ القاعدة الأهم: المندوب = معلقة (لم تصل للتاجر بعد)
+  if (statusOriginal.includes('المندوب') || statusOriginal.includes('مندوب')) {
+    console.log(`📋 Status "${status}" → pending (delegate, not merchant)`);
+    return 'pending';
+  }
+  
+  // ✅ التاجر = مستلمة فعلياً
+  if (statusOriginal.includes('التاجر') || statusOriginal.includes('تاجر')) {
+    console.log(`📋 Status "${status}" → received (merchant received)`);
+    return 'received';
+  }
+  
+  // ✅ كلمة "مستلم" بدون تحديد = نفترض التاجر (مستلمة)
+  if (statusOriginal.includes('مستلم') || statusOriginal.includes('تم استلام')) {
+    console.log(`📋 Status "${status}" → received (contains "مستلم")`);
+    return 'received';
+  }
+  
+  // ✅ "استلام" مع "التاجر" = مستلمة
+  if (statusOriginal.includes('استلام') && statusOriginal.includes('التاجر')) {
+    console.log(`📋 Status "${status}" → received (استلام + التاجر)`);
+    return 'received';
+  }
+  
+  // ✅ English statuses
+  if (statusLower.includes('receiv')) {
+    console.log(`📋 Status "${status}" → received (English)`);
+    return 'received';
+  }
+  
+  // ✅ معلقة
+  if (statusLower.includes('pend') || statusOriginal.includes('معلق') || statusOriginal.includes('انتظار')) {
+    console.log(`📋 Status "${status}" → pending`);
+    return 'pending';
+  }
+  
+  // ✅ ملغاة
+  if (statusLower.includes('cancel') || statusOriginal.includes('ملغ')) {
+    console.log(`📋 Status "${status}" → cancelled`);
+    return 'cancelled';
+  }
+  
+  // ✅ مرسلة
+  if (statusLower.includes('sent') || statusOriginal.includes('ارسال') || statusOriginal.includes('أرسل')) {
+    console.log(`📋 Status "${status}" → sent`);
+    return 'sent';
+  }
+  
+  console.log(`📋 Status "${status}" → ${statusLower} (default)`);
   return statusLower;
+}
+
+/**
+ * ✅ استخراج تاريخ الاستلام الحقيقي من بيانات الفاتورة
+ */
+function extractReceivedAt(invoice: Invoice): string | null {
+  // أولوية 1: تاريخ التحديث من API
+  if (invoice.updated_at) {
+    return invoice.updated_at;
+  }
+  // أولوية 2: تاريخ الإنشاء
+  if (invoice.created_at) {
+    return invoice.created_at;
+  }
+  // أولوية 3: الآن كحل أخير
+  return new Date().toISOString();
 }
 
 serve(async (req) => {
@@ -157,10 +228,11 @@ serve(async (req) => {
       employee_id, 
       sync_invoices = true, 
       sync_orders = false,
-      force_refresh = false 
+      force_refresh = false,
+      run_reconciliation = true
     } = body;
 
-    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}`);
+    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, Reconcile: ${run_reconciliation}`);
 
     let totalInvoicesSynced = 0;
     let totalOrdersUpdated = 0;
@@ -203,6 +275,21 @@ serve(async (req) => {
             const externalId = String(invoice.id);
             const statusNormalized = normalizeStatus(invoice.status);
             const isReceived = statusNormalized === 'received' || invoice.received === true;
+            const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
+
+            // ✅ التحقق مما إذا كانت الفاتورة مستلمة بالفعل (لا نستدعي API مرة أخرى)
+            const { data: existingInvoice } = await supabase
+              .from('delivery_invoices')
+              .select('id, received, received_at')
+              .eq('external_id', externalId)
+              .eq('partner', 'alwaseet')
+              .single();
+
+            // ✅ إذا كانت الفاتورة مستلمة بالفعل، نتخطاها (لتقليل الاستهلاك)
+            if (existingInvoice?.received === true && !force_refresh) {
+              console.log(`  ⏭️ Invoice ${externalId} already received, skipping`);
+              continue;
+            }
 
             // Upsert invoice with correct owner_user_id
             const { data: upsertedInvoice, error: upsertError } = await supabase
@@ -213,16 +300,17 @@ serve(async (req) => {
                 owner_user_id: employeeId,
                 account_username: accountUsername,
                 merchant_id: tokenData.merchant_id,
-            amount: invoice.merchant_price || invoice.amount || 0,
-            orders_count: invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0,
+                amount: invoice.merchant_price || invoice.amount || 0,
+                orders_count: invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0,
                 status: invoice.status,
                 status_normalized: statusNormalized,
                 received: isReceived,
                 received_flag: isReceived,
+                received_at: isReceived ? (existingInvoice?.received_at || receivedAt) : null,
                 issued_at: invoice.created_at || invoice.createdAt,
                 raw: invoice,
                 last_synced_at: new Date().toISOString(),
-                last_api_updated_at: new Date().toISOString(),
+                last_api_updated_at: invoice.updated_at || new Date().toISOString(),
               }, {
                 onConflict: 'external_id,partner',
                 ignoreDuplicates: false,
@@ -360,20 +448,25 @@ serve(async (req) => {
         const externalId = String(invoice.id);
         const statusNormalized = normalizeStatus(invoice.status);
         const isReceived = statusNormalized === 'received' || invoice.received === true;
+        const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
 
         // Check if invoice already exists with same status
-        if (!force_refresh) {
-          const { data: existing } = await supabase
-            .from('delivery_invoices')
-            .select('id, status_normalized, received')
-            .eq('external_id', externalId)
-            .eq('partner', 'alwaseet')
-            .single();
+        const { data: existing } = await supabase
+          .from('delivery_invoices')
+          .select('id, status_normalized, received, received_at')
+          .eq('external_id', externalId)
+          .eq('partner', 'alwaseet')
+          .single();
 
-          // Skip if no changes
-          if (existing && existing.status_normalized === statusNormalized && existing.received === isReceived) {
-            continue;
-          }
+        // ✅ Skip if already received (تقليل الاستهلاك)
+        if (existing?.received === true && !force_refresh) {
+          console.log(`⏭️ Invoice ${externalId} already received, skipping`);
+          continue;
+        }
+
+        // Skip if no changes
+        if (!force_refresh && existing && existing.status_normalized === statusNormalized && existing.received === isReceived) {
+          continue;
         }
 
         const { data: upsertedInvoice, error: upsertError } = await supabase
@@ -390,6 +483,7 @@ serve(async (req) => {
             status_normalized: statusNormalized,
             received: isReceived,
             received_flag: isReceived,
+            received_at: isReceived ? (existing?.received_at || receivedAt) : null,
             issued_at: invoice.created_at || invoice.createdAt,
             raw: invoice,
             last_synced_at: new Date().toISOString(),
@@ -463,15 +557,33 @@ serve(async (req) => {
       console.warn('⚠️ Error calling link_invoice_orders_to_orders:', linkErr);
     }
 
+    // ✅ تسوية التناقضات تلقائياً (Reconciliation)
+    let reconciledCount = 0;
+    if (run_reconciliation) {
+      try {
+        // إصلاح الطلبات المرتبطة بفواتير مستلمة لكن receipt_received=false
+        const { data: reconciledOrders, error: reconcileError } = await supabase.rpc('reconcile_invoice_receipts');
+        
+        if (reconcileError) {
+          console.warn('⚠️ Failed to reconcile receipts:', reconcileError.message);
+        } else if (reconciledOrders) {
+          reconciledCount = reconciledOrders.length || 0;
+          console.log(`🔧 Reconciled ${reconciledCount} orders with received invoices`);
+        }
+      } catch (reconcileErr) {
+        console.warn('⚠️ Error calling reconcile_invoice_receipts:', reconcileErr);
+      }
+    }
+
     // Log sync result
     await supabase.from('background_sync_logs').insert({
       sync_type: mode === 'comprehensive' ? 'comprehensive_invoice_sync' : 'smart_invoice_sync',
       success: true,
       invoices_synced: totalInvoicesSynced,
-      orders_updated: totalOrdersUpdated + linkedCount,
+      orders_updated: totalOrdersUpdated + linkedCount + reconciledCount,
     });
 
-    console.log(`✅ Sync complete - Invoices: ${totalInvoicesSynced}, Orders: ${totalOrdersUpdated}, Linked: ${linkedCount}`);
+    console.log(`✅ Sync complete - Invoices: ${totalInvoicesSynced}, Orders: ${totalOrdersUpdated}, Linked: ${linkedCount}, Reconciled: ${reconciledCount}`);
 
     return new Response(
       JSON.stringify({
@@ -479,6 +591,8 @@ serve(async (req) => {
         mode,
         invoices_synced: totalInvoicesSynced,
         orders_updated: totalOrdersUpdated,
+        linked_count: linkedCount,
+        reconciled_count: reconciledCount,
         employee_results: employeeResults,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
