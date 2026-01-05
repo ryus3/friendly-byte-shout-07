@@ -7324,6 +7324,7 @@ export type Database = {
           old_sold: number
         }[]
       }
+      fix_merchant_received_invoices: { Args: never; Returns: number }
       fix_partial_delivery_financials_112066293: { Args: never; Returns: Json }
       fix_regions_cities_linking: { Args: never; Returns: Json }
       generate_customer_promo_code: {
@@ -7436,6 +7437,21 @@ export type Database = {
           total_variants: number
         }[]
       }
+      get_employee_invoice_stats: {
+        Args: never
+        Returns: {
+          account_username: string
+          employee_id: string
+          employee_name: string
+          last_sync_at: string
+          pending_invoices: number
+          received_invoices: number
+          token_active: boolean
+          token_expires_at: string
+          total_amount: number
+          total_invoices: number
+        }[]
+      }
       get_employee_last_sync: { Args: { p_employee_id: string }; Returns: Json }
       get_employee_pending_deductions: {
         Args: { p_employee_id: string }
@@ -7534,6 +7550,35 @@ export type Database = {
           total_sold: number
         }[]
       }
+      get_invoice_cron_status: {
+        Args: never
+        Returns: {
+          is_active: boolean
+          job_name: string
+          next_run_at: string
+          schedule: string
+        }[]
+      }
+      get_invoice_discrepancies: {
+        Args: never
+        Returns: {
+          count: number
+          details: string
+          discrepancy_type: string
+        }[]
+      }
+      get_invoice_sync_stats: {
+        Args: never
+        Returns: {
+          last_sync_at: string
+          last_sync_success: boolean
+          orders_awaiting_receipt: number
+          pending_invoices: number
+          received_invoices: number
+          total_invoices: number
+          total_linked_orders: number
+        }[]
+      }
       get_last_cities_regions_sync: {
         Args: never
         Returns: {
@@ -7569,6 +7614,18 @@ export type Database = {
           total_quantity_sold: number
           total_revenue: number
           variant_id: string
+        }[]
+      }
+      get_recent_sync_logs: {
+        Args: { p_limit?: number }
+        Returns: {
+          error_message: string
+          id: string
+          invoices_synced: number
+          orders_updated: number
+          success: boolean
+          sync_time: string
+          sync_type: string
         }[]
       }
       get_region_external_id: {
@@ -7944,6 +8001,14 @@ export type Database = {
         Args: { p_source_id: string; p_starting_balance?: number }
         Returns: Json
       }
+      reconcile_invoice_receipts: {
+        Args: never
+        Returns: {
+          fixed: boolean
+          invoice_id: string
+          order_id: string
+        }[]
+      }
       record_discount_usage: {
         Args: {
           p_customer_id: string
@@ -8160,6 +8225,15 @@ export type Database = {
       update_customer_tier_by_phone: {
         Args: { phone_param: string }
         Returns: undefined
+      }
+      update_invoice_sync_schedule: {
+        Args: {
+          p_enabled: boolean
+          p_evening_time?: string
+          p_frequency?: string
+          p_morning_time?: string
+        }
+        Returns: Json
       }
       update_order_reservation_status: {
         Args: {
