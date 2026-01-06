@@ -277,18 +277,25 @@ serve(async (req) => {
             const isReceived = statusNormalized === 'received' || invoice.received === true;
             const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
 
-            // ✅ التحقق مما إذا كانت الفاتورة مستلمة بالفعل (لا نستدعي API مرة أخرى)
+            // ✅ التحقق مما إذا كانت الفاتورة موجودة في قاعدة البيانات
             const { data: existingInvoice } = await supabase
               .from('delivery_invoices')
-              .select('id, received, received_at')
+              .select('id, received, received_at, status_normalized')
               .eq('external_id', externalId)
               .eq('partner', 'alwaseet')
               .single();
 
-            // ✅ إذا كانت الفاتورة مستلمة بالفعل، نتخطاها (لتقليل الاستهلاك)
+            // ✅ إذا كانت الفاتورة مستلمة في DB ومستلمة في API أيضاً = نتخطاها (تقليل الاستهلاك)
+            // لكن إذا كانت معلقة في DB ومستلمة في API = نحدثها!
             if (existingInvoice?.received === true && !force_refresh) {
-              console.log(`  ⏭️ Invoice ${externalId} already received, skipping`);
+              console.log(`  ⏭️ Invoice ${externalId} already received in DB, skipping`);
               continue;
+            }
+            
+            // ✅ تحقق إذا الفاتورة تغيرت حالتها (من معلقة لمستلمة)
+            const statusChanged = existingInvoice && existingInvoice.status_normalized !== statusNormalized;
+            if (statusChanged) {
+              console.log(`  📝 Invoice ${externalId} status changed: ${existingInvoice.status_normalized} → ${statusNormalized}`);
             }
 
             // Upsert invoice with correct owner_user_id
@@ -458,14 +465,21 @@ serve(async (req) => {
           .eq('partner', 'alwaseet')
           .single();
 
-        // ✅ Skip if already received (تقليل الاستهلاك)
+        // ✅ إذا الفاتورة مستلمة في DB ومستلمة في API = نتخطاها (تقليل الاستهلاك)
+        // لكن إذا كانت معلقة في DB ومستلمة في API = نحدثها!
         if (existing?.received === true && !force_refresh) {
-          console.log(`⏭️ Invoice ${externalId} already received, skipping`);
+          console.log(`⏭️ Invoice ${externalId} already received in DB, skipping`);
           continue;
         }
 
-        // Skip if no changes
-        if (!force_refresh && existing && existing.status_normalized === statusNormalized && existing.received === isReceived) {
+        // ✅ تحقق إذا الفاتورة تغيرت حالتها (من معلقة لمستلمة)
+        const statusChanged = existing && existing.status_normalized !== statusNormalized;
+        if (statusChanged) {
+          console.log(`📝 Invoice ${externalId} status changed: ${existing.status_normalized} → ${statusNormalized}`);
+        }
+
+        // Skip if no changes at all
+        if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
           continue;
         }
 
