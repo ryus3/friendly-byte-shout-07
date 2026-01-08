@@ -8275,7 +8275,7 @@ export type Database = {
         Returns: undefined
       }
       upsert_alwaseet_invoice_list:
-        | { Args: { p_invoices: Json }; Returns: undefined }
+        | { Args: { p_invoices: Json }; Returns: Json }
         | {
             Args: { p_invoices: Json; p_owner_user_id?: string }
             Returns: undefined
