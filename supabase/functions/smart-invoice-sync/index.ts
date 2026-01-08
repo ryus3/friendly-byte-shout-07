@@ -81,6 +81,8 @@ async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
 }
 
 // ✅ Fetch invoice orders from AlWaseet API - CORRECTED endpoint
+// الصيغة الرسمية من التوثيق:
+// { status: true, errNum: "S000", data: { invoice: [...], orders: [...] } }
 async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Promise<InvoiceOrder[]> {
   try {
     console.log(`📡 Fetching orders for invoice ${invoiceId}...`);
@@ -100,32 +102,36 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Prom
     }
 
     const data = await response.json();
-
     const ok = data?.status === true || data?.errNum === 'S000';
-    const count = Array.isArray(data?.data)
-      ? data.data.length
-      : (Array.isArray(data?.orders) ? data.orders.length : (Array.isArray(data) ? data.length : 0));
 
-    console.log(
-      `📥 Invoice ${invoiceId} orders response: status=${data?.status}, errNum=${data?.errNum}, count=${count}`
-    );
-
-    // ✅ الصيغة المتوقعة
-    if (ok && Array.isArray(data?.data)) {
-      return data.data;
+    // ✅ الشكل الرسمي حسب التوثيق: data.data.orders
+    // { status: true, data: { invoice: [...], orders: [...] } }
+    if (ok && data?.data && typeof data.data === 'object') {
+      // حالة 1: data.data.orders (الشكل الرسمي)
+      if (Array.isArray(data.data.orders)) {
+        console.log(`📥 Invoice ${invoiceId} orders: ${data.data.orders.length} (from data.data.orders)`);
+        return data.data.orders;
+      }
+      // حالة 2: data.data مباشرة Array
+      if (Array.isArray(data.data)) {
+        console.log(`📥 Invoice ${invoiceId} orders: ${data.data.length} (from data.data array)`);
+        return data.data;
+      }
     }
 
-    // أحياناً تكون orders
+    // حالة 3: data.orders على المستوى الأول
     if (ok && Array.isArray(data?.orders)) {
+      console.log(`📥 Invoice ${invoiceId} orders: ${data.orders.length} (from data.orders)`);
       return data.orders;
     }
 
-    // وأحياناً Array مباشرة
+    // حالة 4: Array مباشرة
     if (Array.isArray(data)) {
+      console.log(`📥 Invoice ${invoiceId} orders: ${data.length} (from root array)`);
       return data;
     }
 
-    console.warn(`⚠️ Unexpected orders response shape for invoice ${invoiceId}:`, JSON.stringify(data)?.slice(0, 500));
+    console.warn(`⚠️ No orders found for invoice ${invoiceId}. Response shape:`, JSON.stringify(data)?.slice(0, 500));
     return [];
   } catch (error) {
     console.error(`Error fetching orders for invoice ${invoiceId}:`, error);
