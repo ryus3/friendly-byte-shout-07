@@ -282,19 +282,73 @@ serve(async (req) => {
             const statusNormalized = normalizeStatus(invoice.status);
             const isReceived = statusNormalized === 'received' || invoice.received === true;
             const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
+            const apiOrdersCount = invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0;
 
             // ✅ التحقق مما إذا كانت الفاتورة موجودة في قاعدة البيانات
             const { data: existingInvoice } = await supabase
               .from('delivery_invoices')
-              .select('id, received, received_at, status_normalized')
+              .select('id, received, received_at, status_normalized, orders_last_synced_at')
               .eq('external_id', externalId)
               .eq('partner', 'alwaseet')
               .single();
 
-            // ✅ إذا كانت الفاتورة مستلمة في DB ومستلمة في API أيضاً = نتخطاها (تقليل الاستهلاك)
-            // لكن إذا كانت معلقة في DB ومستلمة في API = نحدثها!
+            // ✅ التحقق من عدد الطلبات الموجودة في delivery_invoice_orders
+            let existingOrdersCount = 0;
+            if (existingInvoice?.id) {
+              const { count } = await supabase
+                .from('delivery_invoice_orders')
+                .select('*', { count: 'exact', head: true })
+                .eq('invoice_id', existingInvoice.id);
+              existingOrdersCount = count || 0;
+            }
+
+            // ✅ تحديد إذا كانت الفاتورة تحتاج مزامنة Orders (self-healing)
+            const needsOrdersSync = sync_orders && apiOrdersCount > 0 && existingOrdersCount === 0;
+            
+            // ✅ إذا كانت الفاتورة مستلمة في DB ومستلمة في API أيضاً
+            // نتخطى تحديث بيانات الفاتورة، لكن ننفذ Orders sync إذا كانت ناقصة
             if (existingInvoice?.received === true && !force_refresh) {
-              console.log(`  ⏭️ Invoice ${externalId} already received in DB, skipping`);
+              if (needsOrdersSync) {
+                console.log(`  🔧 Invoice ${externalId} received but missing orders (${apiOrdersCount} expected, ${existingOrdersCount} found). Syncing orders only...`);
+                // فقط مزامنة Orders بدون تحديث بيانات الفاتورة
+                try {
+                  const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
+                  
+                  if (invoiceOrders.length > 0) {
+                    console.log(`    📦 Self-healing: Syncing ${invoiceOrders.length} orders for invoice ${externalId}`);
+                    
+                    for (const order of invoiceOrders) {
+                      const { error: orderError } = await supabase
+                        .from('delivery_invoice_orders')
+                        .upsert({
+                          invoice_id: existingInvoice.id,
+                          external_order_id: String(order.id),
+                          raw: order,
+                          status: order.status,
+                          amount: order.price || order.amount || 0,
+                          owner_user_id: employeeId,
+                        }, {
+                          onConflict: 'invoice_id,external_order_id',
+                          ignoreDuplicates: false,
+                        });
+                      
+                      if (!orderError) {
+                        employeeOrdersSynced++;
+                      }
+                    }
+                    
+                    // Update orders_last_synced_at
+                    await supabase
+                      .from('delivery_invoices')
+                      .update({ orders_last_synced_at: new Date().toISOString() })
+                      .eq('id', existingInvoice.id);
+                  }
+                } catch (ordersError) {
+                  console.error(`    ❌ Error self-healing orders for invoice ${externalId}:`, ordersError);
+                }
+              } else {
+                console.log(`  ⏭️ Invoice ${externalId} already received in DB with ${existingOrdersCount} orders, skipping`);
+              }
               continue;
             }
             
@@ -314,7 +368,7 @@ serve(async (req) => {
                 account_username: accountUsername,
                 merchant_id: tokenData.merchant_id,
                 amount: invoice.merchant_price || invoice.amount || 0,
-                orders_count: invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0,
+                orders_count: apiOrdersCount,
                 status: invoice.status,
                 status_normalized: statusNormalized,
                 received: isReceived,
@@ -462,19 +516,70 @@ serve(async (req) => {
         const statusNormalized = normalizeStatus(invoice.status);
         const isReceived = statusNormalized === 'received' || invoice.received === true;
         const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
+        const apiOrdersCount = invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0;
 
         // Check if invoice already exists with same status
         const { data: existing } = await supabase
           .from('delivery_invoices')
-          .select('id, status_normalized, received, received_at')
+          .select('id, status_normalized, received, received_at, orders_last_synced_at')
           .eq('external_id', externalId)
           .eq('partner', 'alwaseet')
           .single();
 
+        // ✅ التحقق من عدد الطلبات الموجودة في delivery_invoice_orders
+        let existingOrdersCount = 0;
+        if (existing?.id) {
+          const { count } = await supabase
+            .from('delivery_invoice_orders')
+            .select('*', { count: 'exact', head: true })
+            .eq('invoice_id', existing.id);
+          existingOrdersCount = count || 0;
+        }
+
+        // ✅ تحديد إذا كانت الفاتورة تحتاج مزامنة Orders (self-healing)
+        const needsOrdersSync = sync_orders && apiOrdersCount > 0 && existingOrdersCount === 0;
+
         // ✅ إذا الفاتورة مستلمة في DB ومستلمة في API = نتخطاها (تقليل الاستهلاك)
         // لكن إذا كانت معلقة في DB ومستلمة في API = نحدثها!
+        // وإذا كانت مستلمة لكن ناقصة Orders = نعمل self-healing
         if (existing?.received === true && !force_refresh) {
-          console.log(`⏭️ Invoice ${externalId} already received in DB, skipping`);
+          if (needsOrdersSync) {
+            console.log(`🔧 Invoice ${externalId} received but missing orders. Self-healing...`);
+            try {
+              const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
+              
+              for (const order of invoiceOrders) {
+                const { error: orderError } = await supabase
+                  .from('delivery_invoice_orders')
+                  .upsert({
+                    invoice_id: existing.id,
+                    external_order_id: String(order.id),
+                    raw: order,
+                    status: order.status,
+                    amount: order.price || order.amount || 0,
+                    owner_user_id: targetEmployeeId,
+                  }, {
+                    onConflict: 'invoice_id,external_order_id',
+                    ignoreDuplicates: false,
+                  });
+                
+                if (!orderError) {
+                  totalOrdersUpdated++;
+                }
+              }
+              
+              if (invoiceOrders.length > 0) {
+                await supabase
+                  .from('delivery_invoices')
+                  .update({ orders_last_synced_at: new Date().toISOString() })
+                  .eq('id', existing.id);
+              }
+            } catch (ordersError) {
+              console.error(`Error self-healing orders for invoice ${externalId}:`, ordersError);
+            }
+          } else {
+            console.log(`⏭️ Invoice ${externalId} already received in DB with ${existingOrdersCount} orders, skipping`);
+          }
           continue;
         }
 
@@ -485,7 +590,7 @@ serve(async (req) => {
         }
 
         // Skip if no changes at all
-        if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
+        if (!force_refresh && existing && !statusChanged && existing.received === isReceived && !needsOrdersSync) {
           continue;
         }
 
@@ -498,7 +603,7 @@ serve(async (req) => {
             account_username: tokenData.account_username,
             merchant_id: tokenData.merchant_id,
             amount: invoice.merchant_price || invoice.amount || 0,
-            orders_count: invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0,
+            orders_count: apiOrdersCount,
             status: invoice.status,
             status_normalized: statusNormalized,
             received: isReceived,
