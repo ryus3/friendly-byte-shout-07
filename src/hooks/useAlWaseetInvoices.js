@@ -167,7 +167,7 @@ export const useAlWaseetInvoices = () => {
           mode: 'smart',
           employee_id: user?.id,
           sync_invoices: true,
-          sync_orders: false // Only sync invoices in background
+          sync_orders: true // مزامنة الطلبات لضمان الربط التلقائي
         }
       });
       
