@@ -69,9 +69,9 @@ const AllEmployeesInvoicesView = () => {
           const { error: syncError } = await supabase.functions.invoke('smart-invoice-sync', {
             body: { 
               mode: 'comprehensive',
-              force_refresh: true,
+              force_refresh: false,
               sync_invoices: true,
-              sync_orders: false
+              sync_orders: true
             }
           });
           

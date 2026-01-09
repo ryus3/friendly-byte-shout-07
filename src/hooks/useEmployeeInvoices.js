@@ -63,9 +63,8 @@ export const useEmployeeInvoices = (employeeId) => {
       return;
     }
     
-  // استبعاد المدير من مزامنة الفواتير في صفحة متابعة الموظفين
-    const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
-    if (employeeId === 'all' || employeeId === ADMIN_ID) {
+    // استبعاد حالة "all" فقط - المدير يمكنه رؤية فواتير الموظفين
+    if (employeeId === 'all') {
       setInvoices([]);
       return;
     }
