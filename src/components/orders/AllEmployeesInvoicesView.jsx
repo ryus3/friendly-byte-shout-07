@@ -113,7 +113,7 @@ const AllEmployeesInvoicesView = () => {
           // لمدير القسم: عرض فواتير الموظفين المشرف عليهم فقط (استبعاد فواتيره الشخصية)
           if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
             return supervisedEmployeeIds.includes(invoice.owner_user_id) && 
-                   invoice.owner_user_id !== user?.user_id;
+                   invoice.owner_user_id !== user?.id;
           }
           
           return true;
