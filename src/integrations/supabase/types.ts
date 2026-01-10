@@ -7081,6 +7081,14 @@ export type Database = {
       auto_apply_city_benefits: { Args: never; Returns: Json }
       auto_cleanup_notifications: { Args: never; Returns: undefined }
       auto_select_monthly_city_discount: { Args: never; Returns: undefined }
+      backfill_delivery_invoice_orders_from_orders: {
+        Args: { p_partner?: string }
+        Returns: {
+          links_created: number
+          links_updated: number
+          orders_processed: number
+        }[]
+      }
       bytea_to_text: { Args: { data: string }; Returns: string }
       calculate_employee_item_profit: {
         Args: {
