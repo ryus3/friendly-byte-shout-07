@@ -7911,6 +7911,13 @@ export type Database = {
           updated_orders_count: number
         }[]
       }
+      link_orders_by_external_id: {
+        Args: never
+        Returns: {
+          linked_count: number
+          order_ids: string[]
+        }[]
+      }
       link_telegram_user: {
         Args: { p_chat_id: number; p_employee_code: string }
         Returns: Json
@@ -8012,9 +8019,10 @@ export type Database = {
       reconcile_invoice_receipts: {
         Args: never
         Returns: {
-          fixed: boolean
+          action: string
           invoice_id: string
           order_id: string
+          order_number: string
         }[]
       }
       record_discount_usage: {
@@ -8180,6 +8188,13 @@ export type Database = {
         Returns: Json
       }
       sync_employee_orders: { Args: { p_employee_id: string }; Returns: Json }
+      sync_invoice_id_to_orders: {
+        Args: never
+        Returns: {
+          order_ids: string[]
+          updated_count: number
+        }[]
+      }
       sync_missing_invoice_targeted: {
         Args: { p_employee_id: string; p_invoice_id: string }
         Returns: Json
