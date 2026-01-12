@@ -10,7 +10,7 @@ const corsHeaders = {
 const ALWASEET_API_BASE = 'https://api.alwaseet-iq.net/v1/merchant';
 
 interface SyncRequest {
-  mode: 'smart' | 'comprehensive';
+  mode: 'smart' | 'comprehensive' | 'refresh_pending';
   employee_id?: string;
   sync_invoices?: boolean;
   sync_orders?: boolean;
@@ -25,7 +25,9 @@ interface Invoice {
   created_at: string;
   updated_at?: string;
   orders_count?: number;
+  delivered_orders_count?: number;
   received?: boolean;
+  merchant_price?: number;
   [key: string]: any;
 }
 
@@ -141,35 +143,41 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Prom
 
 /**
  * ✅ تطبيع حالة الفاتورة مع التفريق بين المندوب والتاجر
- * - "تم الاستلام من قبل المندوب" = pending (معلقة - لم تصل للتاجر بعد)
+ * - "تم الاستلام من قبل المندوب" / "تم استلام من قبل المندوب" = pending (معلقة - لم تصل للتاجر بعد)
  * - "تم الاستلام من قبل التاجر" = received (مستلمة فعلياً)
+ * 
+ * ✅ الترتيب مهم جداً:
+ * 1. المندوب = أولوية أولى (يعني معلقة)
+ * 2. التاجر = أولوية ثانية (يعني مستلمة)
  */
 function normalizeStatus(status: string | null): string {
   if (!status) return 'pending';
   const statusLower = status.toLowerCase();
   const statusOriginal = status;
   
-  // ✅ القاعدة الأهم: المندوب = معلقة (لم تصل للتاجر بعد)
+  // ✅ القاعدة الأهم أولاً: إذا كان يحتوي "المندوب" فهو معلق حتى لو احتوى كلمات أخرى
   if (statusOriginal.includes('المندوب') || statusOriginal.includes('مندوب')) {
-    console.log(`📋 Status "${status}" → pending (delegate, not merchant)`);
+    console.log(`📋 Status "${status}" → pending (delegate received, not merchant)`);
     return 'pending';
   }
   
-  // ✅ التاجر = مستلمة فعلياً
+  // ✅ التاجر = مستلمة فعلياً (بعد استبعاد المندوب)
   if (statusOriginal.includes('التاجر') || statusOriginal.includes('تاجر')) {
     console.log(`📋 Status "${status}" → received (merchant received)`);
     return 'received';
   }
   
-  // ✅ كلمة "مستلم" بدون تحديد = نفترض التاجر (مستلمة)
-  if (statusOriginal.includes('مستلم') || statusOriginal.includes('تم استلام')) {
-    console.log(`📋 Status "${status}" → received (contains "مستلم")`);
+  // ✅ "تم الاستلام" بدون تحديد من = نحتاج نتحقق من السياق
+  // إذا وصلنا هنا يعني لا يحتوي "المندوب" ولا "التاجر"
+  if (statusOriginal.includes('تم الاستلام') || statusOriginal.includes('تم استلام')) {
+    // إذا لم يحتوي على المندوب ولا التاجر = نفترض مستلمة
+    console.log(`📋 Status "${status}" → received (generic received)`);
     return 'received';
   }
   
-  // ✅ "استلام" مع "التاجر" = مستلمة
-  if (statusOriginal.includes('استلام') && statusOriginal.includes('التاجر')) {
-    console.log(`📋 Status "${status}" → received (استلام + التاجر)`);
+  // ✅ كلمة "مستلم" بدون تحديد = نفترض مستلمة
+  if (statusOriginal.includes('مستلم')) {
+    console.log(`📋 Status "${status}" → received (contains "مستلم")`);
     return 'received';
   }
   
@@ -191,14 +199,14 @@ function normalizeStatus(status: string | null): string {
     return 'cancelled';
   }
   
-  // ✅ مرسلة
-  if (statusLower.includes('sent') || statusOriginal.includes('ارسال') || statusOriginal.includes('أرسل')) {
+  // ✅ مرسلة / تم تصدير الفاتورة
+  if (statusLower.includes('sent') || statusOriginal.includes('ارسال') || statusOriginal.includes('أرسل') || statusOriginal.includes('تصدير')) {
     console.log(`📋 Status "${status}" → sent`);
     return 'sent';
   }
   
-  console.log(`📋 Status "${status}" → ${statusLower} (default)`);
-  return statusLower;
+  console.log(`📋 Status "${status}" → pending (default/unknown)`);
+  return 'pending';
 }
 
 /**
@@ -244,7 +252,143 @@ serve(async (req) => {
     let totalOrdersUpdated = 0;
     const employeeResults: Record<string, { invoices: number; orders: number }> = {};
 
-    if (mode === 'comprehensive') {
+    // ========== REFRESH PENDING MODE ==========
+    // تحديث الفواتير المعلقة القديمة التي ربما تغيرت حالتها على AlWaseet
+    if (mode === 'refresh_pending') {
+      console.log('🔄 REFRESH PENDING MODE - Checking stale pending invoices...');
+      
+      // جلب جميع الـ tokens النشطة
+      const { data: tokens, error: tokensError } = await supabase
+        .from('delivery_partner_tokens')
+        .select('id, user_id, token, account_username, merchant_id, expires_at')
+        .eq('is_active', true)
+        .eq('partner_name', 'alwaseet')
+        .gt('expires_at', new Date().toISOString());
+
+      if (tokensError) {
+        throw new Error('Failed to fetch employee tokens');
+      }
+
+      console.log(`📋 Found ${tokens?.length || 0} active tokens`);
+
+      // جلب الفواتير المعلقة من آخر 60 يوم
+      const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: pendingInvoices, error: pendingError } = await supabase
+        .from('delivery_invoices')
+        .select('id, external_id, owner_user_id, status, status_normalized, received, last_synced_at')
+        .eq('partner', 'alwaseet')
+        .eq('received', false)
+        .gt('issued_at', sixtyDaysAgo)
+        .order('issued_at', { ascending: false });
+
+      if (pendingError) {
+        console.error('Error fetching pending invoices:', pendingError);
+        throw new Error('Failed to fetch pending invoices');
+      }
+
+      console.log(`📋 Found ${pendingInvoices?.length || 0} pending invoices to check`);
+
+      // تجميع الفواتير حسب owner_user_id
+      const invoicesByOwner = new Map<string, typeof pendingInvoices>();
+      for (const inv of pendingInvoices || []) {
+        if (!inv.owner_user_id) continue;
+        const existing = invoicesByOwner.get(inv.owner_user_id) || [];
+        existing.push(inv);
+        invoicesByOwner.set(inv.owner_user_id, existing);
+      }
+
+      // لكل token، جلب الفواتير من API ومقارنتها
+      for (const tokenData of tokens || []) {
+        const employeeId = tokenData.user_id;
+        const ownerPendingInvoices = invoicesByOwner.get(employeeId) || [];
+        
+        if (ownerPendingInvoices.length === 0) {
+          continue; // لا توجد فواتير معلقة لهذا الموظف
+        }
+
+        console.log(`👤 Checking ${ownerPendingInvoices.length} pending invoices for ${tokenData.account_username}`);
+
+        try {
+          // جلب كل الفواتير من API
+          const apiInvoices = await fetchInvoicesFromAPI(tokenData.token);
+          
+          // إنشاء Map للوصول السريع
+          const apiInvoicesMap = new Map<string, Invoice>();
+          for (const inv of apiInvoices) {
+            apiInvoicesMap.set(String(inv.id), inv);
+          }
+
+          // مقارنة كل فاتورة معلقة مع حالتها في API
+          for (const pendingInv of ownerPendingInvoices) {
+            const apiInvoice = apiInvoicesMap.get(pendingInv.external_id);
+            
+            if (!apiInvoice) {
+              console.log(`  ⚠️ Invoice ${pendingInv.external_id} not found in API response`);
+              continue;
+            }
+
+            const apiStatus = normalizeStatus(apiInvoice.status);
+            const isNowReceived = apiStatus === 'received';
+
+            // ✅ إذا تغيرت الحالة من معلقة إلى مستلمة
+            if (isNowReceived && !pendingInv.received) {
+              console.log(`  📝 Invoice ${pendingInv.external_id} status changed: ${pendingInv.status_normalized} → received`);
+              
+              const receivedAt = extractReceivedAt(apiInvoice);
+              
+              const { error: updateError } = await supabase
+                .from('delivery_invoices')
+                .update({
+                  status: apiInvoice.status,
+                  status_normalized: 'received',
+                  received: true,
+                  received_flag: true,
+                  received_at: receivedAt,
+                  last_synced_at: new Date().toISOString(),
+                  last_api_updated_at: apiInvoice.updated_at || new Date().toISOString(),
+                  raw: apiInvoice,
+                })
+                .eq('id', pendingInv.id);
+
+              if (updateError) {
+                console.error(`  ❌ Error updating invoice ${pendingInv.external_id}:`, updateError.message);
+              } else {
+                totalInvoicesSynced++;
+                console.log(`  ✅ Invoice ${pendingInv.external_id} marked as received`);
+              }
+            } else if (apiStatus !== pendingInv.status_normalized) {
+              // تحديث الحالة حتى لو لم تتحول لـ received
+              console.log(`  📝 Invoice ${pendingInv.external_id} status update: ${pendingInv.status_normalized} → ${apiStatus}`);
+              
+              await supabase
+                .from('delivery_invoices')
+                .update({
+                  status: apiInvoice.status,
+                  status_normalized: apiStatus,
+                  last_synced_at: new Date().toISOString(),
+                  raw: apiInvoice,
+                })
+                .eq('id', pendingInv.id);
+            }
+          }
+
+          employeeResults[employeeId] = {
+            invoices: totalInvoicesSynced,
+            orders: 0,
+          };
+
+        } catch (employeeError) {
+          console.error(`  ❌ Error checking pending invoices for ${tokenData.account_username}:`, employeeError);
+        }
+
+        // تأخير بسيط لتجنب rate limiting
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
+
+      // بعد تحديث الفواتير، تشغيل الربط والتسوية
+      console.log(`\n🔗 Running post-refresh reconciliation...`);
+
+    } else if (mode === 'comprehensive') {
       // ========== COMPREHENSIVE MODE ==========
       // Fetch ALL active employee tokens and sync their invoices
       
@@ -282,7 +426,7 @@ serve(async (req) => {
             const statusNormalized = normalizeStatus(invoice.status);
             const isReceived = statusNormalized === 'received' || invoice.received === true;
             const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
-            const apiOrdersCount = invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0;
+            const apiOrdersCount = invoice.delivered_orders_count || invoice.orders_count || 0;
 
             // ✅ التحقق مما إذا كانت الفاتورة موجودة في قاعدة البيانات
             const { data: existingInvoice } = await supabase
@@ -506,8 +650,8 @@ serve(async (req) => {
       // Fetch recent invoices
       const apiInvoices = await fetchInvoicesFromAPI(tokenData.token);
       
-      // In smart mode, only process last 5 invoices for speed
-      const recentInvoices = force_refresh ? apiInvoices : apiInvoices.slice(0, 5);
+      // ✅ في smart mode، نعالج آخر 20 فاتورة (بدلاً من 5) لتغطية أفضل
+      const recentInvoices = force_refresh ? apiInvoices : apiInvoices.slice(0, 20);
       
       console.log(`📥 Processing ${recentInvoices.length} recent invoices (smart mode)`);
 
@@ -516,7 +660,7 @@ serve(async (req) => {
         const statusNormalized = normalizeStatus(invoice.status);
         const isReceived = statusNormalized === 'received' || invoice.received === true;
         const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
-        const apiOrdersCount = invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0;
+        const apiOrdersCount = invoice.delivered_orders_count || invoice.orders_count || 0;
 
         // Check if invoice already exists with same status
         const { data: existing } = await supabase
@@ -702,13 +846,13 @@ serve(async (req) => {
 
     // Log sync result
     await supabase.from('background_sync_logs').insert({
-      sync_type: mode === 'comprehensive' ? 'comprehensive_invoice_sync' : 'smart_invoice_sync',
+      sync_type: mode === 'comprehensive' ? 'comprehensive_invoice_sync' : (mode === 'refresh_pending' ? 'refresh_pending_sync' : 'smart_invoice_sync'),
       success: true,
       invoices_synced: totalInvoicesSynced,
       orders_updated: totalOrdersUpdated + linkedCount + reconciledCount,
     });
 
-    console.log(`✅ Sync complete - Invoices: ${totalInvoicesSynced}, Orders: ${totalOrdersUpdated}, Linked: ${linkedCount}, Reconciled: ${reconciledCount}`);
+    console.log(`✅ Sync complete - Mode: ${mode}, Invoices: ${totalInvoicesSynced}, Orders: ${totalOrdersUpdated}, Linked: ${linkedCount}, Reconciled: ${reconciledCount}`);
 
     return new Response(
       JSON.stringify({
