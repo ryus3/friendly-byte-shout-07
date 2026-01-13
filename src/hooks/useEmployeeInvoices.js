@@ -19,37 +19,29 @@ export const useEmployeeInvoices = (employeeId) => {
     dailyTime: '09:00'
   });
   
-  // Smart sync function موحد ومحسن
+  // ✅ Smart sync function - استخدام Edge Function بدون حذف البيانات القديمة
   const smartSync = async () => {
-    if (!token || !isLoggedIn || activePartner !== 'alwaseet') return;
+    if (!employeeId || employeeId === 'all') return;
     
     try {
-      console.log('🔄 مزامنة ذكية موحدة لفواتير الموظف:', employeeId);
+      console.log('🔄 مزامنة ذكية عبر Edge Function للموظف:', employeeId);
       
-      // جلب أحدث الفواتير من API
-      const recentInvoices = await AlWaseetAPI.getMerchantInvoices(token);
-      
-      // حفظ الفواتير مع تنظيف صارم (آخر 10 فقط)
-      if (recentInvoices?.length > 0) {
-        const { data, error } = await supabase.rpc('upsert_alwaseet_invoice_list_with_cleanup', {
-          p_invoices: recentInvoices,
-          p_employee_id: employeeId
-        });
-        
-        if (error) {
-          console.warn('خطأ في upsert_alwaseet_invoice_list_with_cleanup:', error.message);
-        } else {
-          console.log('✅ مزامنة موحدة:', data?.processed || 0, 'فاتورة، حذف', data?.deleted_old || 0, 'قديمة');
-          setLastAutoSync(Date.now());
-          
-          // ضمان وجود الفاتورة المستهدفة 1849184
-          if (employeeId === 'aaf33986-9e8f-4aa7-97ff-8be81c5fab9b') { // Ahmed's ID
-            await supabase.rpc('sync_missing_invoice_targeted', {
-              p_invoice_id: '1849184',
-              p_employee_id: employeeId
-            });
-          }
+      // ✅ استدعاء Edge Function للمزامنة الآمنة (بدون حذف)
+      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
+        body: { 
+          mode: 'smart',
+          employee_id: employeeId,
+          sync_invoices: true,
+          sync_orders: true,
+          run_reconciliation: true
         }
+      });
+      
+      if (error) {
+        console.warn('خطأ في المزامنة الذكية:', error.message);
+      } else {
+        console.log('✅ نتيجة المزامنة:', data);
+        setLastAutoSync(Date.now());
       }
     } catch (error) {
       console.warn('⚠️ Smart sync failed:', error.message);
