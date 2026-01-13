@@ -502,7 +502,9 @@ serve(async (req) => {
               console.log(`  📝 Invoice ${externalId} status changed: ${existingInvoice.status_normalized} → ${statusNormalized}`);
             }
 
-            // Upsert invoice with correct owner_user_id
+            // ✅ Upsert invoice with correct owner_user_id and proper issued_at fallback
+            const issuedAtValue = invoice.updated_at || invoice.created_at || invoice.createdAt || new Date().toISOString();
+            
             const { data: upsertedInvoice, error: upsertError } = await supabase
               .from('delivery_invoices')
               .upsert({
@@ -518,7 +520,7 @@ serve(async (req) => {
                 received: isReceived,
                 received_flag: isReceived,
                 received_at: isReceived ? (existingInvoice?.received_at || receivedAt) : null,
-                issued_at: invoice.created_at || invoice.createdAt,
+                issued_at: issuedAtValue,
                 raw: invoice,
                 last_synced_at: new Date().toISOString(),
                 last_api_updated_at: invoice.updated_at || new Date().toISOString(),
@@ -738,6 +740,9 @@ serve(async (req) => {
           continue;
         }
 
+        // ✅ Smart mode: proper issued_at fallback
+        const issuedAtValue = invoice.updated_at || invoice.created_at || invoice.createdAt || new Date().toISOString();
+        
         const { data: upsertedInvoice, error: upsertError } = await supabase
           .from('delivery_invoices')
           .upsert({
@@ -753,7 +758,7 @@ serve(async (req) => {
             received: isReceived,
             received_flag: isReceived,
             received_at: isReceived ? (existing?.received_at || receivedAt) : null,
-            issued_at: invoice.created_at || invoice.createdAt,
+            issued_at: issuedAtValue,
             raw: invoice,
             last_synced_at: new Date().toISOString(),
           }, {
