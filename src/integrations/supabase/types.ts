@@ -7907,7 +7907,6 @@ export type Database = {
         Args: never
         Returns: {
           linked_count: number
-          processing_time_ms: number
           updated_orders_count: number
         }[]
       }
@@ -8016,15 +8015,7 @@ export type Database = {
         Args: { p_source_id: string; p_starting_balance?: number }
         Returns: Json
       }
-      reconcile_invoice_receipts: {
-        Args: never
-        Returns: {
-          action: string
-          invoice_id: string
-          order_id: string
-          order_number: string
-        }[]
-      }
+      reconcile_invoice_receipts: { Args: never; Returns: number }
       record_discount_usage: {
         Args: {
           p_customer_id: string
