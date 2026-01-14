@@ -24,11 +24,15 @@ import {
   Database,
   Wifi,
   WifiOff,
-  Building
+  Building,
+  Wrench,
+  Loader2
 } from 'lucide-react';
 import { formatDistanceToNow, format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 const AlWaseetInvoiceDetailsDialog = ({ 
   isOpen, 
@@ -46,6 +50,7 @@ const AlWaseetInvoiceDetailsDialog = ({
   const [linkedOrders, setLinkedOrders] = useState([]);
   const [loadingLinked, setLoadingLinked] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [repairing, setRepairing] = useState(false);
   const [dataSource, setDataSource] = useState('database');
 
   useEffect(() => {
@@ -105,6 +110,61 @@ const AlWaseetInvoiceDetailsDialog = ({
     }
   };
 
+  // ✅ NEW: إصلاح الفاتورة - جلب طلباتها وربطها
+  const handleRepairInvoice = async () => {
+    const invoiceId = invoice?.external_id || invoice?.id;
+    if (!invoiceId) return;
+    
+    setRepairing(true);
+    try {
+      console.log(`🔧 Repairing invoice ${invoiceId}...`);
+      
+      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
+        body: {
+          mode: 'repair_invoice',
+          invoice_id: String(invoiceId),
+          sync_orders: true,
+          run_reconciliation: true
+        }
+      });
+
+      if (error) {
+        console.error('Repair failed:', error);
+        toast({
+          title: 'فشل الإصلاح',
+          description: error.message,
+          variant: 'destructive'
+        });
+        return;
+      }
+
+      console.log('✅ Repair result:', data);
+      
+      // إعادة تحميل البيانات
+      await fetchInvoiceOrders(invoiceId);
+      await loadLinkedOrders();
+      
+      toast({
+        title: 'تم إصلاح الفاتورة ✅',
+        description: `تم جلب ${data.orders_fetched || 0} طلب وربط ${data.linked_count || 0} طلب محلي`,
+        variant: 'default'
+      });
+      
+      // إرسال حدث لتحديث الواجهات الأخرى
+      window.dispatchEvent(new CustomEvent('invoicesSynced'));
+      
+    } catch (error) {
+      console.error('Error repairing invoice:', error);
+      toast({
+        title: 'خطأ في الإصلاح',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setRepairing(false);
+    }
+  };
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -123,9 +183,31 @@ const AlWaseetInvoiceDetailsDialog = ({
               <CardHeader dir="rtl">
                 <CardTitle className="flex flex-col items-end gap-2">
                   <div className="flex items-center justify-between w-full">
-                    <Badge variant={isReceived ? 'success' : 'secondary'}>
-                      {isReceived ? 'مُستلمة' : 'معلقة'}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={isReceived ? 'success' : 'secondary'}>
+                        {isReceived ? 'مُستلمة' : 'معلقة'}
+                      </Badge>
+                      {/* ✅ زر إصلاح الفاتورة */}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRepairInvoice}
+                        disabled={repairing}
+                        className="gap-1"
+                      >
+                        {repairing ? (
+                          <>
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            جاري الإصلاح...
+                          </>
+                        ) : (
+                          <>
+                            <Wrench className="h-3 w-3" />
+                            إصلاح الفاتورة
+                          </>
+                        )}
+                      </Button>
+                    </div>
                     <span className="text-right">معلومات الفاتورة</span>
                   </div>
                   {/* ✅ المرحلة 3: عرض اسم الحساب */}
