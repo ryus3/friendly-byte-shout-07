@@ -68,16 +68,18 @@ const EmployeeFollowUpPage = () => {
   // حالة معالجة التسوية
   const [isSettlementProcessing, setIsSettlementProcessing] = useState(false);
   
-  // جلب الموظفين الذين يشرف عليهم مدير القسم
+  // ✅ جلب الموظفين الذين يشرف عليهم مدير القسم - إصلاح استخدام user.id بدلاً من user.user_id
   useEffect(() => {
     const fetchSupervisedEmployees = async () => {
-      if (!isDepartmentManager || !user?.user_id) return;
+      // ✅ إصلاح: استخدام user.id (UUID الصحيح)
+      const userId = user?.id || user?.user_id;
+      if (!isDepartmentManager || !userId) return;
       
       try {
         const { data, error } = await supabase
           .from('employee_supervisors')
           .select('employee_id')
-          .eq('supervisor_id', user.user_id)
+          .eq('supervisor_id', userId)
           .eq('is_active', true);
         
         if (error) {
@@ -86,7 +88,9 @@ const EmployeeFollowUpPage = () => {
         }
         
         if (data && data.length > 0) {
-          setSupervisedEmployeeIds(data.map(d => d.employee_id));
+          const employeeIds = data.map(d => d.employee_id);
+          console.log('✅ [EmployeeFollowUp] الموظفين تحت الإشراف:', employeeIds.length);
+          setSupervisedEmployeeIds(employeeIds);
         }
       } catch (err) {
         console.error('خطأ:', err);
@@ -94,7 +98,7 @@ const EmployeeFollowUpPage = () => {
     };
     
     fetchSupervisedEmployees();
-  }, [isDepartmentManager, user?.user_id]);
+  }, [isDepartmentManager, user?.id, user?.user_id]);
   
   const [searchParams] = useSearchParams();
   
