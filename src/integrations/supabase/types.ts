@@ -7081,6 +7081,14 @@ export type Database = {
       auto_apply_city_benefits: { Args: never; Returns: Json }
       auto_cleanup_notifications: { Args: never; Returns: undefined }
       auto_select_monthly_city_discount: { Args: never; Returns: undefined }
+      backfill_delivery_invoice_orders_from_orders: {
+        Args: { p_partner?: string }
+        Returns: {
+          links_created: number
+          links_updated: number
+          orders_processed: number
+        }[]
+      }
       bytea_to_text: { Args: { data: string }; Returns: string }
       calculate_employee_item_profit: {
         Args: {
@@ -7899,8 +7907,14 @@ export type Database = {
         Args: never
         Returns: {
           linked_count: number
-          processing_time_ms: number
           updated_orders_count: number
+        }[]
+      }
+      link_orders_by_external_id: {
+        Args: never
+        Returns: {
+          linked_count: number
+          order_ids: string[]
         }[]
       }
       link_telegram_user: {
@@ -8001,14 +8015,7 @@ export type Database = {
         Args: { p_source_id: string; p_starting_balance?: number }
         Returns: Json
       }
-      reconcile_invoice_receipts: {
-        Args: never
-        Returns: {
-          fixed: boolean
-          invoice_id: string
-          order_id: string
-        }[]
-      }
+      reconcile_invoice_receipts: { Args: never; Returns: number }
       record_discount_usage: {
         Args: {
           p_customer_id: string
@@ -8172,6 +8179,13 @@ export type Database = {
         Returns: Json
       }
       sync_employee_orders: { Args: { p_employee_id: string }; Returns: Json }
+      sync_invoice_id_to_orders: {
+        Args: never
+        Returns: {
+          order_ids: string[]
+          updated_count: number
+        }[]
+      }
       sync_missing_invoice_targeted: {
         Args: { p_employee_id: string; p_invoice_id: string }
         Returns: Json
