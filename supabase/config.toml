@@ -37,5 +37,6 @@ verify_jwt = false
 verify_jwt = false
 
 # Smart invoice synchronization - supports smart and comprehensive modes
+# ✅ This is the MAIN sync function - called by Cron Jobs automatically
 [functions.smart-invoice-sync]
-verify_jwt = true
+verify_jwt = false
