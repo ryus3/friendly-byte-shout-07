@@ -37,7 +37,6 @@ import UnifiedEmployeeProfitsManager from '@/components/manage-employees/Unified
 import BackupSystemDialog from '@/components/settings/BackupSystemDialog';
 import SyncNotificationSettings from '@/components/settings/SyncNotificationSettings';
 import AutoSyncScheduleSettings from '@/components/settings/AutoSyncScheduleSettings';
-import InvoiceSyncSettingsDialog from '@/components/settings/InvoiceSyncSettingsDialog';
 import { Badge } from '@/components/ui/badge';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
@@ -154,7 +153,6 @@ const SettingsPage = () => {
   const [isSyncNotificationOpen, setIsSyncNotificationOpen] = useState(false);
   const [isAutoSyncScheduleOpen, setIsAutoSyncScheduleOpen] = useState(false);
   const [isDeliveryManagementOpen, setIsDeliveryManagementOpen] = useState(false);
-  const [isInvoiceSyncOpen, setIsInvoiceSyncOpen] = useState(false);
   const [employeeCodes, setEmployeeCodes] = useState([]);
 
   // جلب عدد رموز الموظفين من النظام الموحد
@@ -382,23 +380,7 @@ const SettingsPage = () => {
                     <span className="font-bold text-blue-600">منذ ساعة</span>
                   </div>
                 </div>
-            </ModernCard>
-            )}
-
-            {/* جدولة مزامنة الفواتير - للمدراء فقط */}
-            {isAdmin && (
-              <ModernCard
-                icon={FileText}
-                title="جدولة مزامنة الفواتير"
-                description="تحكم بأوقات ربط الفواتير بالطلبات تلقائياً (مرة أو مرتين يومياً)"
-                iconColor="from-teal-500 to-cyan-600"
-                onClick={() => setIsInvoiceSyncOpen(true)}
-                badge={
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                    تلقائي
-                  </Badge>
-                }
-              />
+              </ModernCard>
             )}
 
             {/* بوت التليغرام الذكي - للجميع مع رمز شخصي */}
@@ -597,11 +579,6 @@ const SettingsPage = () => {
       <ComprehensiveDeliveryManagementDialog 
         open={isDeliveryManagementOpen} 
         onOpenChange={setIsDeliveryManagementOpen} 
-      />
-
-      <InvoiceSyncSettingsDialog 
-        open={isInvoiceSyncOpen} 
-        onOpenChange={setIsInvoiceSyncOpen} 
       />
 
     </>

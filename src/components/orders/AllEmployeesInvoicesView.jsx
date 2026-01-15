@@ -69,9 +69,9 @@ const AllEmployeesInvoicesView = () => {
           const { error: syncError } = await supabase.functions.invoke('smart-invoice-sync', {
             body: { 
               mode: 'comprehensive',
-              force_refresh: false,
+              force_refresh: true,
               sync_invoices: true,
-              sync_orders: true
+              sync_orders: false
             }
           });
           
@@ -83,21 +83,18 @@ const AllEmployeesInvoicesView = () => {
         }
       }
 
-      // ✅ جلب جميع الفواتير من قاعدة البيانات (بدون فلترة issued_at لتجنب فقدان الفواتير)
-      // الفلترة بالتاريخ تتم في الواجهة حسب اختيار المستخدم
+      // جلب جميع الفواتير من قاعدة البيانات
       const { data: invoicesData, error: invError } = await supabase
         .from('delivery_invoices')
         .select('*')
         .eq('partner', 'alwaseet')
-        .order('created_at', { ascending: false })
-        .limit(500); // زيادة الحد لضمان عدم فقدان الفواتير
+        .gte('issued_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()) // آخر 3 أشهر
+        .order('issued_at', { ascending: false })
+        .limit(200); // زيادة الحد لضمان عدم فقدان الفواتير
 
       if (invError) {
-        console.error('خطأ في جلب الفواتير:', invError);
         return;
       }
-      
-      console.log(`📊 تم جلب ${invoicesData?.length || 0} فاتورة من قاعدة البيانات`);
 
       // ربط الفواتير بالموظفين مع معلومات مفصلة
       const invoicesWithEmployees = (invoicesData || [])
@@ -116,7 +113,7 @@ const AllEmployeesInvoicesView = () => {
           // لمدير القسم: عرض فواتير الموظفين المشرف عليهم فقط (استبعاد فواتيره الشخصية)
           if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
             return supervisedEmployeeIds.includes(invoice.owner_user_id) && 
-                   invoice.owner_user_id !== user?.id;
+                   invoice.owner_user_id !== user?.user_id;
           }
           
           return true;
@@ -169,11 +166,10 @@ const AllEmployeesInvoicesView = () => {
         employeeFilter === 'all' || 
         invoice.owner_user_id === employeeFilter;
 
-      // ✅ فلتر الفترة الزمنية - استخدام COALESCE للتواريخ
+      // فلتر الفترة الزمنية
       let matchesTimePeriod = true;
       if (timePeriodFilter !== 'all') {
-        // استخدام أي تاريخ متاح: issued_at أو created_at أو updated_at
-        const invoiceDate = new Date(invoice.issued_at || invoice.created_at || invoice.updated_at || 0);
+        const invoiceDate = new Date(invoice.issued_at || invoice.created_at);
         const now = new Date();
         
         switch (timePeriodFilter) {

@@ -64,13 +64,7 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
   const [linkedOrdersCount, setLinkedOrdersCount] = useState(0);
   
   // معالجة محسنة للبيانات سواء من API أو قاعدة البيانات أو raw JSON
-  // ✅ منطق موحد لتحديد "مستلمة" - يعتمد على DB أولاً ثم نص status
-  const isReceived = 
-    invoice.received === true || 
-    invoice.received_flag === true || 
-    invoice.status_normalized?.toLowerCase() === 'received' ||
-    invoice.status?.includes('التاجر') ||
-    (invoice.status?.includes('مستلم') && !invoice.status?.includes('المندوب'));
+  const isReceived = invoice.received || invoice.received_flag || invoice.status === 'تم الاستلام من قبل التاجر';
   // ✅ قراءة المبلغ من raw إذا كانت القيمة الرئيسية صفر
   const amount = parseFloat(
     invoice.amount || 

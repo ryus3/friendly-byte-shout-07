@@ -167,7 +167,7 @@ export const useAlWaseetInvoices = () => {
           mode: 'smart',
           employee_id: user?.id,
           sync_invoices: true,
-          sync_orders: true // مزامنة الطلبات لضمان الربط التلقائي
+          sync_orders: false // Only sync invoices in background
         }
       });
       
@@ -224,7 +224,6 @@ export const useAlWaseetInvoices = () => {
           // ✅ استخدام البيانات المُخزنة مباشرة (تم تحديثها بواسطة backfill migration)
           const transformedInvoices = cachedInvoices.map(inv => ({
             id: inv.external_id,
-            external_id: inv.external_id,
             merchant_price: inv.amount,
             delivered_orders_count: inv.orders_count,
             status: inv.status,
@@ -234,11 +233,7 @@ export const useAlWaseetInvoices = () => {
             raw: inv.raw,
             // استخدام account_username و partner_name_ar من قاعدة البيانات مباشرة
             account_username: inv.account_username,
-            partner_name_ar: inv.partner_name_ar || (activePartner === 'modon' ? 'مدن' : 'الوسيط'),
-            // ✅ إضافة الحقول المفقودة لتحديد حالة "مستلمة" بشكل صحيح
-            received: inv.received,
-            received_flag: inv.received_flag,
-            status_normalized: inv.status_normalized
+            partner_name_ar: inv.partner_name_ar || (activePartner === 'modon' ? 'مدن' : 'الوسيط')
           }));
           
           // إحصائيات الحسابات للتتبع

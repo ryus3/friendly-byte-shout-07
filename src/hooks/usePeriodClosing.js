@@ -89,10 +89,8 @@ export const usePeriodClosing = () => {
     const start = startDate.toISOString();
     const end = endDate.toISOString();
 
-    console.log(`[PeriodClosing] Calculating data from ${start} to ${end}`);
-
     // جلب الطلبات المستلمة فاتورتها في الفترة
-    const { data: orders, error: ordersError } = await supabase
+    const { data: orders } = await supabase
       .from('orders')
       .select(`
         id, final_amount, delivery_fee, status, delivery_status,
@@ -103,41 +101,24 @@ export const usePeriodClosing = () => {
       .gte('receipt_received_at', start)
       .lte('receipt_received_at', end);
 
-    if (ordersError) {
-      console.error('[PeriodClosing] Error fetching orders:', ordersError);
-      throw new Error(`فشل في جلب الطلبات: ${ordersError.message}`);
-    }
-
-    console.log(`[PeriodClosing] Found ${orders?.length || 0} orders with receipt_received=true`);
-
     // جلب المصاريف في الفترة
-    const { data: expenses, error: expensesError } = await supabase
+    const { data: expenses } = await supabase
       .from('expenses')
       .select('*')
       .gte('created_at', start)
       .lte('created_at', end);
 
-    if (expensesError) {
-      console.error('[PeriodClosing] Error fetching expenses:', expensesError);
-    }
-
     // جلب رصيد القاصة في بداية ونهاية الفترة
-    const { data: cashSources, error: cashError } = await supabase
+    const { data: cashSources } = await supabase
       .from('cash_sources')
       .select('current_balance')
       .eq('is_active', true);
-
-    if (cashError) {
-      console.error('[PeriodClosing] Error fetching cash sources:', cashError);
-    }
 
     // حسابات الإيرادات
     const deliveredOrders = (orders || []).filter(o => 
       ['delivered', 'completed'].includes(o.status) || o.delivery_status === '4'
     );
     const returnedOrders = (orders || []).filter(o => o.delivery_status === '17');
-
-    console.log(`[PeriodClosing] Delivered: ${deliveredOrders.length}, Returned: ${returnedOrders.length}`);
 
     const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || 0), 0);
     const totalDeliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);
