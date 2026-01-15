@@ -83,10 +83,17 @@ export const useAlWaseetInvoices = () => {
           });
           
           if (upsertErr) {
-            console.error('❌ خطأ في حفظ الفواتير:', upsertErr);
+            console.error('❌ خطأ في حفظ الفواتير - تفاصيل كاملة:', {
+              message: upsertErr.message,
+              code: upsertErr.code,
+              details: upsertErr.details,
+              hint: upsertErr.hint,
+              fullError: upsertErr
+            });
+            console.error('📦 البيانات المرسلة (أول فاتورة):', invoicesData[0]);
             toast({
               title: 'تحذير',
-              description: `فشل حفظ ${invoicesData.length} فاتورة في قاعدة البيانات`,
+              description: `فشل حفظ الفواتير: ${upsertErr.message || 'خطأ غير معروف'}`,
               variant: 'destructive'
             });
           } else {
