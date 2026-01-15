@@ -75,14 +75,37 @@ export const useAlWaseetInvoices = () => {
       
       const invoicesData = allInvoicesData;
       
-      // Persist invoices to DB (bulk upsert via RPC) - in background
+      // Persist invoices to DB (bulk upsert via RPC)
       if (invoicesData?.length > 0) {
         try {
           const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
             p_invoices: invoicesData
           });
+          
+          if (upsertErr) {
+            console.error('❌ خطأ في حفظ الفواتير:', upsertErr);
+            toast({
+              title: 'تحذير',
+              description: `فشل حفظ ${invoicesData.length} فاتورة في قاعدة البيانات`,
+              variant: 'destructive'
+            });
+          } else {
+            console.log(`✅ تم حفظ/تحديث ${invoicesData.length} فاتورة بنجاح`);
+            // Log status breakdown for debugging
+            const receivedCount = invoicesData.filter(inv => 
+              inv.status?.includes('التاجر') || 
+              (inv.status?.includes('مستلم') && !inv.status?.includes('المندوب'))
+            ).length;
+            const pendingCount = invoicesData.length - receivedCount;
+            console.log(`   📊 مستلمة: ${receivedCount} | معلقة/مُرسلة: ${pendingCount}`);
+          }
         } catch (e) {
-          // Silent error handling
+          console.error('❌ استثناء أثناء حفظ الفواتير:', e);
+          toast({
+            title: 'خطأ',
+            description: 'فشل حفظ الفواتير: ' + e.message,
+            variant: 'destructive'
+          });
         }
       }
       
