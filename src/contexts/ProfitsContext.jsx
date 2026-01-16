@@ -114,7 +114,7 @@ export const ProfitsProvider = ({ children }) => {
           updateData.settled_at = new Date().toISOString();
         } else {
           profitStatus = 'invoice_received';
-          updateData.invoice_received_at = new Date().toISOString();
+          // ✅ لا نكتب invoice_received_at لأنه غير موجود في جدول profits
         }
       }
 
