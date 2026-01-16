@@ -71,13 +71,13 @@ const EmployeeFollowUpPage = () => {
   // جلب الموظفين الذين يشرف عليهم مدير القسم
   useEffect(() => {
     const fetchSupervisedEmployees = async () => {
-      if (!isDepartmentManager || !user?.user_id) return;
+      if (!isDepartmentManager || !user?.id) return;
       
       try {
         const { data, error } = await supabase
           .from('employee_supervisors')
           .select('employee_id')
-          .eq('supervisor_id', user.user_id)
+          .eq('supervisor_id', user.id)
           .eq('is_active', true);
         
         if (error) {
