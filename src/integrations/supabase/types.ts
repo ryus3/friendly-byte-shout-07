@@ -8288,15 +8288,17 @@ export type Database = {
         }
         Returns: undefined
       }
-      upsert_alwaseet_invoice_list:
-        | { Args: { p_invoices: Json }; Returns: Json }
-        | {
-            Args: { p_invoices: Json; p_owner_user_id?: string }
-            Returns: undefined
-          }
+      upsert_alwaseet_invoice_list: {
+        Args: { p_invoices: Json }
+        Returns: Json
+      }
       upsert_alwaseet_invoice_list_for_user: {
         Args: { p_employee_id: string; p_invoices: Json }
         Returns: Json
+      }
+      upsert_alwaseet_invoice_list_old_disabled: {
+        Args: { p_invoices: Json; p_owner_user_id?: string }
+        Returns: undefined
       }
       upsert_alwaseet_invoice_list_with_cleanup: {
         Args: { p_employee_id: string; p_invoices: Json }
