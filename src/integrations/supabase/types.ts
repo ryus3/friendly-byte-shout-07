@@ -8015,6 +8015,10 @@ export type Database = {
         Args: { p_source_id: string; p_starting_balance?: number }
         Returns: Json
       }
+      reconcile_invoice_receipts: {
+        Args: { p_invoice_id?: string }
+        Returns: Json
+      }
       record_discount_usage: {
         Args: {
           p_customer_id: string
@@ -8239,15 +8243,25 @@ export type Database = {
         Args: { phone_param: string }
         Returns: undefined
       }
-      update_invoice_sync_schedule: {
-        Args: {
-          p_enabled: boolean
-          p_evening_time?: string
-          p_frequency?: string
-          p_morning_time?: string
-        }
-        Returns: Json
-      }
+      update_invoice_sync_schedule:
+        | {
+            Args: {
+              p_enabled: boolean
+              p_evening_time?: string
+              p_frequency?: string
+              p_morning_time?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_enabled: boolean
+              p_evening_time: string
+              p_frequency: string
+              p_morning_time: string
+            }
+            Returns: Json
+          }
       update_order_reservation_status: {
         Args: {
           p_delivery_partner: string
