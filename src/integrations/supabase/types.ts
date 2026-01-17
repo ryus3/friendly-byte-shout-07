@@ -1709,6 +1709,7 @@ export type Database = {
         Row: {
           account_label: string | null
           account_username: string | null
+          auto_renew_enabled: boolean | null
           created_at: string
           expires_at: string | null
           id: string
@@ -1726,6 +1727,7 @@ export type Database = {
         Insert: {
           account_label?: string | null
           account_username?: string | null
+          auto_renew_enabled?: boolean | null
           created_at?: string
           expires_at?: string | null
           id?: string
@@ -1743,6 +1745,7 @@ export type Database = {
         Update: {
           account_label?: string | null
           account_username?: string | null
+          auto_renew_enabled?: boolean | null
           created_at?: string
           expires_at?: string | null
           id?: string

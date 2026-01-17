@@ -4,13 +4,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus, Trash2, User, Lock, Star, Badge as BadgeIcon, RefreshCw } from 'lucide-react';
+import { Loader2, Truck, CheckCircle, XCircle, Server, LogOut, UserPlus, Trash2, User, Lock, Star, Badge as BadgeIcon, RefreshCw, Clock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from './ui/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Switch } from '@/components/ui/switch';
 
 const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const { 
@@ -26,6 +27,7 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const [selectedAccount, setSelectedAccount] = useState(null);
     const [showAddForm, setShowAddForm] = useState(false);
     const [isRenewing, setIsRenewing] = useState(false);
+    const [autoRenewEnabled, setAutoRenewEnabled] = useState(false);
     
     const orderCreationMode = user?.order_creation_mode || 'choice';
 
@@ -113,6 +115,11 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                 const savedAccount = validAccounts.find(acc => acc.account_username === profile?.selected_delivery_account);
                 const defaultAccount = savedAccount || validAccounts.find(acc => acc.is_default) || validAccounts[0];
                 setSelectedAccount(defaultAccount || null);
+                
+                // تحميل حالة التجديد التلقائي للحساب المختار
+                if (defaultAccount) {
+                    setAutoRenewEnabled(defaultAccount.auto_renew_enabled || false);
+                }
                 
                 // ✅ Auto Re-login: إذا كان هناك حساب افتراضي ولكن التوكن منتهي
                 if (defaultAccount && defaultAccount.isExpired && !isLoggedIn) {
@@ -368,7 +375,39 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                 variant: 'destructive'
             });
         } finally {
-            setIsRenewing(false);
+        setIsRenewing(false);
+        }
+    }
+
+    const handleToggleAutoRenew = async (enabled) => {
+        if (!selectedAccount || !user?.id) return;
+        
+        try {
+            const { error } = await supabase
+                .from('delivery_partner_tokens')
+                .update({ auto_renew_enabled: enabled })
+                .eq('user_id', user.id)
+                .eq('partner_name', selectedPartner)
+                .eq('account_username', selectedAccount.account_username);
+            
+            if (error) throw error;
+            
+            setAutoRenewEnabled(enabled);
+            
+            toast({
+                title: enabled ? "✅ تم تفعيل التجديد التلقائي" : "❌ تم إلغاء التجديد التلقائي",
+                description: enabled 
+                    ? "سيتم تجديد التوكن تلقائياً في اليوم الأخير قبل انتهاء الصلاحية" 
+                    : "لن يتم تجديد التوكن تلقائياً",
+                variant: enabled ? 'success' : 'default'
+            });
+        } catch (error) {
+            console.error('Error toggling auto-renew:', error);
+            toast({
+                title: "خطأ",
+                description: "فشل في تحديث إعدادات التجديد التلقائي",
+                variant: 'destructive'
+            });
         }
     }
 
@@ -432,6 +471,21 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                                             })()}
                                         </span>
                                     )}
+                                </div>
+                                
+                                {/* التجديد التلقائي Toggle */}
+                                <div className="flex items-center justify-between mt-3 pt-3 border-t border-blue-200 dark:border-blue-700">
+                                    <div className="flex items-center gap-2">
+                                        <Clock className="w-4 h-4 text-primary" />
+                                        <div>
+                                            <Label className="text-sm font-medium cursor-pointer">التجديد التلقائي</Label>
+                                            <p className="text-xs text-muted-foreground">يجدد التوكن في اليوم الأخير تلقائياً</p>
+                                        </div>
+                                    </div>
+                                    <Switch
+                                        checked={autoRenewEnabled}
+                                        onCheckedChange={handleToggleAutoRenew}
+                                    />
                                 </div>
                             </div>
                         )}
