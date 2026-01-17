@@ -8012,7 +8012,6 @@ export type Database = {
         Args: { p_source_id: string; p_starting_balance?: number }
         Returns: Json
       }
-      reconcile_invoice_receipts: { Args: never; Returns: number }
       record_discount_usage: {
         Args: {
           p_customer_id: string
