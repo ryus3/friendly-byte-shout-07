@@ -397,7 +397,7 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       const { data, error } = await supabase
         .from('delivery_partner_tokens')
-        .select('account_username, merchant_id, account_label, is_default, last_used_at, created_at, partner_data, token, expires_at')
+        .select('account_username, merchant_id, account_label, is_default, last_used_at, created_at, partner_data, token, expires_at, auto_renew_enabled')
         .eq('user_id', userId)
         .eq('partner_name', partnerName)
         .eq('is_active', true)
