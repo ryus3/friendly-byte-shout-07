@@ -21,7 +21,8 @@ const AllEmployeesInvoicesView = () => {
   
   const [allInvoices, setAllInvoices] = useState([]);
   const [employees, setEmployees] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // true للتحميل الأولي
+  const [syncing, setSyncing] = useState(false); // للمزامنة الخلفية
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [employeeFilter, setEmployeeFilter] = useState('all');
@@ -37,66 +38,40 @@ const AllEmployeesInvoicesView = () => {
   const isDepartmentManager = user?.roles?.includes('department_manager');
   const GENERAL_MANAGER_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
-  // جلب جميع فواتير الموظفين مع مزامنة محسنة
-  const fetchAllEmployeesInvoices = async (forceSync = false) => {
-    setLoading(true);
+  // ============ نمط Cache-First: عرض سريع + مزامنة خلفية ============
+
+  // 1️⃣ جلب البيانات المحفوظة من قاعدة البيانات (سريع جداً)
+  const fetchFromDatabase = async () => {
     try {
       // جلب الموظفين النشطين
       const { data: employeesData, error: empError } = await supabase
         .from('profiles')
         .select('id, user_id, full_name, username, employee_code')
         .eq('is_active', true)
-        .neq('user_id', GENERAL_MANAGER_ID); // استبعاد المدير العام
+        .neq('user_id', GENERAL_MANAGER_ID);
 
-      if (empError) {
-        return;
-      }
+      if (empError) return;
 
-      // لمدير القسم: تصفية الموظفين حسب المشرف عليهم فقط
       let filteredEmployees = employeesData || [];
       if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
         filteredEmployees = filteredEmployees.filter(emp => 
           supervisedEmployeeIds.includes(emp.user_id)
         );
       }
-
       setEmployees(filteredEmployees);
 
-      // مزامنة شاملة باستخدام Edge Function (لا نستخدم توكن المدير)
-      if (forceSync) {
-        try {
-          // استدعاء المزامنة الذكية الجديدة
-          const { error: syncError } = await supabase.functions.invoke('smart-invoice-sync', {
-            body: { 
-              mode: 'comprehensive',
-              force_refresh: true,
-              sync_invoices: true,
-              sync_orders: false
-            }
-          });
-          
-          if (syncError) {
-            // Sync warning silently
-          }
-        } catch (apiError) {
-          // API error silently
-        }
-      }
-
-      // جلب جميع الفواتير من قاعدة البيانات
+      // جلب الفواتير المحفوظة
       const { data: invoicesData, error: invError } = await supabase
         .from('delivery_invoices')
         .select('*')
         .eq('partner', 'alwaseet')
-        .gte('issued_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()) // آخر 3 أشهر
+        .gte('issued_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
         .order('issued_at', { ascending: false })
-        .limit(200); // زيادة الحد لضمان عدم فقدان الفواتير
+        .limit(200);
 
-      if (invError) {
-        return;
-      }
+      if (invError) return;
 
-      // ربط الفواتير بالموظفين مع معلومات مفصلة
+      // ربط الفواتير بالموظفين
       const invoicesWithEmployees = (invoicesData || [])
         .map(invoice => {
           const employee = employeesData?.find(emp => emp.user_id === invoice.owner_user_id) || null;
@@ -107,41 +82,104 @@ const AllEmployeesInvoicesView = () => {
           };
         })
         .filter(invoice => {
-          // استبعاد فواتير المدير العام دائماً
           if (invoice.owner_user_id === GENERAL_MANAGER_ID) return false;
-          
-          // لمدير القسم: عرض فواتير الموظفين المشرف عليهم فقط (استبعاد فواتيره الشخصية)
           if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
             return supervisedEmployeeIds.includes(invoice.owner_user_id) && 
                    invoice.owner_user_id !== user?.user_id;
           }
-          
           return true;
         });
 
       setAllInvoices(invoicesWithEmployees);
-      setLastSync(new Date().toISOString());
-      
+      return { employeesData, invoicesWithEmployees };
     } catch (error) {
-      // Error silently
-    } finally {
-      setLoading(false);
+      console.error('Error fetching from database:', error);
     }
   };
 
-  // تأثير التحميل الأولي مع مزامنة تلقائية ومزامنة دورية
+  // 2️⃣ مزامنة خلفية مع API (لا تؤثر على الأداء)
+  const syncInBackground = async () => {
+    if (syncing) return; // تجنب التكرار
+    setSyncing(true);
+    
+    try {
+      // مزامنة شاملة لجميع حسابات الموظفين
+      const { error: syncError } = await supabase.functions.invoke('smart-invoice-sync', {
+        body: { 
+          mode: 'comprehensive',
+          force_refresh: true,
+          sync_invoices: true,
+          sync_orders: false
+        }
+      });
+      
+      if (!syncError) {
+        // بعد نجاح المزامنة، تحديث البيانات من قاعدة البيانات
+        await fetchFromDatabase();
+        setLastSync(new Date().toISOString());
+        console.log('✅ Background sync completed');
+      }
+    } catch (error) {
+      console.warn('Background sync failed:', error);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // 3️⃣ الوظيفة المجمعة للتحميل الأولي
+  const initialLoad = async () => {
+    setLoading(true);
+    try {
+      // أولاً: عرض البيانات المحفوظة فوراً
+      await fetchFromDatabase();
+    } finally {
+      setLoading(false);
+    }
+    
+    // ثانياً: مزامنة في الخلفية (بدون انتظار)
+    syncInBackground();
+  };
+
+  // 4️⃣ تحديث يدوي (عند الضغط على زر التحديث)
+  const handleRefresh = async () => {
+    setSyncing(true);
+    try {
+      await supabase.functions.invoke('smart-invoice-sync', {
+        body: { 
+          mode: 'comprehensive',
+          force_refresh: true,
+          sync_invoices: true,
+          sync_orders: false
+        }
+      });
+      await fetchFromDatabase();
+      setLastSync(new Date().toISOString());
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  // تأثير التحميل الأولي: عرض فوري + مزامنة خلفية
   useEffect(() => {
-    // انتظار تحميل الموظفين المشرف عليهم لمدير القسم
     if (isDepartmentManager && !isAdmin && supervisedLoading) return;
     
-    fetchAllEmployeesInvoices(true); // مع مزامنة فورية
+    initialLoad(); // تحميل سريع + مزامنة خلفية
     
-    // مزامنة تلقائية كل 30 دقيقة للحصول على أحدث الفواتير
+    // الاستماع لأحداث المزامنة من أجزاء أخرى من التطبيق
+    const handleSyncEvent = () => {
+      fetchFromDatabase();
+    };
+    window.addEventListener('invoicesSynced', handleSyncEvent);
+    
+    // مزامنة دورية كل 15 دقيقة
     const syncInterval = setInterval(() => {
-      fetchAllEmployeesInvoices(true);
-    }, 30 * 60 * 1000); // 30 دقيقة
+      syncInBackground();
+    }, 15 * 60 * 1000);
     
-    return () => clearInterval(syncInterval);
+    return () => {
+      clearInterval(syncInterval);
+      window.removeEventListener('invoicesSynced', handleSyncEvent);
+    };
   }, [token, isLoggedIn, supervisedEmployeeIds, supervisedLoading]);
 
   // فلترة الفواتير مع الفترة الزمنية (محسن)
@@ -219,10 +257,6 @@ const AllEmployeesInvoicesView = () => {
   const handleViewInvoice = (invoice) => {
     setSelectedInvoice(invoice);
     setDetailsDialogOpen(true);
-  };
-
-  const handleRefresh = () => {
-    fetchAllEmployeesInvoices(true);
   };
 
   return (
@@ -330,15 +364,21 @@ const AllEmployeesInvoicesView = () => {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>فواتير جميع الموظفين</span>
-            <Button
-              onClick={handleRefresh}
-              disabled={loading}
-              className="flex items-center gap-2"
-            >
-              {loading && <RefreshCw className="h-4 w-4 animate-spin" />}
-              <RefreshCw className="h-4 w-4" />
-              تحديث الفواتير
-            </Button>
+            <div className="flex items-center gap-2">
+              {syncing && (
+                <span className="text-sm text-muted-foreground animate-pulse">
+                  جاري المزامنة...
+                </span>
+              )}
+              <Button
+                onClick={handleRefresh}
+                disabled={syncing}
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
+                تحديث الفواتير
+              </Button>
+            </div>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
