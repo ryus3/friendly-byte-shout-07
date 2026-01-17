@@ -71,18 +71,21 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get tokens that need renewal (auto_renew_enabled=true and expiring within 24 hours)
+    // Get tokens that need renewal:
+    // - auto_renew_enabled = true
+    // - Token expires within 24 hours (last day) but NOT already expired
     const renewalWindowHours = 24;
-    const renewalThreshold = new Date();
-    renewalThreshold.setHours(renewalThreshold.getHours() + renewalWindowHours);
+    const now = new Date();
+    const renewalThreshold = new Date(now.getTime() + renewalWindowHours * 60 * 60 * 1000);
 
     const { data: tokens, error: fetchError } = await supabase
       .from('delivery_partner_tokens')
       .select('id, partner_name, token, expires_at, partner_data, account_username, user_id')
       .eq('is_active', true)
       .eq('auto_renew_enabled', true)
-      .eq('partner_name', 'alwaseet') // Currently only AlWaseet
-      .or(`expires_at.is.null,expires_at.lte.${renewalThreshold.toISOString()}`);
+      .eq('partner_name', 'alwaseet')
+      .gte('expires_at', now.toISOString()) // Not expired yet
+      .lte('expires_at', renewalThreshold.toISOString()); // Expires within 24 hours
 
     if (fetchError) {
       console.error('Error fetching tokens:', fetchError);
