@@ -131,9 +131,10 @@ const InvoiceSyncSettings = () => {
       fetchAllData();
     } catch (error) {
       console.error('Error updating schedule:', error);
+      const errorMessage = error?.message || error?.details || error?.hint || 'فشل في تحديث الجدولة';
       toast({
-        title: "❌ خطأ",
-        description: "فشل في تحديث الجدولة",
+        title: "❌ خطأ في تحديث الجدولة",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {

@@ -268,10 +268,14 @@ serve(async (req) => {
           const apiInvoices = await fetchInvoicesFromAPI(tokenData.token);
           console.log(`  📥 Fetched ${apiInvoices.length} invoices from API`);
 
+          // ✅ ذكي: معالجة آخر 5 فواتير فقط (أو كلها إذا force_refresh)
+          const invoicesToProcess = force_refresh ? apiInvoices : apiInvoices.slice(0, 5);
+          console.log(`  🎯 Processing ${invoicesToProcess.length} recent invoices (smart mode)`);
+
           let employeeInvoicesSynced = 0;
           let employeeOrdersSynced = 0;
 
-          for (const invoice of apiInvoices) {
+          for (const invoice of invoicesToProcess) {
             const externalId = String(invoice.id);
             const statusNormalized = normalizeStatus(invoice.status);
             const isReceived = statusNormalized === 'received' || invoice.received === true;
