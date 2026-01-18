@@ -407,6 +407,7 @@ serve(async (req) => {
     } else {
       // ========== SMART MODE ==========
       // Quick sync for specific employee or current user
+      // ✅ يدعم تعدد التوكنات: يزامن كل التوكنات النشطة للموظف
       
       let targetEmployeeId = employee_id;
 
@@ -428,18 +429,18 @@ serve(async (req) => {
         );
       }
 
-      // Get employee's token
-      const { data: tokenData, error: tokenError } = await supabase
+      // ✅ جلب كل التوكنات النشطة للموظف (بدلاً من .single())
+      const { data: tokensData, error: tokensError } = await supabase
         .from('delivery_partner_tokens')
-        .select('token, account_username, merchant_id')
+        .select('id, token, account_username, merchant_id')
         .eq('user_id', targetEmployeeId)
         .eq('is_active', true)
         .eq('partner_name', 'alwaseet')
         .gt('expires_at', new Date().toISOString())
-        .single();
+        .order('updated_at', { ascending: false });
 
-      if (tokenError || !tokenData) {
-        console.log(`⚠️ No active token for employee ${targetEmployeeId}`);
+      if (tokensError || !tokensData || tokensData.length === 0) {
+        console.log(`⚠️ No active tokens for employee ${targetEmployeeId}`);
         return new Response(
           JSON.stringify({ 
             success: true, 
@@ -450,109 +451,128 @@ serve(async (req) => {
         );
       }
 
-      // Fetch recent invoices
-      const apiInvoices = await fetchInvoicesFromAPI(tokenData.token);
-      
-      // In smart mode, only process last 5 invoices for speed
-      const recentInvoices = force_refresh ? apiInvoices : apiInvoices.slice(0, 5);
-      
-      console.log(`📥 Processing ${recentInvoices.length} recent invoices (smart mode)`);
+      console.log(`👤 Employee ${targetEmployeeId} has ${tokensData.length} active token(s)`);
 
-      for (const invoice of recentInvoices) {
-        const externalId = String(invoice.id);
-        const statusNormalized = normalizeStatus(invoice.status);
-        const isReceived = statusNormalized === 'received' || invoice.received === true;
-        const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
+      // ✅ مزامنة كل التوكنات النشطة
+      for (const tokenData of tokensData) {
+        console.log(`🔄 Syncing token: ${tokenData.account_username} (merchant: ${tokenData.merchant_id})`);
+        
+        // Fetch recent invoices
+        const apiInvoices = await fetchInvoicesFromAPI(tokenData.token);
+        
+        // In smart mode, only process last 5 invoices for speed
+        const recentInvoices = force_refresh ? apiInvoices : apiInvoices.slice(0, 5);
+        
+        console.log(`📥 Processing ${recentInvoices.length} recent invoices for ${tokenData.account_username}`);
 
-        // Check if invoice already exists with same status
-        const { data: existing } = await supabase
-          .from('delivery_invoices')
-          .select('id, status_normalized, received, received_at')
-          .eq('external_id', externalId)
-          .eq('partner', 'alwaseet')
-          .single();
+        for (const invoice of recentInvoices) {
+          const externalId = String(invoice.id);
+          const statusNormalized = normalizeStatus(invoice.status);
+          const isReceived = statusNormalized === 'received' || invoice.received === true;
+          const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
 
-        // ✅ إذا الفاتورة مستلمة في DB ومستلمة في API = نتخطاها (تقليل الاستهلاك)
-        // لكن إذا كانت معلقة في DB ومستلمة في API = نحدثها!
-        if (existing?.received === true && !force_refresh) {
-          console.log(`⏭️ Invoice ${externalId} already received in DB, skipping`);
-          continue;
-        }
+          // Check if invoice already exists with same status
+          const { data: existing } = await supabase
+            .from('delivery_invoices')
+            .select('id, status_normalized, received, received_at')
+            .eq('external_id', externalId)
+            .eq('partner', 'alwaseet')
+            .single();
 
-        // ✅ تحقق إذا الفاتورة تغيرت حالتها (من معلقة لمستلمة)
-        const statusChanged = existing && existing.status_normalized !== statusNormalized;
-        if (statusChanged) {
-          console.log(`📝 Invoice ${externalId} status changed: ${existing.status_normalized} → ${statusNormalized}`);
-        }
+          // ✅ إذا الفاتورة مستلمة في DB ومستلمة في API = نتخطاها (تقليل الاستهلاك)
+          if (existing?.received === true && !force_refresh) {
+            continue;
+          }
 
-        // Skip if no changes at all
-        if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
-          continue;
-        }
+          // ✅ تحقق إذا الفاتورة تغيرت حالتها
+          const statusChanged = existing && existing.status_normalized !== statusNormalized;
+          if (statusChanged) {
+            console.log(`📝 Invoice ${externalId} status changed: ${existing.status_normalized} → ${statusNormalized}`);
+          }
 
-        const { data: upsertedInvoice, error: upsertError } = await supabase
-          .from('delivery_invoices')
-          .upsert({
-            external_id: externalId,
-            partner: 'alwaseet',
-            owner_user_id: targetEmployeeId,
-            account_username: tokenData.account_username,
-            merchant_id: tokenData.merchant_id,
-            amount: invoice.merchant_price || invoice.amount || 0,
-            orders_count: invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0,
-            status: invoice.status,
-            status_normalized: statusNormalized,
-            received: isReceived,
-            received_flag: isReceived,
-            received_at: isReceived ? (existing?.received_at || receivedAt) : null,
-            issued_at: invoice.created_at || invoice.createdAt,
-            raw: invoice,
-            last_synced_at: new Date().toISOString(),
-          }, {
-            onConflict: 'external_id,partner',
-            ignoreDuplicates: false,
-          })
-          .select('id')
-          .single();
+          // Skip if no changes at all
+          if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
+            continue;
+          }
 
-        if (!upsertError) {
-          totalInvoicesSynced++;
-          
-          // ✅ Sync orders in smart mode too if requested
-          if (sync_orders && upsertedInvoice?.id) {
-            try {
-              const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
-              
-              for (const order of invoiceOrders) {
-                const { error: orderError } = await supabase
-                  .from('delivery_invoice_orders')
-                  .upsert({
-                    invoice_id: upsertedInvoice.id,
-                    external_order_id: String(order.id),
-                    raw: order,
-                    status: order.status,
-                    amount: order.price || order.amount || 0,
-                    owner_user_id: targetEmployeeId,
-                  }, {
-                    onConflict: 'invoice_id,external_order_id',
-                    ignoreDuplicates: false,
-                  });
+          const { data: upsertedInvoice, error: upsertError } = await supabase
+            .from('delivery_invoices')
+            .upsert({
+              external_id: externalId,
+              partner: 'alwaseet',
+              owner_user_id: targetEmployeeId,
+              account_username: tokenData.account_username,
+              merchant_id: tokenData.merchant_id,
+              amount: invoice.merchant_price || invoice.amount || 0,
+              orders_count: invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0,
+              status: invoice.status,
+              status_normalized: statusNormalized,
+              received: isReceived,
+              received_flag: isReceived,
+              received_at: isReceived ? (existing?.received_at || receivedAt) : null,
+              issued_at: invoice.created_at || invoice.createdAt,
+              raw: invoice,
+              last_synced_at: new Date().toISOString(),
+            }, {
+              onConflict: 'external_id,partner',
+              ignoreDuplicates: false,
+            })
+            .select('id')
+            .single();
+
+          if (!upsertError) {
+            totalInvoicesSynced++;
+            
+            // ✅ Sync orders in smart mode too if requested
+            if (sync_orders && upsertedInvoice?.id) {
+              try {
+                const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
                 
-                if (!orderError) {
-                  totalOrdersUpdated++;
+                for (const order of invoiceOrders) {
+                  const { error: orderError } = await supabase
+                    .from('delivery_invoice_orders')
+                    .upsert({
+                      invoice_id: upsertedInvoice.id,
+                      external_order_id: String(order.id),
+                      raw: order,
+                      status: order.status,
+                      amount: order.price || order.amount || 0,
+                      owner_user_id: targetEmployeeId,
+                    }, {
+                      onConflict: 'invoice_id,external_order_id',
+                      ignoreDuplicates: false,
+                    });
+                  
+                  if (!orderError) {
+                    totalOrdersUpdated++;
+                  }
                 }
+                
+                if (invoiceOrders.length > 0) {
+                  await supabase
+                    .from('delivery_invoices')
+                    .update({ orders_last_synced_at: new Date().toISOString() })
+                    .eq('id', upsertedInvoice.id);
+                }
+              } catch (ordersError) {
+                console.error(`Error syncing orders for invoice ${externalId}:`, ordersError);
               }
-              
-              if (invoiceOrders.length > 0) {
-                await supabase
-                  .from('delivery_invoices')
-                  .update({ orders_last_synced_at: new Date().toISOString() })
-                  .eq('id', upsertedInvoice.id);
-              }
-            } catch (ordersError) {
-              console.error(`Error syncing orders for invoice ${externalId}:`, ordersError);
             }
           }
+        }
+        
+        // ✅ تحديث last_sync_at لهذا التوكن
+        await supabase
+          .from('delivery_partner_tokens')
+          .update({ 
+            last_used_at: new Date().toISOString(),
+            last_sync_at: new Date().toISOString()
+          })
+          .eq('id', tokenData.id);
+        
+        // تأخير صغير بين التوكنات لتجنب rate limiting
+        if (tokensData.length > 1) {
+          await new Promise(resolve => setTimeout(resolve, 150));
         }
       }
 
@@ -560,18 +580,8 @@ serve(async (req) => {
         invoices: totalInvoicesSynced,
         orders: totalOrdersUpdated,
       };
-
-      // ✅ تحديث last_sync_at للموظف في smart mode
-      await supabase
-        .from('delivery_partner_tokens')
-        .update({ 
-          last_used_at: new Date().toISOString(),
-          last_sync_at: new Date().toISOString()
-        })
-        .eq('user_id', targetEmployeeId)
-        .eq('is_active', true);
       
-      console.log(`✅ Updated last_sync_at for employee ${targetEmployeeId}`);
+      console.log(`✅ Smart sync complete for employee ${targetEmployeeId}: ${totalInvoicesSynced} invoices from ${tokensData.length} token(s)`);
     }
 
     // ✅ ربط طلبات الفواتير بالطلبات المحلية تلقائياً
@@ -590,22 +600,11 @@ serve(async (req) => {
       console.warn('⚠️ Error calling link_invoice_orders_to_orders:', linkErr);
     }
 
-    // ✅ تسوية التناقضات تلقائياً (Reconciliation)
-    let reconciledCount = 0;
+    // ✅ التسوية الآن تتم تلقائياً عبر Trigger على delivery_invoices
+    // لا حاجة لاستدعاء RPC هنا - الـ Trigger يعمل عند UPDATE على الفاتورة
+    const reconciledCount = 0;
     if (run_reconciliation) {
-      try {
-        // إصلاح الطلبات المرتبطة بفواتير مستلمة لكن receipt_received=false
-        const { data: reconciledOrders, error: reconcileError } = await supabase.rpc('reconcile_invoice_receipts');
-        
-        if (reconcileError) {
-          console.warn('⚠️ Failed to reconcile receipts:', reconcileError.message);
-        } else if (reconciledOrders) {
-          reconciledCount = reconciledOrders.length || 0;
-          console.log(`🔧 Reconciled ${reconciledCount} orders with received invoices`);
-        }
-      } catch (reconcileErr) {
-        console.warn('⚠️ Error calling reconcile_invoice_receipts:', reconcileErr);
-      }
+      console.log('ℹ️ Reconciliation handled automatically via database trigger');
     }
 
     // Log sync result
