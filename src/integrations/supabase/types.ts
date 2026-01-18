@@ -8255,7 +8255,7 @@ export type Database = {
         Args: {
           p_enabled: boolean
           p_evening_time: string
-          p_frequency?: string
+          p_frequency: string
           p_morning_time: string
         }
         Returns: Json
