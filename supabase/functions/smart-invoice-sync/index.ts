@@ -241,6 +241,7 @@ serve(async (req) => {
     if (mode === 'comprehensive') {
       // ========== COMPREHENSIVE MODE ==========
       // Fetch ALL active employee tokens and sync their invoices
+      // ✅ NEW: Also check pending invoices in DB that may have been received
       
       const { data: tokens, error: tokensError } = await supabase
         .from('delivery_partner_tokens')
@@ -256,6 +257,18 @@ serve(async (req) => {
 
       console.log(`📋 Found ${tokens?.length || 0} active tokens to sync`);
 
+      // ✅ NEW: جلب الفواتير المعلقة من قاعدة البيانات للتحقق منها
+      const { data: pendingInvoices } = await supabase
+        .from('delivery_invoices')
+        .select('external_id, owner_user_id, status_normalized')
+        .eq('partner', 'alwaseet')
+        .neq('status_normalized', 'received')
+        .order('issued_at', { ascending: false })
+        .limit(50);
+      
+      const pendingExternalIds = new Set(pendingInvoices?.map(i => i.external_id) || []);
+      console.log(`📋 Found ${pendingExternalIds.size} pending invoices in DB to check`);
+
       // Process each employee's token
       for (const tokenData of tokens || []) {
         const employeeId = tokenData.user_id;
@@ -268,9 +281,23 @@ serve(async (req) => {
           const apiInvoices = await fetchInvoicesFromAPI(tokenData.token);
           console.log(`  📥 Fetched ${apiInvoices.length} invoices from API`);
 
-          // ✅ ذكي: معالجة آخر 5 فواتير فقط (أو كلها إذا force_refresh)
-          const invoicesToProcess = force_refresh ? apiInvoices : apiInvoices.slice(0, 5);
-          console.log(`  🎯 Processing ${invoicesToProcess.length} recent invoices (smart mode)`);
+          // ✅ بناء قائمة الفواتير للمعالجة:
+          // 1. آخر 5 فواتير من API
+          // 2. + أي فاتورة معلقة في DB موجودة في API
+          const recentInvoices = apiInvoices.slice(0, 5);
+          const pendingFromDb: Invoice[] = [];
+          
+          // ✅ البحث عن الفواتير المعلقة في DB ضمن استجابة API
+          for (const apiInvoice of apiInvoices) {
+            const extId = String(apiInvoice.id);
+            if (pendingExternalIds.has(extId) && !recentInvoices.find(i => String(i.id) === extId)) {
+              pendingFromDb.push(apiInvoice);
+            }
+          }
+          
+          // ✅ دمج القائمتين
+          const invoicesToProcess = [...recentInvoices, ...pendingFromDb];
+          console.log(`  🎯 Processing ${invoicesToProcess.length} invoices (${recentInvoices.length} recent + ${pendingFromDb.length} pending from DB)`);
 
           let employeeInvoicesSynced = 0;
           let employeeOrdersSynced = 0;
