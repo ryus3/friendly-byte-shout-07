@@ -7461,8 +7461,9 @@ export type Database = {
           pending_invoices: number
           received_amount: number
           received_invoices: number
-          token_active: boolean
           token_expires_at: string
+          token_id: string
+          token_status: string
           total_amount: number
           total_invoices: number
         }[]
@@ -7577,9 +7578,12 @@ export type Database = {
       get_invoice_discrepancies: {
         Args: never
         Returns: {
-          count: number
-          details: string
           discrepancy_type: string
+          invoice_received: boolean
+          invoice_status: string
+          order_id: string
+          order_number: string
+          order_receipt_received: boolean
         }[]
       }
       get_invoice_sync_stats: {
@@ -8017,6 +8021,10 @@ export type Database = {
       }
       recompute_cash_source_balances: {
         Args: { p_source_id: string; p_starting_balance?: number }
+        Returns: Json
+      }
+      reconcile_invoice_receipts: {
+        Args: { p_employee_id?: string }
         Returns: Json
       }
       record_discount_usage: {
