@@ -1715,7 +1715,6 @@ export type Database = {
           id: string
           is_active: boolean
           is_default: boolean | null
-          last_sync_at: string | null
           last_used_at: string | null
           merchant_id: string | null
           normalized_username: string | null
@@ -1734,7 +1733,6 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_default?: boolean | null
-          last_sync_at?: string | null
           last_used_at?: string | null
           merchant_id?: string | null
           normalized_username?: string | null
@@ -1753,7 +1751,6 @@ export type Database = {
           id?: string
           is_active?: boolean
           is_default?: boolean | null
-          last_sync_at?: string | null
           last_used_at?: string | null
           merchant_id?: string | null
           normalized_username?: string | null
@@ -7454,13 +7451,14 @@ export type Database = {
       get_employee_invoice_stats: {
         Args: never
         Returns: {
+          account_username: string
           employee_id: string
           employee_name: string
           last_sync_at: string
           pending_invoices: number
-          received_amount: number
           received_invoices: number
-          token_status: string
+          token_active: boolean
+          token_expires_at: string
           total_amount: number
           total_invoices: number
         }[]
@@ -8018,7 +8016,7 @@ export type Database = {
         Returns: Json
       }
       reconcile_invoice_receipts: {
-        Args: { p_employee_id?: string }
+        Args: { p_invoice_id?: string }
         Returns: Json
       }
       record_discount_usage: {

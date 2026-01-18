@@ -393,14 +393,11 @@ serve(async (req) => {
         await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      // ✅ Update last_used_at AND last_sync_at for all processed tokens
+      // Update last_used_at for all processed tokens
       if (tokens && tokens.length > 0) {
         await supabase
           .from('delivery_partner_tokens')
-          .update({ 
-            last_used_at: new Date().toISOString(),
-            last_sync_at: new Date().toISOString() // ✅ هذا يضمن تحديث وقت المزامنة حتى لو لم تُضف فواتير
-          })
+          .update({ last_used_at: new Date().toISOString() })
           .in('id', tokens.map(t => t.id));
       }
 
@@ -560,18 +557,6 @@ serve(async (req) => {
         invoices: totalInvoicesSynced,
         orders: totalOrdersUpdated,
       };
-
-      // ✅ تحديث last_sync_at للموظف في smart mode
-      await supabase
-        .from('delivery_partner_tokens')
-        .update({ 
-          last_used_at: new Date().toISOString(),
-          last_sync_at: new Date().toISOString()
-        })
-        .eq('user_id', targetEmployeeId)
-        .eq('is_active', true);
-      
-      console.log(`✅ Updated last_sync_at for employee ${targetEmployeeId}`);
     }
 
     // ✅ ربط طلبات الفواتير بالطلبات المحلية تلقائياً
