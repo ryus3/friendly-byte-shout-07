@@ -7454,13 +7454,15 @@ export type Database = {
       get_employee_invoice_stats: {
         Args: never
         Returns: {
+          account_username: string
           employee_id: string
           employee_name: string
           last_sync_at: string
           pending_invoices: number
           received_amount: number
           received_invoices: number
-          token_status: string
+          token_active: boolean
+          token_expires_at: string
           total_amount: number
           total_invoices: number
         }[]
@@ -8017,10 +8019,6 @@ export type Database = {
         Args: { p_source_id: string; p_starting_balance?: number }
         Returns: Json
       }
-      reconcile_invoice_receipts: {
-        Args: { p_employee_id?: string }
-        Returns: Json
-      }
       record_discount_usage: {
         Args: {
           p_customer_id: string
@@ -8259,7 +8257,7 @@ export type Database = {
             Args: {
               p_enabled: boolean
               p_evening_time: string
-              p_frequency: string
+              p_frequency?: string
               p_morning_time: string
             }
             Returns: Json
