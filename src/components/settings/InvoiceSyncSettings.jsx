@@ -511,7 +511,13 @@ const InvoiceSyncSettings = () => {
                     <p>لا يوجد موظفين مسجلين بعد</p>
                   </div>
                 ) : (
-                  employees.map((emp, i) => (
+                  employees.map((emp, i) => {
+                    // Robust token status check (case insensitive + fallback to expiry date)
+                    const tokenStatusText = (emp.token_status || '').trim().toLowerCase();
+                    const isTokenActive = tokenStatusText === 'active' || 
+                      (emp.token_expires_at && new Date(emp.token_expires_at) > new Date());
+                    
+                    return (
                     <div key={i} className="p-4 bg-muted/30 rounded-lg space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -519,8 +525,8 @@ const InvoiceSyncSettings = () => {
                           <span className="font-medium">{emp.employee_name || 'بدون اسم'}</span>
                           <span className="text-xs text-muted-foreground">({emp.account_username})</span>
                         </div>
-                        <Badge variant={emp.token_status === 'active' ? "default" : "destructive"} className="text-xs">
-                          {emp.token_status === 'active' ? 'Token نشط' : 'Token منتهي'}
+                        <Badge variant={isTokenActive ? "default" : "destructive"} className="text-xs">
+                          {isTokenActive ? 'Token نشط' : 'Token منتهي'}
                         </Badge>
                       </div>
                       
@@ -548,7 +554,7 @@ const InvoiceSyncSettings = () => {
                         <span>انتهاء Token: {formatDate(emp.token_expires_at)}</span>
                       </div>
                     </div>
-                  ))
+                  )})
                 )}
               </div>
             </ScrollArea>
