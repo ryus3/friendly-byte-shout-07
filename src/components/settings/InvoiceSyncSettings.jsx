@@ -344,7 +344,7 @@ const InvoiceSyncSettings = () => {
             <div className="space-y-2">
               <Label className="text-sm font-medium">حالة المهام المجدولة</Label>
               <div className="grid gap-2">
-                {cronJobs.filter(j => j.job_name?.includes('smart')).map((job, i) => (
+                {cronJobs.filter(j => j.job_name?.includes('invoice-sync') || j.job_name?.includes('smart')).map((job, i) => (
                   <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                     <div className="flex items-center gap-2">
                       {job.is_active ? (

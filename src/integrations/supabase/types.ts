@@ -8126,6 +8126,7 @@ export type Database = {
         }[]
       }
       select_random_city_for_monthly_discount: { Args: never; Returns: Json }
+      setup_invoice_sync_cron: { Args: never; Returns: Json }
       setup_monthly_city_benefits: { Args: never; Returns: Json }
       should_keep_reservation_for_order: {
         Args: {
