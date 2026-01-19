@@ -8279,6 +8279,10 @@ export type Database = {
             }
             Returns: Json
           }
+        | {
+            Args: { p_evening_time?: string; p_morning_time?: string }
+            Returns: Json
+          }
       update_order_reservation_status: {
         Args: {
           p_delivery_partner: string

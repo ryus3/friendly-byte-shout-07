@@ -114,14 +114,15 @@ const InvoiceSyncSettings = () => {
   const updateSchedule = async () => {
     setSaving(true);
     try {
+      // استخدام الدالة الجديدة الموحدة - تقبل فقط morning و evening time كنص
       const { data, error } = await supabase.rpc('update_invoice_sync_schedule', {
-        p_enabled: settings.daily_sync_enabled,
-        p_frequency: settings.sync_frequency,
-        p_morning_time: settings.morning_sync_time + ':00',
-        p_evening_time: settings.evening_sync_time + ':00'
+        p_morning_time: settings.morning_sync_time,
+        p_evening_time: settings.evening_sync_time
       });
 
       if (error) throw error;
+      
+      console.log('✅ Schedule update result:', data);
 
       toast({
         title: "✅ تم تحديث الجدولة",
