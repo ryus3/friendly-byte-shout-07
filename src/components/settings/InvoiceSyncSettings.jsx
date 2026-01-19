@@ -519,8 +519,8 @@ const InvoiceSyncSettings = () => {
                           <span className="font-medium">{emp.employee_name || 'بدون اسم'}</span>
                           <span className="text-xs text-muted-foreground">({emp.account_username})</span>
                         </div>
-                        <Badge variant={emp.token_active ? "default" : "destructive"} className="text-xs">
-                          {emp.token_active ? 'Token نشط' : 'Token منتهي'}
+                        <Badge variant={emp.token_status === 'active' ? "default" : "destructive"} className="text-xs">
+                          {emp.token_status === 'active' ? 'Token نشط' : 'Token منتهي'}
                         </Badge>
                       </div>
                       
