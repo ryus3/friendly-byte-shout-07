@@ -74,14 +74,15 @@ const InvoiceSyncSettings = () => {
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch all data in parallel
-      const [statsRes, cronRes, logsRes, employeesRes, discrepanciesRes, settingsRes] = await Promise.all([
+      // Fetch all data in parallel - including auto_sync_schedule_settings for actual cron times
+      const [statsRes, cronRes, logsRes, employeesRes, discrepanciesRes, settingsRes, scheduleRes] = await Promise.all([
         supabase.rpc('get_invoice_sync_stats'),
         supabase.rpc('get_invoice_cron_status'),
         supabase.rpc('get_recent_sync_logs', { p_limit: 10 }),
         supabase.rpc('get_employee_invoice_stats'),
         supabase.rpc('get_invoice_discrepancies'),
-        supabase.from('invoice_sync_settings').select('*').single()
+        supabase.from('invoice_sync_settings').select('*').maybeSingle(),
+        supabase.from('auto_sync_schedule_settings').select('*').maybeSingle()
       ]);
 
       if (statsRes.data) setStats(statsRes.data[0] || {});
@@ -90,14 +91,19 @@ const InvoiceSyncSettings = () => {
       if (employeesRes.data) setEmployees(employeesRes.data || []);
       if (discrepanciesRes.data) setDiscrepancies(discrepanciesRes.data || []);
       
-      if (settingsRes.data) {
-        setSettings(prev => ({
-          ...prev,
-          ...settingsRes.data,
-          morning_sync_time: settingsRes.data.morning_sync_time?.slice(0, 5) || '09:00',
-          evening_sync_time: settingsRes.data.evening_sync_time?.slice(0, 5) || '21:00'
-        }));
-      }
+      // Priority: read sync times from auto_sync_schedule_settings (source of truth for cron)
+      // Fallback to invoice_sync_settings for other settings
+      const scheduleData = scheduleRes.data;
+      const syncTimes = scheduleData?.sync_times || [];
+      
+      setSettings(prev => ({
+        ...prev,
+        ...(settingsRes.data || {}),
+        daily_sync_enabled: scheduleData?.enabled ?? prev.daily_sync_enabled,
+        // Read from auto_sync_schedule_settings.sync_times array (Baghdad time)
+        morning_sync_time: syncTimes[0]?.slice(0, 5) || settingsRes.data?.morning_sync_time?.slice(0, 5) || '09:00',
+        evening_sync_time: syncTimes[1]?.slice(0, 5) || settingsRes.data?.evening_sync_time?.slice(0, 5) || '21:00'
+      }));
     } catch (error) {
       console.error('Error fetching invoice sync data:', error);
     } finally {
