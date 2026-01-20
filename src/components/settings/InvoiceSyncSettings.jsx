@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/hooks/use-toast';
+import { toZonedTime, format as formatTz } from 'date-fns-tz';
 
 /**
  * 🚀 لوحة تحكم مزامنة الفواتير الاحترافية
@@ -207,12 +208,18 @@ const InvoiceSyncSettings = () => {
 
   // ============ Render Helpers ============
   
+  // ✅ عرض التاريخ بتوقيت بغداد (Asia/Baghdad)
   const formatDate = (date) => {
     if (!date) return 'غير متاح';
-    return new Date(date).toLocaleString('ar-EG', {
-      dateStyle: 'short',
-      timeStyle: 'short'
-    });
+    try {
+      const baghdadTime = toZonedTime(new Date(date), 'Asia/Baghdad');
+      return formatTz(baghdadTime, 'yyyy/MM/dd HH:mm', { timeZone: 'Asia/Baghdad' });
+    } catch {
+      return new Date(date).toLocaleString('ar-EG', {
+        dateStyle: 'short',
+        timeStyle: 'short'
+      });
+    }
   };
 
   const totalDiscrepancies = discrepancies.reduce((sum, d) => sum + (d.count || 0), 0);
@@ -341,31 +348,42 @@ const InvoiceSyncSettings = () => {
               </Button>
             </div>
 
-            {/* حالة Cron Jobs */}
+            {/* حالة Cron Jobs - فقط invoice-sync-am/pm */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">حالة المهام المجدولة</Label>
               <div className="grid gap-2">
-                {cronJobs.filter(j => j.job_name?.includes('invoice-sync') || j.job_name?.includes('smart')).map((job, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      {job.is_active ? (
-                        <Play className="w-4 h-4 text-green-600" />
-                      ) : (
-                        <Pause className="w-4 h-4 text-muted-foreground" />
-                      )}
-                      <span className="text-sm">{job.job_name?.replace(/-/g, ' ')}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={job.is_active ? "default" : "secondary"} className="text-xs">
-                        {job.schedule}
-                      </Badge>
-                      <Badge variant={job.is_active ? "outline" : "secondary"} className="text-xs">
-                        {job.is_active ? 'نشط' : 'معطل'}
-                      </Badge>
-                    </div>
+                {cronJobs.length === 0 ? (
+                  <div className="p-3 bg-muted/30 rounded-lg text-center text-muted-foreground text-sm">
+                    لا توجد مهام مجدولة
                   </div>
-                ))}
+                ) : (
+                  cronJobs.map((job, i) => (
+                    <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        {job.is_active ? (
+                          <Play className="w-4 h-4 text-green-600" />
+                        ) : (
+                          <Pause className="w-4 h-4 text-muted-foreground" />
+                        )}
+                        <span className="text-sm">
+                          {job.job_name === 'invoice-sync-am' ? 'مزامنة الصباح' : 
+                           job.job_name === 'invoice-sync-pm' ? 'مزامنة المساء' : 
+                           job.job_name?.replace(/-/g, ' ')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={job.is_active ? "default" : "secondary"} className="text-xs">
+                          {job.schedule}
+                        </Badge>
+                        <Badge variant={job.is_active ? "outline" : "secondary"} className="text-xs">
+                          {job.is_active ? 'نشط' : 'معطل'}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
+              <p className="text-xs text-muted-foreground">التوقيت: Asia/Baghdad (UTC+3)</p>
             </div>
           </TabsContent>
 

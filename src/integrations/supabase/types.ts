@@ -7036,7 +7036,7 @@ export type Database = {
       }
       admin_manage_invoice_cron: {
         Args: {
-          p_action: string
+          p_action?: string
           p_evening_time?: string
           p_morning_time?: string
         }
