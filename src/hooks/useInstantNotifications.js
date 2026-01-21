@@ -94,6 +94,47 @@ export const useInstantNotifications = (userId, userRole) => {
 
     channelsRef.current.add(ordersChannel);
 
+    // إعداد قناة إشعارات الفواتير الفورية
+    const invoiceNotificationsChannel = supabase
+      .channel(`instant-invoice-notifications-${userId}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'invoice_notifications',
+          filter: `user_id=eq.${userId}`
+        },
+        (payload) => {
+          console.log('⚡ Instant invoice notification:', payload.new);
+          
+          const notification = payload.new;
+          
+          // إشعار متصفح فوري
+          notificationService.notify(
+            notification.title,
+            notification.message,
+            notification.notification_type,
+            notification.data
+          ).catch(error => {
+            console.log('⚠️ Browser notification not available:', error);
+          });
+
+          // بث حدث للواجهة
+          window.dispatchEvent(new CustomEvent('invoiceNotification', { 
+            detail: notification 
+          }));
+        }
+      )
+      .subscribe((status) => {
+        console.log('📊 Invoice notifications subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Invoice notifications ready for user:', userId);
+        }
+      });
+
+    channelsRef.current.add(invoiceNotificationsChannel);
+
     // تنظيف القنوات عند إلغاء التحميل
     return () => {
       console.log('🧹 Cleaning up instant notification channels');

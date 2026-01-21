@@ -1650,6 +1650,7 @@ export type Database = {
           partner: string
           partner_name_ar: string | null
           raw: Json
+          raw_status: string | null
           received: boolean
           received_at: string | null
           received_flag: boolean
@@ -1673,6 +1674,7 @@ export type Database = {
           partner?: string
           partner_name_ar?: string | null
           raw?: Json
+          raw_status?: string | null
           received?: boolean
           received_at?: string | null
           received_flag?: boolean
@@ -1696,6 +1698,7 @@ export type Database = {
           partner?: string
           partner_name_ar?: string | null
           raw?: Json
+          raw_status?: string | null
           received?: boolean
           received_at?: string | null
           received_flag?: boolean
@@ -3176,6 +3179,57 @@ export type Database = {
             columns: ["variant_id"]
             isOneToOne: false
             referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoice_notifications: {
+        Row: {
+          created_at: string | null
+          data: Json | null
+          id: string
+          invoice_id: string
+          is_read: boolean | null
+          message: string
+          notification_type: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          invoice_id: string
+          is_read?: boolean | null
+          message: string
+          notification_type: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          data?: Json | null
+          id?: string
+          invoice_id?: string
+          is_read?: boolean | null
+          message?: string
+          notification_type?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoice_notifications_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoice_notifications_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_invoices_needing_sync"
             referencedColumns: ["id"]
           },
         ]
@@ -7242,6 +7296,16 @@ export type Database = {
       create_invoice_cash_movement: {
         Args: { p_amount: number; p_description?: string; p_order_id: string }
         Returns: string
+      }
+      create_invoice_notification: {
+        Args: {
+          p_data?: Json
+          p_invoice_id: string
+          p_message: string
+          p_notification_type: string
+          p_title: string
+        }
+        Returns: undefined
       }
       create_order_deletion_notification: {
         Args: {
