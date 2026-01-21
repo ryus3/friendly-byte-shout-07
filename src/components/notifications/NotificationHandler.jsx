@@ -75,6 +75,28 @@ export const useNotificationHandler = () => {
       navigate('/ai-orders');
     }
     
+    // معالجة إشعارات الفواتير المعلقة
+    else if (notification.type === 'invoice_pending') {
+      const { invoice_id, employee_id } = notification.data || {};
+      
+      if (employee_id) {
+        navigate(`/employee-follow-up?employee=${employee_id}&tab=invoices&highlight=${invoice_id}`);
+      } else {
+        navigate(`/employee-follow-up?tab=invoices&highlight=${invoice_id}`);
+      }
+    }
+    
+    // معالجة إشعارات الفواتير المستلمة
+    else if (notification.type === 'invoice_received') {
+      const { invoice_id, employee_id } = notification.data || {};
+      
+      if (employee_id) {
+        navigate(`/employee-follow-up?employee=${employee_id}&tab=invoices&highlight=${invoice_id}`);
+      } else {
+        navigate(`/employee-follow-up?tab=invoices&highlight=${invoice_id}`);
+      }
+    }
+    
     // معالجة أنواع إشعارات أخرى...
     else {
       navigate('/dashboard');
