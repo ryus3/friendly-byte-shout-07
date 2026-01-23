@@ -20,27 +20,30 @@ interface SyncRequest {
 
 interface Invoice {
   id: number;
-  amount: number;
+  merchant_price?: number;
+  amount?: number;
   status: string;
-  created_at: string;
+  created_at?: string;
   updated_at?: string;
+  delivered_orders_count?: number;
   orders_count?: number;
+  ordersCount?: number;
   received?: boolean;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 interface InvoiceOrder {
   id: number;
   price?: number;
+  amount?: number;
   status?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
-// ✅ Fetch invoices from AlWaseet API - CORRECTED endpoint
+// ✅ Fetch ALL invoices from AlWaseet API
 async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
   try {
     console.log('📡 Fetching invoices from AlWaseet API...');
-    // ✅ استخدام الـ endpoint الصحيح مع token في query params
     const response = await fetch(`${ALWASEET_API_BASE}/get_merchant_invoices?token=${encodeURIComponent(token)}`, {
       method: 'GET',
       headers: {
@@ -56,35 +59,21 @@ async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
     }
 
     const data = await response.json();
-
-    // ✅ AlWaseet عادة يرجّع: { status: true, errNum: "S000", data: [...] }
     const ok = data?.status === true || data?.errNum === 'S000';
-    const count = Array.isArray(data?.data) ? data.data.length : (Array.isArray(data) ? data.length : 0);
-    console.log(`📥 API Response: status=${data?.status}, errNum=${data?.errNum}, count=${count}`);
+    const invoices = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+    console.log(`📥 API Response: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}`);
 
-    if (ok && Array.isArray(data?.data)) {
-      return data.data;
-    }
-
-    // بعض الأحيان قد تكون الاستجابة Array مباشرة
-    if (Array.isArray(data)) {
-      return data;
-    }
-
-    // فشل أو صيغة غير متوقعة
-    console.warn('⚠️ Unexpected invoices response shape:', JSON.stringify(data)?.slice(0, 500));
-    return [];
+    return invoices;
   } catch (error) {
     console.error('Error fetching invoices:', error);
     return [];
   }
 }
 
-// ✅ Fetch invoice orders from AlWaseet API - CORRECTED endpoint
+// ✅ Fetch invoice orders from AlWaseet API
 async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Promise<InvoiceOrder[]> {
   try {
     console.log(`📡 Fetching orders for invoice ${invoiceId}...`);
-    // ✅ استخدام الـ endpoint الصحيح مع token و invoice_id في query params
     const response = await fetch(`${ALWASEET_API_BASE}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${invoiceId}`, {
       method: 'GET',
       headers: {
@@ -100,32 +89,12 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Prom
     }
 
     const data = await response.json();
-
     const ok = data?.status === true || data?.errNum === 'S000';
-    const count = Array.isArray(data?.data)
-      ? data.data.length
-      : (Array.isArray(data?.orders) ? data.orders.length : (Array.isArray(data) ? data.length : 0));
-
-    console.log(
-      `📥 Invoice ${invoiceId} orders response: status=${data?.status}, errNum=${data?.errNum}, count=${count}`
-    );
-
-    // ✅ الصيغة المتوقعة
-    if (ok && Array.isArray(data?.data)) {
-      return data.data;
-    }
-
-    // أحياناً تكون orders
-    if (ok && Array.isArray(data?.orders)) {
-      return data.orders;
-    }
-
-    // وأحياناً Array مباشرة
-    if (Array.isArray(data)) {
-      return data;
-    }
-
-    console.warn(`⚠️ Unexpected orders response shape for invoice ${invoiceId}:`, JSON.stringify(data)?.slice(0, 500));
+    
+    if (ok && Array.isArray(data?.data)) return data.data;
+    if (ok && Array.isArray(data?.orders)) return data.orders;
+    if (Array.isArray(data)) return data;
+    
     return [];
   } catch (error) {
     console.error(`Error fetching orders for invoice ${invoiceId}:`, error);
@@ -143,76 +112,40 @@ function normalizeStatus(status: string | null): string {
   const statusLower = status.toLowerCase();
   const statusOriginal = status;
   
-  // ✅ القاعدة الأهم: المندوب = معلقة (لم تصل للتاجر بعد)
+  // ✅ المندوب = معلقة (لم تصل للتاجر بعد)
   if (statusOriginal.includes('المندوب') || statusOriginal.includes('مندوب')) {
-    console.log(`📋 Status "${status}" → pending (delegate, not merchant)`);
     return 'pending';
   }
   
   // ✅ التاجر = مستلمة فعلياً
   if (statusOriginal.includes('التاجر') || statusOriginal.includes('تاجر')) {
-    console.log(`📋 Status "${status}" → received (merchant received)`);
     return 'received';
   }
   
-  // ✅ كلمة "مستلم" بدون تحديد = نفترض التاجر (مستلمة)
+  // ✅ كلمة "مستلم" بدون تحديد = نفترض مستلمة
   if (statusOriginal.includes('مستلم') || statusOriginal.includes('تم استلام')) {
-    console.log(`📋 Status "${status}" → received (contains "مستلم")`);
-    return 'received';
-  }
-  
-  // ✅ "استلام" مع "التاجر" = مستلمة
-  if (statusOriginal.includes('استلام') && statusOriginal.includes('التاجر')) {
-    console.log(`📋 Status "${status}" → received (استلام + التاجر)`);
     return 'received';
   }
   
   // ✅ English statuses
-  if (statusLower.includes('receiv')) {
-    console.log(`📋 Status "${status}" → received (English)`);
-    return 'received';
-  }
+  if (statusLower.includes('receiv')) return 'received';
+  if (statusLower.includes('pend') || statusOriginal.includes('معلق') || statusOriginal.includes('انتظار')) return 'pending';
+  if (statusLower.includes('cancel') || statusOriginal.includes('ملغ')) return 'cancelled';
+  if (statusLower.includes('sent') || statusOriginal.includes('ارسال') || statusOriginal.includes('أرسل')) return 'sent';
   
-  // ✅ معلقة
-  if (statusLower.includes('pend') || statusOriginal.includes('معلق') || statusOriginal.includes('انتظار')) {
-    console.log(`📋 Status "${status}" → pending`);
-    return 'pending';
-  }
-  
-  // ✅ ملغاة
-  if (statusLower.includes('cancel') || statusOriginal.includes('ملغ')) {
-    console.log(`📋 Status "${status}" → cancelled`);
-    return 'cancelled';
-  }
-  
-  // ✅ مرسلة
-  if (statusLower.includes('sent') || statusOriginal.includes('ارسال') || statusOriginal.includes('أرسل')) {
-    console.log(`📋 Status "${status}" → sent`);
-    return 'sent';
-  }
-  
-  console.log(`📋 Status "${status}" → ${statusLower} (default)`);
   return statusLower;
 }
 
 /**
- * ✅ استخراج تاريخ الاستلام الحقيقي من بيانات الفاتورة
+ * ✅ استخراج تاريخ الاستلام
  */
 function extractReceivedAt(invoice: Invoice): string | null {
-  // أولوية 1: تاريخ التحديث من API
-  if (invoice.updated_at) {
-    return invoice.updated_at;
-  }
-  // أولوية 2: تاريخ الإنشاء
-  if (invoice.created_at) {
-    return invoice.created_at;
-  }
-  // أولوية 3: الآن كحل أخير
+  if (invoice.updated_at) return invoice.updated_at;
+  if (invoice.created_at) return invoice.created_at;
   return new Date().toISOString();
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -232,17 +165,16 @@ serve(async (req) => {
       run_reconciliation = true
     } = body;
 
-    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, Reconcile: ${run_reconciliation}`);
+    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, ForceRefresh: ${force_refresh}`);
 
     let totalInvoicesSynced = 0;
     let totalOrdersUpdated = 0;
-    const employeeResults: Record<string, { invoices: number; orders: number }> = {};
+    let newInvoicesCount = 0;
+    let statusChangedCount = 0;
+    const employeeResults: Record<string, { invoices: number; orders: number; newInvoices: number }> = {};
 
+    // ========== COMPREHENSIVE MODE ==========
     if (mode === 'comprehensive') {
-      // ========== COMPREHENSIVE MODE ==========
-      // Fetch ALL active employee tokens and sync their invoices
-      // ✅ NEW: Also check pending invoices in DB that may have been received
-      
       const { data: tokens, error: tokensError } = await supabase
         .from('delivery_partner_tokens')
         .select('id, user_id, token, account_username, merchant_id, expires_at')
@@ -257,79 +189,55 @@ serve(async (req) => {
 
       console.log(`📋 Found ${tokens?.length || 0} active tokens to sync`);
 
-      // ✅ NEW: جلب الفواتير المعلقة من قاعدة البيانات للتحقق منها
-      const { data: pendingInvoices } = await supabase
-        .from('delivery_invoices')
-        .select('external_id, owner_user_id, status_normalized')
-        .eq('partner', 'alwaseet')
-        .neq('status_normalized', 'received')
-        .order('issued_at', { ascending: false })
-        .limit(50);
-      
-      const pendingExternalIds = new Set(pendingInvoices?.map(i => i.external_id) || []);
-      console.log(`📋 Found ${pendingExternalIds.size} pending invoices in DB to check`);
-
-      // Process each employee's token
       for (const tokenData of tokens || []) {
         const employeeId = tokenData.user_id;
         const accountUsername = tokenData.account_username || 'unknown';
         
-        console.log(`👤 Syncing invoices for employee: ${employeeId} (${accountUsername})`);
+        console.log(`👤 Syncing ALL invoices for employee: ${employeeId} (${accountUsername})`);
 
         try {
-          // Fetch invoices from AlWaseet API
+          // ✅ جلب جميع الفواتير من API
           const apiInvoices = await fetchInvoicesFromAPI(tokenData.token);
-          console.log(`  📥 Fetched ${apiInvoices.length} invoices from API`);
-
-          // ✅ بناء قائمة الفواتير للمعالجة:
-          // 1. آخر 5 فواتير من API
-          // 2. + أي فاتورة معلقة في DB موجودة في API
-          const recentInvoices = apiInvoices.slice(0, 5);
-          const pendingFromDb: Invoice[] = [];
-          
-          // ✅ البحث عن الفواتير المعلقة في DB ضمن استجابة API
-          for (const apiInvoice of apiInvoices) {
-            const extId = String(apiInvoice.id);
-            if (pendingExternalIds.has(extId) && !recentInvoices.find(i => String(i.id) === extId)) {
-              pendingFromDb.push(apiInvoice);
-            }
-          }
-          
-          // ✅ دمج القائمتين
-          const invoicesToProcess = [...recentInvoices, ...pendingFromDb];
-          console.log(`  🎯 Processing ${invoicesToProcess.length} invoices (${recentInvoices.length} recent + ${pendingFromDb.length} pending from DB)`);
+          console.log(`  📥 Fetched ${apiInvoices.length} total invoices from API`);
 
           let employeeInvoicesSynced = 0;
           let employeeOrdersSynced = 0;
+          let employeeNewInvoices = 0;
 
-          for (const invoice of invoicesToProcess) {
+          // ✅ معالجة كل الفواتير من API
+          for (const invoice of apiInvoices) {
             const externalId = String(invoice.id);
             const statusNormalized = normalizeStatus(invoice.status);
             const isReceived = statusNormalized === 'received' || invoice.received === true;
             const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
 
-            // ✅ التحقق مما إذا كانت الفاتورة موجودة في قاعدة البيانات
+            // التحقق إذا كانت الفاتورة موجودة
             const { data: existingInvoice } = await supabase
               .from('delivery_invoices')
               .select('id, received, received_at, status_normalized')
               .eq('external_id', externalId)
               .eq('partner', 'alwaseet')
-              .single();
+              .maybeSingle();
 
-            // ✅ إذا كانت الفاتورة مستلمة في DB ومستلمة في API أيضاً = نتخطاها (تقليل الاستهلاك)
-            // لكن إذا كانت معلقة في DB ومستلمة في API = نحدثها!
+            // ✅ إذا موجودة ومستلمة في DB ولم نطلب force = تخطي
             if (existingInvoice?.received === true && !force_refresh) {
-              console.log(`  ⏭️ Invoice ${externalId} already received in DB, skipping`);
               continue;
             }
-            
-            // ✅ تحقق إذا الفاتورة تغيرت حالتها (من معلقة لمستلمة)
+
+            // ✅ تحقق من تغيير الحالة
+            const isNew = !existingInvoice;
             const statusChanged = existingInvoice && existingInvoice.status_normalized !== statusNormalized;
-            if (statusChanged) {
+            
+            if (isNew) {
+              console.log(`  🆕 New invoice ${externalId} (status: ${statusNormalized})`);
+              employeeNewInvoices++;
+              newInvoicesCount++;
+            } else if (statusChanged) {
               console.log(`  📝 Invoice ${externalId} status changed: ${existingInvoice.status_normalized} → ${statusNormalized}`);
+              statusChangedCount++;
             }
 
-            // Upsert invoice with correct owner_user_id
+            // Upsert
             const { data: upsertedInvoice, error: upsertError } = await supabase
               .from('delivery_invoices')
               .upsert({
@@ -345,7 +253,7 @@ serve(async (req) => {
                 received: isReceived,
                 received_flag: isReceived,
                 received_at: isReceived ? (existingInvoice?.received_at || receivedAt) : null,
-                issued_at: invoice.created_at || invoice.createdAt,
+                issued_at: invoice.created_at,
                 raw: invoice,
                 last_synced_at: new Date().toISOString(),
                 last_api_updated_at: invoice.updated_at || new Date().toISOString(),
@@ -354,21 +262,19 @@ serve(async (req) => {
                 ignoreDuplicates: false,
               })
               .select('id')
-              .single();
+              .maybeSingle();
 
             if (upsertError) {
               console.error(`  ❌ Error upserting invoice ${externalId}:`, upsertError.message);
             } else {
               employeeInvoicesSynced++;
               
-              // ✅ Sync invoice orders if requested
+              // ✅ مزامنة طلبات الفاتورة
               if (sync_orders && upsertedInvoice?.id) {
                 try {
                   const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
                   
                   if (invoiceOrders.length > 0) {
-                    console.log(`    📦 Syncing ${invoiceOrders.length} orders for invoice ${externalId}`);
-                    
                     for (const order of invoiceOrders) {
                       const { error: orderError } = await supabase
                         .from('delivery_invoice_orders')
@@ -384,12 +290,9 @@ serve(async (req) => {
                           ignoreDuplicates: false,
                         });
                       
-                      if (!orderError) {
-                        employeeOrdersSynced++;
-                      }
+                      if (!orderError) employeeOrdersSynced++;
                     }
                     
-                    // Update orders_last_synced_at
                     await supabase
                       .from('delivery_invoices')
                       .update({ orders_last_synced_at: new Date().toISOString() })
@@ -405,40 +308,38 @@ serve(async (req) => {
           employeeResults[employeeId] = {
             invoices: employeeInvoicesSynced,
             orders: employeeOrdersSynced,
+            newInvoices: employeeNewInvoices,
           };
           totalInvoicesSynced += employeeInvoicesSynced;
           totalOrdersUpdated += employeeOrdersSynced;
 
-          console.log(`  ✅ Synced ${employeeInvoicesSynced} invoices, ${employeeOrdersSynced} orders for ${accountUsername}`);
+          console.log(`  ✅ Synced ${employeeInvoicesSynced} invoices (${employeeNewInvoices} new), ${employeeOrdersSynced} orders`);
 
         } catch (employeeError) {
           console.error(`  ❌ Error syncing employee ${employeeId}:`, employeeError);
-          employeeResults[employeeId] = { invoices: 0, orders: 0 };
+          employeeResults[employeeId] = { invoices: 0, orders: 0, newInvoices: 0 };
         }
 
-        // Small delay to avoid rate limiting
         await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      // ✅ Update last_used_at AND last_sync_at for all processed tokens
+      // Update token last sync times
       if (tokens && tokens.length > 0) {
         await supabase
           .from('delivery_partner_tokens')
           .update({ 
             last_used_at: new Date().toISOString(),
-            last_sync_at: new Date().toISOString() // ✅ هذا يضمن تحديث وقت المزامنة حتى لو لم تُضف فواتير
+            last_sync_at: new Date().toISOString()
           })
           .in('id', tokens.map(t => t.id));
       }
 
     } else {
       // ========== SMART MODE ==========
-      // Quick sync for specific employee or current user
-      // ✅ يدعم تعدد التوكنات: يزامن كل التوكنات النشطة للموظف
+      // ✅ تعديل: جلب كل الفواتير وليس فقط 5
       
       let targetEmployeeId = employee_id;
 
-      // If no employee_id provided, get from auth header
       if (!targetEmployeeId) {
         const authHeader = req.headers.get('Authorization');
         if (authHeader) {
@@ -456,7 +357,6 @@ serve(async (req) => {
         );
       }
 
-      // ✅ جلب كل التوكنات النشطة للموظف (بدلاً من .single())
       const { data: tokensData, error: tokensError } = await supabase
         .from('delivery_partner_tokens')
         .select('id, token, account_username, merchant_id')
@@ -480,41 +380,42 @@ serve(async (req) => {
 
       console.log(`👤 Employee ${targetEmployeeId} has ${tokensData.length} active token(s)`);
 
-      // ✅ مزامنة كل التوكنات النشطة
       for (const tokenData of tokensData) {
         console.log(`🔄 Syncing token: ${tokenData.account_username} (merchant: ${tokenData.merchant_id})`);
         
-        // Fetch recent invoices
+        // ✅ جلب كل الفواتير من API
         const apiInvoices = await fetchInvoicesFromAPI(tokenData.token);
-        
-        // In smart mode, only process last 5 invoices for speed
-        const recentInvoices = force_refresh ? apiInvoices : apiInvoices.slice(0, 5);
-        
-        console.log(`📥 Processing ${recentInvoices.length} recent invoices for ${tokenData.account_username}`);
+        console.log(`📥 Processing ${apiInvoices.length} invoices for ${tokenData.account_username}`);
 
-        for (const invoice of recentInvoices) {
+        // ✅ معالجة كل الفواتير وليس فقط 5
+        for (const invoice of apiInvoices) {
           const externalId = String(invoice.id);
           const statusNormalized = normalizeStatus(invoice.status);
           const isReceived = statusNormalized === 'received' || invoice.received === true;
           const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
 
-          // Check if invoice already exists with same status
+          // Check existing
           const { data: existing } = await supabase
             .from('delivery_invoices')
             .select('id, status_normalized, received, received_at')
             .eq('external_id', externalId)
             .eq('partner', 'alwaseet')
-            .single();
+            .maybeSingle();
 
-          // ✅ إذا الفاتورة مستلمة في DB ومستلمة في API = نتخطاها (تقليل الاستهلاك)
+          // ✅ Skip if already received in DB and not forcing
           if (existing?.received === true && !force_refresh) {
             continue;
           }
 
-          // ✅ تحقق إذا الفاتورة تغيرت حالتها
+          const isNew = !existing;
           const statusChanged = existing && existing.status_normalized !== statusNormalized;
-          if (statusChanged) {
-            console.log(`📝 Invoice ${externalId} status changed: ${existing.status_normalized} → ${statusNormalized}`);
+          
+          if (isNew) {
+            console.log(`  🆕 New invoice ${externalId} (${statusNormalized})`);
+            newInvoicesCount++;
+          } else if (statusChanged) {
+            console.log(`  📝 Invoice ${externalId}: ${existing.status_normalized} → ${statusNormalized}`);
+            statusChangedCount++;
           }
 
           // Skip if no changes at all
@@ -537,7 +438,7 @@ serve(async (req) => {
               received: isReceived,
               received_flag: isReceived,
               received_at: isReceived ? (existing?.received_at || receivedAt) : null,
-              issued_at: invoice.created_at || invoice.createdAt,
+              issued_at: invoice.created_at,
               raw: invoice,
               last_synced_at: new Date().toISOString(),
             }, {
@@ -545,12 +446,11 @@ serve(async (req) => {
               ignoreDuplicates: false,
             })
             .select('id')
-            .single();
+            .maybeSingle();
 
           if (!upsertError) {
             totalInvoicesSynced++;
             
-            // ✅ Sync orders in smart mode too if requested
             if (sync_orders && upsertedInvoice?.id) {
               try {
                 const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
@@ -570,9 +470,7 @@ serve(async (req) => {
                       ignoreDuplicates: false,
                     });
                   
-                  if (!orderError) {
-                    totalOrdersUpdated++;
-                  }
+                  if (!orderError) totalOrdersUpdated++;
                 }
                 
                 if (invoiceOrders.length > 0) {
@@ -588,7 +486,6 @@ serve(async (req) => {
           }
         }
         
-        // ✅ تحديث last_sync_at لهذا التوكن
         await supabase
           .from('delivery_partner_tokens')
           .update({ 
@@ -597,7 +494,6 @@ serve(async (req) => {
           })
           .eq('id', tokenData.id);
         
-        // تأخير صغير بين التوكنات لتجنب rate limiting
         if (tokensData.length > 1) {
           await new Promise(resolve => setTimeout(resolve, 150));
         }
@@ -606,12 +502,13 @@ serve(async (req) => {
       employeeResults[targetEmployeeId] = {
         invoices: totalInvoicesSynced,
         orders: totalOrdersUpdated,
+        newInvoices: newInvoicesCount,
       };
       
-      console.log(`✅ Smart sync complete for employee ${targetEmployeeId}: ${totalInvoicesSynced} invoices from ${tokensData.length} token(s)`);
+      console.log(`✅ Smart sync complete for employee ${targetEmployeeId}: ${totalInvoicesSynced} invoices (${newInvoicesCount} new)`);
     }
 
-    // ✅ ربط طلبات الفواتير بالطلبات المحلية تلقائياً
+    // ✅ Link invoice orders to local orders
     let linkedCount = 0;
     let updatedOrdersCount = 0;
     try {
@@ -627,31 +524,25 @@ serve(async (req) => {
       console.warn('⚠️ Error calling link_invoice_orders_to_orders:', linkErr);
     }
 
-    // ✅ التسوية الآن تتم تلقائياً عبر Trigger على delivery_invoices
-    // لا حاجة لاستدعاء RPC هنا - الـ Trigger يعمل عند UPDATE على الفاتورة
-    const reconciledCount = 0;
-    if (run_reconciliation) {
-      console.log('ℹ️ Reconciliation handled automatically via database trigger');
-    }
-
     // Log sync result
     await supabase.from('background_sync_logs').insert({
       sync_type: mode === 'comprehensive' ? 'comprehensive_invoice_sync' : 'smart_invoice_sync',
       success: true,
       invoices_synced: totalInvoicesSynced,
-      orders_updated: totalOrdersUpdated + linkedCount + reconciledCount,
+      orders_updated: totalOrdersUpdated + linkedCount,
     });
 
-    console.log(`✅ Sync complete - Invoices: ${totalInvoicesSynced}, Orders: ${totalOrdersUpdated}, Linked: ${linkedCount}, Reconciled: ${reconciledCount}`);
+    console.log(`✅ Sync complete - Invoices: ${totalInvoicesSynced}, New: ${newInvoicesCount}, StatusChanged: ${statusChangedCount}, Orders: ${totalOrdersUpdated}, Linked: ${linkedCount}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         mode,
         invoices_synced: totalInvoicesSynced,
+        new_invoices: newInvoicesCount,
+        status_changed: statusChangedCount,
         orders_updated: totalOrdersUpdated,
         linked_count: linkedCount,
-        reconciled_count: reconciledCount,
         employee_results: employeeResults,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

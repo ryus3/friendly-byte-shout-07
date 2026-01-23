@@ -7088,23 +7088,14 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_manage_invoice_cron:
-        | {
-            Args: {
-              p_action?: string
-              p_evening_time?: string
-              p_morning_time?: string
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_enabled?: boolean
-              p_evening_time: string
-              p_morning_time: string
-            }
-            Returns: Json
-          }
+      admin_manage_invoice_cron: {
+        Args: {
+          p_enabled?: boolean
+          p_evening_time: string
+          p_morning_time: string
+        }
+        Returns: Json
+      }
       analyze_customer_gender: {
         Args: { customer_id_param: string }
         Returns: string
@@ -8334,7 +8325,7 @@ export type Database = {
         Returns: undefined
       }
       update_invoice_sync_schedule: {
-        Args: { p_evening_time?: string; p_morning_time?: string }
+        Args: { p_evening_time: string; p_morning_time: string }
         Returns: Json
       }
       update_order_reservation_status: {
