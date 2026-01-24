@@ -8325,7 +8325,7 @@ export type Database = {
         Returns: undefined
       }
       update_invoice_sync_schedule: {
-        Args: { p_evening_time: string; p_morning_time: string }
+        Args: { p_evening_time?: string; p_morning_time?: string }
         Returns: Json
       }
       update_order_reservation_status: {

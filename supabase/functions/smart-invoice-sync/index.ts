@@ -160,7 +160,7 @@ serve(async (req) => {
       mode = 'smart', 
       employee_id, 
       sync_invoices = true, 
-      sync_orders = false,
+      sync_orders = true,  // ✅ تفعيل افتراضي - مهم للربط التلقائي
       force_refresh = false,
       run_reconciliation = true
     } = body;
