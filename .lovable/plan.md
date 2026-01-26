@@ -1,83 +1,25 @@
 
-# خطة إصلاح مشكلتي الجدولة وحالة الطلب
+# خطة إصلاح مشكلة حالة الطلب "Completed" الخاطئة
 
-## المشكلة 1: إصلاح جدولة المزامنة التلقائية
+## المشكلة المكتشفة
+الطلب **#121313050 (ORD000724)** يظهر كـ `completed` رغم أن:
+- ربح الموظف = **7,000 د.ع** (وليس 0)
+- الفاتورة **#2714651** لا تزال **معلقة** (`received: false`)
 
-### 1.1 حذف الـ Cron Jobs الخاطئة
-```sql
-SELECT cron.unschedule(55);
-SELECT cron.unschedule(56);
-```
+## السبب الجذري
+يوجد مسار في الكود يُغيّر الـ status إلى completed بدون التحقق من `receipt_received`.
 
-### 1.2 إعادة إنشاء الـ Cron Jobs بالبيانات الصحيحة
-- استخدام URL الصحيح: `tkheostkubborwkwzugl.supabase.co`
-- إضافة الـ Anon Key الصحيح
-- تحويل الوقت: 09:00 بغداد = 06:00 UTC، 21:00 بغداد = 18:00 UTC
+## خطوات الإصلاح
 
-```sql
--- صباح: 09:00 بغداد = 06:00 UTC
-SELECT cron.schedule(
-  'invoice-sync-am',
-  '0 6 * * *',
-  $$SELECT net.http_post(
-    url:='https://tkheostkubborwkwzugl.supabase.co/functions/v1/smart-invoice-sync',
-    headers:='{"Content-Type": "application/json", "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."}'::jsonb,
-    body:='{"mode": "comprehensive", "sync_invoices": true, "sync_orders": true}'::jsonb
-  )$$
-);
-
--- مساء: 21:00 بغداد = 18:00 UTC
-SELECT cron.schedule(
-  'invoice-sync-pm',
-  '0 18 * * *',
-  $$SELECT net.http_post(...)$$
-);
-```
-
-### 1.3 تحديث جدول الإعدادات
-```sql
-UPDATE auto_sync_schedule_settings 
-SET sync_times = ARRAY['09:00', '21:00']
-WHERE id = '00000000-0000-0000-0000-000000000001';
-```
-
----
-
-## المشكلة 2: تصحيح منطق حالة "Completed"
-
-### 2.1 تعديل Trigger `auto_complete_zero_profit_orders`
-**الوضع الحالي**: يُكمل الطلب تلقائياً عند `delivery_status = '4'` إذا كان الربح = 0
-
-**الوضع المطلوب**: يجب أن يُكمل الطلب فقط عندما:
-- `delivery_status = '4'` (مُسلّم)
-- **و** `receipt_received = true` (الفاتورة مُستلمة)
-
-```sql
-CREATE OR REPLACE FUNCTION auto_complete_zero_profit_orders()
-RETURNS TRIGGER AS $$
-BEGIN
-  -- فقط إذا كانت الفاتورة مستلمة
-  IF NEW.receipt_received = true 
-     AND NEW.status NOT IN ('completed', 'returned', 'cancelled')
-     AND COALESCE(NEW.employee_profit, 0) = 0 
-  THEN
-    NEW.status := 'completed';
-    NEW.completed_at := now();
-  END IF;
-  RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-```
-
-### 2.2 إصلاح الطلب ORD000724
+### الخطوة 1: تصحيح الطلب فوراً
 ```sql
 UPDATE orders 
-SET status = 'delivered'  -- إعادة للحالة الصحيحة
-WHERE order_number = 'ORD000724' 
+SET status = 'delivered'
+WHERE tracking_number = '121313050' 
   AND receipt_received = false;
 ```
 
-### 2.3 إصلاح أي طلبات أخرى مشابهة
+### الخطوة 2: إصلاح أي طلبات مشابهة
 ```sql
 UPDATE orders 
 SET status = 'delivered'
@@ -86,9 +28,10 @@ WHERE status = 'completed'
   AND delivery_status = '4';
 ```
 
----
+### الخطوة 3: تعديل ملف return-status-handler.js
+تغيير `order_status: 'completed'` إلى `status: 'completed'` مع إضافة شرط التحقق من الفاتورة.
 
 ## النتيجة المتوقعة
-1. المزامنة ستعمل في 09:00 صباحاً و 21:00 مساءً بتوقيت بغداد بدقة
-2. الطلبات ستصبح "completed" فقط بعد استلام الفاتورة من شركة التوصيل
-3. الطلب ORD000724 سيعود لحالة "delivered" حتى تُستلم الفاتورة #2714651
+- الطلب #121313050 يعود لحالة `delivered`
+- لن يصبح `completed` إلا بعد استلام الفاتورة #2714651
+- جميع الطلبات المتأثرة تُصحح تلقائياً
