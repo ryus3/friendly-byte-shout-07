@@ -297,6 +297,38 @@ serve(async (req) => {
                       .from('delivery_invoices')
                       .update({ orders_last_synced_at: new Date().toISOString() })
                       .eq('id', upsertedInvoice.id);
+                  } else if (isReceived) {
+                    // ✅ FALLBACK: إذا فشل جلب الطلبات من API وكانت الفاتورة مستلمة
+                    // نبحث عن طلبات محلية مرتبطة بهذه الفاتورة
+                    console.log(`    ⚠️ No orders from API for received invoice ${externalId}, trying local fallback...`);
+                    
+                    const { data: localOrders } = await supabase
+                      .from('orders')
+                      .select('id, tracking_number, final_amount')
+                      .eq('delivery_partner_invoice_id', externalId)
+                      .in('delivery_status', ['4', '5', '21']);
+                    
+                    if (localOrders && localOrders.length > 0) {
+                      console.log(`    🔄 Found ${localOrders.length} local orders for invoice ${externalId}`);
+                      for (const order of localOrders) {
+                        const { error: fallbackError } = await supabase
+                          .from('delivery_invoice_orders')
+                          .upsert({
+                            invoice_id: upsertedInvoice.id,
+                            external_order_id: order.tracking_number,
+                            order_id: order.id,
+                            amount: order.final_amount || 0,
+                            status: 'delivered',
+                            owner_user_id: employeeId,
+                            raw: { id: order.tracking_number, fallback: true },
+                          }, {
+                            onConflict: 'invoice_id,external_order_id',
+                            ignoreDuplicates: false,
+                          });
+                        
+                        if (!fallbackError) employeeOrdersSynced++;
+                      }
+                    }
                   }
                 } catch (ordersError) {
                   console.error(`    ❌ Error syncing orders for invoice ${externalId}:`, ordersError);
@@ -455,29 +487,60 @@ serve(async (req) => {
               try {
                 const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
                 
-                for (const order of invoiceOrders) {
-                  const { error: orderError } = await supabase
-                    .from('delivery_invoice_orders')
-                    .upsert({
-                      invoice_id: upsertedInvoice.id,
-                      external_order_id: String(order.id),
-                      raw: order,
-                      status: order.status,
-                      amount: order.price || order.amount || 0,
-                      owner_user_id: targetEmployeeId,
-                    }, {
-                      onConflict: 'invoice_id,external_order_id',
-                      ignoreDuplicates: false,
-                    });
-                  
-                  if (!orderError) totalOrdersUpdated++;
-                }
-                
                 if (invoiceOrders.length > 0) {
+                  for (const order of invoiceOrders) {
+                    const { error: orderError } = await supabase
+                      .from('delivery_invoice_orders')
+                      .upsert({
+                        invoice_id: upsertedInvoice.id,
+                        external_order_id: String(order.id),
+                        raw: order,
+                        status: order.status,
+                        amount: order.price || order.amount || 0,
+                        owner_user_id: targetEmployeeId,
+                      }, {
+                        onConflict: 'invoice_id,external_order_id',
+                        ignoreDuplicates: false,
+                      });
+                    
+                    if (!orderError) totalOrdersUpdated++;
+                  }
+                  
                   await supabase
                     .from('delivery_invoices')
                     .update({ orders_last_synced_at: new Date().toISOString() })
                     .eq('id', upsertedInvoice.id);
+                } else if (isReceived) {
+                  // ✅ FALLBACK: إذا فشل جلب الطلبات من API وكانت الفاتورة مستلمة
+                  console.log(`  ⚠️ No orders from API for received invoice ${externalId}, trying local fallback...`);
+                  
+                  const { data: localOrders } = await supabase
+                    .from('orders')
+                    .select('id, tracking_number, final_amount')
+                    .eq('delivery_partner_invoice_id', externalId)
+                    .in('delivery_status', ['4', '5', '21']);
+                  
+                  if (localOrders && localOrders.length > 0) {
+                    console.log(`  🔄 Found ${localOrders.length} local orders for invoice ${externalId}`);
+                    for (const order of localOrders) {
+                      const { error: fallbackError } = await supabase
+                        .from('delivery_invoice_orders')
+                        .upsert({
+                          invoice_id: upsertedInvoice.id,
+                          external_order_id: order.tracking_number,
+                          order_id: order.id,
+                          amount: order.final_amount || 0,
+                          status: 'delivered',
+                          owner_user_id: targetEmployeeId,
+                          raw: { id: order.tracking_number, fallback: true },
+                        }, {
+                          onConflict: 'invoice_id,external_order_id',
+                          ignoreDuplicates: false,
+                        });
+                      
+                      if (!fallbackError) totalOrdersUpdated++;
+                    }
+                  }
                 }
               } catch (ordersError) {
                 console.error(`Error syncing orders for invoice ${externalId}:`, ordersError);
