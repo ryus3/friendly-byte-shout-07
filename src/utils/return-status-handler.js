@@ -320,7 +320,8 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
         console.log('⚠️ لا يوجد original_order_id - تخطي المعالجة المالية');
       }
 
-      // ✅ تحديث حالة الطلب إلى "completed"
+      // ✅ تحديث ملاحظات الطلب فقط - لا نغير status إلى completed إلا بعد استلام الفاتورة
+      // الـ trigger auto_complete_zero_profit_orders سيتولى تغيير status تلقائياً عند receipt_received = true
       const notesAddition = isLoss 
         ? `\n[تلقائي] تم إرجاع ${stockUpdatedCount} منتج للمخزون ومعالجة الأرباح. خسارة: ${lossAmount} دينار`
         : `\n[تلقائي] تم إرجاع ${stockUpdatedCount} منتج للمخزون ومعالجة الأرباح`;
@@ -328,7 +329,6 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
       await supabase
         .from('orders')
         .update({ 
-          order_status: 'completed',
           merchant_notes: (order.merchant_notes || '') + notesAddition,
           updated_at: new Date().toISOString()
         })
