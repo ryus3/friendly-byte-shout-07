@@ -372,8 +372,8 @@ const InvoiceSyncSettings = () => {
                           <Pause className="w-4 h-4 text-muted-foreground" />
                         )}
                         <span className="text-sm">
-                          {job.job_name === 'invoice-sync-am' ? 'مزامنة الصباح' : 
-                           job.job_name === 'invoice-sync-pm' ? 'مزامنة المساء' : 
+                          {job.job_name === 'smart-invoice-sync-morning' ? 'مزامنة الصباح' : 
+                           job.job_name === 'smart-invoice-sync-evening' ? 'مزامنة المساء' : 
                            job.job_name?.replace(/-/g, ' ')}
                         </span>
                       </div>
