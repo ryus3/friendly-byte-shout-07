@@ -1,94 +1,99 @@
 
 
-# خطة الإصلاح الجذري لمشكلة الجدولة
+# خطة إصلاح الواجهة لتعرض Jobs الصحيحة فقط
 
-## المشكلة الجذرية
-وجدنا أن هناك **تضارب** في الـ Cron Jobs:
-- `invoice-sync-am/pm` (من الواجهة): تستخدم URL خاطئ وبدون Authorization
-- `smart-invoice-sync-morning/evening`: صحيحة لكن لا تتحدث عند تغيير الوقت
+## المشكلة المكتشفة
 
-## الحل الجذري
+الـ Jobs الصحيحة (61, 62) موجودة وتعمل بشكل سليم:
+- **ID 61**: `smart-invoice-sync-morning` @ `15 1 * * *` = 04:15 بغداد ✅
+- **ID 62**: `smart-invoice-sync-evening` @ `0 18 * * *` = 21:00 بغداد ✅
 
-### الخطوة 1: حذف كل الـ Jobs المتضاربة
-```sql
--- حذف Jobs بـ URL خاطئ
-SELECT cron.unschedule(59); -- invoice-sync-am (خاطئ)
-SELECT cron.unschedule(60); -- invoice-sync-pm (خاطئ)
-```
-
-### الخطوة 2: تحديث Jobs الصحيحة بالوقت المطلوب
-```sql
--- تحديث smart-invoice-sync-morning لتعمل 04:15 بغداد = 01:15 UTC
-SELECT cron.unschedule('smart-invoice-sync-morning');
-SELECT cron.schedule(
-  'smart-invoice-sync-morning',
-  '15 1 * * *',
-  -- نفس الـ command الصحيح الموجود
-);
-
--- تحديث smart-invoice-sync-evening لتعمل 21:00 بغداد = 18:00 UTC
-SELECT cron.unschedule('smart-invoice-sync-evening');
-SELECT cron.schedule(
-  'smart-invoice-sync-evening', 
-  '0 18 * * *',
-  -- نفس الـ command الصحيح
-);
-```
-
-### الخطوة 3: إصلاح دالة `update_invoice_sync_schedule`
-تعديل الدالة لتُحدّث `smart-invoice-sync-morning/evening` بدلاً من إنشاء `invoice-sync-am/pm` بمسار خاطئ.
-
-**التغيير الجذري**:
-- استخدام URL الصحيح: `https://tkheostkubborwkwzugl.supabase.co/functions/v1/smart-invoice-sync`
-- استخدام Anon Key الصحيح
-- التحويل الزمني: وقت بغداد - 3 ساعات = UTC
-
-### الخطوة 4: تحديث `auto_sync_schedule_settings`
-```sql
-UPDATE auto_sync_schedule_settings 
-SET sync_times = ARRAY['04:15', '21:00']::text[]
-WHERE id = '00000000-0000-0000-0000-000000000001';
-```
+لكن دالة `get_invoice_cron_status` تبحث عن الأسماء الخاطئة (`invoice-sync-am/pm`) بدلاً من الصحيحة (`smart-invoice-sync-morning/evening`).
 
 ---
 
-## الملفات المطلوب تعديلها
+## الحل
 
-### 1. SQL Migration جديدة
-- حذف الـ Cron Jobs الخاطئة (59, 60)
-- إنشاء دالة `update_invoice_sync_schedule` مُصححة تستخدم:
-  - URL: `https://tkheostkubborwkwzugl.supabase.co/functions/v1/smart-invoice-sync`
-  - Authorization: Bearer + anon key
-  - تحديث `smart-invoice-sync-morning/evening` بدلاً من إنشاء jobs جديدة
+### التعديل الوحيد المطلوب
 
-### 2. لا تغيير على الواجهة
-`InvoiceSyncSettings.jsx` صحيح - يقرأ الوقت من `auto_sync_schedule_settings.sync_times`
+تحديث دالة `get_invoice_cron_status` لتعرض الـ Jobs الصحيحة فقط:
+
+```sql
+CREATE OR REPLACE FUNCTION public.get_invoice_cron_status()
+RETURNS TABLE (
+  job_name TEXT,
+  schedule TEXT,
+  is_active BOOLEAN,
+  next_run_at TIMESTAMPTZ
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, cron
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    j.jobname::text as job_name,
+    j.schedule::text as schedule,
+    j.active as is_active,
+    CASE 
+      WHEN j.active THEN NOW() + INTERVAL '1 hour'
+      ELSE NULL
+    END as next_run_at
+  FROM cron.job j
+  WHERE j.jobname IN (
+    'smart-invoice-sync-morning', 
+    'smart-invoice-sync-evening'
+  )
+  AND j.jobid IN (61, 62)  -- فقط الـ Jobs الصحيحة
+  ORDER BY j.jobname;
+END;
+$$;
+```
+
+### تحديث الواجهة
+
+تعديل `InvoiceSyncSettings.jsx` لعرض أسماء الـ Jobs بشكل صحيح:
+
+```javascript
+// السطر 375-377
+{job.job_name === 'smart-invoice-sync-morning' ? 'مزامنة الصباح' : 
+ job.job_name === 'smart-invoice-sync-evening' ? 'مزامنة المساء' : 
+ job.job_name?.replace(/-/g, ' ')}
+```
 
 ---
 
 ## النتيجة المتوقعة
 
-| الوقت الذي تختاره | الـ Cron Job | التنفيذ الفعلي |
-|-------------------|--------------|----------------|
-| 04:15 صباحاً بغداد | `15 1 * * *` UTC | ✅ 04:15 صباحاً بالضبط |
-| 21:00 مساءً بغداد | `0 18 * * *` UTC | ✅ 21:00 مساءً بالضبط |
-
-## معلومات تقنية
-
-### لماذا كان الزر اليدوي يعمل؟
-الزر اليدوي يستخدم `supabase.functions.invoke()` الذي:
-- يستخدم URL المشروع الصحيح تلقائياً من الـ client config
-- يُرسل Authorization header من الـ session الحالية
-
-### لماذا الـ Cron كان يفشل؟
-الـ Cron Jobs `invoice-sync-am/pm` كانت:
-- تستدعي مشروع مختلف (`rqwrv...`)
-- بدون Authorization token
+| ما تختاره في الواجهة | ما يُحفظ | ما يظهر في الواجهة | ما يُنفذ فعلاً |
+|---------------------|---------|-------------------|---------------|
+| 04:15 صباحاً | `sync_times = ['04:15', '21:00']` | 04:15 صباحاً | ✅ 04:15 صباحاً بغداد |
+| 21:00 مساءً | نفس الأعلى | 21:00 مساءً | ✅ 21:00 مساءً بغداد |
 
 ---
 
-## التحقق بعد التنفيذ
-1. Query على `cron.job` للتأكد من عدم وجود URL خاطئ
-2. التأكد أن `smart-invoice-sync-morning/evening` تستخدم الوقت الصحيح
-3. مراقبة الـ Edge Function logs في الوقت المجدول
+## ملخص الملفات المطلوب تعديلها
+
+1. **SQL Migration جديدة**:
+   - تحديث `get_invoice_cron_status` لتبحث عن `smart-invoice-sync-morning/evening` بدلاً من `invoice-sync-am/pm`
+
+2. **src/components/settings/InvoiceSyncSettings.jsx**:
+   - تحديث أسماء العرض في السطر 375-377
+
+---
+
+## معلومات تقنية
+
+### لماذا Jobs القديمة لن تؤثر؟
+- دالة `update_invoice_sync_schedule` الحالية (الصحيحة) تُحدّث فقط `smart-invoice-sync-morning/evening` (61, 62)
+- الواجهة ستعرض فقط هذه الـ Jobs
+- Jobs القديمة (17, 18, 59, 60) ستبقى موجودة لكن **لن تُستخدم ولن تُعرض**
+
+### ماذا يحدث عند تغيير الوقت؟
+1. تختار 05:30 صباحاً في الواجهة
+2. تُستدعى `update_invoice_sync_schedule('05:30', '21:00')`
+3. تُحذف `smart-invoice-sync-morning/evening` القديمة وتُنشأ جديدة
+4. Job 61 تُحذف وتُنشأ بجدولة `30 2 * * *` (05:30 بغداد = 02:30 UTC)
+5. الواجهة تُحدّث وتعرض 05:30
 
