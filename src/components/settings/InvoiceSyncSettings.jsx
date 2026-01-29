@@ -82,7 +82,7 @@ const InvoiceSyncSettings = () => {
         supabase.rpc('get_employee_invoice_stats'),
         supabase.rpc('get_invoice_discrepancies'),
         supabase.from('invoice_sync_settings').select('*').maybeSingle(),
-        supabase.from('auto_sync_schedule_settings').select('*').maybeSingle()
+        supabase.from('auto_sync_schedule_settings').select('*').eq('id', '00000000-0000-0000-0000-000000000001').maybeSingle()
       ]);
 
       if (statsRes.data) setStats(statsRes.data[0] || {});
