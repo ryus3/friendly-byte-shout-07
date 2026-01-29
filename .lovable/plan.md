@@ -1,84 +1,255 @@
 
-هدف التعديل
-- المزامنة تعمل فعلاً بالوقت الذي تختاره (هذا ممتاز).
-- المشكلة المتبقية فقط بالواجهة: وقت “مزامنة الصباح/المساء” يبقى على القيمة الافتراضية (09:00 و 21:00) بدل قراءة الوقت المحفوظ من قاعدة البيانات.
+# تقرير فحص عميق: الطلب 121347070 ومزامنة مدن
 
-التشخيص (سبب المشكلة الحقيقي)
-- في `InvoiceSyncSettings.jsx` يتم جلب الجدولة هكذا:
-  - `supabase.from('auto_sync_schedule_settings').select('*').maybeSingle()`
-- لكن جدول `auto_sync_schedule_settings` عندك يحتوي صفّين (تم التحقق في بيئة test):
-  - `00000000-0000-0000-0000-000000000001` → `sync_times: ['09:00','23:45']` (هذا الصف الصحيح الذي نحدثه دائماً)
-  - `af158c1a-3dc6-4f73-9b87-c3096e6a988f` → `sync_times: ['02:15:00','21:00:00']` (صف قديم)
-- عند وجود أكثر من صف، `maybeSingle()` لا تعطي نتيجة “مضمونة” وقد ترجع `null` أو خطأ، فيسقط الكود على القيم الافتراضية:
-  - morning = '09:00'
-  - evening = '21:00'
-- لذلك الواجهة تبقى تعرض 9:00 (صباحاً) و 9:00 (مساءً = 21:00) حتى لو كانت الجدولة تعمل بوقت مختلف.
+---
 
-ملاحظة مهمة إضافية (ليست سبب وقت الواجهة، لكنها قد تسبب لبس)
-- جدول `cron.job` عندك يحتوي نسختين لنفس اسم الـ job:
-  - morning: jobid 17 و jobid 63
-  - evening: jobid 18 و jobid 64
-- دالة `get_invoice_cron_status()` حالياً ترجع الاثنين لأنّها تعمل فلترة بالاسم فقط، وليس على “آخر job” أو “الـ job الصحيح”.
-- هذا لا يغير قيمة الوقت في Inputs، لكنه قد يجعل قسم “حالة المهام المجدولة” يعرض أكثر من سطر أو يعرض جدول قديم.
+## المشكلة الأولى: الطلب 121347070 في نافذة المخزون المحجوز
 
-التنفيذ المقترح (تصحيح الواجهة لتقرأ الوقت الصحيح دائماً)
-1) تعديل الاستعلام داخل `src/components/settings/InvoiceSyncSettings.jsx`
-   - بدلاً من قراءة أي صف من `auto_sync_schedule_settings`، سنقرأ الصف الصحيح مباشرة بالـ ID الثابت:
-     - `eq('id', '00000000-0000-0000-0000-000000000001')`
-   - مع استخدام `maybeSingle()` (أو `single()` مع معالجة الخطأ) بحيث:
-     - إذا لم يوجد الصف لأي سبب: نُظهر Toast/تنبيه واضح + نستخدم fallback.
-     - إذا وجد: نقرأ `sync_times` ونحدث `settings.morning_sync_time` و `settings.evening_sync_time`.
+### التشخيص
 
-   لماذا هذا كافٍ؟
-   - لأن `update_invoice_sync_schedule()` أصلاً يكتب دائماً في هذا الـ ID:
-     - `WHERE id = '00000000-0000-0000-0000-000000000001'`
-   - فمجرّد أن الواجهة تقرأ منه بشكل صريح، ستعرض نفس الوقت الذي اخترته بلا أي افتراضات.
+حالة الطلب في قاعدة البيانات:
+```
+qr_id: 121347070
+status: returned (مُرجع)
+delivery_status: 17 (تم الإرجاع للتاجر)
+order_type: partial_delivery
+receipt_received: true
+delivery_partner: alwaseet
+```
 
-2) تحسين صغير لتجربة المستخدم (اختياري لكن مفيد)
-   - عند نجاح “حفظ إعدادات الجدولة”، بدلاً من انتظار `fetchAllData()` فقط:
-     - نحدّث الـ state مباشرة بالقيم التي اختارها المستخدم (هي أصلاً موجودة في state)
-     - ثم نجلب البيانات لتأكيدها (كما هو الآن).
-   - الهدف: حتى لو تأخر الجلب أو فشل مرة، تبقى الواجهة تعرض ما اختاره المستخدم.
+حالة العنصر في order_items:
+```
+item_status: pending (لا يزال!)
+item_direction: null
+```
 
-التنفيذ المقترح (اختياري) لتصفية عرض الـ Cron Jobs في الواجهة
-3) تحديث دالة `public.get_invoice_cron_status()` لتعرض “آخر job فقط” لكل اسم
-   - لأن عندك jobid قديم وجديد بنفس الاسم، نريد إظهار الأحدث فقط (الأكبر jobid عادةً).
-   - التعديل سيكون داخل SQL migration:
-     - بدل `WHERE jobname IN (...)` فقط
-     - نستخدم subquery/CTE لاختيار `max(jobid)` لكل `jobname` ثم نرجع تلك الصفوف فقط.
-   - هذا لا يغيّر تشغيل المزامنة (أنت قلت كل شيء يعمل)، لكنه يمنع الواجهة من عرض بيانات مضللة أو مكررة.
+### السبب الجذري
 
-التحقق الإلزامي بعد التنفيذ (Verification عميق كما تحب)
-A) تحقق من قاعدة البيانات (Test environment)
-- تشغيل:
-  - `select id, sync_times, updated_at from public.auto_sync_schedule_settings order by updated_at desc;`
-- التأكد أن الصف `0000...0001` يحتوي الوقت الذي اخترته فعلاً.
+فلتر نافذة المخزون المحجوز في السطر 42:
+```javascript
+// ReservedStockDialog.jsx - الفلتر الحالي
+return orders?.filter(order => 
+  ['pending', 'shipped', 'delivery', 'returned'].includes(order.status) &&  // ⚠️ يشمل returned!
+  order.status !== 'returned_in_stock' &&
+  order.status !== 'completed'
+) || [];
+```
 
-B) تحقق من الواجهة
-- افتح “لوحة تحكم مزامنة الفواتير” > تبويب “الجدولة”.
-- تأكد أن حقول الوقت تعرض نفس `sync_times` المخزنة (بدون رجوع إلى 09:00/21:00).
-- غيّر الوقت واحفظ:
-  - أعد تحميل الصفحة (Refresh).
-  - تأكد أن الوقت يبقى كما اخترته.
+المشكلة المزدوجة:
+1. الفلتر يشمل `'returned'` ضمن الحالات المحجوزة - لكن هذا صحيح للطلبات المعادة التي لم تصل للتاجر بعد
+2. العنصر لا يزال `item_status = 'pending'` رغم أن الطلب `delivery_status = 17` (مُرجع للتاجر)
 
-C) تحقق من “حالة المهام المجدولة” (إن طبقنا خطوة 3)
-- تأكد أنه يظهر سطر واحد للصباح وسطر واحد للمساء (بدون تكرار).
-- لا نحتاج حذف jobs القديمة طالما لا نعرضها ولا نعتمد عليها.
+### الحل المطلوب
 
-الملفات التي سيتم تعديلها
-- Frontend:
-  - `src/components/settings/InvoiceSyncSettings.jsx`
-    - تعديل استعلام جلب `auto_sync_schedule_settings` ليقرأ صف ID الثابت.
-    - (اختياري) تحسين التعامل مع الأخطاء/الـ fallback و UX بعد الحفظ.
-- Database (اختياري لتحسين عرض الحالة فقط):
-  - SQL migration لتحديث `public.get_invoice_cron_status()` ليختار آخر job لكل اسم.
+إضافة شرط استثناء إضافي يستبعد الطلبات التي:
+- `delivery_status = '17'` (تم الإرجاع للتاجر فعلياً)
 
-مخاطر/ملاحظات
-- لا يوجد أي تغيير في منطق الجدولة أو تشغيل المزامنة نفسه (لأنها تعمل صحيح بالفعل).
-- التعديل الأساسي فقط يضمن أن الواجهة تقرأ “المصدر الصحيح” بدل الاعتماد على `maybeSingle()` مع وجود صفين.
+تعديل السطور 40-46:
+```javascript
+const reservedOrders = useMemo(() => {
+  return orders?.filter(order => {
+    // ✅ استثناء مبدئي: delivery_status = 17 أو 4 لا يُحجز أبداً
+    const ds = String(order.delivery_status || '');
+    if (ds === '4' || ds === '17') return false;
+    
+    // الفلترة حسب status
+    return ['pending', 'shipped', 'delivery', 'returned'].includes(order.status) &&
+      order.status !== 'returned_in_stock' &&
+      order.status !== 'completed';
+  }) || [];
+}, [orders]);
+```
 
-تسلسل التنفيذ المقترح
-1) تعديل `InvoiceSyncSettings.jsx` (الاستعلام) + معالجة fallback/التوست.
-2) اختبار الواجهة مباشرة (refresh + تغيير وقت + حفظ).
-3) (اختياري) تحديث `get_invoice_cron_status()` لمنع التكرار في عرض الـ jobs.
-4) إعادة اختبار الواجهة وتأكيد أن كل شيء يظهر مطابقاً للوقت الذي تختاره.
+---
+
+## المشكلة الثانية: مزامنة حالة الطلبات في شركة مدن لا تعمل
+
+### التشخيص العميق
+
+#### 1. حالة التوكنات
+
+| الشركة | الحسابات النشطة | الصلاحية |
+|--------|-----------------|----------|
+| **الوسيط** | 3 حسابات | صالحة حتى يناير-فبراير 2026 ✅ |
+| **مدن** | 0 حسابات | Token منتهي منذ نوفمبر 2025 ❌ |
+
+التوكن الوحيد لمدن:
+```
+account_username: ryus-brand
+partner_name: modon
+is_active: false
+expires_at: 2025-11-18 (منتهي!)
+```
+
+#### 2. الطلبات في قاعدة البيانات
+
+| الشركة | عدد الطلبات |
+|--------|-------------|
+| الوسيط | 600 طلب |
+| مدن | 0 طلب |
+
+**لا توجد أي طلبات من مدن في النظام حالياً!**
+
+### كيف يعمل النظام الحالي (مقارنة)
+
+#### مزامنة الوسيط (تعمل بشكل صحيح)
+```
+API: https://api.alwaseet-iq.net/v1/merchant/merchant-orders?token=xxx
+edge function: sync-order-updates (يعالج كلا الشركتين)
+edge function: smart-invoice-sync (يعالج الوسيط فقط حالياً!)
+```
+
+الفرق الخطير: `smart-invoice-sync` يفلتر على `partner_name = 'alwaseet'` فقط:
+```typescript
+// smart-invoice-sync/index.ts - السطر 182
+.eq('partner_name', 'alwaseet')  // ❌ لا يشمل مدن!
+```
+
+#### مزامنة مدن (الآلية المُعدّة لكن غير فعّالة)
+```
+API: https://mcht.modon-express.net/v1/merchant/merchant-orders?token=xxx
+edge function: sync-order-updates (يدعم مدن ✅)
+edge function: modon-proxy (يعمل ✅)
+lib: modon-api.js (مكتمل ✅)
+statuses: modon-statuses.js (15 حالة معرّفة ✅)
+```
+
+### هل المزامنة تعرف أي شركة ينتمي إليها كل طلب؟
+
+**نعم!** النظام مُصمم بشكل صحيح للفصل:
+
+#### 1. في قاعدة البيانات
+```sql
+orders.delivery_partner = 'alwaseet' | 'modon'
+delivery_partner_tokens.partner_name = 'alwaseet' | 'modon'
+delivery_invoices.partner = 'alwaseet' | 'modon'
+```
+
+#### 2. في sync-order-updates (Edge Function)
+```typescript
+// السطر 88: جلب توكنات كلا الشركتين
+.in('partner_name', ['alwaseet', 'modon'])
+
+// السطر 108-114: تحديد API URL بناءً على الشركة
+const apiUrl = partnerName === 'modon'
+  ? `https://mcht.modon-express.net/v1/merchant/merchant-orders?token=xxx`
+  : `https://api.alwaseet-iq.net/v1/merchant/merchant-orders?token=xxx`;
+
+// السطر 126-129: كل طلب يحمل علامة _partner
+const ordersWithAccount = result.data.map((order) => ({
+  ...order,
+  _account: tokenRecord.account_username,
+  _partner: partnerName  // ✅ يحدد الشركة
+}));
+
+// السطر 201-205: حماية ضد التداخل!
+if (waseetOrder._partner !== localOrder.delivery_partner) {
+  console.warn(`⚠️ تم تجاهل الطلب - تداخل بين الشركات!`);
+  continue;  // ✅ يتجاهل الطلب إذا كان من شركة مختلفة
+}
+```
+
+**الحماية موجودة وتعمل!** لن يحدث تداخل بين الشركتين حتى لو كان التوكنان نشطين.
+
+### لماذا المزامنة لا تعمل؟
+
+**السبب الوحيد: لا يوجد Token نشط لمدن!**
+
+1. Token مدن الوحيد منتهي الصلاحية منذ نوفمبر 2025
+2. لا توجد طلبات من مدن في قاعدة البيانات
+3. `smart-invoice-sync` لا يدعم مدن أصلاً (يفلتر على alwaseet فقط)
+
+---
+
+## فجوات في الكود تحتاج إصلاح
+
+### 1. smart-invoice-sync لا يدعم مدن
+```typescript
+// الحالي (السطر 182):
+.eq('partner_name', 'alwaseet')
+
+// المطلوب:
+.in('partner_name', ['alwaseet', 'modon'])
+```
+
+### 2. URLs ثابتة للوسيط فقط
+```typescript
+// الحالي (السطر 10):
+const ALWASEET_API_BASE = 'https://api.alwaseet-iq.net/v1/merchant';
+
+// المطلوب: إضافة MODON_API_BASE
+const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
+```
+
+### 3. دوال API لا تدعم مدن
+```typescript
+// الحالية: fetchInvoicesFromAPI تستخدم ALWASEET_API_BASE فقط
+// المطلوب: معامل partner لتحديد الشركة
+async function fetchInvoicesFromAPI(token, partner = 'alwaseet') {
+  const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
+  // ...
+}
+```
+
+---
+
+## ملخص التعديلات المطلوبة
+
+### ملف 1: ReservedStockDialog.jsx
+- إضافة استثناء `delivery_status = '17'` و `'4'` من المخزون المحجوز
+- يحل مشكلة الطلب 121347070
+
+### ملف 2: smart-invoice-sync/index.ts
+- دعم مدن في مزامنة الفواتير
+- إضافة MODON_API_BASE
+- تعديل فلترة التوكنات لتشمل مدن
+- تمرير partner إلى دوال API
+
+### متطلب أساسي (من المستخدم)
+- **تسجيل دخول جديد لحساب مدن** لتفعيل التوكن
+- بدون توكن نشط، المزامنة مستحيلة!
+
+---
+
+## الملفات التي سيتم تعديلها
+
+| الملف | التعديل |
+|-------|---------|
+| `src/components/inventory/ReservedStockDialog.jsx` | استثناء delivery_status 4 و 17 |
+| `supabase/functions/smart-invoice-sync/index.ts` | دعم مدن في مزامنة الفواتير |
+
+---
+
+## المعلومات التقنية
+
+### مقارنة APIs (الوسيط vs مدن)
+
+| الميزة | الوسيط | مدن |
+|--------|--------|-----|
+| جلب الطلبات | `GET merchant-orders?token=xxx` | `GET merchant-orders?token=xxx` ✅ متطابق |
+| جلب طلبات بالدفعة | `POST get-orders-by-ids-bulk` (25 max) | `POST get-orders-by-ids-bulk` (25 max) ✅ متطابق |
+| جلب الفواتير | `GET get_merchant_invoices?token=xxx` | `GET get_merchant_invoices?token=xxx` ✅ متطابق |
+| طلبات الفاتورة | `GET get_merchant_invoice_orders` | `GET get_merchant_invoice_orders` ✅ متطابق |
+| استلام الفاتورة | `GET receive_merchant_invoice` | `GET receive_merchant_invoice` ✅ متطابق |
+| حذف طلب | فقط إذا status=1 | فقط إذا status=1 ✅ متطابق |
+| Webhooks | دعم webhook | دعم webhook ✅ متطابق |
+| ملاحظة | - | يتطلب Merchant token للفواتير |
+
+### حالات مدن المعرّفة (15 حالة)
+
+| الرقم | النص | الحالة المحلية | يحرر المخزون؟ |
+|-------|------|----------------|---------------|
+| 1 | طلب جديد | pending | ❌ |
+| 2 | استلام من المندوب | shipped | ❌ |
+| 3 | قيد التوصيل | delivery | ❌ |
+| 4 | تم التسليم | delivered | ✅ |
+| 7 | تم الإرجاع للتاجر | returned_in_stock | ✅ |
+
+---
+
+## خطوات التنفيذ
+
+1. إصلاح ReservedStockDialog.jsx (الطلب 121347070)
+2. إصلاح smart-invoice-sync لدعم مدن
+3. **مطلوب من المستخدم**: تسجيل دخول جديد لحساب مدن لتفعيل التوكن
+4. اختبار المزامنة بعد تفعيل التوكن
