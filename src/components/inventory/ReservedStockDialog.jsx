@@ -37,12 +37,18 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
 
 
   // الطلبات المحجوزة - تشمل الطلبات المعادة أيضاً حتى يتم إرجاعها للمخزن
+  // ✅ القاعدة الذهبية: delivery_status = 4 (تم التسليم) أو 17 (تم الإرجاع للتاجر) لا يُحجز أبداً
   const reservedOrders = useMemo(() => {
-    return orders?.filter(order => 
-      ['pending', 'shipped', 'delivery', 'returned'].includes(order.status) &&
-      order.status !== 'returned_in_stock' &&
-      order.status !== 'completed'
-    ) || [];
+    return orders?.filter(order => {
+      // ✅ استثناء مبدئي: delivery_status = 4 أو 17 لا يُحجز أبداً
+      const ds = String(order.delivery_status || '');
+      if (ds === '4' || ds === '17') return false;
+      
+      // الفلترة حسب status
+      return ['pending', 'shipped', 'delivery', 'returned'].includes(order.status) &&
+        order.status !== 'returned_in_stock' &&
+        order.status !== 'completed';
+    }) || [];
   }, [orders]);
 
   // الموظفون المشاركون في الطلبات المحجوزة

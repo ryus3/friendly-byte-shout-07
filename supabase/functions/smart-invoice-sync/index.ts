@@ -6,8 +6,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// ✅ CORRECT AlWaseet API Base URL
+// ✅ API Base URLs for both delivery partners
 const ALWASEET_API_BASE = 'https://api.alwaseet-iq.net/v1/merchant';
+const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
@@ -40,11 +41,13 @@ interface InvoiceOrder {
   [key: string]: unknown;
 }
 
-// ✅ Fetch ALL invoices from AlWaseet API
-async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
+// ✅ Fetch ALL invoices from API (supports both AlWaseet and MODON)
+async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet'): Promise<Invoice[]> {
   try {
-    console.log('📡 Fetching invoices from AlWaseet API...');
-    const response = await fetch(`${ALWASEET_API_BASE}/get_merchant_invoices?token=${encodeURIComponent(token)}`, {
+    const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
+    console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API...`);
+    
+    const response = await fetch(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -61,20 +64,22 @@ async function fetchInvoicesFromAPI(token: string): Promise<Invoice[]> {
     const data = await response.json();
     const ok = data?.status === true || data?.errNum === 'S000';
     const invoices = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    console.log(`📥 API Response: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}`);
+    console.log(`📥 ${partner.toUpperCase()} API Response: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}`);
 
     return invoices;
   } catch (error) {
-    console.error('Error fetching invoices:', error);
+    console.error(`Error fetching invoices from ${partner}:`, error);
     return [];
   }
 }
 
-// ✅ Fetch invoice orders from AlWaseet API
-async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Promise<InvoiceOrder[]> {
+// ✅ Fetch invoice orders from API (supports both AlWaseet and MODON)
+async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partner: string = 'alwaseet'): Promise<InvoiceOrder[]> {
   try {
-    console.log(`📡 Fetching orders for invoice ${invoiceId}...`);
-    const response = await fetch(`${ALWASEET_API_BASE}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${invoiceId}`, {
+    const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
+    console.log(`📡 Fetching orders for invoice ${invoiceId} from ${partner.toUpperCase()}...`);
+    
+    const response = await fetch(`${baseUrl}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${invoiceId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -84,7 +89,7 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Prom
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`API Error fetching orders for invoice ${invoiceId}: ${response.status} - ${errorText}`);
+      console.error(`API Error fetching orders for invoice ${invoiceId} from ${partner}: ${response.status} - ${errorText}`);
       return [];
     }
 
@@ -97,7 +102,7 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string): Prom
     
     return [];
   } catch (error) {
-    console.error(`Error fetching orders for invoice ${invoiceId}:`, error);
+    console.error(`Error fetching orders for invoice ${invoiceId} from ${partner}:`, error);
     return [];
   }
 }
@@ -177,9 +182,9 @@ serve(async (req) => {
     if (mode === 'comprehensive') {
       const { data: tokens, error: tokensError } = await supabase
         .from('delivery_partner_tokens')
-        .select('id, user_id, token, account_username, merchant_id, expires_at')
+        .select('id, user_id, token, account_username, merchant_id, expires_at, partner_name')
         .eq('is_active', true)
-        .eq('partner_name', 'alwaseet')
+        .in('partner_name', ['alwaseet', 'modon'])  // ✅ دعم كلا الشركتين
         .gt('expires_at', new Date().toISOString());
 
       if (tokensError) {
@@ -192,13 +197,14 @@ serve(async (req) => {
       for (const tokenData of tokens || []) {
         const employeeId = tokenData.user_id;
         const accountUsername = tokenData.account_username || 'unknown';
+        const partnerName = tokenData.partner_name || 'alwaseet';  // ✅ تحديد الشركة
         
-        console.log(`👤 Syncing ALL invoices for employee: ${employeeId} (${accountUsername})`);
+        console.log(`👤 Syncing ALL invoices for employee: ${employeeId} (${accountUsername}) - Partner: ${partnerName.toUpperCase()}`);
 
         try {
-          // ✅ جلب جميع الفواتير من API
-          const apiInvoices = await fetchInvoicesFromAPI(tokenData.token);
-          console.log(`  📥 Fetched ${apiInvoices.length} total invoices from API`);
+          // ✅ جلب جميع الفواتير من API المناسب للشركة
+          const apiInvoices = await fetchInvoicesFromAPI(tokenData.token, partnerName);
+          console.log(`  📥 Fetched ${apiInvoices.length} total invoices from ${partnerName.toUpperCase()} API`);
 
           let employeeInvoicesSynced = 0;
           let employeeOrdersSynced = 0;
@@ -211,12 +217,12 @@ serve(async (req) => {
             const isReceived = statusNormalized === 'received' || invoice.received === true;
             const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
 
-            // التحقق إذا كانت الفاتورة موجودة
+            // التحقق إذا كانت الفاتورة موجودة - ✅ استخدام partnerName بدلاً من 'alwaseet' الثابت
             const { data: existingInvoice } = await supabase
               .from('delivery_invoices')
               .select('id, received, received_at, status_normalized')
               .eq('external_id', externalId)
-              .eq('partner', 'alwaseet')
+              .eq('partner', partnerName)
               .maybeSingle();
 
             // ✅ إذا موجودة ومستلمة في DB ولم نطلب force = تخطي
@@ -237,12 +243,12 @@ serve(async (req) => {
               statusChangedCount++;
             }
 
-            // Upsert
+            // Upsert - ✅ استخدام partnerName بدلاً من 'alwaseet' الثابت
             const { data: upsertedInvoice, error: upsertError } = await supabase
               .from('delivery_invoices')
               .upsert({
                 external_id: externalId,
-                partner: 'alwaseet',
+                partner: partnerName,  // ✅ الشركة الصحيحة
                 owner_user_id: employeeId,
                 account_username: accountUsername,
                 merchant_id: tokenData.merchant_id,
@@ -269,10 +275,10 @@ serve(async (req) => {
             } else {
               employeeInvoicesSynced++;
               
-              // ✅ مزامنة طلبات الفاتورة
+              // ✅ مزامنة طلبات الفاتورة - استخدام partnerName
               if (sync_orders && upsertedInvoice?.id) {
                 try {
-                  const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
+                  const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);
                   
                   if (invoiceOrders.length > 0) {
                     for (const order of invoiceOrders) {
@@ -391,10 +397,10 @@ serve(async (req) => {
 
       const { data: tokensData, error: tokensError } = await supabase
         .from('delivery_partner_tokens')
-        .select('id, token, account_username, merchant_id')
+        .select('id, token, account_username, merchant_id, partner_name')  // ✅ إضافة partner_name
         .eq('user_id', targetEmployeeId)
         .eq('is_active', true)
-        .eq('partner_name', 'alwaseet')
+        .in('partner_name', ['alwaseet', 'modon'])  // ✅ دعم كلا الشركتين
         .gt('expires_at', new Date().toISOString())
         .order('updated_at', { ascending: false });
 
@@ -413,11 +419,12 @@ serve(async (req) => {
       console.log(`👤 Employee ${targetEmployeeId} has ${tokensData.length} active token(s)`);
 
       for (const tokenData of tokensData) {
-        console.log(`🔄 Syncing token: ${tokenData.account_username} (merchant: ${tokenData.merchant_id})`);
+        const partnerName = tokenData.partner_name || 'alwaseet';  // ✅ تحديد الشركة
+        console.log(`🔄 Syncing token: ${tokenData.account_username} (merchant: ${tokenData.merchant_id}) - Partner: ${partnerName.toUpperCase()}`);
         
-        // ✅ جلب كل الفواتير من API
-        const apiInvoices = await fetchInvoicesFromAPI(tokenData.token);
-        console.log(`📥 Processing ${apiInvoices.length} invoices for ${tokenData.account_username}`);
+        // ✅ جلب كل الفواتير من API المناسب للشركة
+        const apiInvoices = await fetchInvoicesFromAPI(tokenData.token, partnerName);
+        console.log(`📥 Processing ${apiInvoices.length} invoices for ${tokenData.account_username} from ${partnerName.toUpperCase()}`);
 
         // ✅ معالجة كل الفواتير وليس فقط 5
         for (const invoice of apiInvoices) {
@@ -426,12 +433,12 @@ serve(async (req) => {
           const isReceived = statusNormalized === 'received' || invoice.received === true;
           const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
 
-          // Check existing
+          // Check existing - ✅ استخدام partnerName بدلاً من 'alwaseet' الثابت
           const { data: existing } = await supabase
             .from('delivery_invoices')
             .select('id, status_normalized, received, received_at')
             .eq('external_id', externalId)
-            .eq('partner', 'alwaseet')
+            .eq('partner', partnerName)
             .maybeSingle();
 
           // ✅ Skip if already received in DB and not forcing
@@ -459,7 +466,7 @@ serve(async (req) => {
             .from('delivery_invoices')
             .upsert({
               external_id: externalId,
-              partner: 'alwaseet',
+              partner: partnerName,  // ✅ الشركة الصحيحة
               owner_user_id: targetEmployeeId,
               account_username: tokenData.account_username,
               merchant_id: tokenData.merchant_id,
@@ -485,7 +492,7 @@ serve(async (req) => {
             
             if (sync_orders && upsertedInvoice?.id) {
               try {
-                const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId);
+                const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);  // ✅ تمرير partnerName
                 
                 if (invoiceOrders.length > 0) {
                   for (const order of invoiceOrders) {
