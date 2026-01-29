@@ -1,99 +1,92 @@
 
 
-# خطة إصلاح الواجهة لتعرض Jobs الصحيحة فقط
+# خطة إصلاح عرض الوقت في واجهة إعدادات المزامنة
 
 ## المشكلة المكتشفة
 
-الـ Jobs الصحيحة (61, 62) موجودة وتعمل بشكل سليم:
-- **ID 61**: `smart-invoice-sync-morning` @ `15 1 * * *` = 04:15 بغداد ✅
-- **ID 62**: `smart-invoice-sync-evening` @ `0 18 * * *` = 21:00 بغداد ✅
+### السبب الجذري
+عند قراءة إعدادات المزامنة، الكود يستخدم:
+```javascript
+supabase.from('auto_sync_schedule_settings').select('*').maybeSingle()
+```
 
-لكن دالة `get_invoice_cron_status` تبحث عن الأسماء الخاطئة (`invoice-sync-am/pm`) بدلاً من الصحيحة (`smart-invoice-sync-morning/evening`).
+لكن جدول `auto_sync_schedule_settings` يحتوي على **صفين**:
+
+| ID | sync_times | ملاحظة |
+|----|-----------|--------|
+| `af158c1a-...` | `[02:15:00, 21:00:00]` | صف قديم (غير مستخدم) |
+| `00000000-...` | `[09:00, 23:45]` | **الصف الصحيح** ✅ |
+
+دالة `maybeSingle()` تتوقع صفًا واحدًا أو لا شيء. عندما تجد صفين، قد ترجع `null` أو الصف الأول (الخاطئ)، مما يجعل الواجهة تعرض القيم الافتراضية `09:00` و `21:00`.
 
 ---
 
 ## الحل
 
-### التعديل الوحيد المطلوب
+### التعديل المطلوب
 
-تحديث دالة `get_invoice_cron_status` لتعرض الـ Jobs الصحيحة فقط:
+تعديل السطر 85 في `InvoiceSyncSettings.jsx` لقراءة الصف الصحيح تحديداً:
 
-```sql
-CREATE OR REPLACE FUNCTION public.get_invoice_cron_status()
-RETURNS TABLE (
-  job_name TEXT,
-  schedule TEXT,
-  is_active BOOLEAN,
-  next_run_at TIMESTAMPTZ
-)
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public, cron
-AS $$
-BEGIN
-  RETURN QUERY
-  SELECT 
-    j.jobname::text as job_name,
-    j.schedule::text as schedule,
-    j.active as is_active,
-    CASE 
-      WHEN j.active THEN NOW() + INTERVAL '1 hour'
-      ELSE NULL
-    END as next_run_at
-  FROM cron.job j
-  WHERE j.jobname IN (
-    'smart-invoice-sync-morning', 
-    'smart-invoice-sync-evening'
-  )
-  AND j.jobid IN (61, 62)  -- فقط الـ Jobs الصحيحة
-  ORDER BY j.jobname;
-END;
-$$;
+**قبل:**
+```javascript
+supabase.from('auto_sync_schedule_settings').select('*').maybeSingle()
 ```
 
-### تحديث الواجهة
-
-تعديل `InvoiceSyncSettings.jsx` لعرض أسماء الـ Jobs بشكل صحيح:
-
+**بعد:**
 ```javascript
-// السطر 375-377
-{job.job_name === 'smart-invoice-sync-morning' ? 'مزامنة الصباح' : 
- job.job_name === 'smart-invoice-sync-evening' ? 'مزامنة المساء' : 
- job.job_name?.replace(/-/g, ' ')}
+supabase
+  .from('auto_sync_schedule_settings')
+  .select('*')
+  .eq('id', '00000000-0000-0000-0000-000000000001')
+  .single()
+```
+
+---
+
+## التفاصيل التقنية
+
+### لماذا يعمل المزامنة بشكل صحيح في الخلفية؟
+دالة `update_invoice_sync_schedule` تُحدّث الصف الصحيح مباشرة وتُحدّث الـ cron jobs بشكل صحيح. الـ cron jobs الحالية:
+
+- **ID 63** `smart-invoice-sync-morning`: `0 6 * * *` (06:00 UTC = 09:00 بغداد) ✅
+- **ID 64** `smart-invoice-sync-evening`: `45 20 * * *` (20:45 UTC = 23:45 بغداد) ✅
+
+### ماذا يحدث بعد الإصلاح؟
+1. عند فتح صفحة الإعدادات، الكود يقرأ الصف الصحيح فقط
+2. `sync_times = ['09:00', '23:45']`
+3. الواجهة تعرض: `09:00` للصباح و `23:45` للمساء
+
+---
+
+## الملفات المطلوب تعديلها
+
+**`src/components/settings/InvoiceSyncSettings.jsx`** - السطر 85:
+- تغيير الاستعلام لقراءة الصف الصحيح بواسطة الـ ID المحدد
+
+---
+
+## اختياري: تنظيف قاعدة البيانات
+
+لتجنب أي ارتباك مستقبلي، يمكن حذف الصف القديم غير المستخدم:
+
+```sql
+DELETE FROM auto_sync_schedule_settings 
+WHERE id = 'af158c1a-3dc6-4f73-9b87-c3096e6a988f';
+```
+
+وأيضاً حذف الـ cron jobs المكررة القديمة:
+
+```sql
+SELECT cron.unschedule(17);  -- smart-invoice-sync-morning القديمة
+SELECT cron.unschedule(18);  -- smart-invoice-sync-evening القديمة
 ```
 
 ---
 
 ## النتيجة المتوقعة
 
-| ما تختاره في الواجهة | ما يُحفظ | ما يظهر في الواجهة | ما يُنفذ فعلاً |
-|---------------------|---------|-------------------|---------------|
-| 04:15 صباحاً | `sync_times = ['04:15', '21:00']` | 04:15 صباحاً | ✅ 04:15 صباحاً بغداد |
-| 21:00 مساءً | نفس الأعلى | 21:00 مساءً | ✅ 21:00 مساءً بغداد |
-
----
-
-## ملخص الملفات المطلوب تعديلها
-
-1. **SQL Migration جديدة**:
-   - تحديث `get_invoice_cron_status` لتبحث عن `smart-invoice-sync-morning/evening` بدلاً من `invoice-sync-am/pm`
-
-2. **src/components/settings/InvoiceSyncSettings.jsx**:
-   - تحديث أسماء العرض في السطر 375-377
-
----
-
-## معلومات تقنية
-
-### لماذا Jobs القديمة لن تؤثر؟
-- دالة `update_invoice_sync_schedule` الحالية (الصحيحة) تُحدّث فقط `smart-invoice-sync-morning/evening` (61, 62)
-- الواجهة ستعرض فقط هذه الـ Jobs
-- Jobs القديمة (17, 18, 59, 60) ستبقى موجودة لكن **لن تُستخدم ولن تُعرض**
-
-### ماذا يحدث عند تغيير الوقت؟
-1. تختار 05:30 صباحاً في الواجهة
-2. تُستدعى `update_invoice_sync_schedule('05:30', '21:00')`
-3. تُحذف `smart-invoice-sync-morning/evening` القديمة وتُنشأ جديدة
-4. Job 61 تُحذف وتُنشأ بجدولة `30 2 * * *` (05:30 بغداد = 02:30 UTC)
-5. الواجهة تُحدّث وتعرض 05:30
+| ما تختاره | ما يُحفظ في DB | ما يظهر في الواجهة |
+|-----------|---------------|-------------------|
+| 09:00 صباحاً | `['09:00', ...]` | **09:00 ص** ✅ |
+| 23:45 مساءً | `[..., '23:45']` | **23:45 م** ✅ |
 
