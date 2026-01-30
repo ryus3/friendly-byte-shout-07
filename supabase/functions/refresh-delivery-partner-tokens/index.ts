@@ -18,14 +18,14 @@ interface TokenRecord {
   user_id: string | null;
 }
 
-interface AlWaseetLoginResponse {
+interface LoginResponse {
   success: boolean;
   token?: string;
   expires_at?: string;
   error?: string;
 }
 
-async function loginToAlWaseet(username: string, password: string): Promise<AlWaseetLoginResponse> {
+async function loginToAlWaseet(username: string, password: string): Promise<LoginResponse> {
   try {
     const response = await fetch('https://app.alwaseet-ye.com/api/login', {
       method: 'POST',
@@ -60,6 +60,41 @@ async function loginToAlWaseet(username: string, password: string): Promise<AlWa
   }
 }
 
+async function loginToModon(username: string, password: string): Promise<LoginResponse> {
+  try {
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('password', password);
+
+    const response = await fetch('https://mcht.modon-express.net/v1/merchant/login', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      return { success: false, error: `HTTP ${response.status}` };
+    }
+
+    const data = await response.json();
+    
+    if (data.status && data.data?.token) {
+      // Token expires in 7 days
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7);
+      
+      return {
+        success: true,
+        token: data.data.token,
+        expires_at: expiresAt.toISOString(),
+      };
+    }
+
+    return { success: false, error: data.msg || 'Login failed' };
+  } catch (error) {
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -83,7 +118,7 @@ Deno.serve(async (req) => {
       .select('id, partner_name, token, expires_at, partner_data, account_username, user_id')
       .eq('is_active', true)
       .eq('auto_renew_enabled', true)
-      .eq('partner_name', 'alwaseet')
+      .in('partner_name', ['alwaseet', 'modon'])
       .gte('expires_at', now.toISOString()) // Not expired yet
       .lte('expires_at', renewalThreshold.toISOString()); // Expires within 24 hours
 
@@ -117,9 +152,12 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      console.log(`Renewing token for account: ${username}`);
+      console.log(`Renewing token for ${tokenRecord.partner_name} account: ${username}`);
       
-      const loginResult = await loginToAlWaseet(username, password);
+      // Call the appropriate login function based on partner
+      const loginResult = tokenRecord.partner_name === 'modon'
+        ? await loginToModon(username, password)
+        : await loginToAlWaseet(username, password);
 
       if (loginResult.success && loginResult.token) {
         // Update token in database
