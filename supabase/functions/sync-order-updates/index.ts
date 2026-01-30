@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
     // 4️⃣ جلب الطلبات المحلية النشطة من كلا الشركتين
     const { data: activeOrders, error: ordersError } = await supabase
       .from('orders')
-      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner')
+      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner, customer_city, customer_province, customer_address')
       .in('delivery_partner', ['alwaseet', 'modon'])
       .not('delivery_status', 'in', '(17,31,32)')
       .not('status', 'in', '(completed,returned_in_stock)')
@@ -212,6 +212,7 @@ Deno.serve(async (req) => {
         let statusChanged = false;
         let priceChanged = false;
         let accountChanged = false;
+        let addressChanged = false;
 
         // Compare status
         const statusChangedCheck = currentStatus !== newStatus;
@@ -257,26 +258,43 @@ Deno.serve(async (req) => {
           updates.status = finalStatus;
           statusChanged = true;
           changesList.push(`الحالة: ${currentStatus} → ${newStatus} (${statusConfig.text})`);
-          
-          // ✅ مزامنة خفيفة للمدينة والمنطقة (فقط عند تغيير الحالة - بدون API إضافي)
-          if (waseetOrder.city_name && localOrder.customer_city !== waseetOrder.city_name) {
-            updates.customer_city = waseetOrder.city_name;
-            changesList.push(`المدينة: ${localOrder.customer_city} → ${waseetOrder.city_name}`);
-          }
-          if (waseetOrder.region_name && localOrder.customer_province !== waseetOrder.region_name) {
-            updates.customer_province = waseetOrder.region_name;
-            changesList.push(`المنطقة: ${localOrder.customer_province} → ${waseetOrder.region_name}`);
-          }
+        }
+
+        // ✅ مزامنة العنوان دائماً (بغض النظر عن تغيير الحالة)
+        if (waseetOrder.city_name && localOrder.customer_city !== waseetOrder.city_name) {
+          updates.customer_city = waseetOrder.city_name;
+          addressChanged = true;
+          changesList.push(`المدينة: ${localOrder.customer_city} → ${waseetOrder.city_name}`);
+        }
+        if (waseetOrder.region_name && localOrder.customer_province !== waseetOrder.region_name) {
+          updates.customer_province = waseetOrder.region_name;
+          addressChanged = true;
+          changesList.push(`المنطقة: ${localOrder.customer_province} → ${waseetOrder.region_name}`);
+        }
+        // مزامنة العنوان التفصيلي
+        if (waseetOrder.location && localOrder.customer_address !== waseetOrder.location) {
+          updates.customer_address = waseetOrder.location;
+          addressChanged = true;
+          changesList.push(`العنوان: ${localOrder.customer_address} → ${waseetOrder.location}`);
         }
 
         // Compare prices (تجاهل للطلبات الجزئية - السعر ثابت)
-        const currentPrice = parseInt(String(localOrder.final_amount || 0));
-        const newPrice = parseInt(String(waseetOrder.price || 0));
+        const currentFinalAmount = parseInt(String(localOrder.final_amount || 0));
+        const newFinalAmount = parseInt(String(waseetOrder.price || 0));
+        const currentDeliveryFee = parseInt(String(localOrder.delivery_fee || 0));
 
         // تحديث السعر للطلبات العادية فقط
-        if (!isPartialDelivery && newPrice > 0 && currentPrice !== newPrice) {
-          updates.final_amount = newPrice;
+        // ⚠️ هام: الـ triggers تحسب final_amount = total_amount + delivery_fee
+        // لذلك يجب تحديث total_amount بدلاً من final_amount مباشرة
+        if (!isPartialDelivery && newFinalAmount > 0 && currentFinalAmount !== newFinalAmount) {
+          // حساب total_amount الجديد (السعر الكلي - رسوم التوصيل)
+          const newTotalAmount = Math.max(0, newFinalAmount - currentDeliveryFee);
+          
+          updates.total_amount = newTotalAmount;
+          // لا نُعيّن final_amount مباشرة - الـ trigger سيحسبها تلقائياً
           priceChanged = true;
+
+          console.log(`💵 تحديث السعر: total_amount=${newTotalAmount}, delivery_fee=${currentDeliveryFee}, final_amount سيُحسب تلقائياً`);
 
           // إعادة حساب الأرباح
           const { data: profitRecord } = await supabase
@@ -286,13 +304,13 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
           if (profitRecord) {
-            const priceDifference = newPrice - currentPrice;
+            const priceDifference = newFinalAmount - currentFinalAmount;
             const employeeShare = Math.floor(priceDifference * 0.5);
 
             await supabase
               .from('profits')
               .update({
-                total_revenue: newPrice,
+                total_revenue: newFinalAmount,
                 employee_profit: employeeShare,
                 updated_at: new Date().toISOString()
               })
@@ -302,8 +320,8 @@ Deno.serve(async (req) => {
           }
 
           const currentNotes = localOrder.notes || '';
-          updates.notes = `${currentNotes}\n[${new Date().toISOString()}] السعر تغير من ${currentPrice.toLocaleString()} إلى ${newPrice.toLocaleString()} د.ع`;
-          changesList.push(`السعر: ${currentPrice} → ${newPrice} د.ع`);
+          updates.notes = `${currentNotes}\n[${new Date().toISOString()}] السعر تغير من ${currentFinalAmount.toLocaleString()} إلى ${newFinalAmount.toLocaleString()} د.ع`;
+          changesList.push(`السعر: ${currentFinalAmount} → ${newFinalAmount} د.ع`);
         }
 
         // Compare account
@@ -313,7 +331,7 @@ Deno.serve(async (req) => {
           changesList.push(`الحساب: ${waseetOrder._account}`);
         }
 
-        if (statusChanged || priceChanged || accountChanged) {
+        if (statusChanged || priceChanged || accountChanged || addressChanged) {
           // حفظ الإشعار للإدراج لاحقاً (فقط إذا كانت الإشعارات مفعلة)
           if (notificationsEnabled) {
             notificationsToInsert.push({
@@ -348,14 +366,24 @@ Deno.serve(async (req) => {
           console.log(`✅ تم تحديث ${localOrder.tracking_number} (${waseetOrder._account}): ${changesList.join('، ')}`);
         }
 
-        // دائماً نحدث الطلب
-        await supabase
-          .from('orders')
-          .update(updates)
-          .eq('id', localOrder.id);
+        // تحديث الطلب فقط إذا كانت هناك تغييرات
+        if (Object.keys(updates).length > 0) {
+          updates.updated_at = new Date().toISOString();
+          
+          const { error: updateError } = await supabase
+            .from('orders')
+            .update(updates)
+            .eq('id', localOrder.id);
 
-        if (!statusChanged && !priceChanged && !accountChanged) {
-          console.log(`⏰ تم تحديث وقت ${localOrder.tracking_number} فقط (لا توجد تغييرات)`);
+          if (updateError) {
+            console.error(`❌ فشل تحديث الطلب ${localOrder.order_number}:`, updateError);
+          } else if (statusChanged || priceChanged || accountChanged || addressChanged) {
+            console.log(`✅ تم حفظ التغييرات للطلب ${localOrder.tracking_number}`);
+          }
+        }
+
+        if (!statusChanged && !priceChanged && !accountChanged && !addressChanged) {
+          console.log(`⏰ الطلب ${localOrder.tracking_number} لا توجد تغييرات`);
         }
       } catch (orderError: any) {
         console.error(`❌ خطأ في معالجة الطلب ${localOrder.order_number}:`, orderError.message);
