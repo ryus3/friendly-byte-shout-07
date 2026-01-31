@@ -1,143 +1,128 @@
 
-# خطة إصلاح مزامنة طلبات مدن
+# خطة إصلاح: حساب الخصم والزيادة في مزامنة طلبات مدن
 
 ## المشكلة المكتشفة
 
-### نتائج الفحص المباشر:
+### مقارنة بين الطلبين:
 
-| البيان | من API مدن | في قاعدة البيانات | الحالة |
-|--------|-----------|-------------------|--------|
-| السعر | 30,000 | 33,000 | لم يُحدّث |
-| المنطقة | بيرش | بانك ستي | لم يُحدّث |
-| الحالة | 1 | 1 | متطابق |
+| الطلب | السعر الأصلي | السعر الجديد | الخصم | price_change_type |
+|-------|-------------|--------------|-------|-------------------|
+| **الوسيط** (ORD000802) | 28,000 | 25,000 | **3,000** ✅ | **discount** ✅ |
+| **مدن** (ORD000814) | 28,000 | 25,000 | **0** ❌ | **null** ❌ |
 
-### السبب الجذري (3 مشاكل):
+### السبب الجذري:
 
-**1. مزامنة العنوان مشروطة بتغيير الحالة**
+**كود AlWaseetContext.jsx (السطور 3807-3822) يحسب بشكل صحيح:**
+```javascript
+const priceDiff = originalProductsPrice - productsPriceFromWaseet;
+
+if (priceDiff > 0) {
+  updates.discount = priceDiff;
+  updates.price_increase = 0;
+  updates.price_change_type = 'discount';
+} else if (priceDiff < 0) {
+  updates.discount = 0;
+  updates.price_increase = Math.abs(priceDiff);
+  updates.price_change_type = 'increase';
+}
 ```
-السطور 261-269 داخل block:
-if (statusChangedCheck) {
-  // ... تحديث الحالة ...
+
+**كود Edge Function (السطور 289-324) لا يحسب ذلك:**
+```javascript
+// ❌ يحدّث فقط total_amount بدون حساب الخصم!
+updates.total_amount = newTotalAmount;
+// لا يوجد حساب لـ discount, price_increase, price_change_type
+```
+
+---
+
+## الإصلاح المطلوب
+
+### تعديل: `supabase/functions/sync-order-updates/index.ts`
+
+**في قسم مقارنة الأسعار (السطور 281-325):**
+
+```typescript
+// Compare prices (تجاهل للطلبات الجزئية - السعر ثابت)
+const currentFinalAmount = parseInt(String(localOrder.final_amount || 0));
+const newFinalAmount = parseInt(String(waseetOrder.price || 0));
+const currentDeliveryFee = parseInt(String(localOrder.delivery_fee || 0));
+const currentTotalAmount = parseInt(String(localOrder.total_amount || 0));
+
+// تحديث السعر للطلبات العادية فقط
+if (!isPartialDelivery && newFinalAmount > 0 && currentFinalAmount !== newFinalAmount) {
+  // حساب total_amount الجديد (السعر الكلي - رسوم التوصيل)
+  const newTotalAmount = Math.max(0, newFinalAmount - currentDeliveryFee);
   
-  // ✅ مزامنة خفيفة للمدينة والمنطقة (فقط عند تغيير الحالة)
-  if (waseetOrder.city_name && ...) {
-    updates.customer_city = waseetOrder.city_name;
+  // ✅ جلب السعر الأصلي للمنتجات من order_items
+  const { data: orderItems } = await supabase
+    .from('order_items')
+    .select('unit_price, quantity')
+    .eq('order_id', localOrder.id);
+  
+  const originalProductsTotal = (orderItems || []).reduce(
+    (sum, item) => sum + (item.unit_price || 0) * (item.quantity || 1),
+    0
+  );
+  
+  // ✅ حساب الخصم/الزيادة
+  const priceDiff = originalProductsTotal - newTotalAmount;
+  
+  if (priceDiff > 0) {
+    // خصم
+    updates.discount = priceDiff;
+    updates.price_increase = 0;
+    updates.price_change_type = 'discount';
+    console.log(`🔻 خصم: ${priceDiff.toLocaleString()} د.ع`);
+  } else if (priceDiff < 0) {
+    // زيادة
+    updates.discount = 0;
+    updates.price_increase = Math.abs(priceDiff);
+    updates.price_change_type = 'increase';
+    console.log(`🔺 زيادة: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
+  } else {
+    updates.discount = 0;
+    updates.price_increase = 0;
+    updates.price_change_type = null;
   }
-}
-```
-**المشكلة:** إذا لم تتغير الحالة = لا تتم مزامنة العنوان أبداً!
+  
+  updates.total_amount = newTotalAmount;
+  updates.sales_amount = newTotalAmount; // ✅ إضافة sales_amount أيضاً
+  priceChanged = true;
 
-**2. التحديث لا يحفظ عند وجود الحساب فقط**
-```typescript
-// السطر 316 - الشرط:
-if (statusChanged || priceChanged || accountChanged) {
-  // ... إضافة للتقرير ...
-}
-
-// السطر 351-355 - التحديث:
-await supabase.from('orders').update(updates).eq('id', localOrder.id);
-```
-**المشكلة:** عندما يتغير السعر فقط (بدون حالة)، الـ `updates` object يحتوي على `final_amount`، لكن **لا يتم تسجيل التغيير في التقرير** لأن شرط الدخول للـ block يتطلب `statusChanged || priceChanged`.
-
-**3. السعر لا يُحفظ فعلاً!**
-الـ API response أظهر:
-```json
-{"changes": [{"changes": ["السعر: 33000 → 30000 د.ع"]}], "updated": 1}
-```
-لكن قاعدة البيانات لا تزال تُظهر `33000`!
-
-هذا يعني أن **الـ update statement ينفّذ لكن لا يُحفظ** - قد يكون بسبب خطأ صامت أو RLS.
-
----
-
-## التحقق الإضافي المطلوب
-
-قبل الإصلاح، سأتحقق من:
-1. هل يوجد RLS على جدول orders يمنع التحديث؟
-2. هل الـ update يُرجع خطأ صامت؟
-
----
-
-## الإصلاحات المطلوبة
-
-### إصلاح 1: نقل مزامنة العنوان خارج شرط الحالة
-```typescript
-// قبل: داخل if (statusChangedCheck)
-// بعد: مستقل تماماً
-
-// مزامنة العنوان دائماً (بغض النظر عن تغيير الحالة)
-if (waseetOrder.city_name && localOrder.customer_city !== waseetOrder.city_name) {
-  updates.customer_city = waseetOrder.city_name;
-  changesList.push(`المدينة: ${localOrder.customer_city} → ${waseetOrder.city_name}`);
-}
-if (waseetOrder.region_name && localOrder.customer_province !== waseetOrder.region_name) {
-  updates.customer_province = waseetOrder.region_name;
-  changesList.push(`المنطقة: ${localOrder.customer_province} → ${waseetOrder.region_name}`);
-}
-// إضافة: مزامنة location (العنوان التفصيلي)
-if (waseetOrder.location && localOrder.customer_address !== waseetOrder.location) {
-  updates.customer_address = waseetOrder.location;
+  console.log(`💵 تحديث السعر: original=${originalProductsTotal}, new=${newTotalAmount}, diff=${priceDiff}`);
+  
+  // ... باقي الكود (تحديث الأرباح)
 }
 ```
 
-### إصلاح 2: إضافة متغير addressChanged
-```typescript
-let statusChanged = false;
-let priceChanged = false;
-let accountChanged = false;
-let addressChanged = false;  // ✅ جديد
+**إضافة الحقول المطلوبة في SELECT query (السطر ~180):**
 
-// ... في مكان مزامنة العنوان ...
-if (waseetOrder.city_name && localOrder.customer_city !== waseetOrder.city_name) {
-  updates.customer_city = waseetOrder.city_name;
-  addressChanged = true;
-  changesList.push(...);
-}
-
-// ... تحديث الشرط ...
-if (statusChanged || priceChanged || accountChanged || addressChanged) {
-  // الآن يُسجل التغيير
-}
-```
-
-### إصلاح 3: التحقق من نتيجة التحديث
 ```typescript
 // قبل:
-await supabase.from('orders').update(updates).eq('id', localOrder.id);
+.select('id, order_number, tracking_number, ...')
 
-// بعد:
-const { error: updateError } = await supabase
-  .from('orders')
-  .update(updates)
-  .eq('id', localOrder.id);
-
-if (updateError) {
-  console.error(`❌ فشل تحديث الطلب ${localOrder.order_number}:`, updateError);
-}
+// بعد: إضافة discount, price_increase, price_change_type
+.select('id, order_number, tracking_number, ..., discount, price_increase, price_change_type')
 ```
 
 ---
 
-## التحقق من التوكن التلقائي (إجابة على سؤالك)
+## التحقق من عدم التأثير على الوسيط
 
-**هل التوكن يتجدد تلقائياً لمدن؟**
-✅ نعم! بعد آخر تعديل، دالة `refresh-delivery-partner-tokens` تدعم كلا الشركتين:
-```typescript
-.in('partner_name', ['alwaseet', 'modon'])
+**لماذا لا يتأثر الوسيط؟**
 
-const loginResult = tokenRecord.partner_name === 'modon'
-  ? await loginToModon(username, password)
-  : await loginToAlWaseet(username, password);
-```
+1. **AlWaseetContext.jsx** يُستخدم في:
+   - المزامنة من الواجهة الأمامية (Frontend)
+   - يحسب الخصم بشكل صحيح
 
-**هل المزامنة تعرف أي طلب لأي شركة؟**
-✅ نعم! الفصل موجود وآمن:
-```typescript
-if (waseetOrder._partner !== localOrder.delivery_partner) {
-  console.warn(`⚠️ تم تجاهل الطلب - تداخل بين الشركات!`);
-  continue;
-}
-```
+2. **sync-order-updates Edge Function** يُستخدم في:
+   - المزامنة التلقائية (cron job)
+   - المزامنة اليدوية من الخادم
+
+**بعد الإصلاح:**
+- كلا المسارين سيحسبان الخصم/الزيادة بنفس الطريقة
+- لن يتأثر الوسيط سلباً (سيستمر بالعمل كما هو)
 
 ---
 
@@ -145,29 +130,18 @@ if (waseetOrder._partner !== localOrder.delivery_partner) {
 
 | الملف | التعديل |
 |-------|---------|
-| `supabase/functions/sync-order-updates/index.ts` | 1. نقل مزامنة العنوان خارج شرط الحالة |
-|  | 2. إضافة `addressChanged` flag |
-|  | 3. تحديث شرط الدخول للتقرير |
-|  | 4. التحقق من نتيجة التحديث |
-|  | 5. مزامنة `location` → `customer_address` |
+| `supabase/functions/sync-order-updates/index.ts` | 1. جلب السعر الأصلي من order_items |
+|  | 2. حساب priceDiff = originalProductsTotal - newTotalAmount |
+|  | 3. تعيين discount, price_increase, price_change_type |
+|  | 4. إضافة sales_amount للتحديث |
 
 ---
 
-## تسلسل التنفيذ
+## النتيجة المتوقعة
 
-1. تعديل Edge Function
-2. Deploy
-3. تشغيل المزامنة يدوياً للاختبار
-4. التحقق من قاعدة البيانات أن القيم تحدثت فعلاً
-
----
-
-## الملاحظة عن الـ cron job
-
-لاحظت أن `last_run_at` في جدول `auto_sync_schedule_settings` = `null`!
-
-هذا يعني أن الـ **cron job** (`sync-order-updates-scheduled`) الذي يعمل كل دقيقة **لا يُطابق الأوقات المحددة** (`09:00`, `23:45`).
-
-الدالة `check_and_run_sync()` تستخدم `TO_CHAR(NOW(), 'HH24:MI')` بتوقيت **UTC** بينما الأوقات المحفوظة بتوقيت **بغداد**.
-
-لكن هذا ليس المشكلة الرئيسية الآن - المشكلة هي أن **التحديثات لا تُحفظ حتى عند تشغيلها يدوياً**.
+| الميزة | قبل | بعد |
+|--------|-----|-----|
+| حساب الخصم (مدن) | ❌ لا يعمل | ✅ يعمل |
+| حساب الزيادة (مدن) | ❌ لا يعمل | ✅ يعمل |
+| price_change_type (مدن) | ❌ null | ✅ discount/increase |
+| الوسيط | ✅ يعمل | ✅ يعمل (بدون تغيير) |
