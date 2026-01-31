@@ -290,11 +290,43 @@ Deno.serve(async (req) => {
           // حساب total_amount الجديد (السعر الكلي - رسوم التوصيل)
           const newTotalAmount = Math.max(0, newFinalAmount - currentDeliveryFee);
           
+          // ✅ جلب السعر الأصلي للمنتجات من order_items
+          const { data: orderItems } = await supabase
+            .from('order_items')
+            .select('unit_price, quantity')
+            .eq('order_id', localOrder.id);
+          
+          const originalProductsTotal = (orderItems || []).reduce(
+            (sum: number, item: any) => sum + (parseInt(String(item.unit_price || 0)) * parseInt(String(item.quantity || 1))),
+            0
+          );
+          
+          // ✅ حساب الخصم/الزيادة (مثل AlWaseetContext.jsx)
+          const priceDiff = originalProductsTotal - newTotalAmount;
+          
+          if (priceDiff > 0) {
+            // خصم
+            updates.discount = priceDiff;
+            updates.price_increase = 0;
+            updates.price_change_type = 'discount';
+            console.log(`🔻 خصم: ${priceDiff.toLocaleString()} د.ع (أصلي: ${originalProductsTotal}, جديد: ${newTotalAmount})`);
+          } else if (priceDiff < 0) {
+            // زيادة
+            updates.discount = 0;
+            updates.price_increase = Math.abs(priceDiff);
+            updates.price_change_type = 'increase';
+            console.log(`🔺 زيادة: ${Math.abs(priceDiff).toLocaleString()} د.ع (أصلي: ${originalProductsTotal}, جديد: ${newTotalAmount})`);
+          } else {
+            updates.discount = 0;
+            updates.price_increase = 0;
+            updates.price_change_type = null;
+          }
+          
           updates.total_amount = newTotalAmount;
-          // لا نُعيّن final_amount مباشرة - الـ trigger سيحسبها تلقائياً
+          updates.sales_amount = newTotalAmount; // ✅ تحديث sales_amount أيضاً
           priceChanged = true;
 
-          console.log(`💵 تحديث السعر: total_amount=${newTotalAmount}, delivery_fee=${currentDeliveryFee}, final_amount سيُحسب تلقائياً`);
+          console.log(`💵 تحديث السعر: original=${originalProductsTotal}, new=${newTotalAmount}, diff=${priceDiff}, delivery_fee=${currentDeliveryFee}`);
 
           // إعادة حساب الأرباح
           const { data: profitRecord } = await supabase
