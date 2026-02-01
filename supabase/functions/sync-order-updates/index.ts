@@ -282,11 +282,20 @@ Deno.serve(async (req) => {
         const currentFinalAmount = parseInt(String(localOrder.final_amount || 0));
         const newFinalAmount = parseInt(String(waseetOrder.price || 0));
         const currentDeliveryFee = parseInt(String(localOrder.delivery_fee || 0));
+        const currentDiscount = parseInt(String(localOrder.discount || 0));
+        const currentPriceChangeType = localOrder.price_change_type;
+
+        // ✅ إعادة حساب الخصم حتى لو السعر لم يتغير (للطلبات التي تم تحديثها قبل الإصلاح)
+        const priceNeedsRecalculation = 
+          !isPartialDelivery && 
+          newFinalAmount > 0 && 
+          currentDiscount === 0 &&
+          currentPriceChangeType === null;
 
         // تحديث السعر للطلبات العادية فقط
         // ⚠️ هام: الـ triggers تحسب final_amount = total_amount + delivery_fee
         // لذلك يجب تحديث total_amount بدلاً من final_amount مباشرة
-        if (!isPartialDelivery && newFinalAmount > 0 && currentFinalAmount !== newFinalAmount) {
+        if (!isPartialDelivery && newFinalAmount > 0 && (currentFinalAmount !== newFinalAmount || priceNeedsRecalculation)) {
           // حساب total_amount الجديد (السعر الكلي - رسوم التوصيل)
           const newTotalAmount = Math.max(0, newFinalAmount - currentDeliveryFee);
           
