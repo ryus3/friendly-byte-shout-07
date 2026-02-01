@@ -17,9 +17,10 @@ export const useAlWaseetInvoices = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [invoiceOrders, setInvoiceOrders] = useState([]);
 
-  // Enhanced smart fetch with instant loading and background sync
+  // Enhanced smart fetch with instant loading and background sync - UNIFIED for all partners
   const fetchInvoices = useCallback(async (timeFilter = 'week', forceRefresh = false) => {
-    if (!token || !isLoggedIn || (activePartner !== 'alwaseet' && activePartner !== 'modon')) {
+    // ✅ Universal: لا حاجة لـ activePartner - جلب فواتير كل الشركات
+    if (!isLoggedIn) {
       return;
     }
 
@@ -31,12 +32,12 @@ export const useAlWaseetInvoices = () => {
     try {
       // Smart fetch: only get recent invoices to avoid loading thousands
       
-      // ✅ جلب جميع التوكنات النشطة للمستخدم
+      // ✅ جلب جميع التوكنات النشطة للمستخدم - كل الشركات
       const { data: userTokens, error: tokensError } = await supabase
         .from('delivery_partner_tokens')
         .select('*')
         .eq('user_id', user?.id)
-        .eq('partner_name', activePartner)
+        .in('partner_name', ['alwaseet', 'modon'])
         .eq('is_active', true)
         .gt('expires_at', new Date().toISOString());
       
@@ -46,16 +47,22 @@ export const useAlWaseetInvoices = () => {
       
       let allInvoicesData = [];
       
-      // جلب الفواتير من كل توكن على حدة
+      // جلب الفواتير من كل توكن على حدة - كل الشركات
       if (userTokens && userTokens.length > 0) {
         for (const tokenData of userTokens) {
+          const partnerName = tokenData.partner_name;
           
           let invoicesFromThisToken;
-          if (activePartner === 'modon') {
-            const ModonAPI = await import('@/lib/modon-api');
-            invoicesFromThisToken = await ModonAPI.getMerchantInvoices(tokenData.token);
-          } else {
-            invoicesFromThisToken = await AlWaseetAPI.getMerchantInvoices(tokenData.token);
+          try {
+            if (partnerName === 'modon') {
+              const ModonAPI = await import('@/lib/modon-api');
+              invoicesFromThisToken = await ModonAPI.getMerchantInvoices(tokenData.token);
+            } else {
+              invoicesFromThisToken = await AlWaseetAPI.getMerchantInvoices(tokenData.token);
+            }
+          } catch (apiErr) {
+            console.warn(`⚠️ فشل جلب فواتير ${partnerName}:`, apiErr.message);
+            continue;
           }
           
           // إضافة معلومات الحساب الصحيحة لكل فاتورة
@@ -63,9 +70,9 @@ export const useAlWaseetInvoices = () => {
             invoicesFromThisToken.forEach(inv => {
               inv.account_username = tokenData.account_username;
               inv.merchant_id = tokenData.merchant_id;
-              inv.partner_name_ar = activePartner === 'modon' ? 'مدن' : 'الوسيط';
+              inv.partner_name_ar = partnerName === 'modon' ? 'مدن' : 'الوسيط';
               inv.owner_user_id = user?.id;
-              inv.partner = activePartner;
+              inv.partner = partnerName;
             });
             
             allInvoicesData.push(...invoicesFromThisToken);
@@ -211,19 +218,19 @@ export const useAlWaseetInvoices = () => {
     }
   }, [fetchInvoices, user?.id]);
 
-    // Enhanced instant loading with smart caching
+    // Enhanced instant loading with smart caching - UNIFIED for all partners
   useEffect(() => {
-    if (!isLoggedIn || (activePartner !== 'alwaseet' && activePartner !== 'modon')) return;
+    if (!isLoggedIn) return;
 
     const loadInvoicesInstantly = async () => {
-      // ✅ جلب جميع التوكنات النشطة للمستخدم أولاً
+      // ✅ جلب جميع التوكنات النشطة للمستخدم - كل الشركات
       try {
         // جلب جميع التوكنات النشطة
         const { data: allTokens, error: tokensError } = await supabase
           .from('delivery_partner_tokens')
           .select('merchant_id, account_username, partner_name, user_id')
           .eq('user_id', user?.id)
-          .eq('partner_name', activePartner)
+          .in('partner_name', ['alwaseet', 'modon'])
           .eq('is_active', true)
           .gt('expires_at', new Date().toISOString());
 
@@ -239,19 +246,19 @@ export const useAlWaseetInvoices = () => {
           });
         }
 
-        // جلب الفواتير من قاعدة البيانات
+        // جلب الفواتير من قاعدة البيانات - كل الشركات
         const { data: cachedInvoices, error: invoicesError } = await supabase
           .from('delivery_invoices')
           .select('*')
-          .eq('partner', activePartner)
+          .in('partner', ['alwaseet', 'modon'])
           .eq('owner_user_id', user?.id)
           .order('issued_at', { ascending: false })
-          .limit(50);
+          .limit(100);
 
         if (invoicesError) throw invoicesError;
 
       if (cachedInvoices?.length > 0) {
-          // ✅ استخدام البيانات المُخزنة مباشرة (تم تحديثها بواسطة backfill migration)
+          // ✅ استخدام البيانات المُخزنة مباشرة - مع إضافة حقل partner
           const transformedInvoices = cachedInvoices.map(inv => ({
             id: inv.external_id,
             external_id: inv.external_id,
@@ -264,7 +271,8 @@ export const useAlWaseetInvoices = () => {
             raw: inv.raw,
             // استخدام account_username و partner_name_ar من قاعدة البيانات مباشرة
             account_username: inv.account_username,
-            partner_name_ar: inv.partner_name_ar || (activePartner === 'modon' ? 'مدن' : 'الوسيط'),
+            partner: inv.partner,
+            partner_name_ar: inv.partner_name_ar || (inv.partner === 'modon' ? 'مدن' : 'الوسيط'),
             // ✅ إضافة الحقول المفقودة لتحديد حالة "مستلمة" بشكل صحيح
             received: inv.received,
             received_flag: inv.received_flag,
