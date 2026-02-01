@@ -18,7 +18,8 @@ import {
   TrendingUp,
   Banknote,
   Receipt,
-  Users
+  Users,
+  Building2
 } from 'lucide-react';
 import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
@@ -42,6 +43,7 @@ const AlWaseetInvoicesTab = () => {
   const [accountFilter, setAccountFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [partnerFilter, setPartnerFilter] = useState('all');
   
   // Time filter state with localStorage - default to 'week' for better UX
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
@@ -60,7 +62,7 @@ const AlWaseetInvoicesTab = () => {
     return Array.from(accounts).sort();
   }, [invoices]);
 
-  // Filter invoices based on search, status, account, and time
+  // Filter invoices based on search, status, account, partner, and time
   const filteredInvoices = useMemo(() => {
     let filtered = invoices;
     
@@ -69,11 +71,16 @@ const AlWaseetInvoicesTab = () => {
       filtered = applyCustomDateRangeFilter(filtered, customDateRange);
     }
     
+    // Apply partner filter
+    if (partnerFilter !== 'all') {
+      filtered = filtered.filter(invoice => invoice.partner === partnerFilter);
+    }
+    
     // Apply search, status, and account filters
     return filtered.filter(invoice => {
       const matchesSearch = 
         invoice.id.toString().includes(searchTerm) ||
-        invoice.merchant_price.toString().includes(searchTerm);
+        invoice.merchant_price?.toString().includes(searchTerm);
       
       const matchesStatus = 
         statusFilter === 'all' || 
@@ -86,7 +93,7 @@ const AlWaseetInvoicesTab = () => {
       
       return matchesSearch && matchesStatus && matchesAccount;
     });
-  }, [invoices, searchTerm, statusFilter, accountFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
+  }, [invoices, searchTerm, statusFilter, accountFilter, partnerFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
 
   // ❌ معطّل: الجلب المزدوج يسبب استبدال التصميم الجميل
   // ✅ الاعتماد فقط على التحميل الفوري من DB في useAlWaseetInvoices hook
@@ -139,20 +146,8 @@ const AlWaseetInvoicesTab = () => {
   };
 
 
-  // Show message if not logged in to delivery partner (support both AlWaseet and MODON)
-  if (!isLoggedIn || (activePartner !== 'alwaseet' && activePartner !== 'modon')) {
-    return (
-      <Card>
-        <CardContent className="p-8 text-center">
-          <AlertTriangle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
-          <h3 className="text-lg font-semibold mb-2">غير متصل بشركة التوصيل</h3>
-          <p className="text-muted-foreground mb-4">
-            يجب تسجيل الدخول إلى شركة التوصيل (الوسيط أو مدن) أولاً لعرض الفواتير
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
+  // ✅ عرض الفواتير دائماً - بدون شرط activePartner
+  // الفواتير تُجلب من كل الشركات معاً
 
   return (
     <div className="space-y-6">
@@ -350,8 +345,9 @@ const AlWaseetInvoicesTab = () => {
                 <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
               </Button>
             </div>
-            <span className="text-right">
-              فواتير {activePartner === 'modon' ? 'مدن' : activePartner === 'alwaseet' ? 'الوسيط' : 'شركة التوصيل'}
+            <span className="text-right flex items-center gap-2">
+              فواتير شركات التوصيل
+              <Badge variant="outline" className="text-xs">الوسيط + مدن</Badge>
             </span>
           </CardTitle>
         </CardHeader>
@@ -374,8 +370,8 @@ const AlWaseetInvoicesTab = () => {
           )}
 
           <div className="space-y-4 mb-6">
-            {/* Time Filter, Status Filter, and Account Filter */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            {/* Time Filter, Status Filter, Partner Filter, and Account Filter */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
               <Select value={timeFilter} onValueChange={handleTimeFilterChange}>
                 <SelectTrigger className="flex-1" dir="rtl">
                   <Calendar className="h-4 w-4 mr-2" />
@@ -389,6 +385,44 @@ const AlWaseetInvoicesTab = () => {
                   <SelectItem value="year">سنة</SelectItem>
                   <SelectItem value="all">كل الوقت</SelectItem>
                   <SelectItem value="custom">مخصص</SelectItem>
+                </SelectContent>
+              </Select>
+              
+              {/* ✅ NEW: Partner Filter */}
+              <Select value={partnerFilter} onValueChange={setPartnerFilter}>
+                <SelectTrigger className="flex-1" dir="rtl">
+                  <Building2 className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="الشركة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">
+                    <div className="flex items-center gap-2">
+                      <span>جميع الشركات</span>
+                      <Badge variant="outline" className="text-xs">
+                        {invoices.length}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="alwaseet">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-gradient-to-r from-orange-500 to-red-600 text-white text-xs border-0">
+                        الوسيط
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {invoices.filter(i => i.partner === 'alwaseet').length}
+                      </Badge>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="modon">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-gradient-to-r from-cyan-500 to-blue-600 text-white text-xs border-0">
+                        مدن
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        {invoices.filter(i => i.partner === 'modon').length}
+                      </Badge>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
               
@@ -414,10 +448,21 @@ const AlWaseetInvoicesTab = () => {
                     جميع الحسابات ({invoices.length})
                   </SelectItem>
                   {uniqueAccounts.map(account => {
-                    const count = invoices.filter(i => i.account_username === account).length;
+                    const accountInvoices = invoices.filter(i => i.account_username === account);
+                    const count = accountInvoices.length;
+                    const partner = accountInvoices[0]?.partner;
                     return (
                       <SelectItem key={account} value={account}>
                         <div className="flex items-center gap-2 w-full">
+                          <Badge 
+                            className={`text-xs border-0 ${
+                              partner === 'modon' 
+                                ? 'bg-cyan-500/20 text-cyan-700 dark:text-cyan-300' 
+                                : 'bg-orange-500/20 text-orange-700 dark:text-orange-300'
+                            }`}
+                          >
+                            {partner === 'modon' ? 'مدن' : 'الوسيط'}
+                          </Badge>
                           <span className="font-mono font-bold">{account}</span>
                           <Badge variant="secondary" className="text-xs ml-auto">
                             {count}

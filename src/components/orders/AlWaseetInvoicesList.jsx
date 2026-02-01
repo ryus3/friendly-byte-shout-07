@@ -104,9 +104,9 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
         try {
           const { data: dbInvoice, error } = await supabase
             .from('delivery_invoices')
-            .select('id, delivery_invoice_orders(count)')
+            .select('id, partner, delivery_invoice_orders(count)')
             .eq('external_id', invoice.external_id || invoice.id)
-            .eq('partner', 'alwaseet')
+            .in('partner', ['alwaseet', 'modon'])
             .maybeSingle();
 
           if (error) {
@@ -163,27 +163,47 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
             </div>
           </div>
 
-          {/* ✅ المرحلة 3: Header احترافي لاسم الحساب وشركة التوصيل */}
-          {(invoice.account_username || invoice.partner_name_ar || invoice.merchant_id) && (
+          {/* ✅ Header محسّن: Badge الشركة + اسم الحساب */}
+          {(invoice.account_username || invoice.partner || invoice.merchant_id) && (
             <div className="flex items-center justify-between gap-3 pb-4 mb-4 border-b-2 border-gradient-to-r from-blue-500/20 to-purple-600/20">
               <div className="flex items-center gap-3">
-                {/* أيقونة مع خلفية ملونة */}
+                {/* أيقونة مع خلفية ملونة حسب الشركة */}
                 <div className="relative">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl blur-sm opacity-50"></div>
-                  <div className="relative p-2.5 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600">
+                  <div className={`absolute inset-0 rounded-xl blur-sm opacity-50 ${
+                    invoice.partner === 'modon' 
+                      ? 'bg-gradient-to-br from-cyan-500 to-blue-600' 
+                      : 'bg-gradient-to-br from-orange-500 to-red-600'
+                  }`}></div>
+                  <div className={`relative p-2.5 rounded-xl ${
+                    invoice.partner === 'modon'
+                      ? 'bg-gradient-to-br from-cyan-500 to-blue-600'
+                      : 'bg-gradient-to-br from-orange-500 to-red-600'
+                  }`}>
                     <Building className="h-5 w-5 text-white" />
                   </div>
                 </div>
                 
                 {/* معلومات الحساب */}
                 <div className="flex flex-col gap-1">
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    {invoice.partner_name_ar || 'الوسيط'}
-                  </span>
+                  {/* ✅ Badge اسم الشركة - ملون */}
+                  <Badge 
+                    variant="secondary"
+                    className={`text-xs font-bold px-2 py-0.5 w-fit ${
+                      invoice.partner === 'modon'
+                        ? 'bg-gradient-to-r from-cyan-500 to-blue-600 text-white border-0'
+                        : 'bg-gradient-to-r from-orange-500 to-red-600 text-white border-0'
+                    }`}
+                  >
+                    {invoice.partner === 'modon' ? 'مدن' : 'الوسيط'}
+                  </Badge>
                   
                   {/* اسم الحساب بخط كبير وواضح */}
                   {invoice.account_username ? (
-                    <span className="text-lg font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 font-mono tracking-wider">
+                    <span className={`text-lg font-black text-transparent bg-clip-text font-mono tracking-wider ${
+                      invoice.partner === 'modon'
+                        ? 'bg-gradient-to-r from-cyan-600 to-blue-600 dark:from-cyan-400 dark:to-blue-400'
+                        : 'bg-gradient-to-r from-orange-600 to-red-600 dark:from-orange-400 dark:to-red-400'
+                    }`}>
                       {invoice.account_username.toUpperCase()}
                     </span>
                   ) : (
@@ -197,7 +217,11 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
               {/* Badge للـ merchant_id */}
               <Badge 
                 variant="outline" 
-                className="bg-gradient-to-br from-blue-500/10 to-purple-600/10 border-blue-500/30 dark:border-purple-500/30 font-mono text-xs px-3 py-1"
+                className={`font-mono text-xs px-3 py-1 ${
+                  invoice.partner === 'modon'
+                    ? 'bg-gradient-to-br from-cyan-500/10 to-blue-600/10 border-cyan-500/30 dark:border-blue-500/30'
+                    : 'bg-gradient-to-br from-orange-500/10 to-red-600/10 border-orange-500/30 dark:border-red-500/30'
+                }`}
               >
                 #{invoice.merchant_id}
               </Badge>
