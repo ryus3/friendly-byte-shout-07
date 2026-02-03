@@ -3580,15 +3580,15 @@ export const AlWaseetProvider = ({ children }) => {
       }
       
       const message = updatedCount > 0 
-        ? `تم تحديث ${updatedCount} طلب من أصل ${waseetOrders.length}`
-        : `تم فحص ${waseetOrders.length} طلب - لا توجد تحديثات مطلوبة`;
+        ? `تم تحديث ${updatedCount} طلب من أصل ${allOrders.length}`
+        : `تم فحص ${allOrders.length} طلب - لا توجد تحديثات مطلوبة`;
       
-      // Silent sync - no toast notification
+      devLog.log(`✅ ${message}`);
       
       // After status sync, check for orders that need deletion (not found in remote)
       await performDeletionPassAfterStatusSync();
       
-      return waseetOrders;
+      return allOrders;
     } catch (error) {
       console.error('❌ خطأ في المزامنة:', error);
       toast({ 
