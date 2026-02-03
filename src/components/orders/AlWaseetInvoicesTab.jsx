@@ -348,9 +348,8 @@ const AlWaseetInvoicesTab = () => {
                 <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
               </Button>
             </div>
-            <span className="text-right flex items-center gap-2">
+            <span className="text-right text-lg font-bold">
               فواتير شركات التوصيل
-              <Badge variant="outline" className="text-xs">الوسيط + مدن</Badge>
             </span>
           </CardTitle>
         </CardHeader>
