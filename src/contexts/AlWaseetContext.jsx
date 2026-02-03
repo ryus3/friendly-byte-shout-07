@@ -2706,11 +2706,12 @@ export const AlWaseetProvider = ({ children }) => {
 
       // 1) اجلب الطلبات المعلقة لدينا مع تأمين فصل الحسابات
       const targetStatuses = ['pending', 'delivery', 'shipped', 'delivered', 'returned']; // ✅ إضافة delivered
+      // ✅ جلب طلبات الوسيط + مدن معاً
       const { data: pendingOrders, error: pendingErr } = await scopeOrdersQuery(
         supabase
           .from('orders')
-          .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received')
-          .eq('delivery_partner', 'alwaseet')
+          .select('id, status, delivery_status, delivery_partner, delivery_partner_order_id, order_number, qr_id, tracking_number, receipt_received, created_by, delivery_account_used')
+          .in('delivery_partner', ['alwaseet', 'modon'])
           .in('status', targetStatuses)
           .neq('delivery_status', '17') // ✅ استثناء الحالة 17 (راجع للتاجر)
       ).limit(200);
@@ -2730,34 +2731,43 @@ export const AlWaseetProvider = ({ children }) => {
         return { updated: 0, checked: 0 };
       }
 
-      // 2) اجلب جميع طلبات الوسيط لعمل fallback search مع معالجة أخطاء Rate Limit
+      // ✅ تقسيم الطلبات حسب الشريك
+      const alwaseetOrders = pendingOrders.filter(o => o.delivery_partner === 'alwaseet');
+      const modonOrdersLocal = pendingOrders.filter(o => o.delivery_partner === 'modon');
+
+      // 2) جلب طلبات الوسيط + مدن من API
       let waseetOrders = [];
-      try {
-        waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-        devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
-      } catch (apiError) {
-        // ⚠️ CRITICAL: إذا فشل جلب الطلبات، لا نحذف أي طلبات!
-        console.error('❌ فشل جلب قائمة الطلبات من الوسيط:', apiError.message);
-        
-        if (apiError.message?.includes('تجاوزت الحد المسموح به') || apiError.message?.includes('rate limit')) {
-          devLog.warn('⚠️ Rate Limit: تم إيقاف المزامنة مؤقتاً لتجنب الحذف الخاطئ');
-          if (showNotifications) {
-            toast({
-              title: "تحذير: معدل الطلبات مرتفع",
-              description: "تم تجاوز الحد المسموح به من الطلبات. المزامنة متوقفة مؤقتاً لحماية بياناتك.",
-              variant: "destructive"
-            });
+      let modonOrdersRemote = [];
+
+      // جلب طلبات الوسيط
+      if (alwaseetOrders.length > 0) {
+        try {
+          waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
+          devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
+        } catch (apiError) {
+          console.error('❌ فشل جلب قائمة الطلبات من الوسيط:', apiError.message);
+          if (apiError.message?.includes('تجاوزت الحد المسموح به') || apiError.message?.includes('rate limit')) {
+            devLog.warn('⚠️ Rate Limit الوسيط: تم تخطي مزامنة الوسيط');
           }
         }
-        
-        setLoading(false);
-        // ✅ إرجاع فوري بدون حذف أي طلبات
-        return { updated: 0, checked: 0, rateLimitHit: true };
       }
 
-      // ✅ فحص إضافي: إذا كانت القائمة فارغة بشكل غير طبيعي
-      if (!waseetOrders || waseetOrders.length === 0) {
-        devLog.warn('⚠️ تحذير: قائمة الطلبات فارغة - قد يكون هناك خطأ في API');
+      // ✅ جلب طلبات مدن
+      if (modonOrdersLocal.length > 0) {
+        try {
+          const modonTokenData = await getTokenForUser(user?.id, null, 'modon');
+          if (modonTokenData?.token) {
+            modonOrdersRemote = await ModonAPI.getMerchantOrders(modonTokenData.token);
+            devLog.log(`📦 تم جلب ${modonOrdersRemote.length} طلب من مدن للمزامنة السريعة`);
+          }
+        } catch (apiError) {
+          console.error('❌ فشل جلب قائمة الطلبات من مدن:', apiError.message);
+        }
+      }
+
+      // ✅ فحص إضافي: إذا كانت القوائم فارغة بشكل غير طبيعي
+      if (waseetOrders.length === 0 && modonOrdersRemote.length === 0) {
+        devLog.warn('⚠️ تحذير: قوائم الطلبات فارغة - قد يكون هناك خطأ في APIs');
         setLoading(false);
         return { updated: 0, checked: 0, emptyList: true };
       }
@@ -3424,14 +3434,36 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
       
+      // ✅ جلب طلبات الوسيط + مدن معاً
+      let allOrders = [];
+      
       // جلب طلبات الوسيط
-      const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-      devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط`);
+      try {
+        const waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
+        devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط`);
+        allOrders = [...waseetOrders.map(o => ({ ...o, _partner: 'alwaseet' }))];
+      } catch (err) {
+        console.error('❌ خطأ في جلب طلبات الوسيط:', err.message);
+      }
+
+      // ✅ جلب طلبات مدن
+      try {
+        const modonTokenData = await getTokenForUser(user?.id, null, 'modon');
+        if (modonTokenData?.token) {
+          const modonOrders = await ModonAPI.getMerchantOrders(modonTokenData.token);
+          devLog.log(`📦 تم جلب ${modonOrders.length} طلب من مدن`);
+          allOrders = [...allOrders, ...modonOrders.map(o => ({ ...o, _partner: 'modon' }))];
+        }
+      } catch (err) {
+        console.error('❌ خطأ في جلب طلبات مدن:', err.message);
+      }
+
+      devLog.log(`📦 إجمالي الطلبات للمزامنة: ${allOrders.length} (الوسيط + مدن)`);
       
       let updatedCount = 0;
       
       // تحديث حالة كل طلب في قاعدة البيانات
-      for (const waseetOrder of waseetOrders) {
+      for (const waseetOrder of allOrders) {
         const trackingNumber = waseetOrder.qr_id || waseetOrder.tracking_number;
         if (!trackingNumber) continue;
         
