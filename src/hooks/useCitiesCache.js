@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
 
 export const useCitiesCache = () => {
@@ -12,7 +13,8 @@ export const useCitiesCache = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [syncInfo, setSyncInfo] = useState(null);
-  const { token } = useAlWaseet();
+  const { getTokenForUser } = useAlWaseet();
+  const { user } = useAuth();
 
   // جلب المدن من الجدول الموحد
   const fetchCities = async () => {
@@ -135,11 +137,15 @@ export const useCitiesCache = () => {
   };
 
   // 🚀 المزامنة الذكية في الخلفية (بدون timeout)
-  const updateCacheBackground = async () => {
-    if (!token) {
+  const updateCacheBackground = async (partnerName = 'alwaseet') => {
+    // ✅ جلب التوكن الصحيح للشريك المحدد
+    const tokenData = await getTokenForUser(user?.id, null, partnerName);
+    
+    if (!tokenData?.token) {
+      const partnerNameAr = partnerName === 'modon' ? 'مدن' : 'الوسيط';
       toast({
         title: "تنبيه",
-        description: "يجب تسجيل الدخول لشركة التوصيل أولاً",
+        description: `يجب تسجيل الدخول لـ${partnerNameAr} أولاً`,
         variant: "destructive"
       });
       return false;
@@ -148,10 +154,11 @@ export const useCitiesCache = () => {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      const functionName = partnerName === 'modon' ? 'update-modon-cache' : 'update-cities-cache';
       
-      const { data, error } = await supabase.functions.invoke('update-cities-cache', {
+      const { data, error } = await supabase.functions.invoke(functionName, {
         body: { 
-          token,
+          token: tokenData.token,  // ✅ التوكن الصحيح
           user_id: session?.user?.id 
         }
       });
@@ -159,9 +166,10 @@ export const useCitiesCache = () => {
       if (error) throw error;
 
       if (data?.success) {
+        const partnerNameAr = partnerName === 'modon' ? 'مدن' : 'الوسيط';
         toast({
           title: "بدأت المزامنة الذكية",
-          description: "جاري تحديث المدن والمناطق في الخلفية - ستظهر النتائج تلقائياً",
+          description: `جاري تحديث المدن والمناطق من ${partnerNameAr} في الخلفية - ستظهر النتائج تلقائياً`,
           variant: "default"
         });
         
@@ -183,10 +191,14 @@ export const useCitiesCache = () => {
 
   // تحديث cache من شركة التوصيل (دعم متعدد الشركاء)
   const updateCache = async (partnerName = 'alwaseet') => {
-    if (!token) {
+    // ✅ جلب التوكن الصحيح للشريك المحدد
+    const tokenData = await getTokenForUser(user?.id, null, partnerName);
+    
+    if (!tokenData?.token) {
+      const partnerNameAr = partnerName === 'modon' ? 'مدن' : 'الوسيط';
       toast({
         title: "تنبيه",
-        description: "يجب تسجيل الدخول لشركة التوصيل أولاً",
+        description: `يجب تسجيل الدخول لـ${partnerNameAr} أولاً`,
         variant: "destructive"
       });
       return false;
@@ -201,7 +213,7 @@ export const useCitiesCache = () => {
       
       const { data, error } = await supabase.functions.invoke(functionName, {
         body: { 
-          token,
+          token: tokenData.token,  // ✅ التوكن الصحيح
           user_id: session?.user?.id 
         }
       });
@@ -209,9 +221,10 @@ export const useCitiesCache = () => {
       if (error) throw error;
 
       if (data?.success) {
+        const partnerNameAr = partnerName === 'modon' ? 'مدن' : 'الوسيط';
         toast({
           title: "بدأت المزامنة الذكية",
-          description: `جاري تحديث المدن والمناطق من ${partnerName === 'modon' ? 'مدن' : 'الوسيط'} في الخلفية`,
+          description: `جاري تحديث المدن والمناطق من ${partnerNameAr} في الخلفية`,
           variant: "default"
         });
         
@@ -264,6 +277,7 @@ export const useCitiesCache = () => {
     getRegionsByCity, // ✅ فلترة من الـ cache
     fetchAllRegions,
     updateCache,
+    updateCacheBackground, // ✅ إضافة دالة المزامنة الخلفية
     fetchSyncInfo,
     isCacheEmpty
   };
