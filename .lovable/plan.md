@@ -1,140 +1,133 @@
 
-# خطة تحليل وإصلاح مشاكل المزامنة وعرض الفواتير
 
-## المشاكل المكتشفة والحلول المقترحة
+# خطة إصلاح التجديد التلقائي للتوكن - حساب alshmry94
 
----
+## المشكلة المكتشفة
 
-## المشكلة 1: مدن لا يتزامن يدوياً
+### الحالة الحالية للتوكن
+| البند | القيمة |
+|-------|--------|
+| الحساب | alshmry94 |
+| الشريك | alwaseet |
+| ينتهي في | 2026-02-07 14:14:36 |
+| الوقت المتبقي | **13.7 ساعة** |
+| auto_renew_enabled | **true** ✅ |
+| is_active | **true** ✅ |
 
-### التشخيص
-تم فحص الكود في `src/lib/modon-api.js` ووُجد أنه **تم تطبيق التعديلات** بشكل صحيح:
-- يستخدم `supabase.functions.invoke('modon-proxy')` بدلاً من URL ثابت
-- يستورد `supabase` من `./customSupabaseClient`
+### السبب الجذري - URL خاطئ في Edge Function!
 
-**لكن المشكلة الفعلية:** عند استدعاء Edge Function من المتصفح، يتطلب ذلك أن يكون المستخدم مُسجل دخوله (Authorization header).
+عند تشغيل `refresh-delivery-partner-tokens` يدوياً، ظهر الخطأ:
+```
+error sending request for url (https://app.alwaseet-ye.com/api/login): 
+dns error: failed to lookup address information: Name or service not known
+```
 
-### الحل
-1. التأكد من أن `modon-api.js` يستخدم supabase client بشكل صحيح
-2. التحقق من أن `modon-proxy` Edge Function تتعامل مع طلبات بدون JWT بشكل صحيح (للتوافق مع المزامنة اليدوية)
-
----
-
-## المشكلة 2: التجديد التلقائي للتوكن لا يعمل
-
-### التشخيص
-- **وظيفة Cron موجودة:** `refresh-delivery-tokens-daily` مجدولة الساعة 08:00 صباحاً
-- **لا توجد سجلات تجديد:** `background_sync_logs` لا تحتوي على أي سجل `sync_type = 'token_renewal'`
-- **التوكنات صالحة:** توكن مدن صالح حتى 2026-02-10 (6 أيام متبقية) - **لا يحتاج تجديد الآن**
-
-### المشكلة الجذرية
-وظيفة التجديد مصممة لتجدد التوكنات التي تنتهي **خلال 24 ساعة القادمة فقط**:
+**المشكلة:** الدالة تستخدم URL قديم/خاطئ:
 ```typescript
-.gte('expires_at', now.toISOString()) // Not expired yet
-.lte('expires_at', renewalThreshold.toISOString()); // Expires within 24 hours
+// ❌ خاطئ - غير موجود!
+https://app.alwaseet-ye.com/api/login
+
+// ✅ صحيح - يجب استخدامه
+https://api.alwaseet-iq.net/v1/merchant/login
 ```
-
-**التوكن الحالي صالح لـ 6 أيام، لذا لن يتم تجديده حتى يتبقى يوم واحد فقط على الانتهاء.**
-
-### الحل
-- ✅ لا توجد مشكلة فعلية - النظام يعمل كما هو مصمم
-- التجديد يحدث تلقائياً خلال آخر 24 ساعة من صلاحية التوكن
-- يمكن إضافة **إشعار** للمستخدم عندما يقترب التوكن من الانتهاء (3 أيام مثلاً) للتوعية
 
 ---
 
-## المشكلة 3: ربط الطلبات المحلية بالفاتورة
+## الحل المطلوب
 
-### التشخيص
-تم فحص دالة `link_invoice_orders_to_orders` ووُجد أنها **تعمل بشكل صحيح**:
-1. تبحث عن الطلبات باستخدام `tracking_number` أو `delivery_partner_order_id`
-2. تتحقق من أهلية الطلب (غير مرجع/ملغي)
-3. تربط فقط الطلبات الموجودة فعلاً في قاعدة البيانات
+### تعديل ملف `supabase/functions/refresh-delivery-partner-tokens/index.ts`
 
-**النتيجة:** تم التحقق من أن الطلبات مربوطة بشكل صحيح (20 طلب مربوط بالفعل كما يظهر في الاستعلام)
+تغيير دالة `loginToAlWaseet` لاستخدام URL الصحيح:
 
+**قبل (خاطئ):**
+```typescript
+const response = await fetch('https://app.alwaseet-ye.com/api/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  body: JSON.stringify({ identifier: username, password }),
+});
 ```
-invoice_external_id: 2819929 → customer_name: ازياء عبود الشمري (delivered) ✓
-```
 
-**الربط ليس عشوائياً** - يتم التحقق من وجود الطلب محلياً قبل الربط.
+**بعد (صحيح):**
+```typescript
+const response = await fetch('https://api.alwaseet-iq.net/v1/merchant/login', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  body: JSON.stringify({ username, password }),  // ✅ تغيير identifier إلى username
+});
+```
 
 ---
 
-## المشكلة 4: فواتير عبدالله لا تظهر عند المدير (الأهم!)
+## التغييرات المطلوبة
 
-### التشخيص
-| العنصر | القيمة |
-|--------|--------|
-| معرف عبدالله | `d46021fe-8cde-4575-97ac-c2661ee91527` |
-| أحدث فاتورة | `2819929` (84,000 دينار - 3 طلبات) |
-| مشكلة `issued_at` | **NULL في أحدث الفواتير!** |
+### 1. إصلاح URL الوسيط (ALWASEET)
+- تغيير `https://app.alwaseet-ye.com/api/login` ← `https://api.alwaseet-iq.net/v1/merchant/login`
+- تغيير body من `{ identifier, password }` ← `{ username, password }`
+- إضافة معالجة response structure الصحيحة
 
-**الاستعلام الحالي في `AllEmployeesInvoicesView.jsx`:**
-```javascript
-.gte('issued_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
+### 2. إضافة Constants للـ URLs
+```typescript
+const ALWASEET_API_BASE = 'https://api.alwaseet-iq.net/v1/merchant';
+const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
 ```
 
-**المشكلة الجذرية:**
-الفواتير الحديثة (2819929 و 2795763) ليس لديها قيمة `issued_at` محددة، بينما الاستعلام يفلتر على `issued_at >= 90 يوم مضى`.
-
-**النتيجة:** الفواتير الحديثة لا تظهر للمدير لأن `issued_at IS NULL`.
-
-### الحل
-تعديل الاستعلام ليستخدم `created_at` كبديل عندما يكون `issued_at` غير موجود، أو استخدام `COALESCE(issued_at, created_at)`:
-
-```javascript
-// قبل
-.gte('issued_at', new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString())
-
-// بعد
-.or(`issued_at.gte.${threshold},and(issued_at.is.null,created_at.gte.${threshold})`)
+### 3. تحسين معالجة Response
+الـ API يُرجع structure مختلفة:
+```json
+{
+  "status": true,
+  "errNum": "S000",
+  "msg": "تم تسجيل الدخول",
+  "data": {
+    "token": "xxx...",
+    "merchant_id": 123
+  }
+}
 ```
-
-**أو الأفضل:** إصلاح `smart-invoice-sync` لضمان ملء `issued_at` دائماً من `invoice.created_at` أو `created_at` المحلي.
-
----
-
-## ملخص التغييرات المطلوبة
-
-| الملف | التعديل | الأولوية |
-|-------|---------|----------|
-| `src/components/orders/AllEmployeesInvoicesView.jsx` | تعديل استعلام الفواتير ليشمل `issued_at IS NULL` مع فلترة `created_at` | عالية |
-| `supabase/functions/smart-invoice-sync/index.ts` | التأكد من ملء `issued_at` من `invoice.created_at` | عالية |
-| `src/lib/modon-api.js` | التحقق من عمل المزامنة اليدوية وإضافة logging أفضل | متوسطة |
-
----
-
-## ملاحظات إضافية
-
-### التجديد التلقائي للتوكن
-- **يعمل بشكل صحيح** ✅
-- مجدول الساعة 08:00 صباحاً يومياً
-- يجدد التوكنات التي تنتهي خلال 24 ساعة فقط
-- التوكن الحالي صالح لـ 6 أيام، لذا لا يحتاج تجديد حالياً
-
-### ربط الطلبات بالفواتير
-- **يعمل بشكل صحيح** ✅
-- يتحقق من وجود الطلب محلياً قبل الربط
-- يستخدم `tracking_number` للمطابقة
-- لا يربط الطلبات المرجعة أو الملغاة
-
-### عبدالله في employee_supervisors
-- **موجود ومربوط** ✅
-- `supervisor_id: 91484496...` (المدير العام)
-- `employee_id: d46021fe...` (عبدالله)
 
 ---
 
 ## خطوات التنفيذ
 
-1. **إصلاح فلتر `issued_at`** في `AllEmployeesInvoicesView.jsx`:
-   - استخدام `created_at` كبديل عندما يكون `issued_at` غير موجود
+1. **تعديل `refresh-delivery-partner-tokens/index.ts`**:
+   - إصلاح URL الوسيط
+   - تصحيح بنية الطلب (username بدلاً من identifier)
+   - تحسين معالجة الاستجابة
 
-2. **تحسين `smart-invoice-sync`**:
-   - ضمان ملء `issued_at` من بيانات API أو `created_at` المحلي
+2. **نشر Edge Function**
 
-3. **اختبار يدوي**:
-   - تسجيل الدخول كمدير
-   - التحقق من ظهور فواتير عبدالله الحديثة
-   - اختبار المزامنة اليدوية لمدن
+3. **تشغيل التجديد يدوياً للتحقق**
+
+---
+
+## التحقق بعد التنفيذ
+
+سيتم استدعاء Edge Function يدوياً للتأكد من:
+- نجاح الاتصال بـ API الوسيط
+- تجديد توكن alshmry94 بنجاح
+- تحديث expires_at إلى 7 أيام جديدة
+
+---
+
+## ملاحظات إضافية
+
+### Cron Job يستخدم Token قديم
+لاحظت أن الـ Cron Job `refresh-delivery-tokens-daily` يستخدم Authorization token قديم:
+```
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...eyJpYXQiOjE3MzYzMjMzNjAsImV4cCI6MjA1MTg5OTM2MH0...
+```
+
+هذا Token من مشروع سابق (`iat: 1736323360` = يناير 2025). لكن بما أن الدالة لا تتطلب JWT (`verify_jwt = false`)، فهذا لن يؤثر على العمل.
+
+### الملف المتأثر
+| الملف | التعديل |
+|-------|---------|
+| `supabase/functions/refresh-delivery-partner-tokens/index.ts` | إصلاح URL + body structure |
+
