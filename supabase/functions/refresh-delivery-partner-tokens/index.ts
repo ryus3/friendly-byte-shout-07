@@ -27,35 +27,45 @@ interface LoginResponse {
 
 async function loginToAlWaseet(username: string, password: string): Promise<LoginResponse> {
   try {
-    const response = await fetch('https://app.alwaseet-ye.com/api/login', {
+    console.log(`[AlWaseet] Attempting login for: ${username}`);
+    
+    // AlWaseet API requires FormData (same as MODON)
+    const formData = new FormData();
+    formData.append('username', username);
+    formData.append('password', password);
+    
+    const response = await fetch('https://api.alwaseet-iq.net/v1/merchant/login', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      body: JSON.stringify({ identifier: username, password }),
+      body: formData,
     });
 
-    if (!response.ok) {
-      return { success: false, error: `HTTP ${response.status}` };
-    }
-
     const data = await response.json();
+    console.log(`[AlWaseet] Response status: ${data.status}, errNum: ${data.errNum}, msg: ${data.msg}`);
     
-    if (data.token) {
+    if (!response.ok) {
+      console.error(`[AlWaseet] HTTP error ${response.status}: ${data.msg || 'Unknown error'}`);
+      return { success: false, error: `HTTP ${response.status}: ${data.msg || 'Unknown error'}` };
+    }
+    
+    // API returns: { status: true, errNum: "S000", msg: "...", data: { token: "...", merchant_id: ... } }
+    if (data.status && data.data?.token) {
       // Token expires in 7 days
       const expiresAt = new Date();
       expiresAt.setDate(expiresAt.getDate() + 7);
       
+      console.log(`[AlWaseet] Login successful, token expires: ${expiresAt.toISOString()}`);
+      
       return {
         success: true,
-        token: data.token,
+        token: data.data.token,
         expires_at: expiresAt.toISOString(),
       };
     }
 
-    return { success: false, error: data.message || 'No token in response' };
+    console.error(`[AlWaseet] Login failed: ${data.msg || 'No token in response'}`);
+    return { success: false, error: data.msg || 'No token in response' };
   } catch (error) {
+    console.error(`[AlWaseet] Exception:`, error);
     return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
   }
 }
