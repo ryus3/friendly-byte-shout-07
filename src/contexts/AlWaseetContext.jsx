@@ -2772,16 +2772,28 @@ export const AlWaseetProvider = ({ children }) => {
         return { updated: 0, checked: 0, emptyList: true };
       }
 
-      // 3) بناء خرائط للبحث السريع
+      // 3) بناء خرائط للبحث السريع (تشمل الوسيط ومدن)
       const byWaseetId = new Map();
       const byQrId = new Map();
       const byTracking = new Map();
       
+      // ✅ إضافة طلبات الوسيط إلى الخرائط
       for (const wo of waseetOrders) {
-        if (wo.id) byWaseetId.set(String(wo.id), wo);
-        if (wo.qr_id) byQrId.set(String(wo.qr_id).trim(), wo);
-        if (wo.tracking_number) byTracking.set(String(wo.tracking_number).trim(), wo);
+        const waseetOrder = { ...wo, _partner: 'alwaseet' };
+        if (wo.id) byWaseetId.set(String(wo.id), waseetOrder);
+        if (wo.qr_id) byQrId.set(String(wo.qr_id).trim(), waseetOrder);
+        if (wo.tracking_number) byTracking.set(String(wo.tracking_number).trim(), waseetOrder);
       }
+      
+      // ✅ إضافة طلبات مدن إلى الخرائط (الإصلاح الجديد!)
+      for (const mo of modonOrdersRemote) {
+        const modonOrder = { ...mo, _partner: 'modon' };
+        if (mo.id) byWaseetId.set(String(mo.id), modonOrder);
+        if (mo.qr_id) byQrId.set(String(mo.qr_id).trim(), modonOrder);
+        if (mo.tracking_number) byTracking.set(String(mo.tracking_number).trim(), modonOrder);
+      }
+      
+      devLog.log(`📊 خرائط البحث: ${byWaseetId.size} بمعرف، ${byQrId.size} بـQR، ${byTracking.size} بـtracking`);
 
       // 4) معالجة كل طلب محلي
       let updated = 0;
