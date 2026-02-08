@@ -693,6 +693,7 @@ export type Database = {
         Row: {
           cities_count: number | null
           created_at: string | null
+          delivery_partner: string | null
           ended_at: string | null
           error_message: string | null
           id: string
@@ -706,6 +707,7 @@ export type Database = {
         Insert: {
           cities_count?: number | null
           created_at?: string | null
+          delivery_partner?: string | null
           ended_at?: string | null
           error_message?: string | null
           id?: string
@@ -719,6 +721,7 @@ export type Database = {
         Update: {
           cities_count?: number | null
           created_at?: string | null
+          delivery_partner?: string | null
           ended_at?: string | null
           error_message?: string | null
           id?: string
