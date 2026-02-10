@@ -7693,6 +7693,18 @@ export type Database = {
           sync_duration_seconds: number
         }[]
       }
+      get_last_successful_cities_regions_sync_by_partner: {
+        Args: { partner_name: string }
+        Returns: {
+          cities_count: number
+          delivery_partner: string
+          id: string
+          last_sync_at: string
+          regions_count: number
+          success: boolean
+          sync_duration_seconds: number
+        }[]
+      }
       get_log_filter_options: {
         Args: never
         Returns: {

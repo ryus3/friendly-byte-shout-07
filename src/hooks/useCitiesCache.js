@@ -113,16 +113,27 @@ export const useCitiesCache = () => {
     );
   };
 
-  // جلب معلومات آخر مزامنة ناجحة فقط
-  const fetchSyncInfo = async () => {
+  // جلب معلومات آخر مزامنة ناجحة - مع دعم فلترة حسب الشريك
+  const fetchSyncInfo = async (partnerName = null) => {
     try {
-      const { data, error } = await supabase.rpc('get_last_successful_cities_regions_sync');
-      if (error) throw error;
+      let syncData;
       
-      console.log('🔍 fetchSyncInfo (successful only) نتيجة:', data);
+      if (partnerName) {
+        // ✅ استخدام RPC الجديد لجلب آخر مزامنة حسب الشريك
+        const { data, error } = await supabase.rpc('get_last_successful_cities_regions_sync_by_partner', {
+          partner_name: partnerName
+        });
+        if (error) throw error;
+        syncData = Array.isArray(data) ? data[0] : data;
+        console.log(`🔍 fetchSyncInfo (${partnerName}) نتيجة:`, syncData);
+      } else {
+        // fallback للـ RPC العام
+        const { data, error } = await supabase.rpc('get_last_successful_cities_regions_sync');
+        if (error) throw error;
+        syncData = Array.isArray(data) ? data[0] : data;
+        console.log('🔍 fetchSyncInfo (all) نتيجة:', syncData);
+      }
       
-      // Handle array response from RPC function
-      const syncData = Array.isArray(data) ? data[0] : data;
       setSyncInfo(syncData);
       
       if (syncData?.last_sync_at) {

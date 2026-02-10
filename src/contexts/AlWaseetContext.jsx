@@ -3614,10 +3614,10 @@ export const AlWaseetProvider = ({ children }) => {
     }
   };
 
-  // دالة مزامنة طلب محدد بالـ QR/tracking number مع تحديث فوري
+  // دالة مزامنة طلب محدد بالـ QR/tracking number مع تحديث فوري - متعدد الشركاء
   const syncOrderByQR = useCallback(async (qrId) => {
     try {
-      devLog.log(`🔄 مزامنة الطلب ${qrId} مع الوسيط...`);
+      devLog.log(`🔄 مزامنة الطلب ${qrId}...`);
       
       // جلب الطلب المحلي أولاً للتحقق من شروط الحذف + تحديد صاحب الطلب
       // ✅ البحث بـ tracking_number أو qr_id أو delivery_partner_order_id
@@ -3633,17 +3633,25 @@ export const AlWaseetProvider = ({ children }) => {
         return null;
       }
 
-      // دالة للحصول على التوكن الفعال مع دعم متعدد الحسابات
+      // ✅ تحديد شريك التوصيل من الطلب المحلي
+      const orderPartner = localOrder?.delivery_partner || 'alwaseet';
+      const isModonOrder = orderPartner === 'modon';
+      const partnerDisplayName = isModonOrder ? 'مدن' : 'الوسيط';
+      
+      devLog.log(`🏢 شريك الطلب: ${partnerDisplayName} (${orderPartner})`);
+
+      // دالة للحصول على التوكن الفعال مع دعم متعدد الحسابات والشركاء
       const getEffectiveTokenForOrder = async (order, fallbackToCurrentUser = true) => {
         if (!order) return { token: null, source: 'no_order' };
         
         const orderOwnerId = order.created_by;
-        devLog.log(`🔍 البحث عن توكن فعال للطلب ${order.tracking_number || order.id} (مالك: ${orderOwnerId})`);
+        const partner = order.delivery_partner || 'alwaseet';
+        devLog.log(`🔍 البحث عن توكن فعال للطلب ${order.tracking_number || order.id} (مالك: ${orderOwnerId}, شريك: ${partner})`);
         
-        // جلب جميع حسابات مالك الطلب
-        const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
+        // جلب جميع حسابات مالك الطلب للشريك الصحيح
+        const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, partner);
         if (ownerAccounts.length > 0) {
-          devLog.log(`👤 وُجد ${ownerAccounts.length} حساب لمالك الطلب ${orderOwnerId}`);
+          devLog.log(`👤 وُجد ${ownerAccounts.length} حساب ${partner} لمالك الطلب ${orderOwnerId}`);
           
           // تجربة كل حساب على حدة
           for (const account of ownerAccounts) {
@@ -3661,7 +3669,7 @@ export const AlWaseetProvider = ({ children }) => {
         // إذا لم نجد توكن لمالك الطلب وكان المستخدم الحالي مختلف
         if (fallbackToCurrentUser && user?.id && user.id !== orderOwnerId) {
           devLog.log(`🔄 لم يوجد توكن لمالك الطلب، التراجع للمستخدم الحالي ${user.id}`);
-          const currentUserAccounts = await getUserDeliveryAccounts(user.id, 'alwaseet');
+          const currentUserAccounts = await getUserDeliveryAccounts(user.id, partner);
           
           for (const account of currentUserAccounts) {
             if (account.token) {
@@ -3692,9 +3700,9 @@ export const AlWaseetProvider = ({ children }) => {
       const checkOrderWithAllTokens = async (orderId) => {
         const orderOwnerId = localOrder?.created_by;
         if (!orderOwnerId) return null;
-        
+        const partner = localOrder?.delivery_partner || 'alwaseet';
         // جلب جميع حسابات مالك الطلب
-        const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, 'alwaseet');
+        const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, partner);
         
         // ✅ حماية: لا تحذف إذا لم يوجد توكن صالح
         if (ownerAccounts.length === 0) {
@@ -3710,7 +3718,15 @@ export const AlWaseetProvider = ({ children }) => {
           
           try {
             devLog.log(`🔄 تجربة البحث بحساب: ${account.account_username}`);
-            const foundOrder = await AlWaseetAPI.getOrderByQR(account.token, orderId);
+            let foundOrder;
+            if (isModonOrder) {
+              const modonOrders = await ModonAPI.getMerchantOrders(account.token);
+              foundOrder = modonOrders.find(o => 
+                String(o.qr_id) === String(orderId) || String(o.id) === String(orderId)
+              );
+            } else {
+              foundOrder = await AlWaseetAPI.getOrderByQR(account.token, orderId);
+            }
             if (foundOrder) {
               devLog.log(`✅ وُجد الطلب ${orderId} بحساب: ${account.account_username}`);
               return foundOrder;
@@ -3724,24 +3740,33 @@ export const AlWaseetProvider = ({ children }) => {
         return null;
       };
 
-      // جلب الطلب من الوسيط باستخدام التوكن المناسب
-      let waseetOrder = await AlWaseetAPI.getOrderByQR(effectiveToken, qrId);
+      // ✅ جلب الطلب من الشريك المناسب باستخدام التوكن المناسب
+      let remoteOrder;
+      if (isModonOrder) {
+        devLog.log(`🔄 جلب طلب مدن ${qrId}...`);
+        const modonOrders = await ModonAPI.getMerchantOrders(effectiveToken);
+        remoteOrder = modonOrders.find(o => 
+          String(o.qr_id) === String(qrId) || String(o.id) === String(qrId) || String(o.tracking_number) === String(qrId)
+        );
+        if (remoteOrder) {
+          devLog.log(`✅ وُجد طلب مدن ${qrId}:`, { id: remoteOrder.id, status_id: remoteOrder.status_id });
+        }
+      } else {
+        remoteOrder = await AlWaseetAPI.getOrderByQR(effectiveToken, qrId);
+      }
       
-      if (!waseetOrder) {
+      if (!remoteOrder) {
         devLog.warn(`❌ لم يتم العثور على الطلب ${qrId} بالتوكن الأولي (${tokenSource})`);
         
-        // فحص متقدم بجميع التوكنات قبل الحذف
         devLog.log(`🔍 بدء الفحص المتقدم بجميع التوكنات للطلب ${qrId}...`);
-        waseetOrder = await checkOrderWithAllTokens(qrId);
+        remoteOrder = await checkOrderWithAllTokens(qrId);
         
-        if (!waseetOrder) {
+        if (!remoteOrder) {
           devLog.warn(`❌ تأكيد: الطلب ${qrId} غير موجود في جميع الحسابات`);
           
-          // التحقق من إمكانية الحذف التلقائي مع حماية مضاعفة
           if (localOrder && canAutoDeleteOrder(localOrder, user)) {
             devLog.log(`⚠️ التحقق من حذف الطلب ${qrId} - مؤكد عدم وجوده في جميع الحسابات`);
             
-            // انتظار إضافي للتأكد (قد يكون هناك تأخير في التزامن)
             await new Promise(resolve => setTimeout(resolve, 3000));
             const finalCheck = await checkOrderWithAllTokens(qrId);
             
@@ -3752,19 +3777,18 @@ export const AlWaseetProvider = ({ children }) => {
                 return { 
                   ...deleteResult, 
                   autoDeleted: true,
-                  message: `تم حذف الطلب ${localOrder.tracking_number || qrId} تلقائياً - مؤكد عدم وجوده في جميع حسابات شركة التوصيل`
+                  message: `تم حذف الطلب ${localOrder.tracking_number || qrId} تلقائياً - مؤكد عدم وجوده في جميع حسابات ${partnerDisplayName}`
                 };
               }
             } else {
               devLog.log(`✅ الطلب ${qrId} موجود فعلياً بعد الفحص النهائي - لن يُحذف`);
-              waseetOrder = finalCheck;
+              remoteOrder = finalCheck;
             }
           } else {
             devLog.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي أو لا يملكه المستخدم الحالي`);
           }
           
-          // ✅ **حماية**: لا تحدّث إذا لم يوجد الطلب في شركة التوصيل
-          if (!waseetOrder) {
+          if (!remoteOrder) {
             return null;
           }
         } else {
@@ -3772,18 +3796,17 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      // ✅ **حماية إضافية**: التحقق من صحة البيانات المُسترجعة
-      // ✅ قبول id أو qr_id من AlWaseet API
-      if (!waseetOrder || (!waseetOrder.qr_id && !waseetOrder.id)) {
-        console.error(`❌ البيانات المُسترجعة للطلب ${qrId} غير صالحة:`, waseetOrder);
+      // ✅ حماية إضافية
+      if (!remoteOrder || (!remoteOrder.qr_id && !remoteOrder.id)) {
+        console.error(`❌ البيانات المُسترجعة للطلب ${qrId} غير صالحة:`, remoteOrder);
         return {
           needs_update: false,
           invalid_data: true,
-          message: 'البيانات المُسترجعة من شركة التوصيل غير صالحة أو قديمة'
+          message: `البيانات المُسترجعة من ${partnerDisplayName} غير صالحة أو قديمة`
         };
       }
 
-      devLog.log('📋 بيانات الطلب من الوسيط:', { tokenSource, waseetOrder });
+      devLog.log(`📋 بيانات الطلب من ${partnerDisplayName}:`, { tokenSource, remoteOrder });
 
       // تحميل حالات الطلبات إذا لم تكن محملة
       let statusMap = orderStatusesMap;
@@ -3791,17 +3814,18 @@ export const AlWaseetProvider = ({ children }) => {
         statusMap = await loadOrderStatuses();
       }
 
-      // ✅ استخدام المصدر الموحد لتعريفات الحالات
-      const waseetStatusId = waseetOrder.status_id || waseetOrder.statusId || waseetOrder.state_id;
-      const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
-      const statusConfig = getStatusConfig(String(waseetStatusId));
+      // ✅ استخدام المصدر الموحد لتعريفات الحالات حسب الشريك
+      const remoteStatusId = remoteOrder.status_id || remoteOrder.statusId || remoteOrder.state_id;
+      const remoteStatusText = remoteOrder.status || remoteOrder.status_text || remoteOrder.status_name || '';
+      const statusConfig = isModonOrder 
+        ? getModonStatusConfig(remoteStatusId, remoteStatusText, localOrder?.status)
+        : getStatusConfig(String(remoteStatusId));
       
-      // ✅ لا حماية - استخدام الحالة الصحيحة مباشرة
       const correctLocalStatus = statusConfig?.localStatus || statusConfig?.internalStatus || 'pending';
       devLog.log(`✅ تحديث ${qrId}: ${localOrder.status} → ${correctLocalStatus} (${statusConfig?.text || 'غير معروف'})`);
       
       devLog.log(`🔄 تحديث ${qrId}:`, {
-        delivery_status: { old: localOrder.delivery_status, new: String(waseetStatusId) },
+        delivery_status: { old: localOrder.delivery_status, new: String(remoteStatusId) },
         status: { old: localOrder.status, new: correctLocalStatus },
         protected: localOrder.status === 'partial_delivery' || localOrder.status === 'delivered' || localOrder.status === 'completed' ? '🔒 محمي' : 'مسموح',
         statusConfig: statusConfig?.text || 'غير معروف'
@@ -3815,69 +3839,53 @@ export const AlWaseetProvider = ({ children }) => {
       // تحضير التحديثات
       const updates = {
         status: correctLocalStatus,
-        delivery_status: String(waseetStatusText),
-        delivery_partner_order_id: String(waseetOrder.id),
-        qr_id: waseetOrder.qr_id || localOrder.qr_id || qrId, // ✅ حفظ qr_id أيضاً
+        delivery_status: isModonOrder ? String(remoteStatusId) : String(remoteStatusText),
+        delivery_partner_order_id: String(remoteOrder.id),
+        qr_id: remoteOrder.qr_id || localOrder.qr_id || qrId,
         updated_at: new Date().toISOString()
       };
 
       // تحديث رسوم التوصيل
-      if (waseetOrder.delivery_price) {
-        const deliveryPrice = parseInt(String(waseetOrder.delivery_price)) || 0;
+      const deliveryPriceField = remoteOrder.delivery_price || remoteOrder.delivery_fee;
+      if (deliveryPriceField) {
+        const deliveryPrice = parseInt(String(deliveryPriceField)) || 0;
         if (deliveryPrice >= 0) {
           updates.delivery_fee = deliveryPrice;
         }
       }
 
-      // ✅ تحديث السعر دائماً إذا تغير من الوسيط
-      if (waseetOrder.price !== undefined) {
-        const waseetTotalPrice = parseInt(String(waseetOrder.price)) || 0;
-        const deliveryFee = parseInt(String(waseetOrder.delivery_price || localOrder.delivery_fee)) || 0;
+      // ✅ تحديث السعر دائماً إذا تغير من الشريك
+      const remotePriceField = remoteOrder.price !== undefined ? remoteOrder.price : remoteOrder.total_price;
+      if (remotePriceField !== undefined) {
+        const remoteTotalPrice = parseInt(String(remotePriceField)) || 0;
+        const deliveryFee = parseInt(String(deliveryPriceField || localOrder.delivery_fee)) || 0;
         
-        // ✅ فصل السعر: منتجات = الشامل - التوصيل
-        const productsPriceFromWaseet = waseetTotalPrice - deliveryFee;
-        
-        // ✅ السعر الأصلي للمنتجات (من final_amount)
+        const productsPriceFromRemote = remoteTotalPrice - deliveryFee;
         const originalFinalAmount = parseInt(String(localOrder.final_amount)) || 0;
         const originalProductsPrice = originalFinalAmount - deliveryFee;
-        
-        // ✅ المقارنة الصحيحة: سعر المنتجات الحالي مع السعر من الوسيط
         const currentProductsPrice = parseInt(String(localOrder.total_amount)) || 0;
         
-        if (productsPriceFromWaseet !== currentProductsPrice) {
-          // ✅ حساب الخصم/الزيادة بناءً على السعر الأصلي للمنتجات
-          const priceDiff = originalProductsPrice - productsPriceFromWaseet;
+        if (productsPriceFromRemote !== currentProductsPrice) {
+          const priceDiff = originalProductsPrice - productsPriceFromRemote;
           
           if (priceDiff > 0) {
-            // خصم
             updates.discount = priceDiff;
             updates.price_increase = 0;
             updates.price_change_type = 'discount';
-            devLog.log(`   - 🔻 خصم: ${priceDiff.toLocaleString()} د.ع`);
           } else if (priceDiff < 0) {
-            // زيادة
             updates.discount = 0;
             updates.price_increase = Math.abs(priceDiff);
             updates.price_change_type = 'increase';
-            devLog.log(`   - 🔺 زيادة: ${Math.abs(priceDiff).toLocaleString()} د.ع`);
           } else {
             updates.discount = 0;
             updates.price_increase = 0;
             updates.price_change_type = null;
           }
           
-          devLog.log(`💰 تحديث السعر للطلب ${localOrder.order_number || qrId}:`);
-          devLog.log(`   - السعر الأصلي للمنتجات: ${originalProductsPrice.toLocaleString()} د.ع`);
-          devLog.log(`   - السعر الجديد للمنتجات: ${productsPriceFromWaseet.toLocaleString()} د.ع`);
-          devLog.log(`   - رسوم التوصيل: ${deliveryFee.toLocaleString()} د.ع`);
-          devLog.log(`   - المجموع النهائي: ${waseetTotalPrice.toLocaleString()} د.ع`);
-          
-          // ⚠️ لا نحدّث final_amount أبداً - يبقى السعر الأصلي
-          updates.total_amount = productsPriceFromWaseet;  // سعر المنتجات فقط
-          updates.sales_amount = productsPriceFromWaseet;  // = total_amount
+          updates.total_amount = productsPriceFromRemote;
+          updates.sales_amount = productsPriceFromRemote;
           updates.delivery_fee = deliveryFee;
           
-          // ✅ تحديث الأرباح
           try {
             const { data: profitRecord } = await supabase
               .from('profits')
@@ -3886,22 +3894,18 @@ export const AlWaseetProvider = ({ children }) => {
               .maybeSingle();
             
             if (profitRecord) {
-              const newProfit = productsPriceFromWaseet - profitRecord.total_cost;
+              const newProfit = productsPriceFromRemote - profitRecord.total_cost;
               const employeeShare = (profitRecord.employee_percentage / 100.0) * newProfit;
               
               await supabase
                 .from('profits')
                 .update({
-                  total_revenue: waseetTotalPrice,
+                  total_revenue: remoteTotalPrice,
                   profit_amount: newProfit,
                   employee_profit: employeeShare,
                   updated_at: new Date().toISOString()
                 })
                 .eq('id', profitRecord.id);
-              
-              devLog.log(`✅ تحديث الأرباح:`);
-              devLog.log(`   - الربح الجديد: ${newProfit.toLocaleString()} د.ع`);
-              devLog.log(`   - حصة الموظف: ${employeeShare.toLocaleString()} د.ع`);
             }
           } catch (profitError) {
             console.error('❌ خطأ في تحديث الأرباح:', profitError);
@@ -3909,26 +3913,16 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      // ترقية إلى completed فقط عند استيفاء جميع الشروط
-      const finConfirmed = waseetOrder.deliver_confirmed_fin === 1;
+      // ترقية إلى completed
+      const finConfirmed = isModonOrder 
+        ? (statusConfig?.localStatus === 'delivered' || statusConfig?.internalStatus === 'delivered')
+        : (remoteOrder.deliver_confirmed_fin === 1);
       const receiptReceived = localOrder?.receipt_received === true;
       const isEmployeeOrder = localOrder?.employee_order === true;
       const employeeDebtPaid = !isEmployeeOrder || localOrder?.employee_debt_paid === true;
       
       if (finConfirmed && receiptReceived && employeeDebtPaid && correctLocalStatus === 'delivered') {
         updates.status = 'completed';
-        console.log(`🎯 [QR Complete] تحويل الطلب إلى completed:`, {
-          finConfirmed,
-          receiptReceived,
-          employeeDebtPaid,
-          orderNumber: localOrder?.order_number
-        });
-      } else if (finConfirmed && correctLocalStatus === 'delivered') {
-        console.log(`⚠️ [QR Pending] الطلب ${localOrder?.order_number} - delivered لكن بانتظار الفاتورة:`, {
-          finConfirmed,
-          receiptReceived,
-          employeeDebtPaid
-        });
       }
 
       // تطبيق التحديثات
@@ -3942,12 +3936,12 @@ export const AlWaseetProvider = ({ children }) => {
         return null;
       }
 
-      devLog.log(`✅ تم تحديث الطلب ${qrId}: ${localOrder.status} → ${correctLocalStatus}`);
+      devLog.log(`✅ تم تحديث الطلب ${qrId} من ${partnerDisplayName}: ${localOrder.status} → ${correctLocalStatus}`);
       
       return {
-        needs_update: localOrder.status !== correctLocalStatus || localOrder.delivery_status !== waseetStatusText,
+        needs_update: localOrder.status !== correctLocalStatus || localOrder.delivery_status !== String(remoteStatusId),
         updates,
-        waseet_order: waseetOrder,
+        waseet_order: remoteOrder,
         local_order: { ...localOrder, ...updates }
       };
 
