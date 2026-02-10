@@ -104,7 +104,7 @@ const CitiesCacheManager = () => {
   };
 
   // ===================================================================
-  // 🚀 المرحلة 4: Real-time Progress باستخدام Supabase Realtime
+  // 🚀 المرحلة 4: Real-time Progress باستخدام Supabase Realtime - مع فلترة الشريك
   // ===================================================================
   useEffect(() => {
     const channel = supabase
@@ -117,10 +117,16 @@ const CitiesCacheManager = () => {
           table: 'cities_regions_sync_log' 
         },
         (payload) => {
-          
           if (payload.new) {
+            // ✅ تجاهل أي payload لا يطابق الشريك الحالي
+            const payloadPartner = payload.new.delivery_partner || 'alwaseet';
+            if (activePartner && payloadPartner !== activePartner) {
+              return; // تجاهل تحديثات الشريك الآخر
+            }
+
             const { cities_count, regions_count, success } = payload.new;
-            const total = 6200; // تقريبي: 18 مدينة + ~6191 منطقة
+            // ✅ تقدير ديناميكي حسب الشريك
+            const total = activePartner === 'modon' ? 1500 : 6200;
             const current = (cities_count || 0) + (regions_count || 0);
             
             setUpdateProgress({
@@ -129,10 +135,10 @@ const CitiesCacheManager = () => {
               message: `تم: ${cities_count || 0} مدينة، ${regions_count || 0} منطقة`
             });
 
-            // عند اكتمال المزامنة بنجاح، حدّث البيانات
-            if (success === true && payload.eventType === 'INSERT') {
+            // ✅ عند اكتمال المزامنة بنجاح - التحقق من UPDATE وليس INSERT فقط
+            if (success === true && (payload.eventType === 'UPDATE' || payload.eventType === 'INSERT')) {
               setTimeout(() => {
-                fetchSyncInfo();
+                fetchSyncInfo(activePartner);
                 fetchCities();
               }, 500);
             }
@@ -144,14 +150,12 @@ const CitiesCacheManager = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchSyncInfo, fetchCities]);
+  }, [fetchSyncInfo, fetchCities, activePartner]);
 
-  // Force refresh syncInfo when component mounts or cities/regions change
+  // ✅ Force refresh syncInfo حسب الشريك الحالي عند التحميل أو تغيير الشريك
   useEffect(() => {
-    if (cities?.length > 0 || regions?.length > 0) {
-      fetchSyncInfo();
-    }
-  }, [cities?.length, regions?.length]);
+    fetchSyncInfo(activePartner);
+  }, [activePartner, cities?.length, regions?.length]);
 
   return (
     <Card className="w-full">
