@@ -574,6 +574,12 @@ const filteredOrders = useMemo(() => {
       return false;
     }
 
+    // ✅ قانون: طلب واصل + مستلم الفاتورة + (بدون سجل ربح أو ربح الموظف = 0) → يُستبعد تلقائياً
+    if (order.delivery_status === '4' && order.receipt_received === true) {
+      if (!profitRecord) return false; // لا يوجد سجل ربح نهائياً
+      if (profitRecord.employee_profit === 0 && profitRecord.status !== 'settlement_requested') return false;
+    }
+
     // ربط الطلب بالموظف عبر created_by أو عبر سجل الأرباح
     let employeeMatch = true;
     if (employeeIdSelected) {
