@@ -568,17 +568,8 @@ const filteredOrders = useMemo(() => {
     // فلتر الفترة الزمنية
     if (!filterByTimePeriod(order)) return false;
 
-    // ✅ استبعاد الطلبات المؤرشفة تلقائياً (بدون قاعدة ربح) - لا تظهر في إجمالي الطلبات
+    // ✅ جلب سجل الربح للطلب
     const profitRecord = profits?.find(p => p.order_id === order.id);
-    if (profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled') {
-      return false;
-    }
-
-    // ✅ قانون: طلب واصل + مستلم الفاتورة + (بدون سجل ربح أو ربح الموظف = 0) → يُستبعد تلقائياً
-    if (order.delivery_status === '4' && order.receipt_received === true) {
-      if (!profitRecord) return false; // لا يوجد سجل ربح نهائياً
-      if (profitRecord.employee_profit === 0 && profitRecord.status !== 'settlement_requested') return false;
-    }
 
     // ربط الطلب بالموظف عبر created_by أو عبر سجل الأرباح
     let employeeMatch = true;
@@ -634,7 +625,7 @@ const filteredOrders = useMemo(() => {
 
     // فلتر الأرشيف والتسوية
     const isManuallyArchived = ((order.isarchived === true || order.isArchived === true || order.is_archived === true) && order.status !== 'completed');
-    const isSettled = profitRecord?.status === 'settled';
+    const isSettled = profitRecord?.status === 'settled' || profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled' || (order.delivery_status === '4' && order.receipt_received === true && (!profitRecord || (profitRecord.employee_profit === 0 && profitRecord.status !== 'settlement_requested')));
     
     // ✅ طلبات "تم طلب التحاسب" تظهر دائماً للمدير حتى لو مؤرشفة
     const isAwaitingSettlement = profitRecord?.status === 'settlement_requested';
@@ -950,7 +941,8 @@ useEffect(() => {
       
       // الطلبات المكتملة والمدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
       const profitRecord = profits?.find(p => p.order_id === o.id);
-      return employeeMatch && profitRecord?.status === 'settled';
+      const isSettledStatus = profitRecord?.status === 'settled' || profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled' || (o.delivery_status === '4' && o.receipt_received === true && (!profitRecord || (profitRecord.employee_profit === 0 && profitRecord.status !== 'settlement_requested')));
+      return employeeMatch && isSettledStatus;
     }).length;
 
     // ✅ عدد طلبات التحاسب المعلقة - من settlementRequests مباشرة (نفس مصدر النافذة)
