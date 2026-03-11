@@ -568,17 +568,8 @@ const filteredOrders = useMemo(() => {
     // فلتر الفترة الزمنية
     if (!filterByTimePeriod(order)) return false;
 
-    // ✅ استبعاد الطلبات المؤرشفة تلقائياً (بدون قاعدة ربح) - لا تظهر في إجمالي الطلبات
+    // ✅ جلب سجل الربح للطلب
     const profitRecord = profits?.find(p => p.order_id === order.id);
-    if (profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled') {
-      return false;
-    }
-
-    // ✅ قانون: طلب واصل + مستلم الفاتورة + (بدون سجل ربح أو ربح الموظف = 0) → يُستبعد تلقائياً
-    if (order.delivery_status === '4' && order.receipt_received === true) {
-      if (!profitRecord) return false; // لا يوجد سجل ربح نهائياً
-      if (profitRecord.employee_profit === 0 && profitRecord.status !== 'settlement_requested') return false;
-    }
 
     // ربط الطلب بالموظف عبر created_by أو عبر سجل الأرباح
     let employeeMatch = true;
