@@ -166,16 +166,8 @@ export default defineConfig(async ({ mode }) => {
         },
         build: {
             target: 'esnext',
-            minify: 'terser',
+            minify: 'esbuild',
             chunkSizeWarningLimit: 1000,
-            // ⚡ المرحلة 1: حذف console.log نهائياً من البناء
-            terserOptions: {
-                compress: {
-                    drop_console: true,
-                    drop_debugger: true,
-                    pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
-                }
-            },
             rollupOptions: {
                 external: [
                     '@babel/parser',
