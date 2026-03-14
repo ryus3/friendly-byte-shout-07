@@ -948,7 +948,7 @@ useEffect(() => {
       
       // الطلبات المكتملة والمدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
       const profitRecord = profits?.find(p => p.order_id === o.id);
-      return employeeMatch && profitRecord?.status === 'settled';
+      return employeeMatch && (profitRecord?.status === 'settled' || profitRecord?.status === 'no_rule_settled');
     }).length;
 
     // ✅ عدد طلبات التحاسب المعلقة - من settlementRequests مباشرة (نفس مصدر النافذة)
