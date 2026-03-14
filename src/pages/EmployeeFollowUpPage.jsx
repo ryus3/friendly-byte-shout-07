@@ -568,9 +568,13 @@ const filteredOrders = useMemo(() => {
     // فلتر الفترة الزمنية
     if (!filterByTimePeriod(order)) return false;
 
-    // ✅ استبعاد الطلبات المؤرشفة تلقائياً (بدون قاعدة ربح) - لا تظهر في إجمالي الطلبات
+    // ✅ استبعاد الطلبات المؤرشفة تلقائياً (بدون قاعدة ربح)
     const profitRecord = profits?.find(p => p.order_id === order.id);
-    if (profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled') {
+    if (profitRecord?.status === 'no_rule_archived') {
+      return false;
+    }
+    // no_rule_settled تظهر فقط في أرشيف التسوية
+    if (profitRecord?.status === 'no_rule_settled' && !showSettlementArchive) {
       return false;
     }
 
