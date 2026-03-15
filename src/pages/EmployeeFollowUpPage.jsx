@@ -632,7 +632,7 @@ const filteredOrders = useMemo(() => {
 
     // فلتر الأرشيف والتسوية
     const isManuallyArchived = ((order.isarchived === true || order.isArchived === true || order.is_archived === true) && order.status !== 'completed');
-    const isSettled = profitRecord?.status === 'settled' || profitRecord?.status === 'no_rule_settled';
+    const isSettled = profitRecord?.status === 'settled' || profitRecord?.status === 'no_rule_settled' || profitRecord?.status === 'no_rule_archived';
     
     // ✅ طلبات "تم طلب التحاسب" تظهر دائماً للمدير حتى لو مؤرشفة
     const isAwaitingSettlement = profitRecord?.status === 'settlement_requested';
