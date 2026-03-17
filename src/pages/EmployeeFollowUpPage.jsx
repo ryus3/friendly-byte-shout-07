@@ -937,10 +937,12 @@ useEffect(() => {
         if (!supervisedEmployeeIds.includes(o.created_by)) return false;
       }
       
-      // فلتر الموظف
+      // فلتر الموظف - موحد مع filteredOrders (created_by أو profits.employee_id)
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        employeeMatch = o.created_by === effectiveEmployeeId;
+        const byCreator = o.created_by === effectiveEmployeeId;
+        const byProfit = profits?.some(p => p.order_id === o.id && p.employee_id === effectiveEmployeeId);
+        employeeMatch = byCreator || byProfit;
       }
       
       // فلتر الفترة
