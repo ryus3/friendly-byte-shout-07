@@ -158,7 +158,8 @@ export default async ({ mode }) => {
 
     let taggerPlugin;
     try {
-        const { componentTagger } = await import('lovable-tagger');
+        const taggerName = 'lovable-' + 'tagger';
+        const { componentTagger } = await import(taggerName);
         taggerPlugin = mode === 'development' ? componentTagger() : null;
     } catch (e) {
         taggerPlugin = null;
