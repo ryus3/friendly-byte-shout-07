@@ -4,9 +4,9 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "dev": "npx vite",
-    "build": "npx vite build",
-    "build:dev": "npx vite build --mode development"
+    "dev": "npx vite@5.4.19 --host :: --port 8080",
+    "build": "npx vite@5.4.19 build",
+    "build:dev": "npx vite@5.4.19 build --mode development"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.2",

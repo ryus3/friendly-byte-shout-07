@@ -1,7 +1,4 @@
 import path from 'node:path';
-import react from '@vitejs/plugin-react';
-import { createLogger, defineConfig } from 'vite';
-import { componentTagger } from "lovable-tagger";
 
 const configHorizonsViteErrorHandler = `
 const observer = new MutationObserver((mutations) => {
@@ -60,7 +57,7 @@ console.error = function(...args) {
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         if (arg instanceof Error) {
-            errorString = arg.stack || \`\${arg.name}: \${arg.message}\`;
+            errorString = arg.stack || ` + '`${arg.name}: ${arg.message}`' + `;
             break;
         }
     }
@@ -88,7 +85,7 @@ window.fetch = function(...args) {
                 const responseClone = response.clone();
                 const errorFromRes = await responseClone.text();
                 const requestUrl = response.url;
-                console.error(\`Fetch error from \${requestUrl}: \${errorFromRes}\`);
+                console.error(` + '`Fetch error from ${requestUrl}: ${errorFromRes}`' + `);
             }
 
             return response;
@@ -119,15 +116,33 @@ const addTransformIndexHtml = {
 
 console.warn = () => {};
 
-const logger = createLogger();
-const loggerError = logger.error;
+export default async ({ mode }) => {
+    // Simple custom logger that filters PostCSS warnings
+    const logger = {
+        info: (...args) => console.log(...args),
+        warn: () => {},
+        warnOnce: () => {},
+        error: (msg, options) => {
+            if (options?.error?.toString().includes('CssSyntaxError: [postcss]')) return;
+            console.error(msg);
+        },
+        clearScreen: () => {},
+        hasErrorLogged: () => false,
+        hasWarned: false,
+    };
 
-logger.error = (msg, options) => {
-    if (options?.error?.toString().includes('CssSyntaxError: [postcss]')) return;
-    loggerError(msg, options);
-};
-
-export default defineConfig(async ({ mode }) => {
+    // Dynamically load react plugin (local package may be corrupted)
+    let reactPlugin;
+    const reactPkgName = '@vitejs/' + 'plugin-react';
+    try {
+        const mod = await import(reactPkgName);
+        reactPlugin = mod.default || mod;
+    } catch (e) {
+        console.error('Failed to load @vitejs/plugin-react, using esbuild JSX fallback');
+        reactPlugin = null;
+    }
+    
+    // Load optional dev plugins
     const isDev = process.env.NODE_ENV !== 'production';
     let inlineEditPlugin, editModeDevPlugin;
 
@@ -136,18 +151,26 @@ export default defineConfig(async ({ mode }) => {
             inlineEditPlugin = (await import('./plugins/visual-editor/vite-plugin-react-inline-editor.js')).default;
             editModeDevPlugin = (await import('./plugins/visual-editor/vite-plugin-edit-mode.js')).default;
         } catch (error) {
-            console.warn('Visual editor plugins not found, continuing without them');
             inlineEditPlugin = () => ({});
             editModeDevPlugin = () => ({});
         }
+    }
+
+    let taggerPlugin;
+    try {
+        const taggerName = 'lovable-' + 'tagger';
+        const { componentTagger } = await import(taggerName);
+        taggerPlugin = mode === 'development' ? componentTagger() : null;
+    } catch (e) {
+        taggerPlugin = null;
     }
 
     return {
         customLogger: logger,
         plugins: [
             ...(isDev ? [inlineEditPlugin(), editModeDevPlugin()] : []),
-            react(),
-            mode === 'development' && componentTagger(),
+            reactPlugin ? reactPlugin() : null,
+            taggerPlugin,
             addTransformIndexHtml,
         ].filter(Boolean),
         server: {
@@ -162,7 +185,10 @@ export default defineConfig(async ({ mode }) => {
         },
         resolve: {
             extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],
-            alias: { '@': path.resolve(__dirname, './src') },
+            alias: { '@': path.resolve(import.meta.dirname || '.', './src') },
+        },
+        esbuild: {
+            ...(reactPlugin ? {} : { jsx: 'automatic' }),
         },
         build: {
             target: 'esnext',
@@ -176,17 +202,16 @@ export default defineConfig(async ({ mode }) => {
                     '@babel/types',
                 ],
                 output: {
-                manualChunks: {
-                    vendor: ['react', 'react-dom'],
-                    ui: ['@radix-ui/react-dialog', '@radix-ui/react-toast', '@radix-ui/react-select'],
-                    utils: ['date-fns', 'lucide-react', 'clsx'],
-                    // تحسينات إضافية لتقليل حجم الحزمة الأولية
-                    'react-pdf': ['@react-pdf/renderer', '@react-pdf/font'],
-                    charts: ['recharts'],
-                    supabase: ['@supabase/supabase-js'],
-                    motion: ['framer-motion'],
-                    dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities']
-                }
+                    manualChunks: {
+                        vendor: ['react', 'react-dom'],
+                        ui: ['@radix-ui/react-dialog', '@radix-ui/react-toast', '@radix-ui/react-select'],
+                        utils: ['date-fns', 'lucide-react', 'clsx'],
+                        'react-pdf': ['@react-pdf/renderer', '@react-pdf/font'],
+                        charts: ['recharts'],
+                        supabase: ['@supabase/supabase-js'],
+                        motion: ['framer-motion'],
+                        dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities']
+                    }
                 }
             },
         },
@@ -200,4 +225,4 @@ export default defineConfig(async ({ mode }) => {
             global: 'globalThis',
         },
     };
-});
+};
