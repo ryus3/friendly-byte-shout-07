@@ -131,8 +131,9 @@ export default async ({ mode }) => {
 
     // Dynamically load react plugin
     let reactPlugin;
+    const reactPkgName = '@vitejs/' + 'plugin-react';
     try {
-        const mod = await import('@vitejs/plugin-react');
+        const mod = await import(reactPkgName);
         reactPlugin = mod.default || mod;
     } catch (e) {
         console.error('Failed to load @vitejs/plugin-react, using esbuild JSX fallback');
