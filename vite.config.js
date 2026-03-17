@@ -1,5 +1,5 @@
 import path from 'node:path';
-import react from '@vitejs/plugin-react';
+// react plugin loaded dynamically below
 import { createLogger, defineConfig } from 'vite';
 import { componentTagger } from "lovable-tagger";
 
