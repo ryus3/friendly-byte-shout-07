@@ -57,7 +57,7 @@ console.error = function(...args) {
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         if (arg instanceof Error) {
-            errorString = arg.stack || \\\`\\\${arg.name}: \\\${arg.message}\\\`;
+            errorString = arg.stack || ` + '`${arg.name}: ${arg.message}`' + `;
             break;
         }
     }
@@ -85,13 +85,13 @@ window.fetch = function(...args) {
                 const responseClone = response.clone();
                 const errorFromRes = await responseClone.text();
                 const requestUrl = response.url;
-                console.error(\\\`Fetch error from \\\${requestUrl}: \\\${errorFromRes}\\\`);
+                console.error(` + '`Fetch error from ${requestUrl}: ${errorFromRes}`' + `);
             }
 
             return response;
         })
         .catch(error => {
-            if (!url.match(/\\\\.html?$/i)) {
+            if (!url.match(/\\.html?$/i)) {
                 console.error(error);
             }
             throw error;
@@ -117,7 +117,7 @@ const addTransformIndexHtml = {
 console.warn = () => {};
 
 export default async ({ mode }) => {
-    // Use a simple custom logger that filters PostCSS warnings
+    // Simple custom logger that filters PostCSS warnings
     const logger = {
         info: (...args) => console.log(...args),
         warn: () => {},
@@ -131,7 +131,7 @@ export default async ({ mode }) => {
         hasWarned: false,
     };
 
-    // Dynamically load react plugin
+    // Dynamically load react plugin (local package may be corrupted)
     let reactPlugin;
     const reactPkgName = '@vitejs/' + 'plugin-react';
     try {
@@ -185,10 +185,9 @@ export default async ({ mode }) => {
         },
         resolve: {
             extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],
-            alias: { '@': path.resolve(import.meta.dirname || new URL('.', import.meta.url).pathname, './src') },
+            alias: { '@': path.resolve(import.meta.dirname || '.', './src') },
         },
         esbuild: {
-            // Fallback JSX config if react plugin is missing
             ...(reactPlugin ? {} : { jsx: 'automatic' }),
         },
         build: {
