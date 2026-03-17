@@ -117,16 +117,18 @@ const addTransformIndexHtml = {
 console.warn = () => {};
 
 export default async ({ mode }) => {
-    // Dynamically import vite utilities from the running vite instance
-    const vite = await import('vite');
-    const { createLogger } = vite;
-    
-    const logger = createLogger();
-    const loggerError = logger.error;
-
-    logger.error = (msg, options) => {
-        if (options?.error?.toString().includes('CssSyntaxError: [postcss]')) return;
-        loggerError(msg, options);
+    // Use a simple custom logger that filters PostCSS warnings
+    const logger = {
+        info: (...args) => console.log(...args),
+        warn: () => {},
+        warnOnce: () => {},
+        error: (msg, options) => {
+            if (options?.error?.toString().includes('CssSyntaxError: [postcss]')) return;
+            console.error(msg);
+        },
+        clearScreen: () => {},
+        hasErrorLogged: () => false,
+        hasWarned: false,
     };
 
     // Dynamically load react plugin
