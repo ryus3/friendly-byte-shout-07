@@ -1,3 +1,0 @@
-#!/bin/bash
-# Force using npx vite instead of direct vite
-exec npx vite "$@"
