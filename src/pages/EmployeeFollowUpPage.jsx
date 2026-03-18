@@ -990,7 +990,7 @@ useEffect(() => {
       settlementRequestsCount,
       returnedOrdersCount
     };
-  }, [filteredOrders, orders, filters, profits, calculateProfit, expenses, employeeFromUrl, settlementRequests, isDepartmentManager, isAdmin, supervisedEmployeeIds]);
+  }, [filteredOrders, orders, filters, profits, calculateProfit, expenses, employeeFromUrl, settlementRequests, isDepartmentManager, isAdmin, supervisedEmployeeIds, employees]);
 
   // معالج تغيير الفلاتر
   const handleFilterChange = (name, value) => {
