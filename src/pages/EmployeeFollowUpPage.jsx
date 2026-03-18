@@ -752,6 +752,7 @@ useEffect(() => {
 
     // فلتر الطلبات حسب الموظف والفترة للإحصائيات
     const effectiveEmployeeId = employeeFromUrl || filters.employeeId;
+    const employeeCodeMap = new Map((employees || []).map(e => [e.user_id, e.employee_code]));
     
     // فلتر الفترة الزمنية
     const filterByTimePeriod = (order) => {
@@ -795,8 +796,9 @@ useEffect(() => {
       // فلتر الموظف المحدد - موحد مع filteredOrders (created_by أو profits.employee_id)
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        const byCreator = order.created_by === effectiveEmployeeId;
-        const byProfit = profits?.some(p => p.order_id === order.id && p.employee_id === effectiveEmployeeId);
+        const employeeCode = employeeCodeMap?.get(effectiveEmployeeId);
+        const byCreator = (order.created_by === effectiveEmployeeId) || (employeeCode && order.created_by === employeeCode);
+        const byProfit = profits?.some(p => p.order_id === order.id && (p.employee_id === effectiveEmployeeId || (employeeCode && p.employee_id === employeeCode)));
         employeeMatch = byCreator || byProfit;
       }
       
@@ -942,8 +944,9 @@ useEffect(() => {
       // فلتر الموظف - موحد مع filteredOrders (created_by أو profits.employee_id)
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        const byCreator = o.created_by === effectiveEmployeeId;
-        const byProfit = profits?.some(p => p.order_id === o.id && p.employee_id === effectiveEmployeeId);
+        const employeeCode = employeeCodeMap?.get(effectiveEmployeeId);
+        const byCreator = (o.created_by === effectiveEmployeeId) || (employeeCode && o.created_by === employeeCode);
+        const byProfit = profits?.some(p => p.order_id === o.id && (p.employee_id === effectiveEmployeeId || (employeeCode && p.employee_id === employeeCode)));
         employeeMatch = byCreator || byProfit;
       }
       
@@ -987,7 +990,7 @@ useEffect(() => {
       settlementRequestsCount,
       returnedOrdersCount
     };
-  }, [filteredOrders, orders, filters, profits, calculateProfit, expenses, employeeFromUrl, settlementRequests, isDepartmentManager, isAdmin, supervisedEmployeeIds]);
+  }, [filteredOrders, orders, filters, profits, calculateProfit, expenses, employeeFromUrl, settlementRequests, isDepartmentManager, isAdmin, supervisedEmployeeIds, employees]);
 
   // معالج تغيير الفلاتر
   const handleFilterChange = (name, value) => {
