@@ -795,8 +795,9 @@ useEffect(() => {
       // فلتر الموظف المحدد - موحد مع filteredOrders (created_by أو profits.employee_id)
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        const byCreator = order.created_by === effectiveEmployeeId;
-        const byProfit = profits?.some(p => p.order_id === order.id && p.employee_id === effectiveEmployeeId);
+        const employeeCode = employeeCodeMap?.get(effectiveEmployeeId);
+        const byCreator = (order.created_by === effectiveEmployeeId) || (employeeCode && order.created_by === employeeCode);
+        const byProfit = profits?.some(p => p.order_id === order.id && (p.employee_id === effectiveEmployeeId || (employeeCode && p.employee_id === employeeCode)));
         employeeMatch = byCreator || byProfit;
       }
       
