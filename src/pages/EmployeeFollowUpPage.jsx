@@ -752,6 +752,7 @@ useEffect(() => {
 
     // فلتر الطلبات حسب الموظف والفترة للإحصائيات
     const effectiveEmployeeId = employeeFromUrl || filters.employeeId;
+    const employeeCodeMap = new Map((employees || []).map(e => [e.user_id, e.employee_code]));
     
     // فلتر الفترة الزمنية
     const filterByTimePeriod = (order) => {
