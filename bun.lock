@@ -5,6 +5,7 @@
     "": {
       "name": "inventory-management-system",
       "dependencies": {
+        "@babel/helper-globals": "^7.28.0",
         "@capacitor/android": "^7.4.2",
         "@capacitor/cli": "^7.4.2",
         "@capacitor/core": "^7.4.2",
