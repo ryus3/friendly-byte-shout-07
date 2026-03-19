@@ -128,6 +128,23 @@ logger.error = (msg, options) => {
 export default defineConfig(async ({ mode }) => {
     const isDev = process.env.NODE_ENV !== 'production';
     let inlineEditPlugin, editModeDevPlugin;
+    let react, componentTagger;
+
+    // Dynamic import for react plugin
+    try {
+        react = (await import('@vitejs/plugin-react')).default;
+    } catch {
+        console.warn('⚠️ @vitejs/plugin-react not found, using esbuild JSX transform');
+        react = null;
+    }
+
+    // Dynamic import for lovable-tagger
+    try {
+        componentTagger = (await import('lovable-tagger')).componentTagger;
+    } catch {
+        console.warn('⚠️ lovable-tagger not found, skipping');
+        componentTagger = null;
+    }
 
     if (isDev) {
         try {
@@ -144,8 +161,8 @@ export default defineConfig(async ({ mode }) => {
         customLogger: logger,
         plugins: [
             ...(isDev ? [inlineEditPlugin(), editModeDevPlugin()] : []),
-            react(),
-            mode === 'development' && componentTagger(),
+            react ? react() : null,
+            mode === 'development' && componentTagger ? componentTagger() : null,
             addTransformIndexHtml,
         ].filter(Boolean),
         server: {
