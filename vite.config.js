@@ -1,7 +1,5 @@
 import path from 'node:path';
-import react from '@vitejs/plugin-react';
 import { createLogger, defineConfig } from 'vite';
-import { componentTagger } from "lovable-tagger";
 
 const configHorizonsViteErrorHandler = `
 const observer = new MutationObserver((mutations) => {
