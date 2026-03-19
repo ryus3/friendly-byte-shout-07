@@ -1,0 +1,17 @@
+{
+  "name": "inventory-management-system-dev",
+  "type": "module",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node dev.js",
+    "start": "node dev.js",
+    "build": "./node_modules/.bin/vite build",
+    "preview": "./node_modules/.bin/vite preview"
+  },
+  "dependencies": {
+    "vite": "^7.0.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}

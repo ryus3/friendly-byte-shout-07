@@ -568,13 +568,9 @@ const filteredOrders = useMemo(() => {
     // فلتر الفترة الزمنية
     if (!filterByTimePeriod(order)) return false;
 
-    // ✅ استبعاد الطلبات المؤرشفة تلقائياً (بدون قاعدة ربح) - تظهر فقط في أرشيف التسوية
+    // ✅ استبعاد الطلبات المؤرشفة تلقائياً (بدون قاعدة ربح) - لا تظهر في إجمالي الطلبات
     const profitRecord = profits?.find(p => p.order_id === order.id);
-    if (profitRecord?.status === 'no_rule_archived' && !showSettlementArchive) {
-      return false;
-    }
-    // no_rule_settled تظهر فقط في أرشيف التسوية
-    if (profitRecord?.status === 'no_rule_settled' && !showSettlementArchive) {
+    if (profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled') {
       return false;
     }
 
@@ -632,7 +628,7 @@ const filteredOrders = useMemo(() => {
 
     // فلتر الأرشيف والتسوية
     const isManuallyArchived = ((order.isarchived === true || order.isArchived === true || order.is_archived === true) && order.status !== 'completed');
-    const isSettled = profitRecord?.status === 'settled' || profitRecord?.status === 'no_rule_settled' || profitRecord?.status === 'no_rule_archived';
+    const isSettled = profitRecord?.status === 'settled';
     
     // ✅ طلبات "تم طلب التحاسب" تظهر دائماً للمدير حتى لو مؤرشفة
     const isAwaitingSettlement = profitRecord?.status === 'settlement_requested';
@@ -752,7 +748,6 @@ useEffect(() => {
 
     // فلتر الطلبات حسب الموظف والفترة للإحصائيات
     const effectiveEmployeeId = employeeFromUrl || filters.employeeId;
-    const employeeCodeMap = new Map((employees || []).map(e => [e.user_id, e.employee_code]));
     
     // فلتر الفترة الزمنية
     const filterByTimePeriod = (order) => {
@@ -793,13 +788,10 @@ useEffect(() => {
         if (!supervisedEmployeeIds.includes(order.created_by)) return false;
       }
       
-      // فلتر الموظف المحدد - موحد مع filteredOrders (created_by أو profits.employee_id)
+      // فلتر الموظف المحدد
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        const employeeCode = employeeCodeMap?.get(effectiveEmployeeId);
-        const byCreator = (order.created_by === effectiveEmployeeId) || (employeeCode && order.created_by === employeeCode);
-        const byProfit = profits?.some(p => p.order_id === order.id && (p.employee_id === effectiveEmployeeId || (employeeCode && p.employee_id === employeeCode)));
-        employeeMatch = byCreator || byProfit;
+        employeeMatch = order.created_by === effectiveEmployeeId;
       }
       
       // فلتر الفترة
@@ -941,13 +933,10 @@ useEffect(() => {
         if (!supervisedEmployeeIds.includes(o.created_by)) return false;
       }
       
-      // فلتر الموظف - موحد مع filteredOrders (created_by أو profits.employee_id)
+      // فلتر الموظف
       let employeeMatch = true;
       if (effectiveEmployeeId && effectiveEmployeeId !== 'all') {
-        const employeeCode = employeeCodeMap?.get(effectiveEmployeeId);
-        const byCreator = (o.created_by === effectiveEmployeeId) || (employeeCode && o.created_by === employeeCode);
-        const byProfit = profits?.some(p => p.order_id === o.id && (p.employee_id === effectiveEmployeeId || (employeeCode && p.employee_id === employeeCode)));
-        employeeMatch = byCreator || byProfit;
+        employeeMatch = o.created_by === effectiveEmployeeId;
       }
       
       // فلتر الفترة
@@ -955,7 +944,7 @@ useEffect(() => {
       
       // الطلبات المكتملة والمدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
       const profitRecord = profits?.find(p => p.order_id === o.id);
-      return employeeMatch && (profitRecord?.status === 'settled' || profitRecord?.status === 'no_rule_settled' || profitRecord?.status === 'no_rule_archived');
+      return employeeMatch && profitRecord?.status === 'settled';
     }).length;
 
     // ✅ عدد طلبات التحاسب المعلقة - من settlementRequests مباشرة (نفس مصدر النافذة)
@@ -990,7 +979,7 @@ useEffect(() => {
       settlementRequestsCount,
       returnedOrdersCount
     };
-  }, [filteredOrders, orders, filters, profits, calculateProfit, expenses, employeeFromUrl, settlementRequests, isDepartmentManager, isAdmin, supervisedEmployeeIds, employees]);
+  }, [filteredOrders, orders, filters, profits, calculateProfit, expenses, employeeFromUrl, settlementRequests, isDepartmentManager, isAdmin, supervisedEmployeeIds]);
 
   // معالج تغيير الفلاتر
   const handleFilterChange = (name, value) => {
