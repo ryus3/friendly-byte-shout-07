@@ -35,6 +35,7 @@ import EnhancedFinancialSummary from '@/components/shared/EnhancedFinancialSumma
 import FinancialPerformanceCard from '@/components/shared/FinancialPerformanceCard';
 import UnifiedFinancialDisplay from '@/components/financial/UnifiedFinancialDisplay';
 import PeriodClosingManager from '@/components/cash/PeriodClosingManager';
+import EmployeeFinancialCenterManager from '@/components/accounting/EmployeeFinancialCenterManager';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
@@ -298,7 +299,7 @@ const AccountingPage = () => {
         };
         
         return accounting.expenses.filter(expense => {
-            if (!filterByDate(expense.transaction_date)) return false;
+            if (!filterByDate(expense.created_at)) return false;
             if (expense.expense_type === 'system') return false;
             if (
                 expense.category === 'مستحقات الموظفين' ||
@@ -475,6 +476,18 @@ const AccountingPage = () => {
                         </AccordionTrigger>
                         <AccordionContent className="px-4 pb-4">
                             <PeriodClosingManager />
+                        </AccordionContent>
+                    </AccordionItem>
+                    <AccordionItem value="employee-financial-centers" className="border rounded-lg">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                            <div className="flex items-center gap-3">
+                                <Wallet className="w-5 h-5 text-indigo-500" />
+                                <span className="font-semibold">المراكز المالية للموظفين</span>
+                                <Badge variant="outline" className="mr-2">جديد</Badge>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4">
+                            <EmployeeFinancialCenterManager allUsers={allUsers} />
                         </AccordionContent>
                     </AccordionItem>
                 </Accordion>

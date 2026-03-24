@@ -52,6 +52,7 @@ const SidebarContent = ({ onClose, isMobile }) => {
     { path: '/inventory', icon: Warehouse, label: 'الجرد التفصيلي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee'], color: 'text-pink-500' },
     { path: '/purchases', icon: ShoppingBag, label: 'المشتريات', roles: ['super_admin', 'admin'], color: 'text-blue-500' },
     { path: '/accounting', icon: DollarSign, label: 'المركز المالي', roles: ['super_admin', 'admin'], color: 'text-indigo-500' },
+    { path: '/employee-financial-center', icon: Wallet, label: 'مركزي المالي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee'], requiresFinancialCenter: true, color: 'text-indigo-400' },
     { path: '/notifications', icon: Bell, label: 'الإشعارات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-red-500' },
     { path: '/department-settings', icon: Users, label: 'إعدادات القسم', roles: ['department_manager'], color: 'text-violet-500' },
     { path: '/settings', icon: Settings, label: 'الاعدادات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-gray-500' }
@@ -76,6 +77,11 @@ const SidebarContent = ({ onClose, isMobile }) => {
         return hasRole && user?.has_storefront_access === true;
       }
       
+      // فحص المركز المالي للموظف
+      if (item.requiresFinancialCenter) {
+        return hasRole && user?.has_financial_center === true;
+      }
+      
       // فحص الصلاحيات الخاصة - التحقق من صلاحية إدارة المنتجات
       if (item.requiresPermission) {
         // المدير العام والأدمن لديهم الصلاحية تلقائياً
@@ -87,7 +93,7 @@ const SidebarContent = ({ onClose, isMobile }) => {
       
       return hasRole;
     });
-  }, [menuItems, user?.roles, user?.customer_management_access, user?.has_storefront_access]);
+  }, [menuItems, user?.roles, user?.customer_management_access, user?.has_storefront_access, user?.has_financial_center]);
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {

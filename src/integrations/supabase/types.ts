@@ -534,6 +534,7 @@ export type Database = {
           initial_balance: number
           is_active: boolean
           name: string
+          owner_user_id: string | null
           type: string
           updated_at: string
         }
@@ -546,6 +547,7 @@ export type Database = {
           initial_balance?: number
           is_active?: boolean
           name: string
+          owner_user_id?: string | null
           type?: string
           updated_at?: string
         }
@@ -558,10 +560,19 @@ export type Database = {
           initial_balance?: number
           is_active?: boolean
           name?: string
+          owner_user_id?: string | null
           type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "cash_sources_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       categories: {
         Row: {
@@ -5025,6 +5036,7 @@ export type Database = {
           email: string
           employee_code: string | null
           full_name: string
+          has_financial_center: boolean | null
           has_storefront_access: boolean | null
           id: string
           is_active: boolean
@@ -5058,6 +5070,7 @@ export type Database = {
           email: string
           employee_code?: string | null
           full_name: string
+          has_financial_center?: boolean | null
           has_storefront_access?: boolean | null
           id?: string
           is_active?: boolean
@@ -5091,6 +5104,7 @@ export type Database = {
           email?: string
           employee_code?: string | null
           full_name?: string
+          has_financial_center?: boolean | null
           has_storefront_access?: boolean | null
           id?: string
           is_active?: boolean
@@ -7322,6 +7336,10 @@ export type Database = {
         Args: { p_purchase_id: string }
         Returns: Json
       }
+      disable_employee_financial_center: {
+        Args: { p_employee_id: string }
+        Returns: Json
+      }
       dmetaphone: { Args: { "": string }; Returns: string }
       dmetaphone_alt: { Args: { "": string }; Returns: string }
       expire_old_points: { Args: never; Returns: undefined }
@@ -8205,6 +8223,10 @@ export type Database = {
         }[]
       }
       select_random_city_for_monthly_discount: { Args: never; Returns: Json }
+      setup_employee_financial_center: {
+        Args: { p_employee_id: string; p_initial_balance?: number }
+        Returns: Json
+      }
       setup_invoice_sync_cron: { Args: never; Returns: Json }
       setup_monthly_city_benefits: { Args: never; Returns: Json }
       should_keep_reservation_for_order: {
