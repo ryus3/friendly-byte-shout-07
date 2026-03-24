@@ -14,13 +14,14 @@ import React, { useState, useEffect } from 'react';
     import { DateRangePicker } from '@/components/ui/date-range-picker';
     import { supabase } from '@/lib/customSupabaseClient';
     
-    const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpense }) => {
-      const [newExpense, setNewExpense] = useState({
-        date: new Date().toISOString().slice(0, 16),
-        category: 'تسويق',
-        description: '',
-        amount: '',
-      });
+const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpense }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newExpense, setNewExpense] = useState({
+    date: new Date().toISOString().slice(0, 16),
+    category: 'تسويق',
+    description: '',
+    amount: '',
+  });
       const [filters, setFilters] = useState({
         category: 'all',
         dateRange: { from: null, to: null } // تعيين قيم null بدلاً من undefined لتجنب ظهور التقويم
@@ -77,13 +78,14 @@ import React, { useState, useEffect } from 'react';
       };
     
       const handleAddExpense = async () => {
+        if (isSubmitting) return;
         if (!newExpense.description || !newExpense.amount || !newExpense.category) {
           toast({ title: 'خطأ', description: 'الرجاء ملء جميع الحقول.', variant: 'destructive' });
           return;
         }
         
+        setIsSubmitting(true);
         try {
-          // التأكد من أن التاريخ صحيح
           const expenseDate = newExpense.date ? new Date(newExpense.date) : new Date();
           
           await addExpense({
@@ -93,9 +95,6 @@ import React, { useState, useEffect } from 'react';
             expense_type: 'operational'
           });
           
-      // البيانات تتحدث تلقائياً عبر invalidate + fetchAllData في addExpense
-          
-          // إعادة تعيين النموذج
           setNewExpense({
             date: new Date().toISOString().slice(0, 16),
             category: expenseCategories[0] || 'تسويق',
@@ -106,6 +105,8 @@ import React, { useState, useEffect } from 'react';
           toast({ title: 'نجح', description: 'تم إضافة المصروف بنجاح', variant: 'success' });
         } catch (error) {
           toast({ title: 'خطأ', description: 'فشل في إضافة المصروف', variant: 'destructive' });
+        } finally {
+          setIsSubmitting(false);
         }
       };
 
@@ -189,7 +190,9 @@ import React, { useState, useEffect } from 'react';
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <Button onClick={handleAddExpense} className="w-full text-sm">إضافة المصروف</Button>
+                      <Button onClick={handleAddExpense} disabled={isSubmitting} className="w-full text-sm">
+                        {isSubmitting ? 'جاري الحفظ...' : 'إضافة المصروف'}
+                      </Button>
                     </div>
                   </div>
                   
