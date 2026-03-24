@@ -92,7 +92,7 @@ async function updateOperationStatus(id, synced, error = null) {
       request.onsuccess = () => {
         const data = request.result;
         if (data) {
-          data.synced = synced;
+          data.synced = synced ? 1 : 0;
           data.lastSyncAttempt = Date.now();
           data.retries = (data.retries || 0) + 1;
           if (error) data.error = error;
