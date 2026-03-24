@@ -11,7 +11,6 @@ import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { DollarSign, Users, TrendingUp, Calculator, Settings, Loader2 } from 'lucide-react';
 import ProfitCalculatorResult from './ProfitCalculatorResult';
 
@@ -339,7 +338,6 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
   const [targetId, setTargetId] = useState('');
   const [profitAmount, setProfitAmount] = useState('');
   const [profitPercentage, setProfitPercentage] = useState('');
-  const [fullProfit, setFullProfit] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const employeeId = employee?.user_id || employee?.id;
@@ -355,7 +353,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
       return;
     }
 
-    if (!fullProfit && (!profitAmount || parseFloat(profitAmount) <= 0)) {
+    if (!profitAmount || parseFloat(profitAmount) <= 0) {
       toast({
         title: "خطأ",
         description: "الرجاء إدخال مبلغ ربح صحيح أكبر من صفر",
@@ -369,20 +367,19 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
       await setEmployeeProfitRule(employeeId, {
         rule_type: ruleType,
         target_id: ruleType === 'default' ? 'default' : targetId,
-        profit_amount: fullProfit ? 0 : parseFloat(profitAmount),
-        profit_percentage: fullProfit ? 100 : null,
+        profit_amount: parseFloat(profitAmount),
+        profit_percentage: null,
         is_active: true
       });
 
       toast({
         title: "تم الحفظ",
-        description: fullProfit ? "تم إضافة قاعدة كامل الربح بنجاح" : "تم إضافة قاعدة الربح بنجاح"
+        description: "تم إضافة قاعدة الربح بنجاح"
       });
 
       // إعادة تعيين النموذج
       setTargetId('');
       setProfitAmount('');
-      setFullProfit(false);
     } catch (error) {
       toast({
         title: "خطأ",
@@ -465,51 +462,18 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
             <DollarSign className="h-5 w-5 text-green-600" />
             قواعد الأرباح - {employee.full_name || employee.username}
           </DialogTitle>
-           <DialogDescription>
-            يمكنك اختيار مبلغ ثابت أو كامل الربح لكل منتج
-           </DialogDescription>
+          <DialogDescription>
+            إدارة قواعد الأرباح بالمبالغ الثابتة (د.ع) - المديرون لا يحصلون على أرباح
+          </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-6">
           {/* إضافة قاعدة جديدة */}
           <Card>
             <CardHeader>
-              <CardTitle>إضافة قاعدة ربح جديدة</CardTitle>
+              <CardTitle>إضافة قاعدة ربح جديدة (مبلغ ثابت)</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* خيار كامل الربح - بارز في الأعلى */}
-              <div 
-                className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                  fullProfit 
-                    ? 'border-green-500 bg-green-50 dark:bg-green-950/30' 
-                    : 'border-muted hover:border-muted-foreground/30'
-                }`}
-                onClick={() => {
-                  const next = !fullProfit;
-                  setFullProfit(next);
-                  if (next) setProfitAmount('');
-                }}
-              >
-                <div className="flex items-center gap-3">
-                  <Switch
-                    checked={fullProfit}
-                    onCheckedChange={(v) => {
-                      setFullProfit(v);
-                      if (v) setProfitAmount('');
-                    }}
-                  />
-                  <div>
-                    <p className="font-semibold text-sm sm:text-base">كامل الربح</p>
-                    <p className="text-xs text-muted-foreground">
-                      الموظف يحصل على كامل هامش الربح (سعر البيع - التكلفة) لكل قطعة
-                    </p>
-                  </div>
-                </div>
-                {fullProfit && (
-                  <Badge className="bg-green-500 text-white shrink-0">مُفعّل</Badge>
-                )}
-              </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label>نوع القاعدة</Label>
@@ -549,23 +513,17 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                 </div>
 
                 <div>
-                  <Label className={fullProfit ? 'text-muted-foreground' : ''}>
-                    مبلغ الربح الثابت (د.ع)
-                  </Label>
+                  <Label>مبلغ الربح الثابت (د.ع)</Label>
                   <Input
                     type="number"
                     value={profitAmount}
                     onChange={(e) => setProfitAmount(e.target.value)}
-                    placeholder={fullProfit ? 'غير مطلوب - كامل الربح مُفعّل' : 'مثال: 5000'}
+                    placeholder="مثال: 5000"
                     min="0"
                     step="1000"
-                    disabled={fullProfit}
-                    className={fullProfit ? 'opacity-50' : ''}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    {fullProfit 
-                      ? '✅ سيتم حساب الربح تلقائياً من هامش المنتج' 
-                      : 'المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة'}
+                    المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة
                   </p>
                 </div>
               </div>
@@ -620,9 +578,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                             {rule.rule_type === 'default' ? 'جميع المنتجات' : getTargetName(rule)}
                           </TableCell>
                           <TableCell className="font-semibold text-green-600">
-                            {rule.profit_percentage === 100 
-                              ? <Badge variant="success">كامل الربح</Badge>
-                              : `${(rule.profit_amount || 0).toLocaleString()} د.ع`}
+                            {rule.profit_amount.toLocaleString()} د.ع
                           </TableCell>
                           <TableCell>
                             <Badge variant={rule.is_active ? "default" : "secondary"}>
