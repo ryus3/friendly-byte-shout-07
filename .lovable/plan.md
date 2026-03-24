@@ -1,64 +1,27 @@
 
 
-# إصلاح: نقل طلبات الربح الصفري المستلمة الفاتورة إلى أرشيف التسوية
+# إصلاح خطأ البناء - حل نهائي (سطر واحد)
 
-## المشكلة
-حالياً في `EmployeeFollowUpPage.jsx`:
-
-1. **السطر 571-574**: الطلبات ذات `no_rule_archived` أو `no_rule_settled` تُستبعد نهائياً من الصفحة - لا تظهر لا في القائمة الرئيسية ولا في أرشيف التسوية
-2. **السطر 637-638**: أرشيف التسوية يعرض فقط `profitRecord?.status === 'settled'` - لا يشمل `no_rule_archived` أو `no_rule_settled`
-3. **السطر 947**: عداد أرشيف التسوية يحسب فقط `status === 'settled'`
-
-**النتيجة:** طلبات كثيرة بدون أرباح للموظف (ربح = 0) ومستلمة الفاتورة "تختفي" من الصفحة بالكامل بدل أن تظهر في أرشيف التسوية.
+## السبب
+`vite` غير موجود في `package.json` → `node_modules/vite` تالف (ملفات chunks مفقودة) → `npx` يجد النسخة التالفة المحلية أولاً ويستخدمها.
 
 ## الحل
+إضافة `vite` كتبعية مباشرة في `devDependencies` بالنسخة `5.4.19`:
 
-### تعديل ملف واحد: `src/pages/EmployeeFollowUpPage.jsx`
-
-#### 1) إزالة الاستبعاد الشامل (السطر 571-575)
-بدلاً من استبعاد `no_rule_archived` و `no_rule_settled` من كل شيء، نتركها تمر من الفلترة العامة ونوجهها لأرشيف التسوية.
-
-**قبل:**
-```javascript
-if (profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled') {
-  return false;
+```json
+"devDependencies": {
+    "@types/node": "^24.1.0",
+    "@types/react": "^18.3.23",
+    "@types/react-dom": "^18.3.7",
+    "eslint": "^8.57.1",
+    "eslint-config-react-app": "^7.0.1",
+    "vite": "5.4.19",
+    "vite-plugin-pwa": "^0.20.5"
 }
 ```
 
-**بعد:**
-```javascript
-// طلبات بدون ربح (no_rule_archived / no_rule_settled) تظهر فقط في أرشيف التسوية
-if (profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled') {
-  if (!showSettlementArchive) return false;
-}
-```
+هذا يضمن أن `node_modules/vite` يُثبَّت بنسخة كاملة وسليمة، فلا يحدث خطأ `dep-C6uTJdX2.js` مرة أخرى.
 
-#### 2) توسيع تعريف `isSettled` (السطر 631)
-```javascript
-// قبل
-const isSettled = profitRecord?.status === 'settled';
-
-// بعد - يشمل الطلبات بدون ربح أيضاً
-const isSettled = profitRecord?.status === 'settled' || 
-                  profitRecord?.status === 'no_rule_archived' || 
-                  profitRecord?.status === 'no_rule_settled';
-```
-
-#### 3) توسيع عداد أرشيف التسوية (السطر 947)
-```javascript
-// قبل
-return employeeMatch && profitRecord?.status === 'settled';
-
-// بعد
-return employeeMatch && (
-  profitRecord?.status === 'settled' || 
-  profitRecord?.status === 'no_rule_archived' || 
-  profitRecord?.status === 'no_rule_settled'
-);
-```
-
-## النتيجة المتوقعة
-- كارت "أرشيف التسوية" سيرتفع عدده ليشمل كل الطلبات المسواة + بدون ربح
-- عند الضغط على الكارت، ستظهر جميع هذه الطلبات
-- الطلبات بدون ربح لن تظهر في القوائم الأخرى (مستحقات معلقة، إجمالي، إلخ)
+### ملف واحد فقط يتأثر
+- `package.json` سطر 86-93: إضافة `"vite": "5.4.19"` في devDependencies
 
