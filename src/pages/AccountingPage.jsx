@@ -35,6 +35,7 @@ import EnhancedFinancialSummary from '@/components/shared/EnhancedFinancialSumma
 import FinancialPerformanceCard from '@/components/shared/FinancialPerformanceCard';
 import UnifiedFinancialDisplay from '@/components/financial/UnifiedFinancialDisplay';
 import PeriodClosingManager from '@/components/cash/PeriodClosingManager';
+import EmployeeFinancialCenterManager from '@/components/accounting/EmployeeFinancialCenterManager';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
