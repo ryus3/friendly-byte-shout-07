@@ -2830,7 +2830,8 @@ export const SuperProvider = ({ children }) => {
         }
       }
 
-      // تحديث البيانات المحلية
+      // تحديث البيانات المحلية - مسح الكاش أولاً لضمان جلب البيانات الجديدة
+      superAPI.invalidate('all_data');
       await fetchAllData();
       
       return { success: true };
