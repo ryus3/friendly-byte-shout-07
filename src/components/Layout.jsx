@@ -93,7 +93,7 @@ const SidebarContent = ({ onClose, isMobile }) => {
       
       return hasRole;
     });
-  }, [menuItems, user?.roles, user?.customer_management_access, user?.has_storefront_access]);
+  }, [menuItems, user?.roles, user?.customer_management_access, user?.has_storefront_access, user?.has_financial_center]);
 
   const handleNavigation = (path) => {
     if (location.pathname === path) {
