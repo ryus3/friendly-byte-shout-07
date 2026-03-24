@@ -524,9 +524,27 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                     placeholder="مثال: 5000"
                     min="0"
                     step="1000"
+                    disabled={fullProfit}
                   />
+                  <div className="flex items-center gap-2 mt-2 p-2 rounded-md bg-muted/50">
+                    <Switch
+                      checked={fullProfit}
+                      onCheckedChange={(v) => {
+                        setFullProfit(v);
+                        if (v) setProfitAmount('');
+                      }}
+                    />
+                    <Label className="text-sm cursor-pointer" onClick={() => {
+                      setFullProfit(!fullProfit);
+                      if (!fullProfit) setProfitAmount('');
+                    }}>
+                      كامل الربح (سعر البيع - التكلفة)
+                    </Label>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة
+                    {fullProfit 
+                      ? 'الموظف يحصل على كامل هامش الربح لكل قطعة' 
+                      : 'المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة'}
                   </p>
                 </div>
               </div>
