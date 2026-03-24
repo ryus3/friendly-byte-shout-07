@@ -339,6 +339,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
   const [targetId, setTargetId] = useState('');
   const [profitAmount, setProfitAmount] = useState('');
   const [profitPercentage, setProfitPercentage] = useState('');
+  const [fullProfit, setFullProfit] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const employeeId = employee?.user_id || employee?.id;
