@@ -48,33 +48,14 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
       }
 
       const order = orders?.[0];
-      if (!order) {
-        setError('الطلب غير موجود في النظام أو الرقم غير صحيح');
-        return null;
-      }
-
-      // إذا لم يوجد، البحث بـ order_number
-      if (!order && orderError?.code === 'PGRST116') {
-        ({ data: order, error: orderError } = await supabase
-          .from('orders')
-          .select(`
-            *,
-            order_items (
-              *,
-              products (name),
-              product_variants (
-                *,
-                colors (name),
-                sizes (name)
-              )
-            )
-          `)
-          .eq('order_number', searchValue)
-          .single());
-      }
 
       if (orderError && orderError.code !== 'PGRST116') {
         throw orderError;
+      }
+
+      if (!order) {
+        setError('الطلب غير موجود في النظام أو الرقم غير صحيح');
+        return null;
       }
 
       if (order) {
