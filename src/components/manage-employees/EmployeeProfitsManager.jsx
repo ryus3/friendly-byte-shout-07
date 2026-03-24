@@ -465,9 +465,9 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
             <DollarSign className="h-5 w-5 text-green-600" />
             قواعد الأرباح - {employee.full_name || employee.username}
           </DialogTitle>
-          <DialogDescription>
-            إدارة قواعد الأرباح بالمبالغ الثابتة (د.ع) - المديرون لا يحصلون على أرباح
-          </DialogDescription>
+           <DialogDescription>
+            يمكنك اختيار مبلغ ثابت أو كامل الربح لكل منتج
+           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-6">
