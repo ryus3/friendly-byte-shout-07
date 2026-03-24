@@ -8235,7 +8235,7 @@ export type Database = {
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
       smart_inventory_search: {
-        Args: { p_employee_id: string; p_search_text: string }
+        Args: { p_employee_id?: string; p_search_text?: string }
         Returns: {
           available_quantity: number
           barcode: string
