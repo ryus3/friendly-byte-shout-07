@@ -402,7 +402,12 @@ const ProfitsSummaryPage = () => {
 
         const totalSettledDues = settlementInvoices?.filter(inv => {
             const invDate = parseISO(inv.settlement_date);
-            return isValid(invDate) && invDate >= from && invDate <= to;
+            if (!isValid(invDate) || invDate < from || invDate > to) return false;
+            // مديرو الأقسام يرون فقط فواتير تسوية الموظفين تحت إشرافهم
+            if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
+              return supervisedEmployeeIds.includes(inv.employee_id);
+            }
+            return true;
         }).reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
         
         console.log('📊 نتائج الحساب:', {
