@@ -1,95 +1,77 @@
 
+## الخلاصة
+المشكلة ليست من `src` ولا من منطق الأرشيف/الأرباح. الانهيار عاد لأن بيئة البناء رجعت **غير حتمية** مرة أخرى.
 
-# خطة إصلاح أرشيف التسوية + ميزة كامل الربح للموظف
+## ما الذي وجدته فعلاً
+1. `package.json` ما زال يحتوي:
+   - `"vite": "^5.4.19"` وليس نسخة ثابتة
+   - `"npm": "^11.5.2"` كـ dependency داخل المشروع رغم أنه ليس dependency للتطبيق
+2. يوجد **ملفان lock** معاً:
+   - `package-lock.json`
+   - `bun.lock`
+3. في المشروع الحالي نفسه ملف الشنك موجود فعلاً:
+   - `node_modules/vite/dist/node/chunks/dep-C6uTJdX2.js`
+   
+هذا يعني أن الخطأ يحصل في **بيئة تثبيت جديدة** تبني `node_modules` بشكل مختلف عن البيئة السليمة. لذلك المشكلة الجذرية هي **dependency drift / mixed installers** وليس كود React.
 
-## المشكلة الأولى: أرشيف التسوية فارغ
+## لماذا كان يعمل ثم انهار؟
+لأن الإصلاح السابق نجح على نسخة `node_modules` سليمة، لكن بعد ذلك بقيت المانيفستات غير موحدة:
+- `vite` غير مثبت بشكل صارم في `package.json`
+- يوجد `bun.lock` بجانب `package-lock.json`
+- توجد package غير لازمة مثل `npm` داخل dependencies
 
-**السبب**: خطأ البناء المتكرر (`dep-BK3b2jBa.js`) يمنع نشر التعديلات. الموقع يعمل بنسخة قديمة لا تحتوي على إصلاحات الأرشيف.
+فعند إعادة التثبيت في sandbox جديد، قد تُبنى البيئة بشكل مختلف أو ناقص، فيرجع خطأ الشنك المفقود.
 
-**البيانات موجودة**: 308 طلب بحالة `no_rule_archived` + 54 بحالة `settled` = 362 طلب يجب أن يظهر في الأرشيف.
+## الخطة الجذرية للإصلاح
+### 1) توحيد مدير الحزم
+اعتماد **npm فقط** كمصدر وحيد للحقيقة:
+- حذف `bun.lock`
+- الإبقاء على `package-lock.json` فقط
+- إضافة `packageManager` في `package.json` لتثبيت المسار على npm
 
-**الكود صحيح** (سطر 640):
-```javascript
-if (showSettlementArchive) {
-  archiveMatch = isSettled || isZeroProfitArchived;
-}
-```
+### 2) جعل toolchain ثابتاً 100%
+تعديل `package.json` بحيث تكون النسخ **exact** بدون `^` للأدوات الحساسة:
+- `vite: "5.4.19"`
+- `@vitejs/plugin-react: "4.3.4"`
+- `rollup: "4.46.0"`
+- `autoprefixer: "10.4.21"`
+- `fraction.js: "5.3.4"`
 
-**الحل**: إصلاح بيئة البناء بتثبيت Vite من الإصدار الموجود فعلاً في الـ sandbox. سأتحقق من الإصدار المثبت وأعيد بناء chunks المفقودة.
+وأيضاً نقل أدوات البناء إلى `devDependencies` حيث يلزم بدل وضعها مع runtime dependencies.
 
-### خطوات الإصلاح:
-1. حذف `node_modules/.vite` و `node_modules/vite` فقط (وليس كل node_modules)
-2. إعادة تثبيت `vite@5.4.19` مباشرة
-3. التحقق من وجود ملف `dep-BK3b2jBa.js` بعد التثبيت
-4. تشغيل البناء للتأكد
+### 3) إزالة مصدر عدم الاستقرار
+حذف `"npm": "^11.5.2"` من dependencies لأنه ليس جزءاً من التطبيق ويزيد احتمالات التثبيت المتقلب.
 
----
+### 4) إعادة توليد lockfile بشكل نظيف
+بعد توحيد `package.json`:
+- حذف `node_modules`
+- حذف `package-lock.json`
+- إعادة التثبيت بـ npm فقط
+- توليد `package-lock.json` جديد ومتوافق مع النسخ المثبتة فعلاً
 
-## المشكلة الثانية: ميزة "كامل الربح للموظف"
+### 5) عدم لمس `vite.config.js` إلا إذا لزم
+الملف الحالي لا يظهر فيه سبب مباشر للانهيار. الـ dynamic imports و escaping الموجودين فيه ليسوا سبب المشكلة الآن، لذلك لن أغيّر منطق الإعداد إلا إذا ظهر خطأ جديد بعد تثبيت البيئة.
 
-**الطلب**: موظف معين يحصل على كامل ربح المنتج (سعر البيع - سعر التكلفة) بدلاً من مبلغ ثابت.
+## الملفات التي سأعدلها
+- `package.json`
+- `package-lock.json` (إعادة توليد)
+- حذف `bun.lock`
 
-**النظام الحالي**: جدول `employee_profit_rules` يحتوي على:
-- `profit_amount` (مبلغ ثابت لكل وحدة)
-- `profit_percentage` (موجود لكن غير مستخدم في الحسابات)
+## التحقق بعد التنفيذ
+سأعتبر الإصلاح ناجحاً فقط إذا تحقق الآتي:
+1. `vite build --mode development` ينجح
+2. لا يظهر خطأ `dep-C6uTJdX2.js` ولا `dep-BK3b2jBa.js`
+3. أتأكد أن التعديلات السابقة الخاصة بالأرشيف و"كامل الربح" أصبحت قابلة للبناء فعلاً
+4. أتحقق من التطبيق نفسه بعد البناء لأنك طلبت سابقاً عدم الاكتفاء بتعديل الملفات فقط
 
-**الحل البسيط بدون تعقيد**: استخدام `profit_percentage = 100` كعلامة أن الموظف يأخذ كامل الربح.
+## النتيجة المتوقعة
+- منع رجوع انهيار Vite عند كل sandbox جديد
+- جعل البناء ثابتاً بدل الاعتماد على `node_modules` مؤقتة كانت سليمة بالصدفة
+- الحفاظ على إصلاحات الأرشيف والأرباح بحيث تُنشر فعلاً ولا تضيع بسبب البيئة
 
-### التعديلات:
+## ملاحظة مهمة
+أقوى مؤشرين على السبب الجذري هنا هما:
+- وجود `bun.lock` و `package-lock.json` معاً
+- بقاء `vite` غير مثبت exact في `package.json`
 
-**1. تعديل دالة الحساب في `SuperProvider.jsx` (سطر 1520-1538)**:
-```javascript
-items.forEach(item => {
-  const productId = item.product_id;
-  if (!productId) return;
-  
-  const rule = (profitRules || []).find(r => 
-    r.target_id === productId &&
-    r.rule_type === 'product' &&
-    new Date(r.created_at) <= orderDate
-  );
-  
-  if (rule) {
-    hasAnyRule = true;
-    
-    if (rule.profit_percentage === 100) {
-      // ✅ كامل الربح: سعر البيع - سعر التكلفة
-      const sellingPrice = item.price || item.unit_price || 0;
-      const costPrice = item.cost_price || item.product_variants?.cost_price || 0;
-      const fullProfit = (sellingPrice - costPrice) * (item.quantity || 1);
-      totalProfit += Math.max(0, fullProfit);
-    } else {
-      // المبلغ الثابت كالمعتاد
-      totalProfit += (rule.profit_amount || 0) * (item.quantity || 1);
-    }
-  }
-});
-```
-
-**2. تعديل واجهة إضافة القاعدة في `DepartmentManagerSettingsPage.jsx`**:
-- إضافة خيار "كامل الربح" (checkbox أو toggle)
-- عند التفعيل: يُرسل `profit_percentage: 100` و `profit_amount: 0`
-
-**3. لا حاجة لتعديل قاعدة البيانات** - الحقل `profit_percentage` موجود أصلاً
-
-### كيف يعمل:
-| الإعداد | الحساب |
-|---------|--------|
-| `profit_amount: 500` | الموظف يأخذ 500 × الكمية |
-| `profit_percentage: 100` | الموظف يأخذ (سعر البيع - التكلفة) × الكمية |
-
----
-
-## ملخص التعديلات
-
-| الملف | التعديل |
-|-------|---------|
-| بيئة البناء | إصلاح Vite chunks لحل خطأ `dep-BK3b2jBa.js` |
-| `SuperProvider.jsx` | دعم `profit_percentage: 100` في دالة حساب الربح |
-| `DepartmentManagerSettingsPage.jsx` | إضافة خيار "كامل الربح" في واجهة القواعد |
-
-## النتيجة
-- أرشيف التسوية يعود للعمل (362 طلب)
-- يمكن تحديد موظف يأخذ كامل ربح المنتج بسهولة
-- لا تغيير في قاعدة البيانات
-
+لذلك الحل الجذري ليس “إصلاح node_modules مرة أخرى فقط”، بل **تنظيف المانيفستات نفسها** حتى لا يعود الانهيار بعد ساعات أو في sandbox جديد.
