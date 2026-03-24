@@ -900,15 +900,17 @@ useEffect(() => {
     const pendingDues = statsOrders
       .filter(order => order.receipt_received === true)
       .reduce((sum, order) => {
+        // ✅ استبعاد الطلبات المؤرشفة يدوياً من المستحقات المعلقة
+        const isManuallyArchived = (order.isarchived === true || order.isArchived === true || order.is_archived === true) && order.status !== 'completed';
+        if (isManuallyArchived) return sum;
+
         // البحث عن سجل الربح
         const profitRecord = profits?.find(p => p.order_id === order.id);
         let employeeProfit = 0;
         
         if (profitRecord && isPendingStatus(profitRecord.status)) {
-          // إذا كان هناك سجل ربح غير مُسوى وربح الموظف > 0
           employeeProfit = profitRecord.employee_profit || 0;
         }
-        // ✅ إزالة: لا نحسب ربح تلقائي للطلبات بدون سجل (تعني لا قاعدة ربح)
         
         return sum + employeeProfit;
       }, 0);

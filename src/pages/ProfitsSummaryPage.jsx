@@ -484,10 +484,13 @@ const ProfitsSummaryPage = () => {
     if (filters.profitStatus !== 'all') {
       if (filters.profitStatus === 'not_settled') {
         // عرض كل ما ليس مدفوع (pending + invoice_received + settlement_requested)
-        // استثناء settled و no_rule_settled (الطلبات بدون ربح لا تحتاج تحاسب)
+        // استثناء settled و no_rule_settled و no_rule_archived (الطلبات بدون ربح لا تحتاج تحاسب)
         filtered = filtered.filter(p => {
           const status = p.profitStatus || 'pending';
-          return status !== 'settled' && status !== 'no_rule_settled';
+          if (status === 'settled' || status === 'no_rule_settled' || status === 'no_rule_archived') return false;
+          // ✅ استبعاد طلبات بربح 0 - لا يوجد استحقاق للموظف
+          if ((p.profit || 0) <= 0) return false;
+          return true;
         });
       } else {
         filtered = filtered.filter(p => (p.profitStatus || 'pending') === filters.profitStatus);
