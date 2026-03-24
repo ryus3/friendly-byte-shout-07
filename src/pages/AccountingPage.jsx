@@ -477,6 +477,18 @@ const AccountingPage = () => {
                             <PeriodClosingManager />
                         </AccordionContent>
                     </AccordionItem>
+                    <AccordionItem value="employee-financial-centers" className="border rounded-lg">
+                        <AccordionTrigger className="px-4 hover:no-underline">
+                            <div className="flex items-center gap-3">
+                                <Wallet className="w-5 h-5 text-indigo-500" />
+                                <span className="font-semibold">المراكز المالية للموظفين</span>
+                                <Badge variant="outline" className="mr-2">جديد</Badge>
+                            </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="px-4 pb-4">
+                            <EmployeeFinancialCenterManager allUsers={allUsers} />
+                        </AccordionContent>
+                    </AccordionItem>
                 </Accordion>
                 
             </div>
