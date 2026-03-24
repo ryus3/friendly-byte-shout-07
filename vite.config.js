@@ -58,7 +58,7 @@ console.error = function(...args) {
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         if (arg instanceof Error) {
-            errorString = arg.stack || \`${arg.name}: ${arg.message}\`;
+            errorString = arg.stack || \`\${arg.name}: \${arg.message}\`;
             break;
         }
     }
@@ -86,7 +86,7 @@ window.fetch = function(...args) {
                 const responseClone = response.clone();
                 const errorFromRes = await responseClone.text();
                 const requestUrl = response.url;
-                console.error(\`Fetch error from ${requestUrl}: ${errorFromRes}\`);
+                console.error(\`Fetch error from \${requestUrl}: \${errorFromRes}\`);
             }
 
             return response;
@@ -171,8 +171,8 @@ export default defineConfig(async ({ mode }) => {
             headers: { 'Cross-Origin-Embedder-Policy': 'credentialless' },
             allowedHosts: true,
             fs: {
-                strict: false
-            }
+                strict: false,
+            },
         },
         resolve: {
             extensions: ['.jsx', '.js', '.tsx', '.ts', '.json'],
@@ -186,16 +186,11 @@ export default defineConfig(async ({ mode }) => {
                 compress: {
                     drop_console: true,
                     drop_debugger: true,
-                    pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
-                }
+                    pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
+                },
             },
             rollupOptions: {
-                external: [
-                    '@babel/parser',
-                    '@babel/traverse',
-                    '@babel/generator',
-                    '@babel/types',
-                ],
+                external: ['@babel/parser', '@babel/traverse', '@babel/generator', '@babel/types'],
                 output: {
                     manualChunks: {
                         vendor: ['react', 'react-dom'],
@@ -205,16 +200,16 @@ export default defineConfig(async ({ mode }) => {
                         charts: ['recharts'],
                         supabase: ['@supabase/supabase-js'],
                         motion: ['framer-motion'],
-                        dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities']
-                    }
-                }
+                        dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+                    },
+                },
             },
         },
         optimizeDeps: {
             include: ['react', 'react-dom', 'react/jsx-runtime'],
             esbuildOptions: {
-                target: 'esnext'
-            }
+                target: 'esnext',
+            },
         },
         define: {
             global: 'globalThis',
