@@ -190,7 +190,9 @@ const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpens
                       />
                     </div>
                     <div className="sm:col-span-2">
-                      <Button onClick={handleAddExpense} className="w-full text-sm">إضافة المصروف</Button>
+                      <Button onClick={handleAddExpense} disabled={isSubmitting} className="w-full text-sm">
+                        {isSubmitting ? 'جاري الحفظ...' : 'إضافة المصروف'}
+                      </Button>
                     </div>
                   </div>
                   
