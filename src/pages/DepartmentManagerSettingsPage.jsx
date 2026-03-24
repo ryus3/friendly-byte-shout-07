@@ -37,7 +37,8 @@ const DepartmentManagerSettingsPage = () => {
     employee_id: '',
     product_id: '',
     profit_amount: 0,
-    profit_type: 'fixed'
+    profit_type: 'fixed',
+    full_profit: false
   });
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
