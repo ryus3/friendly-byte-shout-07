@@ -298,7 +298,7 @@ const AccountingPage = () => {
         };
         
         return accounting.expenses.filter(expense => {
-            if (!filterByDate(expense.transaction_date)) return false;
+            if (!filterByDate(expense.created_at)) return false;
             if (expense.expense_type === 'system') return false;
             if (
                 expense.category === 'مستحقات الموظفين' ||
