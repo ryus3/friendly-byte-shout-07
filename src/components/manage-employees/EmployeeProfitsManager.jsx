@@ -474,7 +474,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
           {/* إضافة قاعدة جديدة */}
           <Card>
             <CardHeader>
-              <CardTitle>إضافة قاعدة ربح جديدة (مبلغ ثابت)</CardTitle>
+              <CardTitle>إضافة قاعدة ربح جديدة</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
