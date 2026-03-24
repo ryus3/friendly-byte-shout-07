@@ -1,7 +1,5 @@
 import path from 'node:path';
-import react from '@vitejs/plugin-react';
 import { createLogger, defineConfig } from 'vite';
-import { componentTagger } from "lovable-tagger";
 
 const configHorizonsViteErrorHandler = `
 const observer = new MutationObserver((mutations) => {
@@ -60,7 +58,7 @@ console.error = function(...args) {
     for (let i = 0; i < args.length; i++) {
         const arg = args[i];
         if (arg instanceof Error) {
-            errorString = arg.stack || \`\${arg.name}: \${arg.message}\`;
+            errorString = arg.stack || \`${arg.name}: ${arg.message}\`;
             break;
         }
     }
@@ -88,7 +86,7 @@ window.fetch = function(...args) {
                 const responseClone = response.clone();
                 const errorFromRes = await responseClone.text();
                 const requestUrl = response.url;
-                console.error(\`Fetch error from \${requestUrl}: \${errorFromRes}\`);
+                console.error(\`Fetch error from ${requestUrl}: ${errorFromRes}\`);
             }
 
             return response;
@@ -129,14 +127,30 @@ logger.error = (msg, options) => {
 
 export default defineConfig(async ({ mode }) => {
     const isDev = process.env.NODE_ENV !== 'production';
-    let inlineEditPlugin, editModeDevPlugin;
+    let reactPlugin = null;
+    let componentTaggerPlugin = null;
+    let inlineEditPlugin;
+    let editModeDevPlugin;
+
+    try {
+        reactPlugin = (await import('@vitejs/plugin-react')).default;
+    } catch (error) {
+        reactPlugin = null;
+    }
+
+    if (mode === 'development') {
+        try {
+            componentTaggerPlugin = (await import('lovable-tagger')).componentTagger;
+        } catch (error) {
+            componentTaggerPlugin = null;
+        }
+    }
 
     if (isDev) {
         try {
             inlineEditPlugin = (await import('./plugins/visual-editor/vite-plugin-react-inline-editor.js')).default;
             editModeDevPlugin = (await import('./plugins/visual-editor/vite-plugin-edit-mode.js')).default;
         } catch (error) {
-            console.warn('Visual editor plugins not found, continuing without them');
             inlineEditPlugin = () => ({});
             editModeDevPlugin = () => ({});
         }
@@ -146,12 +160,12 @@ export default defineConfig(async ({ mode }) => {
         customLogger: logger,
         plugins: [
             ...(isDev ? [inlineEditPlugin(), editModeDevPlugin()] : []),
-            react(),
-            mode === 'development' && componentTagger(),
+            reactPlugin?.(),
+            mode === 'development' && componentTaggerPlugin?.(),
             addTransformIndexHtml,
         ].filter(Boolean),
         server: {
-            host: "::",
+            host: '::',
             cors: true,
             port: 8080,
             headers: { 'Cross-Origin-Embedder-Policy': 'credentialless' },
@@ -168,7 +182,6 @@ export default defineConfig(async ({ mode }) => {
             target: 'esnext',
             minify: 'terser',
             chunkSizeWarningLimit: 1000,
-            // ⚡ المرحلة 1: حذف console.log نهائياً من البناء
             terserOptions: {
                 compress: {
                     drop_console: true,
@@ -184,17 +197,16 @@ export default defineConfig(async ({ mode }) => {
                     '@babel/types',
                 ],
                 output: {
-                manualChunks: {
-                    vendor: ['react', 'react-dom'],
-                    ui: ['@radix-ui/react-dialog', '@radix-ui/react-toast', '@radix-ui/react-select'],
-                    utils: ['date-fns', 'lucide-react', 'clsx'],
-                    // تحسينات إضافية لتقليل حجم الحزمة الأولية
-                    'react-pdf': ['@react-pdf/renderer', '@react-pdf/font'],
-                    charts: ['recharts'],
-                    supabase: ['@supabase/supabase-js'],
-                    motion: ['framer-motion'],
-                    dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities']
-                }
+                    manualChunks: {
+                        vendor: ['react', 'react-dom'],
+                        ui: ['@radix-ui/react-dialog', '@radix-ui/react-toast', '@radix-ui/react-select'],
+                        utils: ['date-fns', 'lucide-react', 'clsx'],
+                        'react-pdf': ['@react-pdf/renderer', '@react-pdf/font'],
+                        charts: ['recharts'],
+                        supabase: ['@supabase/supabase-js'],
+                        motion: ['framer-motion'],
+                        dnd: ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities']
+                    }
                 }
             },
         },

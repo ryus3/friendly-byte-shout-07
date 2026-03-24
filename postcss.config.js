@@ -1,6 +1,14 @@
+import tailwindcss from 'tailwindcss';
+
+let autoprefixerPlugin = null;
+
+try {
+  const { default: autoprefixer } = await import('autoprefixer');
+  autoprefixerPlugin = autoprefixer();
+} catch (error) {
+  autoprefixerPlugin = null;
+}
+
 export default {
-	plugins: {
-		tailwindcss: {},
-		autoprefixer: {},
-	},
+  plugins: [tailwindcss(), ...(autoprefixerPlugin ? [autoprefixerPlugin] : [])],
 };
