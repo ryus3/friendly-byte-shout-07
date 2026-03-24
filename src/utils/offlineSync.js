@@ -40,7 +40,7 @@ export async function savePendingOperation(operation) {
     const data = {
       ...operation,
       timestamp: Date.now(),
-      synced: false,
+      synced: 0,
       retries: 0
     };
 
@@ -69,7 +69,7 @@ export async function getPendingOperations() {
     const index = store.index('synced');
 
     return new Promise((resolve, reject) => {
-      const request = index.getAll(false); // غير المزامنة فقط
+      const request = index.getAll(IDBKeyRange.only(0));
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -92,7 +92,7 @@ async function updateOperationStatus(id, synced, error = null) {
       request.onsuccess = () => {
         const data = request.result;
         if (data) {
-          data.synced = synced;
+          data.synced = synced ? 1 : 0;
           data.lastSyncAttempt = Date.now();
           data.retries = (data.retries || 0) + 1;
           if (error) data.error = error;
