@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -338,6 +339,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
   const [targetId, setTargetId] = useState('');
   const [profitAmount, setProfitAmount] = useState('');
   const [profitPercentage, setProfitPercentage] = useState('');
+  const [fullProfit, setFullProfit] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const employeeId = employee?.user_id || employee?.id;
@@ -353,7 +355,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
       return;
     }
 
-    if (!profitAmount || parseFloat(profitAmount) <= 0) {
+    if (!fullProfit && (!profitAmount || parseFloat(profitAmount) <= 0)) {
       toast({
         title: "خطأ",
         description: "الرجاء إدخال مبلغ ربح صحيح أكبر من صفر",
@@ -367,19 +369,19 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
       await setEmployeeProfitRule(employeeId, {
         rule_type: ruleType,
         target_id: ruleType === 'default' ? 'default' : targetId,
-        profit_amount: parseFloat(profitAmount),
-        profit_percentage: null,
+        profit_amount: fullProfit ? 0 : parseFloat(profitAmount),
+        profit_percentage: fullProfit ? 100 : null,
         is_active: true
       });
 
       toast({
         title: "تم الحفظ",
-        description: "تم إضافة قاعدة الربح بنجاح"
+        description: fullProfit ? "تم إضافة قاعدة كامل الربح بنجاح" : "تم إضافة قاعدة الربح بنجاح"
       });
 
-      // إعادة تعيين النموذج
       setTargetId('');
       setProfitAmount('');
+      setFullProfit(false);
     } catch (error) {
       toast({
         title: "خطأ",
@@ -471,10 +473,10 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
           {/* إضافة قاعدة جديدة */}
           <Card>
             <CardHeader>
-              <CardTitle>إضافة قاعدة ربح جديدة (مبلغ ثابت)</CardTitle>
+              <CardTitle>إضافة قاعدة ربح جديدة</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div>
                   <Label>نوع القاعدة</Label>
                   <Select value={ruleType} onValueChange={setRuleType}>
@@ -521,9 +523,28 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                     placeholder="مثال: 5000"
                     min="0"
                     step="1000"
+                    disabled={fullProfit}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة
+                    {fullProfit ? 'معطّل - الموظف يأخذ كامل الهامش' : 'المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة'}
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-2 justify-center">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={fullProfit}
+                      onCheckedChange={(checked) => {
+                        setFullProfit(checked);
+                        if (checked) setProfitAmount('0');
+                      }}
+                    />
+                    <Label className="text-sm font-semibold">كامل الربح</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {fullProfit 
+                      ? '✅ الموظف يحصل على كامل ربح المنتج (سعر البيع - التكلفة)' 
+                      : 'مبلغ ثابت لكل وحدة مباعة'}
                   </p>
                 </div>
               </div>
@@ -578,7 +599,9 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                             {rule.rule_type === 'default' ? 'جميع المنتجات' : getTargetName(rule)}
                           </TableCell>
                           <TableCell className="font-semibold text-green-600">
-                            {rule.profit_amount.toLocaleString()} د.ع
+                            {rule.profit_percentage === 100 
+                              ? <Badge variant="success" className="text-xs">كامل الربح</Badge>
+                              : `${rule.profit_amount.toLocaleString()} د.ع`}
                           </TableCell>
                           <TableCell>
                             <Badge variant={rule.is_active ? "default" : "secondary"}>
