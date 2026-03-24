@@ -1440,24 +1440,51 @@ export const SuperProvider = ({ children }) => {
     }
   }, []);
 
-  // إضافة مصروف - نفس الواجهة القديمة
+  // إضافة مصروف - حفظ فعلي في قاعدة البيانات
   const addExpense = useCallback(async (expense) => {
     try {
       console.log('💰 SuperProvider: إضافة مصروف:', expense.description);
       
-      // TODO: تطبيق في SuperAPI
+      const userId = user?.id || user?.user_id;
+      if (!userId) throw new Error('يجب تسجيل الدخول أولاً');
+
+      const { data, error } = await supabase
+        .from('expenses')
+        .insert({
+          amount: Number(expense.amount),
+          category: expense.category || 'عام',
+          description: expense.description || '',
+          expense_type: expense.expense_type || 'operational',
+          created_by: userId,
+          vendor_name: expense.vendor_name || null,
+          receipt_number: expense.receipt_number || null,
+          metadata: expense.metadata || null
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      superAPI.invalidate('all_data');
+      await fetchAllData();
+      
       toast({ 
         title: "تمت إضافة المصروف",
         description: `تم إضافة مصروف ${expense.description}`,
         variant: "success" 
       });
 
-      return { success: true, data: expense };
+      return { success: true, data };
     } catch (error) {
       console.error('❌ خطأ في إضافة المصروف:', error);
+      toast({ 
+        title: "خطأ في إضافة المصروف",
+        description: error.message,
+        variant: "destructive" 
+      });
       throw error;
     }
-  }, []);
+  }, [user, fetchAllData]);
 
   // تسوية مستحقات الموظف - نسخة مصححة بالكامل تستخدم قواعد الربح الثابتة + الخصومات المعلقة
   const settleEmployeeProfits = useCallback(async (employeeId, totalSettlement = 0, employeeName = '', orderIds = []) => {
