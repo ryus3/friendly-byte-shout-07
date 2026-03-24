@@ -402,7 +402,9 @@ const DepartmentManagerSettingsPage = () => {
                           <div>
                             <p className="font-semibold">{rule.employee?.full_name || 'موظف'}</p>
                             <p className="text-sm text-muted-foreground">
-                              {rule.product?.name || 'كل المنتجات'} - {rule.profit_amount?.toLocaleString()} د.ع
+                              {rule.product?.name || 'كل المنتجات'} - {rule.profit_percentage === 100 
+                                ? <Badge className="bg-emerald-500 text-white">كامل الربح</Badge>
+                                : `${rule.profit_amount?.toLocaleString()} د.ع`}
                             </p>
                           </div>
                         </div>
