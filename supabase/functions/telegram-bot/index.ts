@@ -1003,7 +1003,7 @@ async function getProductButtons(employeeId: string): Promise<any> {
         .from('products')
         .select('id, name')
         .eq('is_active', true)
-        .limit(8);
+        .limit(50);
       
       if (fallbackError) {
         console.error('❌ Fallback query failed:', fallbackError);
