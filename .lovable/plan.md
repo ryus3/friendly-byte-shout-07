@@ -1,81 +1,129 @@
 
 
-# إصلاح: المصاريف العامة لا تُحفظ + خطأ بناء Vercel
+# إصلاح: المصاريف العامة لا تُسجّل حركة صرف
 
-## الأوضاع الحالية
+## السبب الجذري
 
-### 1. أرباح سارة (كامل الربح)
-سارة لديها قاعدة "كامل الربح" الآن. عند استلام فاتورة لطلب أنشأته سارة:
-- ربحها = سعر البيع - سعر التكلفة (كامل الهامش)
-- يظهر في صفحة "أرباحي" الخاصة بها
-- يظهر في المركز المالي للموظف عند المدير
-- تكلفة المنتجات تُسترد للنظام (COGS)، الهامش كله لسارة
+عمود `status` في جدول `expenses` قيمته الافتراضية `'pending'`. لكن الـ trigger الذي يُنشئ حركة النقد يشترط `status = 'approved'`:
 
-### 2. المصاريف العامة لا تُحفظ - **المشكلة الرئيسية**
+```sql
+IF TG_OP = 'INSERT' AND NEW.status = 'approved' ...  -- ← لا ينطبق لأن status = 'pending'
+```
 
-**السبب المؤكد**: دالة `addExpense` في `SuperProvider.jsx` (سطر 1444-1460) هي **stub فارغ** - تعرض رسالة نجاح فقط ولا تحفظ شيئاً في قاعدة البيانات:
+دالة `addExpense` في `SuperProvider.jsx` **لا ترسل `status`** → فيبقى `pending` → الـ trigger يتجاهله → لا حركة نقد.
+
+بالإضافة: `ExpensesDialog.jsx` ما زال يحتوي على `window.location.reload()` الذي قد يقطع العملية.
+
+## الإصلاح (ملفان فقط)
+
+### 1. `src/contexts/SuperProvider.jsx` (سطر ~1457)
+
+إضافة `status: 'approved'` في الـ insert:
 
 ```javascript
-const addExpense = useCallback(async (expense) => {
-  // TODO: تطبيق في SuperAPI  ← هذا التعليق يؤكد أنها غير مكتملة
-  toast({ title: "تمت إضافة المصروف", ... });
-  return { success: true, data: expense };  // ← لا يحفظ شيئاً!
-}, []);
+.insert({
+  amount: Number(expense.amount),
+  category: expense.category || 'عام',
+  description: expense.description || '',
+  expense_type: expense.expense_type || 'operational',
+  created_by: userId,
+  status: 'approved',           // ← إضافة هذا السطر
+  approved_by: userId,          // ← الموافق هو نفس المُنشئ
+  approved_at: new Date().toISOString(),
+  vendor_name: expense.vendor_name || null,
+  receipt_number: expense.receipt_number || null,
+  metadata: expense.metadata || null
+})
 ```
 
-**الإصلاح**: استبدال الـ stub بكود فعلي يحفظ في جدول `expenses`:
+**النتيجة**: الـ trigger يكتشف `status = 'approved'` ويُنشئ حركة صرف من القاصة الرئيسية تلقائياً.
+
+### 2. `src/components/accounting/ExpensesDialog.jsx` (سطر 96-99)
+
+حذف `window.location.reload()`:
 
 ```javascript
-const addExpense = useCallback(async (expense) => {
-  const { data, error } = await supabase
-    .from('expenses')
-    .insert({
-      amount: expense.amount,
-      category: expense.category,
-      description: expense.description,
-      transaction_date: expense.transaction_date || new Date().toISOString(),
-      expense_type: expense.expense_type || 'operational',
-      created_by: user?.id || user?.user_id
-    })
-    .select()
-    .single();
-  
-  if (error) throw error;
-  
-  superAPI.invalidate('all_data');
-  await fetchAllData();
-  
-  toast({ title: "تمت إضافة المصروف", ... });
-  return { success: true, data };
-}, [user]);
+// حذف هذا الكود بالكامل:
+// if (typeof window !== 'undefined') {
+//   window.location.reload();
+// }
 ```
 
-### 3. خطأ Vercel: `vite: command not found` (exit 127)
+## بخصوص صلاحية المصاريف لسار
 
-**السبب**: في `vercel.json` يوجد:
-```json
-"env": { "NODE_ENV": "production" }
+<lov-plan>
+
+# إصلاح: المصاريف العامة لا تُسجّل حركة صرف + صلاحية مصاريف للموظف
+
+## السبب الجذري للمصاريف
+
+عمود `status` في جدول `expenses` قيمته الافتراضية `'pending'`. لكن الـ trigger الذي يُنشئ حركة النقد يشترط `status = 'approved'`:
+
+```sql
+IF TG_OP = 'INSERT' AND NEW.status = 'approved' ...  -- لا ينطبق لأن status = pending
 ```
 
-هذا يجعل `npm ci` يتخطى `devDependencies` حيث يوجد `vite`. فعند تشغيل `npm run build` → `vite build`، لا يجد أمر `vite`.
+دالة `addExpense` في `SuperProvider.jsx` **لا ترسل `status`** → يبقى `pending` → الـ trigger يتجاهله → لا حركة نقد ولا تظهر كمصروف فعلي.
 
-**الإصلاح**: إزالة `env` من `vercel.json` أو تغيير `installCommand` ليتضمن devDependencies:
+بالإضافة: `ExpensesDialog.jsx` ما زال يحتوي على `window.location.reload()` الذي يقطع العملية.
 
-```json
-"installCommand": "npm ci --legacy-peer-deps --include=dev"
+## الإصلاح
+
+### 1. `src/contexts/SuperProvider.jsx` (سطر ~1453)
+
+إضافة `status: 'approved'` في الـ insert:
+
+```javascript
+.insert({
+  amount: Number(expense.amount),
+  category: expense.category || 'عام',
+  description: expense.description || '',
+  expense_type: expense.expense_type || 'operational',
+  created_by: userId,
+  status: 'approved',
+  approved_by: userId,
+  approved_at: new Date().toISOString(),
+  vendor_name: expense.vendor_name || null,
+  receipt_number: expense.receipt_number || null,
+  metadata: expense.metadata || null
+})
 ```
 
----
+**النتيجة**: الـ trigger يكتشف `status = 'approved'` ويُنشئ حركة صرف من القاصة الرئيسية تلقائياً — كما كان يعمل سابقاً.
+
+### 2. `src/components/accounting/ExpensesDialog.jsx` (سطر 96-99)
+
+حذف `window.location.reload()` بالكامل — لأن `addExpense` يحدّث البيانات عبر `invalidate + fetchAllData`.
+
+### 3. `src/components/shared/UnifiedProfitCalculator.jsx` (سطر ~81)
+
+تغيير `e.transaction_date` إلى `e.created_at` لأن عمود `transaction_date` غير موجود في الجدول:
+
+```javascript
+const expensesInRange = safeExpenses.filter(e => filterByDate(e.created_at));
+```
+
+## بخصوص صلاحية مصاريف لسارة
+
+هذا مرتبط بميزة "المركز المالي للموظف" — حيث سارة (بقاعدة كامل الربح) تحتاج أن تُسجّل مصاريفها الخاصة من أرباحها. هذه ميزة منفصلة تحتاج تصميم خاص — أقترح تنفيذها بعد التأكد من أن المصاريف العامة تعمل بشكل صحيح أولاً. هل توافق؟
 
 ## الملفات المتأثرة
 
 | الملف | التعديل | المخاطر |
 |-------|---------|---------|
-| `src/contexts/SuperProvider.jsx` | استبدال stub بكود حفظ فعلي (سطر 1444-1460) | صفر - نفس الواجهة |
-| `vercel.json` | إضافة `--include=dev` للـ installCommand | صفر - يصلح البناء فقط |
+| `SuperProvider.jsx` | إضافة `status: 'approved'` + `approved_by` + `approved_at` | صفر |
+| `ExpensesDialog.jsx` | حذف `window.location.reload()` | صفر |
+| `UnifiedProfitCalculator.jsx` | `transaction_date` → `created_at` | صفر |
 
 ## ما لن يتغير
-- `ExpensesDialog.jsx` - يعمل بشكل صحيح، المشكلة ليست فيه
-- قواعد الأرباح - تبقى كما هي
-- بوت التليغرام - يبقى كما هو
+- الـ trigger الحالي — صحيح ويعمل ✅
+- القاصة الرئيسية — لا تتأثر ✅
+- قواعد الأرباح — لا تتأثر ✅
+- بوت التليغرام — لا يتأثر ✅
+
+## النتيجة
+1. المصروف يُحفظ بحالة `approved` مباشرة
+2. الـ trigger يُنشئ حركة صرف تلقائياً من القاصة الرئيسية
+3. المصروف يظهر في نافذة المصاريف العامة وفي التقارير المالية
+4. لا reload للصفحة — تحديث سلس
 
