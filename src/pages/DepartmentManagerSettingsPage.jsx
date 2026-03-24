@@ -114,7 +114,7 @@ const DepartmentManagerSettingsPage = () => {
 
   // إضافة قاعدة ربح جديدة
   const handleAddProfitRule = async () => {
-    if (!newRule.employee_id || newRule.profit_amount <= 0) {
+    if (!newRule.employee_id || (!newRule.full_profit && newRule.profit_amount <= 0)) {
       toast({ title: 'خطأ', description: 'الرجاء ملء جميع الحقول المطلوبة', variant: 'destructive' });
       return;
     }
@@ -127,15 +127,16 @@ const DepartmentManagerSettingsPage = () => {
           employee_id: newRule.employee_id,
           target_id: newRule.product_id || null,
           rule_type: newRule.product_id ? 'product' : 'global',
-          profit_amount: newRule.profit_amount,
+          profit_amount: newRule.full_profit ? 0 : newRule.profit_amount,
+          profit_percentage: newRule.full_profit ? 100 : null,
           created_by: user?.id,
           is_active: true
         });
 
       if (error) throw error;
 
-      toast({ title: 'تم بنجاح', description: 'تمت إضافة قاعدة الربح' });
-      setNewRule({ employee_id: '', product_id: '', profit_amount: 0, profit_type: 'fixed' });
+      toast({ title: 'تم بنجاح', description: newRule.full_profit ? 'تمت إضافة قاعدة كامل الربح' : 'تمت إضافة قاعدة الربح' });
+      setNewRule({ employee_id: '', product_id: '', profit_amount: 0, profit_type: 'fixed', full_profit: false });
       
       // إعادة جلب القواعد
       const { data } = await supabase
