@@ -355,7 +355,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
       return;
     }
 
-    if (!profitAmount || parseFloat(profitAmount) <= 0) {
+    if (!fullProfit && (!profitAmount || parseFloat(profitAmount) <= 0)) {
       toast({
         title: "خطأ",
         description: "الرجاء إدخال مبلغ ربح صحيح أكبر من صفر",
@@ -369,19 +369,19 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
       await setEmployeeProfitRule(employeeId, {
         rule_type: ruleType,
         target_id: ruleType === 'default' ? 'default' : targetId,
-        profit_amount: parseFloat(profitAmount),
-        profit_percentage: null,
+        profit_amount: fullProfit ? 0 : parseFloat(profitAmount),
+        profit_percentage: fullProfit ? 100 : null,
         is_active: true
       });
 
       toast({
         title: "تم الحفظ",
-        description: "تم إضافة قاعدة الربح بنجاح"
+        description: fullProfit ? "تم إضافة قاعدة كامل الربح بنجاح" : "تم إضافة قاعدة الربح بنجاح"
       });
 
-      // إعادة تعيين النموذج
       setTargetId('');
       setProfitAmount('');
+      setFullProfit(false);
     } catch (error) {
       toast({
         title: "خطأ",
