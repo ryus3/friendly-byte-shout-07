@@ -1,5 +1,7 @@
 import path from 'node:path';
+import react from '@vitejs/plugin-react';
 import { createLogger, defineConfig } from 'vite';
+import { componentTagger } from "lovable-tagger";
 
 const configHorizonsViteErrorHandler = `
 const observer = new MutationObserver((mutations) => {
@@ -128,23 +130,6 @@ logger.error = (msg, options) => {
 export default defineConfig(async ({ mode }) => {
     const isDev = process.env.NODE_ENV !== 'production';
     let inlineEditPlugin, editModeDevPlugin;
-    let react, componentTagger;
-
-    // Dynamic import for react plugin
-    try {
-        react = (await import('@vitejs/plugin-react')).default;
-    } catch {
-        console.warn('⚠️ @vitejs/plugin-react not found, using esbuild JSX transform');
-        react = null;
-    }
-
-    // Dynamic import for lovable-tagger
-    try {
-        componentTagger = (await import('lovable-tagger')).componentTagger;
-    } catch {
-        console.warn('⚠️ lovable-tagger not found, skipping');
-        componentTagger = null;
-    }
 
     if (isDev) {
         try {
@@ -161,8 +146,8 @@ export default defineConfig(async ({ mode }) => {
         customLogger: logger,
         plugins: [
             ...(isDev ? [inlineEditPlugin(), editModeDevPlugin()] : []),
-            react ? react() : null,
-            mode === 'development' && componentTagger ? componentTagger() : null,
+            react(),
+            mode === 'development' && componentTagger(),
             addTransformIndexHtml,
         ].filter(Boolean),
         server: {
@@ -181,8 +166,16 @@ export default defineConfig(async ({ mode }) => {
         },
         build: {
             target: 'esnext',
-            minify: 'esbuild',
+            minify: 'terser',
             chunkSizeWarningLimit: 1000,
+            // ⚡ المرحلة 1: حذف console.log نهائياً من البناء
+            terserOptions: {
+                compress: {
+                    drop_console: true,
+                    drop_debugger: true,
+                    pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn']
+                }
+            },
             rollupOptions: {
                 external: [
                     '@babel/parser',

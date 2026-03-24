@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { FileText, Eye, Receipt, Calendar, User, DollarSign, CheckCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone } from 'date-fns-tz/formatInTimeZone';
 import { ar } from 'date-fns/locale';
 import { useInventory } from '@/contexts/InventoryContext';
 import OrderDetailsDialog from '@/components/orders/OrderDetailsDialog';

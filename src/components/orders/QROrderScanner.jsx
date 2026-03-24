@@ -47,7 +47,7 @@ const QROrderScanner = ({ isOpen, onClose, onOrderFound, onUpdateOrderStatus }) 
         throw orderError;
       }
 
-      let order = orders?.[0];
+      const order = orders?.[0];
       if (!order) {
         setError('الطلب غير موجود في النظام أو الرقم غير صحيح');
         return null;
