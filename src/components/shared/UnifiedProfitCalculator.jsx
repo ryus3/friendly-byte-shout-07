@@ -73,7 +73,7 @@ export const useUnifiedProfitCalculator = ({
 
     const grossProfit = salesWithoutDelivery - cogs;
 
-    const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date));
+    const expensesInRange = safeExpenses.filter(e => filterByDate(e.created_at));
     const generalExpenses = expensesInRange.filter(e => {
       if (e.expense_type === 'system') return false;
       if (e.category === 'مستحقات الموظفين') return false;

@@ -93,10 +93,7 @@ import React, { useState, useEffect } from 'react';
             expense_type: 'operational'
           });
           
-          // إعادة تحديث قائمة المصاريف من الخادم
-          if (typeof window !== 'undefined') {
-            window.location.reload();
-          }
+      // البيانات تتحدث تلقائياً عبر invalidate + fetchAllData في addExpense
           
           // إعادة تعيين النموذج
           setNewExpense({
