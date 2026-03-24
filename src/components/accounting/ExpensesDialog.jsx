@@ -14,13 +14,14 @@ import React, { useState, useEffect } from 'react';
     import { DateRangePicker } from '@/components/ui/date-range-picker';
     import { supabase } from '@/lib/customSupabaseClient';
     
-    const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpense }) => {
-      const [newExpense, setNewExpense] = useState({
-        date: new Date().toISOString().slice(0, 16),
-        category: 'تسويق',
-        description: '',
-        amount: '',
-      });
+const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpense }) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newExpense, setNewExpense] = useState({
+    date: new Date().toISOString().slice(0, 16),
+    category: 'تسويق',
+    description: '',
+    amount: '',
+  });
       const [filters, setFilters] = useState({
         category: 'all',
         dateRange: { from: null, to: null } // تعيين قيم null بدلاً من undefined لتجنب ظهور التقويم

@@ -3192,48 +3192,18 @@ export const SuperProvider = ({ children }) => {
     // دالة الحصول على تفاصيل المتغير للحجز
     getVariantDetails,
 
-    // دالة حذف المصروف مع إنشاء حركة نقدية عكسية
+    // دالة حذف المصروف - الـ trigger في قاعدة البيانات يتكفل بالحركة العكسية تلقائياً
     deleteExpense: async (expenseId) => {
       try {
         console.log('🗑️ حذف المصروف:', expenseId);
         
-        // جلب تفاصيل المصروف قبل الحذف
-        const { data: expense, error: fetchError } = await supabase
-          .from('expenses')
-          .select('*')
-          .eq('id', expenseId)
-          .single();
-        
-        if (fetchError) throw fetchError;
-        
-        // حذف المصروف
+        // حذف المصروف فقط - الـ trigger يُنشئ حركة إرجاع تلقائياً
         const { error: deleteError } = await supabase
           .from('expenses')
           .delete()
           .eq('id', expenseId);
         
         if (deleteError) throw deleteError;
-        
-        // إنشاء حركة نقدية عكسية (إضافة أموال)
-        if (expense.amount > 0) {
-          const { error: movementError } = await supabase
-            .from('cash_movements')
-            .insert({
-              cash_source_id: expense.cash_source_id || 'fb19dcc0-0a2d-44c2-93cb-bc7cb8ee7e7b',
-              amount: expense.amount,
-              movement_type: 'credit',
-              reference_type: 'expense_deletion',
-              reference_id: expenseId,
-              description: `حذف مصروف: ${expense.description}`,
-              balance_before: 0, // سيتم حسابه بواسطة trigger
-              balance_after: 0,  // سيتم حسابه بواسطة trigger
-              created_by: user?.user_id || user?.id
-            });
-          
-          if (movementError) {
-            console.warn('⚠️ فشل في إنشاء حركة نقدية عكسية:', movementError);
-          }
-        }
         
         // تحديث البيانات المحلية
         setAllData(prev => ({
@@ -3244,9 +3214,13 @@ export const SuperProvider = ({ children }) => {
           }
         }));
         
+        // إعادة تحميل البيانات من قاعدة البيانات
+        superAPI.invalidate('all_data');
+        await fetchAllData();
+        
         toast({
           title: "تم الحذف بنجاح",
-          description: "تم حذف المصروف وإنشاء حركة نقدية عكسية"
+          description: "تم حذف المصروف وإرجاع المبلغ للقاصة"
         });
         
         return { success: true };
