@@ -61,6 +61,7 @@ const CashManagementPage = lazy(() => import('@/pages/CashManagementPage.jsx'));
 const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx'));
 const QRLabelsPage = lazy(() => import('@/pages/QRLabelsPage.jsx'));
 const AdvancedProfitsAnalysisPage = lazy(() => import('@/pages/AdvancedProfitsAnalysisPage.jsx'));
+const EmployeeFinancialCenterPage = lazy(() => import('@/pages/EmployeeFinancialCenterPage.jsx'));
 const CustomersManagementPage = lazy(() => import('@/pages/CustomersManagementPage.jsx'));
 const SalesPage = lazy(() => import('@/pages/SalesPage.jsx'));
 const PushNotificationControl = lazy(() => import('@/pages/PushNotificationControl.jsx'));
