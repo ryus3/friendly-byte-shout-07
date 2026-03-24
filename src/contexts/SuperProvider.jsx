@@ -1530,8 +1530,18 @@ export const SuperProvider = ({ children }) => {
           
           if (rule) {
             hasAnyRule = true;
-            totalProfit += (rule.profit_amount || 0) * (item.quantity || 1);
-            console.debug(`✅ قاعدة ربح للمنتج ${productId}: ${rule.profit_amount} × ${item.quantity}`);
+            
+            if (rule.profit_percentage === 100) {
+              // ✅ كامل الربح: سعر البيع - سعر التكلفة
+              const sellingPrice = item.price || item.unit_price || 0;
+              const costPrice = item.cost_price || item.product_variants?.cost_price || 0;
+              const fullProfit = (sellingPrice - costPrice) * (item.quantity || 1);
+              totalProfit += Math.max(0, fullProfit);
+              console.debug(`✅ كامل الربح للمنتج ${productId}: (${sellingPrice} - ${costPrice}) × ${item.quantity} = ${fullProfit}`);
+            } else {
+              totalProfit += (rule.profit_amount || 0) * (item.quantity || 1);
+              console.debug(`✅ قاعدة ربح للمنتج ${productId}: ${rule.profit_amount} × ${item.quantity}`);
+            }
           } else {
             console.debug(`⚠️ لا توجد قاعدة ربح سارية للمنتج ${productId} وقت الطلب ${orderDate.toISOString()}`);
           }
