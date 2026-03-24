@@ -532,6 +532,7 @@ export type Database = {
           description: string | null
           id: string
           initial_balance: number
+          initial_capital: number | null
           is_active: boolean
           name: string
           owner_user_id: string | null
@@ -545,6 +546,7 @@ export type Database = {
           description?: string | null
           id?: string
           initial_balance?: number
+          initial_capital?: number | null
           is_active?: boolean
           name: string
           owner_user_id?: string | null
@@ -558,6 +560,7 @@ export type Database = {
           description?: string | null
           id?: string
           initial_balance?: number
+          initial_capital?: number | null
           is_active?: boolean
           name?: string
           owner_user_id?: string | null
