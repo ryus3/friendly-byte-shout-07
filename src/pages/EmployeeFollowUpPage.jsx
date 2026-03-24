@@ -634,9 +634,10 @@ const filteredOrders = useMemo(() => {
     // ✅ طلبات "تم طلب التحاسب" تظهر دائماً للمدير حتى لو مؤرشفة
     const isAwaitingSettlement = profitRecord?.status === 'settlement_requested';
 
+    const isZeroProfitArchived = profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled';
     let archiveMatch;
     if (showSettlementArchive) {
-      archiveMatch = isSettled;
+      archiveMatch = isSettled || isZeroProfitArchived;
     } else if (filters.archived) {
       archiveMatch = isManuallyArchived;
     } else {
