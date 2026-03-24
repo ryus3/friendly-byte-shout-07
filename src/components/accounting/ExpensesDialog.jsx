@@ -78,13 +78,14 @@ const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpens
       };
     
       const handleAddExpense = async () => {
+        if (isSubmitting) return;
         if (!newExpense.description || !newExpense.amount || !newExpense.category) {
           toast({ title: 'خطأ', description: 'الرجاء ملء جميع الحقول.', variant: 'destructive' });
           return;
         }
         
+        setIsSubmitting(true);
         try {
-          // التأكد من أن التاريخ صحيح
           const expenseDate = newExpense.date ? new Date(newExpense.date) : new Date();
           
           await addExpense({
@@ -94,9 +95,6 @@ const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpens
             expense_type: 'operational'
           });
           
-      // البيانات تتحدث تلقائياً عبر invalidate + fetchAllData في addExpense
-          
-          // إعادة تعيين النموذج
           setNewExpense({
             date: new Date().toISOString().slice(0, 16),
             category: expenseCategories[0] || 'تسويق',
@@ -107,6 +105,8 @@ const ExpensesDialog = ({ open, onOpenChange, expenses, addExpense, deleteExpens
           toast({ title: 'نجح', description: 'تم إضافة المصروف بنجاح', variant: 'success' });
         } catch (error) {
           toast({ title: 'خطأ', description: 'فشل في إضافة المصروف', variant: 'destructive' });
+        } finally {
+          setIsSubmitting(false);
         }
       };
 
