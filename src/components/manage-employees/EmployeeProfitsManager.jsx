@@ -11,6 +11,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { DollarSign, Users, TrendingUp, Calculator, Settings, Loader2 } from 'lucide-react';
 import ProfitCalculatorResult from './ProfitCalculatorResult';
 
