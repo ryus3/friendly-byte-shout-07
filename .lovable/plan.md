@@ -1,112 +1,63 @@
 
-## ما الذي يعنيه الرجوع لنسخة تعمل؟
-الرجوع لنسخة تعمل جيد كإيقاف نزيف، لكنه **لا يمنع رجوع الخطأ** إذا بقيت ملفات البناء نفسها غير موحّدة. المشكلة المتكررة ليست من منطق التطبيق، بل من **بيئة الحزم**.
 
-## ما وجدته الآن في النسخة الحالية
-1. ما زال يوجد **ملفان lock معاً**:
-   - `package-lock.json`
-   - `bun.lock`
+# خطة: إضافة خيار "كامل الربح" في قواعد الأرباح
 
-2. `bun.lock` ما زال **قديماً وغير متطابق** مع `package.json` الحالي، وفيه أثر dependency محذوف سابقاً:
-   - `"npm": "^11.5.2"`
+## الوضع الحالي
 
-3. `package.json` ما زال بلا عناصر التثبيت الحتمي:
-   - لا يوجد `packageManager`
-   - لا يوجد `engines`
-   - لا يوجد `overrides`
+| المكوّن | الحالة |
+|---------|--------|
+| `SuperProvider.jsx` - حساب `profit_percentage === 100` | ✅ موجود وصحيح |
+| `DepartmentManagerSettingsPage.jsx` - toggle "كامل الربح" | ✅ موجود |
+| `EmployeeProfitsManager.jsx` - نافذة قواعد الربح الرئيسية | ❌ **لا يوجد خيار كامل الربح** |
+| Database trigger `auto_create_profit_record` | ❌ **يقرأ `profit_amount` فقط، يتجاهل `profit_percentage`** |
 
-4. أدوات البناء ما زال جزء كبير منها داخل `dependencies` بدل `devDependencies` مثل:
-   - `@vitejs/plugin-react`
-   - `autoprefixer`
-   - `esbuild`
-   - `postcss`
-   - `rollup`
-   - `tailwindcss`
-   - `terser`
+**المشكلة**: صفحة إدارة الأرباح الرئيسية (`EmployeeProfitsManager`) لا تدعم "كامل الربح"، والـ trigger يحسب 0 لأنه لا يقرأ `profit_percentage`.
 
-5. الخطأ الحالي يثبت أن Vite أحياناً يُحمَّل من خارج المشروع:
-```text
-/dev-server/node_modules/vite/dist/node/cli.js
-→ يحاول استيراد /dev-server/node_modules/rollup/dist/es/parseAst.js
-```
-وهذا يعني أن البيئة تنزلق أحياناً إلى toolchain خارجي بدل الاعتماد الكامل على شجرة المشروع.
+## التعديلات المطلوبة
 
-## السبب الجذري
-النسخة التي رجعت إليها قد تكون سليمة في الكود، لكن **الـ manifests ليست محصنة**. لذلك عند أي إعادة تثبيت أو sandbox جديد:
-```text
-bun.lock + package-lock.json + تبعيات بناء غير منظّمة
-→ شجرة dependencies غير حتمية
-→ أحياناً local vite ناقص / وأحياناً dev-server يستعمل vite خارجي
-→ ERR_MODULE_NOT_FOUND
+### 1. تعديل Database Trigger (Migration)
+
+تحديث `auto_create_profit_record` لقراءة `profit_percentage` بجانب `profit_amount`:
+
+```sql
+-- السطر 83 الحالي:
+SELECT profit_amount INTO v_item_profit
+
+-- يصبح:
+SELECT profit_amount, profit_percentage INTO v_item_profit, v_item_percentage
+
+-- السطر 100 الحالي:
+v_employee_profit := v_employee_profit + (COALESCE(v_item_profit, 0) * v_item.quantity);
+
+-- يصبح:
+IF COALESCE(v_item_percentage, 0) = 100 THEN
+  v_employee_profit := v_employee_profit + 
+    GREATEST(0, (v_item.unit_price - COALESCE(v_item_cost, 0)) * v_item.quantity);
+ELSE
+  v_employee_profit := v_employee_profit + (COALESCE(v_item_profit, 0) * v_item.quantity);
+END IF;
 ```
 
-## الخطة الجذرية بعد الرجوع
-### 1) توحيد مدير الحزم نهائياً
-- حذف `bun.lock`
-- اعتماد `package-lock.json` فقط
-- إضافة `packageManager` في `package.json` لتثبيت npm كمسار وحيد
+### 2. تعديل `EmployeeProfitsManager.jsx`
 
-### 2) جعل toolchain حتمياً
-في `package.json`:
-- إبقاء الإصدارات الحساسة exact بدون `^`:
-  - `vite: "5.4.19"`
-  - `@vitejs/plugin-react: "4.3.4"`
-  - `rollup: "4.46.0"`
-  - `tailwindcss: "3.4.18"`
-  - `autoprefixer: "10.4.21"`
-- إضافة `engines` لتثبيت نسخة Node/NPM المتوقعة
-- إضافة `overrides` للتبعيات الحساسة العابرة إذا لزم
+إضافة Toggle "كامل الربح" في نموذج إضافة القاعدة:
+- عند التفعيل: `profit_percentage = 100`, `profit_amount = 0`، وحقل المبلغ يُعطَّل
+- عند إيقافه: يعود للمبلغ الثابت كالمعتاد
+- عرض badge "كامل الربح" في جدول القواعد الحالية بدلاً من المبلغ عندما `profit_percentage === 100`
+- تعديل validation ليقبل المبلغ 0 عند تفعيل كامل الربح
 
-### 3) فصل runtime عن build-time
-نقل أدوات البناء إلى `devDependencies`:
-- `@vitejs/plugin-react`
-- `rollup`
-- `postcss`
-- `tailwindcss`
-- `autoprefixer`
-- `terser`
-- `esbuild`
+### 3. لا تعديل على باقي الملفات
 
-والإبقاء على Dependencies التشغيلية فقط في `dependencies`.
+- `SuperProvider.jsx` - صحيح بالفعل ✅
+- `DepartmentManagerSettingsPage.jsx` - صحيح بالفعل ✅
+- الموظف بدون قاعدة يبقى ربحه 0 ✅
 
-### 4) إعادة توليد lockfile من شجرة واحدة نظيفة
-بعد تنظيف `package.json`:
-- إعادة توليد `package-lock.json` من npm فقط
-- عدم إبقاء أي أثر لـ Bun أو dependencies قديمة
+## ملخص
 
-### 5) عدم استخدام أي ترقيع
-لن أضيف:
-- wrappers
-- runners
-- patch scripts
-- تشغيلات التفافية لـ Vite
+| الملف | التعديل |
+|-------|---------|
+| Migration SQL | trigger يقرأ `profit_percentage` ويحسب الهامش الكامل |
+| `EmployeeProfitsManager.jsx` | toggle + badge + validation |
 
-الحل سيكون على مستوى:
-- `package.json`
-- `package-lock.json`
-- حذف `bun.lock`
+**النتيجة**: المدير يستطيع من نافذة قواعد الأرباح تفعيل "كامل الربح" لأي موظف/منتج، والحساب يعمل في الكود والـ trigger معاً.
 
-## لماذا هذا يمنع تكرار المشكلة؟
-لأن الرجوع لنسخة تعمل يصلح **اللحظة الحالية فقط**، أما توحيد المانيفستات فيصلح **كل إعادة تثبيت مستقبلية**. الهدف أن أي sandbox جديد يبني نفس الشجرة تماماً، فلا يعود:
-- `dep-C6uTJdX2.js`
-- `dep-BK3b2jBa.js`
-- `rollup/dist/es/parseAst.js`
-
-## التحقق الذي سأعتمد عليه بعد التنفيذ
-لن أعتبر العمل منتهياً إلا إذا تحقق كله:
-1. `vite build --mode development` ينجح
-2. `vite --port 8080` ينجح
-3. لا يعود أي استيراد من `/dev-server/node_modules/vite/...`
-4. تبقى النسخة التي رجعت لها تعمل كما هي بدون كسر منطق التطبيق
-5. التحقق من التطبيق نفسه بعد الإقلاع، وليس فقط تعديل الملفات
-
-## الملفات التي يجب تثبيتها الآن
-- `package.json`
-- `package-lock.json`
-- حذف `bun.lock`
-
-## النتيجة المتوقعة
-- تمنع تكرار الانهيار بعد ساعات أو بعد rollback أو sandbox جديد
-- تبقي المشروع على npm/Vite القياسي فقط
-- تمنع الانزلاق إلى Vite/Rollup من `/dev-server`
-- تحافظ على النظام بدون ترقيع مؤقت
