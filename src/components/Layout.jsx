@@ -77,6 +77,11 @@ const SidebarContent = ({ onClose, isMobile }) => {
         return hasRole && user?.has_storefront_access === true;
       }
       
+      // فحص المركز المالي للموظف
+      if (item.requiresFinancialCenter) {
+        return hasRole && user?.has_financial_center === true;
+      }
+      
       // فحص الصلاحيات الخاصة - التحقق من صلاحية إدارة المنتجات
       if (item.requiresPermission) {
         // المدير العام والأدمن لديهم الصلاحية تلقائياً
