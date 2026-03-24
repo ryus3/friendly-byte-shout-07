@@ -1,59 +1,43 @@
 
 
-# خطة إظهار طلبات الربح الصفري في أرشيف التسوية
+# خطة إصلاح تناقض كارت "مستحقات معلقة"
 
 ## المشكلة
-الطلبات التي ربح الموظف فيها = 0 (حالة `no_rule_archived` أو `no_rule_settled`) يتم **استبعادها بالكامل** من صفحة متابعة الموظفين في السطر 573، فلا تظهر في أي مكان - لا في الطلبات العادية ولا في أرشيف التسوية.
+كارت "مستحقات معلقة" يعرض 7,000 د.ع لكن عند الضغط عليه تظهر 0 طلبات.
 
-المطلوب: هذه الطلبات يجب أن تظهر **فقط** في أرشيف التسوية لأنها مُسوّاة تلقائياً (لا يوجد مبلغ يُطالب به الموظف).
+## السبب
+تناقض بين حساب المبلغ وفلتر عرض الطلبات:
 
-## بخصوص أمان الموقع وخطأ البناء
-- الموقع المنشور على `ryus.lovable.app` يعمل بشكل طبيعي - لا خطورة على البيانات
-- خطأ `dep-C6uTJdX2.js` هو مشكلة بيئة التطوير (node_modules تالف) وليس مشكلة في الكود
-- الحل: إعادة تثبيت node_modules نظيف (وهذا ما تم سابقاً ويحتاج تكرار في كل build جديد بسبب بيئة sandbox)
+| المكان | المنطق |
+|--------|--------|
+| **حساب المبلغ** (سطر 907) | `isPendingStatus()` = يشمل `pending` + `invoice_received` + `settlement_requested` |
+| **فلتر الطلبات** (سطر 622-626) | يشترط `status === 'pending'` فقط + `employee_profit > 0` + `receipt_received === true` |
 
-## التعديلات المطلوبة
+المبلغ 7,000 على الأرجح يأتي من طلبات بحالة `invoice_received` أو `settlement_requested`، لكن الفلتر يبحث فقط عن حالة `pending` الصرفة.
 
-### ملف واحد: `src/pages/EmployeeFollowUpPage.jsx`
+## الحل
+توحيد المنطق: عند الضغط على كارت "مستحقات معلقة"، يجب أن يعرض **نفس الطلبات** التي حُسب منها المبلغ.
 
-**تعديل 1 - السطر 571-575**: بدلاً من استبعاد طلبات الربح الصفري بالكامل، نسمح لها بالمرور ونتركها تُفلتر لاحقاً بواسطة منطق الأرشيف:
+### تعديل واحد في `src/pages/EmployeeFollowUpPage.jsx`
+
+**سطر 622-627** - توسيع فلتر `pending` ليطابق `isPendingStatus`:
 ```javascript
 // قبل:
-if (profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled') {
-  return false;
+} else if (filters.profitStatus === 'pending') {
+  profitStatusMatch = profitRecord?.status === 'pending' && 
+                     profitRecord?.employee_profit > 0 &&
+                     order.receipt_received === true;
 }
 
 // بعد:
-// طلبات الربح الصفري تظهر فقط في أرشيف التسوية
-const isZeroProfitSettled = profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled';
-if (isZeroProfitSettled && !showSettlementArchive) {
-  return false;
+} else if (filters.profitStatus === 'pending') {
+  profitStatusMatch = isPendingStatus(profitRecord?.status) && 
+                     profitRecord?.employee_profit > 0 &&
+                     order.receipt_received === true;
 }
 ```
 
-**تعديل 2 - السطر 637-638**: أرشيف التسوية يعرض أيضاً طلبات الربح الصفري:
-```javascript
-// قبل:
-if (showSettlementArchive) {
-  archiveMatch = isSettled;
-
-// بعد:
-const isZeroProfitArchived = profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled';
-if (showSettlementArchive) {
-  archiveMatch = isSettled || isZeroProfitArchived;
-```
-
-**تعديل 3 - السطر 947**: عدّاد أرشيف التسوية يحسب أيضاً طلبات الربح الصفري:
-```javascript
-// قبل:
-return employeeMatch && profitRecord?.status === 'settled';
-
-// بعد:
-return employeeMatch && (profitRecord?.status === 'settled' || profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled');
-```
-
-## النتيجة المتوقعة
-- كارت "أرشيف التسوية" سيعرض العدد الصحيح (يشمل طلبات الربح الصفري)
-- عند الضغط على الكارت، تظهر الطلبات المدفوعة + طلبات الربح الصفري معاً
-- الطلبات ذات الربح الصفري لن تظهر في الطلبات العادية أو المستحقات المعلقة
+## النتيجة
+- المبلغ في الكارت والطلبات المعروضة ستكون من نفس المصدر
+- الطلبات ذات حالة `invoice_received` و `settlement_requested` ستظهر أيضاً عند الضغط على الكارت
 
