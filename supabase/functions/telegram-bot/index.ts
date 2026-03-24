@@ -1047,16 +1047,12 @@ async function getProductButtons(employeeId: string): Promise<any> {
       return null;
     }
 
-    // أخذ أول 8 منتجات
-    const products = Array.from(uniqueProducts.values()).slice(0, 8);
+    // عرض جميع المنتجات (حد أقصى 50)
+    const products = Array.from(uniqueProducts.values()).slice(0, 50);
     const buttons = products.map((p: any) => [{
       text: `🛍️ ${p.name}`,
       callback_data: `select_product_${p.id}`
     }]);
-
-    if (uniqueProducts.size > 8) {
-      buttons.push([{ text: '⬇️ المزيد...', callback_data: 'more_products' }]);
-    }
 
     console.log('🔘 Buttons created:', buttons.length);
     return { inline_keyboard: buttons };
