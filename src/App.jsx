@@ -224,6 +224,7 @@ function AppContent() {
           <Route path="/profits-summary" element={<ProtectedRoute permission="view_own_profits">{childrenWithProps(ProfitsSummaryPage)}</ProtectedRoute>} />
           
           <Route path="/accounting" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(AccountingPage)}</ProtectedRoute>} />
+          <Route path="/employee-financial-center" element={<ProtectedRoute>{childrenWithProps(EmployeeFinancialCenterPage)}</ProtectedRoute>} />
           <Route path="/cash-management" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(CashManagementPage)}</ProtectedRoute>} />
           <Route path="/manage-employees" element={<ProtectedRoute permission="manage_employees">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
           <Route path="/qr-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(QRLabelsPage)}</ProtectedRoute>} />
