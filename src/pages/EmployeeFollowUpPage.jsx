@@ -568,9 +568,10 @@ const filteredOrders = useMemo(() => {
     // فلتر الفترة الزمنية
     if (!filterByTimePeriod(order)) return false;
 
-    // ✅ استبعاد الطلبات المؤرشفة تلقائياً (بدون قاعدة ربح) - لا تظهر في إجمالي الطلبات
+    // ✅ طلبات الربح الصفري تظهر فقط في أرشيف التسوية
     const profitRecord = profits?.find(p => p.order_id === order.id);
-    if (profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled') {
+    const isZeroProfitSettled = profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled';
+    if (isZeroProfitSettled && !showSettlementArchive) {
       return false;
     }
 
@@ -633,9 +634,10 @@ const filteredOrders = useMemo(() => {
     // ✅ طلبات "تم طلب التحاسب" تظهر دائماً للمدير حتى لو مؤرشفة
     const isAwaitingSettlement = profitRecord?.status === 'settlement_requested';
 
+    const isZeroProfitArchived = profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled';
     let archiveMatch;
     if (showSettlementArchive) {
-      archiveMatch = isSettled;
+      archiveMatch = isSettled || isZeroProfitArchived;
     } else if (filters.archived) {
       archiveMatch = isManuallyArchived;
     } else {
@@ -944,7 +946,7 @@ useEffect(() => {
       
       // الطلبات المكتملة والمدفوعة مستحقاتها (التي لها سجل في profits مع status = 'settled')
       const profitRecord = profits?.find(p => p.order_id === o.id);
-      return employeeMatch && profitRecord?.status === 'settled';
+      return employeeMatch && (profitRecord?.status === 'settled' || profitRecord?.status === 'no_rule_archived' || profitRecord?.status === 'no_rule_settled');
     }).length;
 
     // ✅ عدد طلبات التحاسب المعلقة - من settlementRequests مباشرة (نفس مصدر النافذة)
