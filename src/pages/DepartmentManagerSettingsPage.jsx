@@ -311,7 +311,7 @@ const DepartmentManagerSettingsPage = () => {
                     <Plus className="w-4 h-4" />
                     إضافة قاعدة ربح جديدة
                   </h4>
-                  <div className="grid gap-4 md:grid-cols-4">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                     <div>
                       <Label>الموظف</Label>
                       <Select 
