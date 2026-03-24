@@ -69,7 +69,7 @@ export async function getPendingOperations() {
     const index = store.index('synced');
 
     return new Promise((resolve, reject) => {
-      const request = index.getAll(false); // غير المزامنة فقط
+      const request = index.getAll(IDBKeyRange.only(0));
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
