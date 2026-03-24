@@ -1456,6 +1456,9 @@ export const SuperProvider = ({ children }) => {
           description: expense.description || '',
           expense_type: expense.expense_type || 'operational',
           created_by: userId,
+          status: 'approved',
+          approved_by: userId,
+          approved_at: new Date().toISOString(),
           vendor_name: expense.vendor_name || null,
           receipt_number: expense.receipt_number || null,
           metadata: expense.metadata || null
