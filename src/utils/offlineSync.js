@@ -40,7 +40,7 @@ export async function savePendingOperation(operation) {
     const data = {
       ...operation,
       timestamp: Date.now(),
-      synced: false,
+      synced: 0,
       retries: 0
     };
 
