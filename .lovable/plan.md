@@ -1,129 +1,79 @@
 
 
-# إصلاح: المصاريف العامة لا تُسجّل حركة صرف
+# إصلاح المصاريف العامة + المركز المالي للموظف
 
-## السبب الجذري
+## المرحلة 0: إصلاح المصاريف (المشكلة الحالية)
 
-عمود `status` في جدول `expenses` قيمته الافتراضية `'pending'`. لكن الـ trigger الذي يُنشئ حركة النقد يشترط `status = 'approved'`:
+### المشكلة
+الكود يرسل `status: 'approved'` لكن قاعدة البيانات تحفظ `pending`. الـ trigger يشترط `approved` لإنشاء حركة نقد. النتيجة: لا حركة نقد.
 
+### السبب المحتمل
+البناء لم يُطبق على المعاينة، أو المتصفح يخدّم نسخة قديمة. بدلاً من الاعتماد على الكود، الحل المضمون:
+
+### الإصلاح: BEFORE INSERT trigger
 ```sql
-IF TG_OP = 'INSERT' AND NEW.status = 'approved' ...  -- ← لا ينطبق لأن status = 'pending'
+CREATE FUNCTION auto_approve_operational_expense()
+RETURNS trigger AS $$
+BEGIN
+  IF NEW.expense_type != 'system' AND NEW.category != 'مستحقات الموظفين' THEN
+    NEW.status := 'approved';
+    NEW.approved_at := COALESCE(NEW.approved_at, now());
+    NEW.approved_by := COALESCE(NEW.approved_by, NEW.created_by);
+  END IF;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 ```
 
-دالة `addExpense` في `SuperProvider.jsx` **لا ترسل `status`** → فيبقى `pending` → الـ trigger يتجاهله → لا حركة نقد.
+هذا يضمن أن أي مصروف تشغيلي يصبح `approved` تلقائياً قبل أن يصل للـ AFTER trigger الذي يُنشئ حركة النقد. الحذف يُنشئ حركة عكسية تلقائياً (موجود ويعمل).
 
-بالإضافة: `ExpensesDialog.jsx` ما زال يحتوي على `window.location.reload()` الذي قد يقطع العملية.
+**ملف واحد**: Migration SQL فقط. لا تعديل على الكود.
 
-## الإصلاح (ملفان فقط)
+---
 
-### 1. `src/contexts/SuperProvider.jsx` (سطر ~1457)
+## المرحلة 1: المركز المالي للموظف
 
-إضافة `status: 'approved'` في الـ insert:
+### المفهوم
+نسخة من المركز المالي الحالي (AccountingPage) لكنها مخصصة لموظف معين. الموظف الذي له مركز مالي يعمل ككيان مالي مستقل:
 
-```javascript
-.insert({
-  amount: Number(expense.amount),
-  category: expense.category || 'عام',
-  description: expense.description || '',
-  expense_type: expense.expense_type || 'operational',
-  created_by: userId,
-  status: 'approved',           // ← إضافة هذا السطر
-  approved_by: userId,          // ← الموافق هو نفس المُنشئ
-  approved_at: new Date().toISOString(),
-  vendor_name: expense.vendor_name || null,
-  receipt_number: expense.receipt_number || null,
-  metadata: expense.metadata || null
-})
+```text
+المركز المالي للمدير العام          المركز المالي للموظف (سارة)
+─────────────────────────          ──────────────────────────────
+• كل إيرادات النظام                 • إيرادات طلبات سارة فقط
+• كل المصاريف العامة                • مصاريف سارة فقط
+• كل المشتريات                      • مشتريات سارة فقط
+• مستحقات كل الموظفين               • مستحقات موظفي سارة (تحت إشرافها)
+• رصيد القاصة الرئيسية              • رصيد قاصة سارة
+• تقرير أرباح وخسائر النظام         • تقرير أرباح وخسائر سارة
 ```
 
-**النتيجة**: الـ trigger يكتشف `status = 'approved'` ويُنشئ حركة صرف من القاصة الرئيسية تلقائياً.
+### التعديلات المطلوبة
 
-### 2. `src/components/accounting/ExpensesDialog.jsx` (سطر 96-99)
+**قاعدة البيانات (Migration)**:
+1. إضافة `has_financial_center BOOLEAN DEFAULT false` لجدول `profiles`
+2. إضافة `owner_user_id UUID` لجدول `cash_sources` (لربط القاصة بالموظف)
+3. تعديل trigger الإيرادات: عند استلام فاتورة لطلب أنشأه موظف له مركز مالي → الإيراد يدخل قاصته بدل الرئيسية
+4. RLS policy على `expenses` للسماح للموظف بإدارة مصاريفه
 
-حذف `window.location.reload()`:
+**الكود**:
 
-```javascript
-// حذف هذا الكود بالكامل:
-// if (typeof window !== 'undefined') {
-//   window.location.reload();
-// }
-```
+| الملف | التعديل |
+|-------|---------|
+| `src/pages/EmployeeFinancialCenterPage.jsx` | صفحة جديدة — نسخة مبسطة من AccountingPage مع فلترة بـ `user.id` |
+| `src/components/Layout.jsx` | إضافة رابط "المركز المالي" للموظف الذي لديه `has_financial_center` |
+| `src/contexts/SuperProvider.jsx` | تعديل `addExpense` لتحديد القاصة (الرئيسية أو الخاصة) حسب المستخدم |
+| `src/pages/AccountingPage.jsx` | إضافة قسم لتفعيل/تعطيل المركز المالي لموظف |
 
-## بخصوص صلاحية المصاريف لسار
+### آلية العمل
 
-<lov-plan>
+1. **المدير يفعّل المركز المالي لسارة** → ينشئ قاصة خاصة "قاصة سارة أحمد"
+2. **سارة تبيع منتج** → عند استلام الفاتورة: الإيراد (سعر البيع - رسوم التوصيل) يدخل قاصة سارة، التكلفة تُرجع للنظام
+3. **سارة تضيف مصروف** → يُخصم من قاصتها
+4. **سارة تشتري منتج** → يُخصم من قاصتها (يمكن بالسالب = دين)
+5. **موظف تحت إشراف سارة يبيع منتج من منتجاتها** → الربح يدخل قاصة سارة
+6. **المدير يصفّر** → ينقل الرصيد أو يصفره
 
-# إصلاح: المصاريف العامة لا تُسجّل حركة صرف + صلاحية مصاريف للموظف
-
-## السبب الجذري للمصاريف
-
-عمود `status` في جدول `expenses` قيمته الافتراضية `'pending'`. لكن الـ trigger الذي يُنشئ حركة النقد يشترط `status = 'approved'`:
-
-```sql
-IF TG_OP = 'INSERT' AND NEW.status = 'approved' ...  -- لا ينطبق لأن status = pending
-```
-
-دالة `addExpense` في `SuperProvider.jsx` **لا ترسل `status`** → يبقى `pending` → الـ trigger يتجاهله → لا حركة نقد ولا تظهر كمصروف فعلي.
-
-بالإضافة: `ExpensesDialog.jsx` ما زال يحتوي على `window.location.reload()` الذي يقطع العملية.
-
-## الإصلاح
-
-### 1. `src/contexts/SuperProvider.jsx` (سطر ~1453)
-
-إضافة `status: 'approved'` في الـ insert:
-
-```javascript
-.insert({
-  amount: Number(expense.amount),
-  category: expense.category || 'عام',
-  description: expense.description || '',
-  expense_type: expense.expense_type || 'operational',
-  created_by: userId,
-  status: 'approved',
-  approved_by: userId,
-  approved_at: new Date().toISOString(),
-  vendor_name: expense.vendor_name || null,
-  receipt_number: expense.receipt_number || null,
-  metadata: expense.metadata || null
-})
-```
-
-**النتيجة**: الـ trigger يكتشف `status = 'approved'` ويُنشئ حركة صرف من القاصة الرئيسية تلقائياً — كما كان يعمل سابقاً.
-
-### 2. `src/components/accounting/ExpensesDialog.jsx` (سطر 96-99)
-
-حذف `window.location.reload()` بالكامل — لأن `addExpense` يحدّث البيانات عبر `invalidate + fetchAllData`.
-
-### 3. `src/components/shared/UnifiedProfitCalculator.jsx` (سطر ~81)
-
-تغيير `e.transaction_date` إلى `e.created_at` لأن عمود `transaction_date` غير موجود في الجدول:
-
-```javascript
-const expensesInRange = safeExpenses.filter(e => filterByDate(e.created_at));
-```
-
-## بخصوص صلاحية مصاريف لسارة
-
-هذا مرتبط بميزة "المركز المالي للموظف" — حيث سارة (بقاعدة كامل الربح) تحتاج أن تُسجّل مصاريفها الخاصة من أرباحها. هذه ميزة منفصلة تحتاج تصميم خاص — أقترح تنفيذها بعد التأكد من أن المصاريف العامة تعمل بشكل صحيح أولاً. هل توافق؟
-
-## الملفات المتأثرة
-
-| الملف | التعديل | المخاطر |
-|-------|---------|---------|
-| `SuperProvider.jsx` | إضافة `status: 'approved'` + `approved_by` + `approved_at` | صفر |
-| `ExpensesDialog.jsx` | حذف `window.location.reload()` | صفر |
-| `UnifiedProfitCalculator.jsx` | `transaction_date` → `created_at` | صفر |
-
-## ما لن يتغير
-- الـ trigger الحالي — صحيح ويعمل ✅
-- القاصة الرئيسية — لا تتأثر ✅
-- قواعد الأرباح — لا تتأثر ✅
-- بوت التليغرام — لا يتأثر ✅
-
-## النتيجة
-1. المصروف يُحفظ بحالة `approved` مباشرة
-2. الـ trigger يُنشئ حركة صرف تلقائياً من القاصة الرئيسية
-3. المصروف يظهر في نافذة المصاريف العامة وفي التقارير المالية
-4. لا reload للصفحة — تحديث سلس
+### ترتيب التنفيذ
+- **هذه الجلسة**: المرحلة 0 (إصلاح المصاريف بـ BEFORE trigger)
+- **الجلسة التالية**: المرحلة 1 (البنية التحتية + الصفحة)
 
