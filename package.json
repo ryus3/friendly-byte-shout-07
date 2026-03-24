@@ -16,6 +16,7 @@
     "rollup": "4.46.0"
   },
   "dependencies": {
+    "@babel/generator": "^7.29.1",
     "@babel/traverse": "^7.29.0",
     "@capacitor/android": "^7.4.2",
     "@capacitor/cli": "^7.4.2",
