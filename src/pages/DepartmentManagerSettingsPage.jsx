@@ -356,7 +356,20 @@ const DepartmentManagerSettingsPage = () => {
                         value={newRule.profit_amount}
                         onChange={(e) => setNewRule(prev => ({ ...prev, profit_amount: Number(e.target.value) }))}
                         placeholder="1000"
+                        disabled={newRule.full_profit}
                       />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={newRule.full_profit}
+                          onCheckedChange={(checked) => setNewRule(prev => ({ ...prev, full_profit: checked, profit_amount: checked ? 0 : prev.profit_amount }))}
+                        />
+                        <Label className="text-sm">كامل الربح</Label>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {newRule.full_profit ? 'الموظف يحصل على كامل ربح المنتج (سعر البيع - التكلفة)' : 'مبلغ ثابت لكل وحدة'}
+                      </p>
                     </div>
                     <div className="flex items-end">
                       <Button 
