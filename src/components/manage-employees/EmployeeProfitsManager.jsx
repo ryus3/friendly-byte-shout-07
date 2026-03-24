@@ -11,6 +11,7 @@ import { toast } from '@/components/ui/use-toast';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { DollarSign, Users, TrendingUp, Calculator, Settings, Loader2 } from 'lucide-react';
 import ProfitCalculatorResult from './ProfitCalculatorResult';
 
@@ -338,6 +339,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
   const [targetId, setTargetId] = useState('');
   const [profitAmount, setProfitAmount] = useState('');
   const [profitPercentage, setProfitPercentage] = useState('');
+  const [fullProfit, setFullProfit] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const employeeId = employee?.user_id || employee?.id;
@@ -353,7 +355,7 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
       return;
     }
 
-    if (!profitAmount || parseFloat(profitAmount) <= 0) {
+    if (!fullProfit && (!profitAmount || parseFloat(profitAmount) <= 0)) {
       toast({
         title: "خطأ",
         description: "الرجاء إدخال مبلغ ربح صحيح أكبر من صفر",
@@ -367,19 +369,20 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
       await setEmployeeProfitRule(employeeId, {
         rule_type: ruleType,
         target_id: ruleType === 'default' ? 'default' : targetId,
-        profit_amount: parseFloat(profitAmount),
-        profit_percentage: null,
+        profit_amount: fullProfit ? 0 : parseFloat(profitAmount),
+        profit_percentage: fullProfit ? 100 : null,
         is_active: true
       });
 
       toast({
         title: "تم الحفظ",
-        description: "تم إضافة قاعدة الربح بنجاح"
+        description: fullProfit ? "تم إضافة قاعدة كامل الربح بنجاح" : "تم إضافة قاعدة الربح بنجاح"
       });
 
       // إعادة تعيين النموذج
       setTargetId('');
       setProfitAmount('');
+      setFullProfit(false);
     } catch (error) {
       toast({
         title: "خطأ",
@@ -521,9 +524,27 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                     placeholder="مثال: 5000"
                     min="0"
                     step="1000"
+                    disabled={fullProfit}
                   />
+                  <div className="flex items-center gap-2 mt-2 p-2 rounded-md bg-muted/50">
+                    <Switch
+                      checked={fullProfit}
+                      onCheckedChange={(v) => {
+                        setFullProfit(v);
+                        if (v) setProfitAmount('');
+                      }}
+                    />
+                    <Label className="text-sm cursor-pointer" onClick={() => {
+                      setFullProfit(!fullProfit);
+                      if (!fullProfit) setProfitAmount('');
+                    }}>
+                      كامل الربح (سعر البيع - التكلفة)
+                    </Label>
+                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة
+                    {fullProfit 
+                      ? 'الموظف يحصل على كامل هامش الربح لكل قطعة' 
+                      : 'المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة'}
                   </p>
                 </div>
               </div>
@@ -578,7 +599,9 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                             {rule.rule_type === 'default' ? 'جميع المنتجات' : getTargetName(rule)}
                           </TableCell>
                           <TableCell className="font-semibold text-green-600">
-                            {rule.profit_amount.toLocaleString()} د.ع
+                            {rule.profit_percentage === 100 
+                              ? <Badge variant="success">كامل الربح</Badge>
+                              : `${(rule.profit_amount || 0).toLocaleString()} د.ع`}
                           </TableCell>
                           <TableCell>
                             <Badge variant={rule.is_active ? "default" : "secondary"}>
