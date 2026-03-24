@@ -477,9 +477,6 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label>نوع القاعدة</Label>
                   <Select value={ruleType} onValueChange={setRuleType}>
@@ -526,9 +523,28 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                     placeholder="مثال: 5000"
                     min="0"
                     step="1000"
+                    disabled={fullProfit}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة
+                    {fullProfit ? 'معطّل - الموظف يأخذ كامل الهامش' : 'المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة'}
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-2 justify-center">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      checked={fullProfit}
+                      onCheckedChange={(checked) => {
+                        setFullProfit(checked);
+                        if (checked) setProfitAmount('0');
+                      }}
+                    />
+                    <Label className="text-sm font-semibold">كامل الربح</Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {fullProfit 
+                      ? '✅ الموظف يحصل على كامل ربح المنتج (سعر البيع - التكلفة)' 
+                      : 'مبلغ ثابت لكل وحدة مباعة'}
                   </p>
                 </div>
               </div>
