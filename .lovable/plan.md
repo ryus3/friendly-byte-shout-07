@@ -3,124 +3,134 @@
 
 Do I know what the issue is? نعم.
 
-الانهيار الحالي ليس من كود React ولا من منطق الأرشيف/الأرباح. السبب الحقيقي هو أن بيئة البناء ما زالت غير موحدة بالكامل، ولهذا تظهر أخطاء Vite/Rollup بأشكال مختلفة كل مرة:
+المشكلة رجعت لكن بصيغة مختلفة، وهذا يؤكد أن السبب **ليس من كود التطبيق** ولا من ميزة "كامل الربح". السبب هو أن بيئة التشغيل نفسها تنزلق أحياناً لتستخدم Toolchain من `/dev-server` بدل شجرة المشروع.
 
-- سابقاً: ملف chunk مفقود داخل `project/node_modules/vite/dist/node/chunks/...`
-- حالياً: الخطأ صار من `/dev-server/node_modules/vite/dist/node/cli.js` ويحاول استيراد `/dev-server/node_modules/rollup/dist/es/parseAst.js`
+الآن الخطأ يقول:
 
-وهذا مهم جداً لأنه يعني أن التشغيل لا يعتمد دائماً على نفس نسخة Vite/Rollup الموجودة داخل المشروع.
+```text
+failed to load config from /dev-server/vite.config.js
+Cannot find module './traverseForScope.js'
+Require stack:
+- /dev-server/node_modules/@babel/traverse/...
+```
 
-## ما وجدته فعلاً في المشروع
+هذا مهم جداً لأنه يعني أن dev server لم يعد يعمل من نسخة Vite/Babel المحلية الخاصة بالمشروع، بل من بيئة مشتركة في `/dev-server`، وهذه البيئة نفسها ناقصة/غير متسقة.
 
-1. `package.json` الآن بسيط وصحيح من ناحية السكربتات:
-   - `"dev": "vite"`
-   - `"build": "vite build"`
-   - `"build:dev": "vite build --mode development"`
+## لماذا يحدث هذا؟
 
-2. الإصدارات الحرجة مثبتة exact حالياً:
-   - `vite: "5.4.19"`
-   - `@vitejs/plugin-react: "4.3.4"`
-   - `rollup: "4.46.0"`
+لأن المشروع ما زال يحتوي على مؤشرات عدم حتمية في التثبيت:
 
-3. لكن ما زال يوجد **ملفا lock معاً**:
+1. يوجد **ملفا lock معاً**:
    - `package-lock.json`
    - `bun.lock`
 
-4. و`bun.lock` **قديم وغير متوافق** مع `package.json` الحالي:
-   - ما زال يحتوي `"npm": "^11.5.2"` رغم أنه لم يعد موجوداً في `package.json`
+2. `bun.lock` ما زال **قديم** ويحتوي `npm` كاعتماد:
+   - `"npm": "^11.5.2"`
 
-5. محلياً داخل المشروع ملف Rollup المطلوب **موجود فعلاً**:
-   - `node_modules/rollup/dist/es/parseAst.js`
+3. `package.json` ما زال غير موحد بالكامل:
+   - `vite` ما زال `^5.4.19`
+   - `@vitejs/plugin-react` ما زال `^4.3.4`
+   - `rollup` ما زال `^4.46.0`
+   - لا يوجد `packageManager`
+   - أدوات البناء ما زال جزء منها داخل `dependencies` بدل `devDependencies`
 
-هذا يثبت أن المشكلة ليست “الملف غير موجود في المشروع”، بل أن البيئة أحياناً تشغّل/تركّب سلسلة أدوات مختلفة أو غير متسقة.
+4. هناك drift إضافي في نسخة Node:
+   - `.nvmrc` = `20.19.1`
+   - runtime error يظهر `Node.js v22.21.1`
 
-## السبب الجذري
+إذن الانهيار ليس عشوائياً. هو يحصل عندما تُعاد تهيئة البيئة بطريقة مختلفة، فتُحل بعض الحزم من `/dev-server` بدل المشروع، ثم ينهار Vite أو Babel من ملفات داخلية ناقصة.
+
+## المشكلة الحقيقية باختصار
 
 ```text
-bun.lock + package-lock.json
-        ↓
-اختيار installer / شجرة dependencies بشكل غير حتمي
-        ↓
-مرات يُستخدم Vite/Rollup من بيئة مختلفة (/dev-server)
-أو تُبنى node_modules بشكل ناقص/غير متوافق
-        ↓
-ERR_MODULE_NOT_FOUND
-(dep-C6uTJdX2.js / dep-BK3b2jBa.js / rollup parseAst.js)
+bun.lock + package-lock.json + ranges + no packageManager
+                  ↓
+تثبيت غير حتمي / resolver غير ثابت
+                  ↓
+أحياناً يتم تحميل Vite/Babel من /dev-server
+                  ↓
+ملفات داخلية ناقصة مثل:
+- dep-C6uTJdX2.js
+- dep-BK3b2jBa.js
+- traverseForScope.js
+                  ↓
+انهيار dev/build
 ```
-
-باختصار: المشكلة هي **dependency drift + mixed installers**، وليس مشكلة منطق أعمال.
 
 ## ما سأفعله لحلها جذرياً
 
 ### 1) توحيد مدير الحزم نهائياً
-اعتماد **npm فقط** كمصدر وحيد للحقيقة:
+اعتماد npm فقط:
 - حذف `bun.lock`
 - الإبقاء على `package-lock.json` فقط
-- إضافة `packageManager` داخل `package.json` لتثبيت المسار على npm بشكل صريح
+- إضافة `packageManager` داخل `package.json`
 
-### 2) تنظيف manifest ليكون حتمياً
-في `package.json` سأثبت مسار toolchain بشكل واضح ونهائي:
-- الإبقاء على النسخ exact الحالية
-- نقل أدوات البناء التي لا ينبغي أن تكون runtime إلى `devDependencies` حيث يلزم، خصوصاً:
-  - `@vitejs/plugin-react`
-  - `rollup`
-  - `autoprefixer`
-  - `postcss`
-  - `tailwindcss`
-  - `terser`
-- وعدم إضافة أي runner أو wrapper جديد
+### 2) جعل Toolchain ثابتاً 100%
+في `package.json` سأحوّل الأدوات الحساسة إلى نسخ exact:
+- `vite: "5.4.19"`
+- `@vitejs/plugin-react: "4.3.4"`
+- `rollup: "4.46.0"`
 
-### 3) إعادة توليد lockfile من الصفر
-لأن `bun.lock` و`package-lock.json` حالياً غير متطابقين:
-- إعادة توليد `package-lock.json` من شجرة npm النظيفة فقط
-- التأكد أن lockfile الجديد لا يحمل آثار `npm` القديمة ولا أي تعارض مع Bun
+وسأنقل أدوات البناء إلى `devDependencies` حيث يلزم، خصوصاً:
+- `vite`
+- `@vitejs/plugin-react`
+- `rollup`
+- `postcss`
+- `autoprefixer`
+- `tailwindcss`
+- `terser`
+- `esbuild`
 
-### 4) الحفاظ على نظام البناء الموحّد
-لن ألمس `vite.config.js` إلا إذا ظهر سبب مباشر، لأنه حالياً لا يبدو مصدر الانهيار.
-ولن أضيف:
-- `run-vite.mjs`
-- `vite-start.js`
-- أي patch script
-- أي تشغيل عبر `npx vite` من خارج المشروع
+### 3) إزالة أي مصدر drift واضح
+- التأكد أن `npm` ليس dependency للمشروع
+- إبقاء scripts قياسية فقط:
+  - `dev: vite`
+  - `build: vite build`
+  - `build:dev: vite build --mode development`
 
-### 5) حماية التعديلات التجارية الموجودة
-لن أغير منطق الأعمال الحالي لأنه موجود فعلاً في السورس:
-- `EmployeeFollowUpPage.jsx`: أرشيف التسوية يشمل `no_rule_archived` و`no_rule_settled`
-- `ProfitsSummaryPage.jsx`: استبعاد أرباح 0 من “غير مدفوع”
-- `DepartmentManagerSettingsPage.jsx`: خيار `كامل الربح`
-- `SuperProvider.jsx`: حساب `profit_percentage === 100`
+بدون wrappers أو runners.
 
-الهدف هو **تثبيت البيئة فقط** لكي تُبنى هذه التعديلات وتظهر فعلياً.
+### 4) تثبيت مسار Node بشكل أوضح
+لن أغير البنية، لكن سأضيف `engines` في `package.json` أو أوحّدها مع `.nvmrc` حتى لا يبقى المشروع معلّقاً بين Node 20 و Node 22.
+
+### 5) عدم لمس `vite.config.js` إلا للضرورة
+لا يوجد حتى الآن دليل أن `vite.config.js` نفسه هو سبب المشكلة. الخطأ الحالي سببه تحميل Vite/Babel من مكان خارجي مكسور، لا من config التطبيق.
 
 ## الملفات التي سأعدلها
 
 - `package.json`
-- `package-lock.json`
+- `package-lock.json` (إعادة توليد)
 - حذف `bun.lock`
+- وقد أضيف `engines` أو أضبط `.nvmrc` فقط إذا احتجنا تثبيت مسار Node
 
-وقد أعدل فقط إن لزم:
-- `.nvmrc` أو `engines` في `package.json` إذا احتجنا تثبيت مسار Node أيضاً، لكن هذا ثانوي وليس أول خطوة
+## ما الذي لن أفعله
+لن أضيف أي ترقيع مثل:
+- `run-vite.mjs`
+- `vite-start.js`
+- `npx vite` كحل دائم
+- scripts التفافية
+- تعديلات عشوائية على Babel أو Vite internals
 
-## التحقق بعد التنفيذ
+## كيف سأتأكد أن الحل فعلاً جذري
 
-سأعتبر الحل ناجحاً فقط إذا تحقق كله:
+لن أعتبر الحل ناجحاً إلا إذا تحقق كله:
 
-1. `vite build --mode development` ينجح
-2. `vite --port 8080` ينجح بدون خطأ `/dev-server/node_modules/rollup/dist/es/parseAst.js`
-3. لا يظهر خطأ:
+1. `vite --port 8080` يعمل بدون أن يحاول القراءة من `/dev-server/node_modules/...`
+2. `vite build --mode development` ينجح
+3. لا يظهر أي من الأخطاء:
    - `dep-C6uTJdX2.js`
    - `dep-BK3b2jBa.js`
+   - `traverseForScope.js`
    - `rollup/dist/es/parseAst.js`
-4. تبقى التعديلات الحالية فعالة:
-   - أرشيف التسوية يعرض طلبات الربح الصفري
-   - أرباح 0 لا تظهر كمعلّقة للموظف
-   - ميزة “كامل الربح” تبقى موجودة
-5. لا أستخدم أي ترقيع مؤقت أو wrapper خارج المسار القياسي
+4. تبقى التعديلات التجارية سليمة:
+   - "كامل الربح" يبقى موجوداً
+   - منطق الأرشيف لا يتأثر
+   - لا نكسر التطبيق بحلول مؤقتة
 
 ## النتيجة المتوقعة
 
-- وقف رجوع انهيار البناء كل عدة ساعات أو في sandbox جديد
-- تثبيت Vite/Rollup على شجرة واحدة فقط
-- منع البيئة من الانزلاق إلى install مختلف من `/dev-server`
-- الحفاظ على النظام الحالي بدون ترقيع
-- نشر إصلاحات الأرشيف والأرباح كما هي بدلاً من ضياعها بسبب build unstable
+- منع رجوع انهيار البناء كل مرة
+- تثبيت Vite/Babel/Rollup على شجرة واحدة فقط
+- منع fallback إلى `/dev-server`
+- الحفاظ على النظام بدون ترقيع
+- جعل التعديلات التي تضيفها قابلة للعمل والاستمرار بدل أن تضيع بسبب بيئة بناء غير مستقرة
