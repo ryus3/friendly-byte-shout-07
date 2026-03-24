@@ -1,50 +1,69 @@
 
 
-# إصلاح: عرض قواعد الأرباح بعد الحفظ + جرد التصنيفات في التليغرام
+# إصلاح: المصاريف العامة لا تُحفظ + خطأ بناء Vercel
 
-## المشكلة 1: القاعدة تُحفظ لكن لا تظهر في القائمة
+## الأوضاع الحالية
 
-**السبب**: بعد حفظ القاعدة، الكود يستدعي `fetchAllData()` مباشرة. لكن `fetchAllData` تقرأ من الكاش أولاً (صالح لمدة 30 ثانية). فتُرجع البيانات القديمة بدون القاعدة الجديدة.
+### 1. أرباح سارة (كامل الربح)
+سارة لديها قاعدة "كامل الربح" الآن. عند استلام فاتورة لطلب أنشأته سارة:
+- ربحها = سعر البيع - سعر التكلفة (كامل الهامش)
+- يظهر في صفحة "أرباحي" الخاصة بها
+- يظهر في المركز المالي للموظف عند المدير
+- تكلفة المنتجات تُسترد للنظام (COGS)، الهامش كله لسارة
 
-**الإصلاح**: في `SuperProvider.jsx`، إضافة `superAPI.invalidate('all_data')` قبل `fetchAllData()` داخل دالة `setEmployeeProfitRule`:
+### 2. المصاريف العامة لا تُحفظ - **المشكلة الرئيسية**
+
+**السبب المؤكد**: دالة `addExpense` في `SuperProvider.jsx` (سطر 1444-1460) هي **stub فارغ** - تعرض رسالة نجاح فقط ولا تحفظ شيئاً في قاعدة البيانات:
 
 ```javascript
-// سطر ~2833 الحالي:
-await fetchAllData();
-
-// يصبح:
-superAPI.invalidate('all_data');
-await fetchAllData();
+const addExpense = useCallback(async (expense) => {
+  // TODO: تطبيق في SuperAPI  ← هذا التعليق يؤكد أنها غير مكتملة
+  toast({ title: "تمت إضافة المصروف", ... });
+  return { success: true, data: expense };  // ← لا يحفظ شيئاً!
+}, []);
 ```
 
-**الملف**: `src/contexts/SuperProvider.jsx` - تعديل سطر واحد فقط
+**الإصلاح**: استبدال الـ stub بكود فعلي يحفظ في جدول `expenses`:
 
----
-
-## المشكلة 2: جرد التصنيف يعرض منتج واحد بدل الكل
-
-**السبب المؤكد من قاعدة البيانات**:
-- التصنيفات مرتبطة بالمنتجات عبر جدول وسيط `product_categories`
-- 11 من 13 منتج `category_id = NULL` على جدول `products` مباشرة
-- دالة `smart_inventory_search` تستخدم `LEFT JOIN categories cat ON p.category_id = cat.id`
-- فعند البحث عن "رجالي"، لا تجد إلا المنتجات التي لها `category_id` مباشر (2 فقط)
-
-**نفس المشكلة للمواسم**: الدالة تستخدم `product_seasons_occasions` (صحيح)، لكن التصنيفات تستخدم الطريقة الخاطئة.
-
-**الإصلاح**: Migration لتحديث `smart_inventory_search` لاستخدام `product_categories` بدل `p.category_id`:
-
-```sql
--- بدلاً من:
-LEFT JOIN categories cat ON p.category_id = cat.id
-
--- يصبح:
-LEFT JOIN product_categories pc ON p.id = pc.product_id
-LEFT JOIN categories cat ON pc.category_id = cat.id
+```javascript
+const addExpense = useCallback(async (expense) => {
+  const { data, error } = await supabase
+    .from('expenses')
+    .insert({
+      amount: expense.amount,
+      category: expense.category,
+      description: expense.description,
+      transaction_date: expense.transaction_date || new Date().toISOString(),
+      expense_type: expense.expense_type || 'operational',
+      created_by: user?.id || user?.user_id
+    })
+    .select()
+    .single();
+  
+  if (error) throw error;
+  
+  superAPI.invalidate('all_data');
+  await fetchAllData();
+  
+  toast({ title: "تمت إضافة المصروف", ... });
+  return { success: true, data };
+}, [user]);
 ```
 
-مع تحديث فلترة الصلاحيات أيضاً لاستخدام `pc.category_id` بدل `p.category_id`.
+### 3. خطأ Vercel: `vite: command not found` (exit 127)
 
-**الملف**: Migration SQL جديدة فقط
+**السبب**: في `vercel.json` يوجد:
+```json
+"env": { "NODE_ENV": "production" }
+```
+
+هذا يجعل `npm ci` يتخطى `devDependencies` حيث يوجد `vite`. فعند تشغيل `npm run build` → `vite build`، لا يجد أمر `vite`.
+
+**الإصلاح**: إزالة `env` من `vercel.json` أو تغيير `installCommand` ليتضمن devDependencies:
+
+```json
+"installCommand": "npm ci --legacy-peer-deps --include=dev"
+```
 
 ---
 
@@ -52,19 +71,11 @@ LEFT JOIN categories cat ON pc.category_id = cat.id
 
 | الملف | التعديل | المخاطر |
 |-------|---------|---------|
-| `src/contexts/SuperProvider.jsx` | سطر واحد: invalidate قبل fetchAllData | صفر |
-| Migration SQL | تحديث JOIN في smart_inventory_search | صفر - لا يمس بيانات |
+| `src/contexts/SuperProvider.jsx` | استبدال stub بكود حفظ فعلي (سطر 1444-1460) | صفر - نفس الواجهة |
+| `vercel.json` | إضافة `--include=dev` للـ installCommand | صفر - يصلح البناء فقط |
 
 ## ما لن يتغير
-- `EmployeeProfitsManager.jsx` ✅
-- `telegram-bot/index.ts` ✅
-- القواعد المحفوظة ✅
-- منطق حساب الأرباح ✅
-- حد عرض المنتجات (50) ✅
-
-## النتيجة
-1. قاعدة "كامل الربح" تظهر فوراً بعد الحفظ
-2. جرد "رجالي" يعرض 7 منتجات (كل المنتجات الرجالية)
-3. جرد "نسائي" يعرض 6 منتجات (كل المنتجات النسائية)
-4. جرد الموسم يعمل بنفس الطريقة الصحيحة
+- `ExpensesDialog.jsx` - يعمل بشكل صحيح، المشكلة ليست فيه
+- قواعد الأرباح - تبقى كما هي
+- بوت التليغرام - يبقى كما هو
 
