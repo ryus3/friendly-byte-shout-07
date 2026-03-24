@@ -465,18 +465,51 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
             <DollarSign className="h-5 w-5 text-green-600" />
             قواعد الأرباح - {employee.full_name || employee.username}
           </DialogTitle>
-          <DialogDescription>
-            إدارة قواعد الأرباح بالمبالغ الثابتة (د.ع) - المديرون لا يحصلون على أرباح
-          </DialogDescription>
+           <DialogDescription>
+            يمكنك اختيار مبلغ ثابت أو كامل الربح لكل منتج
+           </DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto space-y-6">
           {/* إضافة قاعدة جديدة */}
           <Card>
             <CardHeader>
-              <CardTitle>إضافة قاعدة ربح جديدة (مبلغ ثابت)</CardTitle>
+              <CardTitle>إضافة قاعدة ربح جديدة</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* خيار كامل الربح - بارز في الأعلى */}
+              <div 
+                className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                  fullProfit 
+                    ? 'border-green-500 bg-green-50 dark:bg-green-950/30' 
+                    : 'border-muted hover:border-muted-foreground/30'
+                }`}
+                onClick={() => {
+                  const next = !fullProfit;
+                  setFullProfit(next);
+                  if (next) setProfitAmount('');
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={fullProfit}
+                    onCheckedChange={(v) => {
+                      setFullProfit(v);
+                      if (v) setProfitAmount('');
+                    }}
+                  />
+                  <div>
+                    <p className="font-semibold text-sm sm:text-base">كامل الربح</p>
+                    <p className="text-xs text-muted-foreground">
+                      الموظف يحصل على كامل هامش الربح (سعر البيع - التكلفة) لكل قطعة
+                    </p>
+                  </div>
+                </div>
+                {fullProfit && (
+                  <Badge className="bg-green-500 text-white shrink-0">مُفعّل</Badge>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <Label>نوع القاعدة</Label>
@@ -516,34 +549,22 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                 </div>
 
                 <div>
-                  <Label>مبلغ الربح الثابت (د.ع)</Label>
+                  <Label className={fullProfit ? 'text-muted-foreground' : ''}>
+                    مبلغ الربح الثابت (د.ع)
+                  </Label>
                   <Input
                     type="number"
                     value={profitAmount}
                     onChange={(e) => setProfitAmount(e.target.value)}
-                    placeholder="مثال: 5000"
+                    placeholder={fullProfit ? 'غير مطلوب - كامل الربح مُفعّل' : 'مثال: 5000'}
                     min="0"
                     step="1000"
                     disabled={fullProfit}
+                    className={fullProfit ? 'opacity-50' : ''}
                   />
-                  <div className="flex items-center gap-2 mt-2 p-2 rounded-md bg-muted/50">
-                    <Switch
-                      checked={fullProfit}
-                      onCheckedChange={(v) => {
-                        setFullProfit(v);
-                        if (v) setProfitAmount('');
-                      }}
-                    />
-                    <Label className="text-sm cursor-pointer" onClick={() => {
-                      setFullProfit(!fullProfit);
-                      if (!fullProfit) setProfitAmount('');
-                    }}>
-                      كامل الربح (سعر البيع - التكلفة)
-                    </Label>
-                  </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {fullProfit 
-                      ? 'الموظف يحصل على كامل هامش الربح لكل قطعة' 
+                      ? '✅ سيتم حساب الربح تلقائياً من هامش المنتج' 
                       : 'المبلغ الذي يحصل عليه الموظف لكل قطعة مباعة'}
                   </p>
                 </div>
