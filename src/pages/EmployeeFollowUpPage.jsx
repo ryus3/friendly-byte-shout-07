@@ -620,8 +620,8 @@ const filteredOrders = useMemo(() => {
       } else if (filters.profitStatus === 'invoice_received') {
         profitStatusMatch = profitRecord?.status === 'invoice_received';
       } else if (filters.profitStatus === 'pending') {
-        // ✅ مستحقات معلقة: فقط الطلبات التي فيها ربح للموظف > 0
-        profitStatusMatch = profitRecord?.status === 'pending' && 
+        // ✅ مستحقات معلقة: يشمل pending + invoice_received + settlement_requested
+        profitStatusMatch = isPendingStatus(profitRecord?.status) && 
                            profitRecord?.employee_profit > 0 &&
                            order.receipt_received === true;
       }
