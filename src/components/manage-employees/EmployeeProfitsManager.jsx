@@ -599,7 +599,9 @@ const EmployeeProfitRuleDialog = ({ open, onOpenChange, employee }) => {
                             {rule.rule_type === 'default' ? 'جميع المنتجات' : getTargetName(rule)}
                           </TableCell>
                           <TableCell className="font-semibold text-green-600">
-                            {rule.profit_amount.toLocaleString()} د.ع
+                            {rule.profit_percentage === 100 
+                              ? <Badge variant="success">كامل الربح</Badge>
+                              : `${(rule.profit_amount || 0).toLocaleString()} د.ع`}
                           </TableCell>
                           <TableCell>
                             <Badge variant={rule.is_active ? "default" : "secondary"}>
