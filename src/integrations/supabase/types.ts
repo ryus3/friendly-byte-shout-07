@@ -8054,6 +8054,7 @@ export type Database = {
         Returns: undefined
       }
       manage_background_sync_cron: { Args: never; Returns: undefined }
+      manage_token_renewal_cron: { Args: never; Returns: undefined }
       mark_invoice_orders_synced: {
         Args: { p_external_id: string; p_partner?: string }
         Returns: boolean
