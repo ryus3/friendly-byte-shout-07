@@ -29,12 +29,29 @@ import { startOfDay, endOfDay, startOfMonth, endOfMonth, startOfYear, endOfYear,
  * تحليل شامل لكل النظام مع دعم فلتر الموظف والتحميل الفوري
  */
 const AdvancedProfitsAnalysisPage = () => {
+  const [searchParams] = useSearchParams();
+  const employeeFromUrl = searchParams.get('employee');
+
   const [dateRange, setDateRange] = useState({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date())
   });
   
   const [filters, setFilters] = useState(() => {
+    // If employee param in URL, force that filter and ignore localStorage
+    if (employeeFromUrl) {
+      return {
+        period: 'all',
+        department: 'all',
+        category: 'all',
+        productType: 'all',
+        season: 'all',
+        color: 'all',
+        size: 'all',
+        product: 'all',
+        employee: employeeFromUrl
+      };
+    }
     const savedFilters = localStorage.getItem('profitsAnalysisFilters');
     const defaultFilters = {
       period: 'all',
@@ -45,7 +62,7 @@ const AdvancedProfitsAnalysisPage = () => {
       color: 'all',
       size: 'all',
       product: 'all',
-      employee: 'all' // ⭐ فلتر الموظف الجديد
+      employee: 'all'
     };
     
     return savedFilters ? { ...defaultFilters, ...JSON.parse(savedFilters) } : defaultFilters;
