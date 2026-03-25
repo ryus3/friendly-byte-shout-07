@@ -357,7 +357,7 @@ const EmployeeFinancialCenterPage = () => {
       icon: PieChart,
       colors: ['violet-500', 'purple-500'],
       format: 'text',
-      onClick: () => navigate('/advanced-profits-analysis')
+      onClick: () => navigate(`/advanced-profits-analysis?employee=${userId}`)
     },
     { key: 'generalExpenses', title: "المصاريف العامة", value: financialStats.generalExpenses, icon: TrendingDown, colors: ['red-500', 'orange-500'], format: 'currency', onClick: () => setDialogs(d => ({ ...d, expenses: true })) },
   ];

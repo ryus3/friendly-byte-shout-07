@@ -123,14 +123,15 @@ Deno.serve(async (req) => {
     const now = new Date();
     const renewalThreshold = new Date(now.getTime() + renewalWindowHours * 60 * 60 * 1000);
 
+    // Fetch tokens that need renewal:
+    // - Expiring within 24 hours OR already expired (self-healing after missed runs)
     const { data: tokens, error: fetchError } = await supabase
       .from('delivery_partner_tokens')
       .select('id, partner_name, token, expires_at, partner_data, account_username, user_id')
       .eq('is_active', true)
       .eq('auto_renew_enabled', true)
       .in('partner_name', ['alwaseet', 'modon'])
-      .gte('expires_at', now.toISOString()) // Not expired yet
-      .lte('expires_at', renewalThreshold.toISOString()); // Expires within 24 hours
+      .lte('expires_at', renewalThreshold.toISOString()); // Expiring soon OR already expired
 
     if (fetchError) {
       console.error('Error fetching tokens:', fetchError);
