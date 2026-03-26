@@ -51,6 +51,8 @@ const SidebarContent = ({ onClose, isMobile }) => {
     { path: '/customers-management', icon: Heart, label: 'إدارة العملاء', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], requiresCustomerAccess: true, color: 'text-rose-500' },
     { path: '/inventory', icon: Warehouse, label: 'الجرد التفصيلي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee'], color: 'text-pink-500' },
     { path: '/purchases', icon: ShoppingBag, label: 'المشتريات', roles: ['super_admin', 'admin'], color: 'text-blue-500' },
+    { path: '/employee-purchases', icon: ShoppingBag, label: 'مشترياتي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee'], requiresFinancialCenter: true, color: 'text-blue-400' },
+    { path: '/employee-products', icon: PackagePlus, label: 'منتجاتي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee'], requiresFinancialCenter: true, color: 'text-cyan-400' },
     { path: '/accounting', icon: DollarSign, label: 'المركز المالي', roles: ['super_admin', 'admin'], color: 'text-indigo-500' },
     { path: '/employee-financial-center', icon: Wallet, label: 'مركزي المالي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee'], requiresFinancialCenter: true, color: 'text-indigo-400' },
     { path: '/notifications', icon: Bell, label: 'الإشعارات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-red-500' },

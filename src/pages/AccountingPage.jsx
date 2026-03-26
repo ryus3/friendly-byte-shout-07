@@ -301,6 +301,9 @@ const AccountingPage = () => {
         return accounting.expenses.filter(expense => {
             if (!filterByDate(expense.created_at)) return false;
             if (expense.expense_type === 'system') return false;
+            // استثناء مصاريف الموظفين أصحاب المراكز المالية
+            const financialCenterUserIds = allUsers?.filter(u => u.has_financial_center).map(u => u.user_id || u.id) || [];
+            if (financialCenterUserIds.includes(expense.created_by)) return false;
             if (
                 expense.category === 'مستحقات الموظفين' ||
                 expense.related_data?.category === 'مستحقات الموظفين' ||

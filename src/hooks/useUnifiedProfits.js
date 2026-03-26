@@ -177,7 +177,8 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = []
 
       const systemProfit = managerTotalProfit + employeeSystemProfit;
 
-      // المصاريف العامة
+      // المصاريف العامة - مع استثناء مصاريف أصحاب المراكز المالية
+      const financialCenterUserIds = allUsers?.filter(u => u.has_financial_center).map(u => u.user_id || u.id) || [];
       const generalExpenses = expensesInRange.filter(e => {
         const isSystem = e.expense_type === 'system';
         const isEmployeeDue = (
@@ -192,6 +193,8 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = []
         if (isSystem) return false;
         if (isEmployeeDue) return false;
         if (isPurchaseRelated) return false;
+        // استثناء مصاريف الموظفين أصحاب المراكز المالية
+        if (financialCenterUserIds.includes(e.created_by)) return false;
         return true;
       }).reduce((sum, e) => sum + (e.amount || 0), 0);
 
