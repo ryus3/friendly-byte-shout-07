@@ -217,6 +217,11 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           
           if (!product) continue;
 
+          // ⭐ فلتر الموظف: فلترة بمالك المنتج (created_by) وليس من أنشأ الطلب
+          if (filters?.employee && filters.employee !== 'all') {
+            if (product.created_by !== filters.employee) continue;
+          }
+
           // تطبيق الفلاتر
           let shouldInclude = true;
 
