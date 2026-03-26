@@ -188,9 +188,9 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
         });
       }
 
-      // ⭐ فلتر الموظف - تحليل كل النظام أو موظف معين
+      // ⭐ فلتر الموظف - فلترة بمنتجات الموظف (المملوكة له) وليس فقط من أنشأ الطلب
       if (filters?.employee && filters.employee !== 'all') {
-        filteredOrders = filteredOrders.filter(order => order.created_by === filters.employee);
+        // بدلاً من فلترة الطلبات، نفلتر العناصر لاحقاً حسب مالك المنتج
       }
 
       let totalRevenue = 0;
