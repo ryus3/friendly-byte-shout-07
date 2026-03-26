@@ -62,6 +62,9 @@ const ManageEmployeesPage = lazy(() => import('@/pages/ManageEmployeesPage.jsx')
 const QRLabelsPage = lazy(() => import('@/pages/QRLabelsPage.jsx'));
 const AdvancedProfitsAnalysisPage = lazy(() => import('@/pages/AdvancedProfitsAnalysisPage.jsx'));
 const EmployeeFinancialCenterPage = lazy(() => import('@/pages/EmployeeFinancialCenterPage.jsx'));
+const EmployeeCashManagementPage = lazy(() => import('@/pages/EmployeeCashManagementPage.jsx'));
+const EmployeePurchasesPage = lazy(() => import('@/pages/EmployeePurchasesPage.jsx'));
+const EmployeeProductsPage = lazy(() => import('@/pages/EmployeeProductsPage.jsx'));
 const CustomersManagementPage = lazy(() => import('@/pages/CustomersManagementPage.jsx'));
 const SalesPage = lazy(() => import('@/pages/SalesPage.jsx'));
 const PushNotificationControl = lazy(() => import('@/pages/PushNotificationControl.jsx'));
@@ -225,10 +228,13 @@ function AppContent() {
           
           <Route path="/accounting" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(AccountingPage)}</ProtectedRoute>} />
           <Route path="/employee-financial-center" element={<ProtectedRoute>{childrenWithProps(EmployeeFinancialCenterPage)}</ProtectedRoute>} />
+          <Route path="/employee-cash-management" element={<ProtectedRoute>{childrenWithProps(EmployeeCashManagementPage)}</ProtectedRoute>} />
+          <Route path="/employee-purchases" element={<ProtectedRoute>{childrenWithProps(EmployeePurchasesPage)}</ProtectedRoute>} />
+          <Route path="/employee-products" element={<ProtectedRoute>{childrenWithProps(EmployeeProductsPage)}</ProtectedRoute>} />
           <Route path="/cash-management" element={<ProtectedRoute permission="view_accounting">{childrenWithProps(CashManagementPage)}</ProtectedRoute>} />
           <Route path="/manage-employees" element={<ProtectedRoute permission="manage_employees">{childrenWithProps(ManageEmployeesPage)}</ProtectedRoute>} />
           <Route path="/qr-labels" element={<ProtectedRoute permission="manage_products">{childrenWithProps(QRLabelsPage)}</ProtectedRoute>} />
-          <Route path="/advanced-profits-analysis" element={<ProtectedRoute permission="view_all_profits">{childrenWithProps(AdvancedProfitsAnalysisPage)}</ProtectedRoute>} />
+          <Route path="/advanced-profits-analysis" element={<ProtectedRoute permission={['view_all_profits', 'view_own_profits']}>{childrenWithProps(AdvancedProfitsAnalysisPage)}</ProtectedRoute>} />
           <Route path="/customers-management" element={<ProtectedRoute permission={['view_customers','manage_all_customers']}>{childrenWithProps(CustomersManagementPage)}</ProtectedRoute>} />
           <Route path="/sales" element={<ProtectedRoute permission="view_orders">{childrenWithProps(SalesPage)}</ProtectedRoute>} />
           <Route path="/push-notification-control" element={<ProtectedRoute>{childrenWithProps(PushNotificationControl)}</ProtectedRoute>} />

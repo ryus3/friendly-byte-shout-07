@@ -343,7 +343,7 @@ const EmployeeFinancialCenterPage = () => {
       format: "currency",
       onClick: () => setDialogs(d => ({ ...d, capital: true }))
     },
-    { key: 'cash', title: "رصيد القاصة", value: financialStats.balance, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency" },
+    { key: 'cash', title: "الرصيد النقدي الفعلي", value: financialStats.balance, icon: Wallet, colors: ['sky-500', 'blue-500'], format: "currency", onClick: () => navigate('/employee-cash-management') },
     { key: 'inventory', title: "قيمة المخزون", value: inventoryValue, icon: Box, colors: ['purple-500', 'violet-600'], format: "currency" },
   ];
 

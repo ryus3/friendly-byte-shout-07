@@ -188,9 +188,9 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
         });
       }
 
-      // ⭐ فلتر الموظف - تحليل كل النظام أو موظف معين
+      // ⭐ فلتر الموظف - فلترة بمنتجات الموظف (المملوكة له) وليس فقط من أنشأ الطلب
       if (filters?.employee && filters.employee !== 'all') {
-        filteredOrders = filteredOrders.filter(order => order.created_by === filters.employee);
+        // بدلاً من فلترة الطلبات، نفلتر العناصر لاحقاً حسب مالك المنتج
       }
 
       let totalRevenue = 0;
@@ -216,6 +216,11 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           const variant = item.product_variants;
           
           if (!product) continue;
+
+          // ⭐ فلتر الموظف: فلترة بمالك المنتج (created_by) وليس من أنشأ الطلب
+          if (filters?.employee && filters.employee !== 'all') {
+            if (product.created_by !== filters.employee) continue;
+          }
 
           // تطبيق الفلاتر
           let shouldInclude = true;
