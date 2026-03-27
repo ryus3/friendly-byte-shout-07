@@ -1,97 +1,87 @@
 
 
-# خطة إصلاح المركز المالي للموظف + عزل المصاريف + التحقق من التوكن
+# خطة إصلاح شاملة: المنتجات، المشتريات، القاصة، الإشعارات
 
-## ملخص المشاكل المكتشفة
+## المشاكل المكتشفة
 
-### 1. المركز المالي ناقص مقارنة بالمدير
-- لا يوجد "الرصيد النقدي الفعلي" القابل للنقر (يفتح صفحة إدارة القاصات)
-- لا يوجد عرض تفصيلي للقاصات ومصادر الأموال وحركات النقد الكاملة مثل `CashManagementPage`
-- لا يوجد `CapitalDetailsDialog` و `InventoryValueDialog` للموظف
+### 1. خطأ المشتريات: `null value in column "last_updated_by"`
+في `updateInventory()` بملف `useImprovedPurchases.js` (سطر 467-496)، عند إنشاء سجل مخزون جديد (insert) لا يتم تمرير `last_updated_by`. الحقل مطلوب (NOT NULL) في جدول `inventory`.
 
-### 2. تحليل أرباح المنتجات يعرض منتجات النظام
-- الفلتر `employee=userId` يفلتر حسب `created_by` (من أنشأ الطلب)، لكن المطلوب هو عرض أرباح **منتجات الموظف الخاصة** فقط
-- يجب التمييز بين: منتجات الموظف (يملكها) vs منتجات النظام (يبيعها فقط)
+### 2. المشتريات تعرض كل مصادر النقد
+`AddPurchaseDialog` يستخدم `useCashSources()` الذي يجلب **جميع** القاصات النشطة بدون فلتر. الموظف يرى القاصة الرئيسية وقاصة الأعظمية.
 
-### 3. المصاريف العامة لسارة تظهر في مصاريف النظام
-- الـ trigger `handle_expense_cash_movement` يعمل صحيحاً — المصروف يُخصم من قاصة سارة
-- لكن `AccountingPage` يعرض كل المصاريف بدون استثناء مصاريف الموظفين أصحاب المراكز المالية
-- النتيجة: المصروف يظهر في قائمة مصاريف النظام رغم أنه لا يخصم من النظام
+### 3. صفحة منتجاتي ناقصة مقارنة بالمدير
+- لا يوجد زر "إضافة منتج" يعمل (يوجه إلى `/products/add` العامة)
+- لا يوجد "إدارة المتغيرات"
+- لا يوجد QR/Barcode Scanner
+- لا يوجد طباعة ملصقات
+- لا يوجد تمييز بصري بين منتجات الموظف ومنتجات النظام
+- لا يوجد تحديث الكاش (refresh)
+- لا يوجد خيار إتاحة المنتج للنظام أو للموظفين تحت الإشراف
 
-### 4. المشتريات وإدارة المنتجات غير متاحة للموظف
-- صفحة المشتريات `/purchases` مقيدة بـ `manage_purchases` (admin فقط)
-- إدارة المنتجات مقيدة بـ `manage_products` (admin فقط)
-- الموظف يحتاج نسخة خاصة من كليهما
+### 4. القاصة مصغرة وليست مثل المدير
+`EmployeeCashManagementPage` مبسطة جداً — لا تحتوي على Tabs (مصادر النقد / حركات النقد / التحليلات) ولا CashSourceCard بالتصميم البرتقالي ولا إحصائيات فترية.
 
-### 5. التجديد التلقائي للتوكن — يعمل بالفعل
-- الـ cron job `refresh-delivery-tokens-daily` فعّال ويعمل كل 6 ساعات كـ `postgres`
-- آخر 3 عمليات تشغيل ناجحة: 26/3 الساعة 00:00، 25/3 الساعة 18:00، 25/3 الساعة 12:00
+### 5. إشعارات النظام تظهر لسارة
+`filterNotificationsByUser` يسمح بالإشعارات حيث `user_id === null` لمدراء الأقسام (`isDepartmentManager`). سارة كمديرة قسم ترى إشعارات عامة مثل طلبات التليغرام التي لا تخصها.
+
+### 6. المصاريف مخصومة من رصيد النظام (ليس بحركة نقدية)
+المصروف يظهر في إحصائيات النظام رغم أن الـ trigger يخصمه من قاصة سارة — مشكلة عرض وليست مشكلة مالية حقيقية (تم معالجتها سابقاً في AccountingPage).
 
 ---
 
 ## التنفيذ
 
-### المرحلة 1: إكمال المركز المالي ليطابق المدير
+### المرحلة 1: إصلاح خطأ المشتريات `last_updated_by`
 
-**ملف: `src/pages/EmployeeFinancialCenterPage.jsx`**
-1. تغيير كرت "رصيد القاصة" ليصبح "الرصيد النقدي الفعلي" مع `onClick` يفتح صفحة قاصات مخصصة
-2. إضافة `CapitalDetailsDialog` خاص بالموظف (يعرض رأس المال + المخزون + النقد)
-3. إضافة `InventoryValueDialog` مفلتر بمنتجات الموظف فقط
-4. الصف الأول يصبح: رأس المال الكلي (قابل للنقر) | الرصيد النقدي الفعلي (قابل للنقر → صفحة القاصات) | قيمة المخزون (قابل للنقر)
+**ملف: `src/hooks/useImprovedPurchases.js`** (سطر 486-496)
+- إضافة `last_updated_by: userId` في insert الـ inventory
+- تمرير `userId` إلى `updateInventory` في كل الحالات
 
-**ملف جديد: `src/pages/EmployeeCashManagementPage.jsx`**
-- نسخة من `CashManagementPage` لكن مفلترة بقاصة الموظف فقط
-- تعرض: القاصة الخاصة + حركات النقد + إضافة/سحب + ملخص
-- Route جديد: `/employee-cash-management`
+### المرحلة 2: فلترة مصادر النقد في المشتريات
 
-### المرحلة 2: عزل تحليل أرباح المنتجات
+**ملف: `src/components/purchases/AddPurchaseDialog.jsx`**
+- إضافة prop اختياري `employeeCashSourceId` أو `filterByOwner`
+- عند فتحه من `EmployeePurchasesPage`، يتم تمرير userId للفلترة
+- فلترة `cashSources` لعرض فقط القاصات التي `owner_user_id === userId`
 
-**ملف: `src/hooks/useAdvancedProfitsAnalysis.js`**
-- عند تطبيق فلتر `employee`, بدلاً من فلترة `created_by` فقط، يجب فلترة **المنتجات المملوكة للموظف** (`product.created_by === employeeId`)
-- المنتجات التي أنشأها الموظف = منتجاته الخاصة
-- أرباح منتجات النظام التي باعها الموظف تظهر بشكل منفصل
+**ملف: `src/pages/EmployeePurchasesPage.jsx`**
+- تمرير `employeeUserId={userId}` إلى `AddPurchaseDialog`
 
-**ملف: `src/pages/AdvancedProfitsAnalysisPage.jsx`**
-- إذا `employee` في URL: إخفاء فلتر الموظف من الواجهة (لأنه مقفل)
-- إضافة تقسيم واضح: "منتجاتي" vs "منتجات النظام"
+### المرحلة 3: ترقية صفحة منتجاتي لتطابق المدير
 
-### المرحلة 3: عزل مصاريف الموظف عن النظام
+**ملف: `src/pages/EmployeeProductsPage.jsx`** — إعادة بناء كاملة:
+1. استخدام نفس `ManageProductsToolbar` مع كل الأزرار (إضافة، إدارة المتغيرات، QR، طباعة، عرض شبكة/قائمة)
+2. زر "تحديث الكاش" (`refreshProducts`)
+3. زر "إضافة منتج" يفتح نفس `/products/add` لكن المنتج يُنسب للموظف عبر `created_by`
+4. إدارة المتغيرات تعمل (`/manage-variants`)
+5. تمييز بصري: Badge "منتجي" (أخضر) vs "منتج النظام" (رمادي)
+6. عرض منتجات الموظف + منتجات النظام المتاحة له (مع فلتر تبديل)
+7. خيار "إتاحة للنظام" و"إتاحة لموظفيّ" عبر toggle في كل منتج
+8. دعم Barcode Scanner، طباعة ملصقات، Select All، حذف جماعي
+9. دعم `ManageProductListItem` و `ManageProductCard` بنفس التصميم
 
-**ملف: `src/pages/AccountingPage.jsx`** (سطر 301-314)
-- إضافة فلتر لاستثناء مصاريف الموظفين أصحاب المراكز المالية:
-```js
-// استثناء مصاريف موظفين لديهم مركز مالي
-const financialCenterUserIds = allUsers?.filter(u => u.has_financial_center).map(u => u.user_id) || [];
-if (financialCenterUserIds.includes(expense.created_by)) return false;
-```
-- نفس الفلتر يُطبق على `useUnifiedProfits` لمنع احتساب مصاريف الموظفين في مصاريف النظام
+### المرحلة 4: ترقية القاصة لتطابق المدير حرفياً
 
-**ملف: `src/hooks/useUnifiedProfits.js`**
-- فلترة المصاريف العامة لاستثناء مصاريف من لديهم `has_financial_center = true`
+**ملف: `src/pages/EmployeeCashManagementPage.jsx`** — إعادة بناء كاملة:
+- نسخة مطابقة لـ `CashManagementPage` لكن مفلترة:
+  - `cashSources` مفلترة بـ `owner_user_id === userId`
+  - `cashMovements` مفلترة بنفس القاصات
+- 3 Tabs: مصادر النقد | حركات النقد | التحليلات
+- KPI cards: الرصيد الحالي، داخل اليوم، خارج اليوم، داخل الشهر، خارج الشهر
+- `CashSourceCard` بالتصميم البرتقالي مع آخر الحركات وأزرار إضافة/سحب
+- `CashMovementsList` كاملة مع فلاتر
+- إمكانية إضافة مصدر نقد جديد (`AddCashSourceDialog`)
+- التحليلات الفترية (يوم/أسبوع/شهر)
+- توزيع الأرصدة حسب المصدر
 
-### المرحلة 4: المشتريات وإدارة المنتجات للموظف
+### المرحلة 5: إصلاح الإشعارات
 
-**ملف: `src/components/Layout.jsx`**
-- إضافة رابط "مشترياتي" و "منتجاتي" في القائمة الجانبية للموظف صاحب المركز المالي
-
-**ملف: `src/pages/EmployeePurchasesPage.jsx`** (جديد)
-- نسخة من `PurchasesPage` مفلترة بـ `created_by = userId`
-- المشتريات تُخصم من قاصة الموظف (الـ trigger موجود أصلاً)
-- Route: `/employee-purchases`
-
-**ملف: `src/pages/EmployeeProductsPage.jsx`** (جديد)
-- نسخة من صفحة إدارة المنتجات مفلترة بـ `created_by = userId`
-- إضافة + تعديل + حذف + إخفاء منتجاته فقط
-- تمييز بصري: منتجات الموظف vs منتجات النظام المسموح بالتعامل معها
-- Route: `/employee-products`
-
-**ملف: `src/App.jsx`**
-- إضافة Routes جديدة: `/employee-cash-management`, `/employee-purchases`, `/employee-products`
-
-### المرحلة 5: بوت التليغرام
-
-- عند شراء منتج من قبل الموظف، يُرسل إشعار طبيعي عبر بوت التليغرام كما يحدث مع أي عملية شراء
-- عند توزيع أرباح من بيع منتج الموظف بواسطة موظف تحته، يُرسل إشعار بالتوزيع
+**ملف: `src/hooks/useUnifiedPermissionsSystem.jsx`** (سطر 173-192)
+- الإشعارات حيث `user_id === null` (عامة) تظهر فقط للـ `isAdmin` وليس لمديري الأقسام
+- مديرو الأقسام يرون فقط:
+  - إشعاراتهم الشخصية
+  - إشعارات الموظفين تحت إشرافهم (حسب `employee_supervisors`)
 
 ---
 
@@ -99,17 +89,10 @@ if (financialCenterUserIds.includes(expense.created_by)) return false;
 
 | الملف | التعديل |
 |-------|---------|
-| `EmployeeFinancialCenterPage.jsx` | إكمال ليطابق AccountingPage |
-| `EmployeeCashManagementPage.jsx` | جديد — صفحة قاصات الموظف |
-| `EmployeePurchasesPage.jsx` | جديد — مشتريات الموظف |
-| `EmployeeProductsPage.jsx` | جديد — إدارة منتجات الموظف |
-| `AccountingPage.jsx` | فلترة استثناء مصاريف المراكز المالية |
-| `useUnifiedProfits.js` | فلترة مصاريف المراكز المالية |
-| `useAdvancedProfitsAnalysis.js` | فلترة منتجات الموظف |
-| `AdvancedProfitsAnalysisPage.jsx` | تقسيم منتجاتي/النظام |
-| `Layout.jsx` | روابط جديدة |
-| `App.jsx` | Routes جديدة |
-
-## التحقق من التوكن
-الـ cron job يعمل بنجاح كل 6 ساعات حتى مع إغلاق الموقع. آخر 3 عمليات ناجحة مسجلة. المزامنة التلقائية تعتمد على cron jobs أخرى منفصلة — لا علاقة لها بفتح الموقع.
+| `useImprovedPurchases.js` | إصلاح `last_updated_by` NULL |
+| `AddPurchaseDialog.jsx` | فلترة مصادر النقد بـ owner |
+| `EmployeePurchasesPage.jsx` | تمرير userId للفلترة |
+| `EmployeeProductsPage.jsx` | إعادة بناء كاملة مثل ManageProductsPage |
+| `EmployeeCashManagementPage.jsx` | إعادة بناء كاملة مثل CashManagementPage |
+| `useUnifiedPermissionsSystem.jsx` | تقييد الإشعارات العامة |
 
