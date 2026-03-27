@@ -154,7 +154,7 @@ const EmployeePurchasesPage = () => {
         />
       </div>
 
-      <AddPurchaseDialog open={isAddOpen} onOpenChange={setIsAddOpen} onPurchaseAdded={() => { setIsAddOpen(false); fetchPurchases(); }} />
+      <AddPurchaseDialog open={isAddOpen} onOpenChange={setIsAddOpen} onPurchaseAdded={() => { setIsAddOpen(false); fetchPurchases(); }} filterByOwnerUserId={userId} />
       <PurchaseDetailsDialog purchase={selectedPurchase} open={isDetailsOpen} onOpenChange={setIsDetailsOpen} />
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>

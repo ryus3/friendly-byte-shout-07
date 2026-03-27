@@ -21,7 +21,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
-const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
+const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded, filterByOwnerUserId }) => {
     const { addPurchase } = useImprovedPurchases();
     const { cashSources, getMainCashSource } = useCashSources();
     const location = useLocation();
@@ -379,7 +379,7 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded }) => {
                                         <SelectValue placeholder="اختر مصدر الأموال" />
                                     </SelectTrigger>
                                     <SelectContent dir="rtl">
-                                        {cashSources.map(source => {
+                                        {(filterByOwnerUserId ? cashSources.filter(s => s.owner_user_id === filterByOwnerUserId) : cashSources).map(source => {
                                             const displayBalance = source.name === 'القاصة الرئيسية' 
                                                 ? mainCashSourceBalance
                                                 : source.current_balance;
