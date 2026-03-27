@@ -181,9 +181,9 @@ export const useUnifiedPermissionsSystem = () => {
           return true;
         }
         
-        // الإشعارات العامة - للمديرين فقط
+        // الإشعارات العامة - للمديرين (admin) فقط وليس مديري الأقسام
         if (notificationUserId === null) {
-          return isAdmin || isDepartmentManager;
+          return isAdmin;
         }
         
         return false;

@@ -489,7 +489,8 @@ const updateInventory = async (productId, variantId, quantity, userId) => {
         product_id: productId,
         variant_id: variantId,
         quantity: quantity,
-        reserved_quantity: 0
+        reserved_quantity: 0,
+        last_updated_by: userId
       });
     
     if (error) throw error;

@@ -1,156 +1,206 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { ArrowRight, Wallet, TrendingUp, TrendingDown, Plus, Minus } from 'lucide-react';
+import {
+  ArrowRight, Plus, Wallet, TrendingUp, TrendingDown,
+  DollarSign, Banknote, Activity, PieChart, BarChart3
+} from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
-import { format, parseISO } from 'date-fns';
-import { ar } from 'date-fns/locale';
-import StatCard from '@/components/dashboard/StatCard';
+import CashSourceCard from '@/components/cash/CashSourceCard';
+import CashMovementsList from '@/components/cash/CashMovementsList';
 import AddCashDialog from '@/components/cash/AddCashDialog';
-
-const formatCurrency = (amount) => {
-  return new Intl.NumberFormat('ar-IQ', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount || 0) + ' د.ع';
-};
+import AddCashSourceDialog from '@/components/cash/AddCashSourceDialog';
+import StatCard from '@/components/dashboard/StatCard';
+import { format, startOfMonth, startOfWeek, startOfDay } from 'date-fns';
+import { ar } from 'date-fns/locale';
 
 const EmployeeCashManagementPage = () => {
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const userId = currentUser?.id || currentUser?.user_id;
 
-  const [cashSource, setCashSource] = useState(null);
-  const [movements, setMovements] = useState([]);
+  const [cashSources, setCashSources] = useState([]);
+  const [cashMovements, setCashMovements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSource, setSelectedSource] = useState(null);
   const [dialogType, setDialogType] = useState(null);
   const [showDialog, setShowDialog] = useState(false);
+  const [deleteSource, setDeleteSource] = useState(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     if (!userId) return;
     setLoading(true);
     try {
-      const { data: source } = await supabase
+      // Fetch cash sources owned by this employee
+      const { data: sources } = await supabase
         .from('cash_sources')
         .select('*')
         .eq('owner_user_id', userId)
         .eq('is_active', true)
-        .single();
-      setCashSource(source);
+        .order('created_at', { ascending: true });
 
-      if (source) {
+      setCashSources(sources || []);
+
+      if (sources && sources.length > 0) {
+        const sourceIds = sources.map(s => s.id);
         const { data: movs } = await supabase
           .from('cash_movements')
           .select('*')
-          .eq('cash_source_id', source.id)
+          .in('cash_source_id', sourceIds)
           .order('effective_at', { ascending: false })
           .order('created_at', { ascending: false })
           .order('balance_after', { ascending: false })
-          .limit(500);
-        setMovements(movs || []);
+          .limit(1000);
+        setCashMovements(movs || []);
+      } else {
+        setCashMovements([]);
       }
     } catch (error) {
       console.error('Error fetching cash data:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     fetchData();
-
     const channel = supabase
-      .channel('emp_cash_changes')
+      .channel('emp_cash_full')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_sources' }, () => fetchData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'cash_movements' }, () => fetchData())
       .subscribe();
-
     return () => supabase.removeChannel(channel);
-  }, [userId]);
+  }, [fetchData]);
 
-  const stats = useMemo(() => {
-    const totalIn = movements.filter(m => m.movement_type === 'in').reduce((s, m) => s + Number(m.amount), 0);
-    const totalOut = movements.filter(m => m.movement_type === 'out').reduce((s, m) => s + Number(m.amount), 0);
-    return { totalIn, totalOut, balance: cashSource?.current_balance || 0 };
-  }, [movements, cashSource]);
+  // Stats calculations
+  const today = new Date();
+  const todayStart = startOfDay(today);
+  const weekStart = startOfWeek(today, { weekStartsOn: 1 });
+  const monthStart = startOfMonth(today);
 
-  const handleAddCash = async (amount, description) => {
-    if (!cashSource) return;
+  const todayMovements = cashMovements.filter(m => new Date(m.effective_at || m.created_at) >= todayStart);
+  const weekMovements = cashMovements.filter(m => new Date(m.effective_at || m.created_at) >= weekStart);
+  const monthMovements = cashMovements.filter(m => new Date(m.effective_at || m.created_at) >= monthStart);
+
+  const calculateStats = useCallback((movements) => {
+    const totalIn = movements.filter(m => m.movement_type === 'in').reduce((sum, m) => sum + (m.amount || 0), 0);
+    const totalOut = movements.filter(m => m.movement_type === 'out').reduce((sum, m) => sum + (m.amount || 0), 0);
+    return { totalIn, totalOut, net: totalIn - totalOut };
+  }, []);
+
+  const todayStats = useMemo(() => calculateStats(todayMovements), [todayMovements, calculateStats]);
+  const weekStats = useMemo(() => calculateStats(weekMovements), [weekMovements, calculateStats]);
+  const monthStats = useMemo(() => calculateStats(monthMovements), [monthMovements, calculateStats]);
+
+  const totalBalance = useMemo(() => cashSources.reduce((sum, s) => sum + (s.current_balance || 0), 0), [cashSources]);
+
+  const kpiCards = [
+    { title: 'الرصيد النقدي الفعلي', value: totalBalance, format: 'currency', icon: DollarSign, colors: ['emerald-600', 'teal-600'], change: `مجموع ${cashSources.length} مصدر نقد` },
+    { title: 'داخل اليوم', value: todayStats.totalIn, format: 'currency', icon: TrendingUp, colors: ['green-500', 'emerald-500'], change: `${todayMovements.filter(m => m.movement_type === 'in').length} حركة` },
+    { title: 'خارج اليوم', value: todayStats.totalOut, format: 'currency', icon: TrendingDown, colors: ['red-500', 'orange-500'], change: `${todayMovements.filter(m => m.movement_type === 'out').length} حركة` },
+    { title: 'داخل هذا الشهر', value: monthStats.totalIn, format: 'currency', icon: TrendingUp, colors: ['teal-500', 'cyan-500'], change: `${monthMovements.filter(m => m.movement_type === 'in').length} حركة` },
+    { title: 'خارج هذا الشهر', value: monthStats.totalOut, format: 'currency', icon: TrendingDown, colors: ['red-500', 'orange-500'], change: `${monthMovements.filter(m => m.movement_type === 'out').length} حركة` },
+  ];
+
+  const handleAddCash = (source) => {
+    setSelectedSource(source);
+    setDialogType('add');
+    setShowDialog(true);
+  };
+
+  const handleWithdrawCash = (source) => {
+    setSelectedSource(source);
+    setDialogType('withdraw');
+    setShowDialog(true);
+  };
+
+  const handleConfirmOperation = async (amount, description) => {
+    if (!selectedSource) return;
     try {
+      const movementType = dialogType === 'add' ? 'in' : 'out';
       const { error } = await supabase.from('cash_movements').insert({
-        cash_source_id: cashSource.id,
-        movement_type: 'in',
+        cash_source_id: selectedSource.id,
+        movement_type: movementType,
         amount: amount,
-        description: description || 'إضافة رصيد',
-        reference_type: 'capital_injection',
+        description: description || (dialogType === 'add' ? 'إضافة رصيد' : 'سحب رصيد'),
+        reference_type: dialogType === 'add' ? 'capital_injection' : 'capital_withdrawal',
         created_by: userId,
       });
       if (error) throw error;
 
+      const newBalance = dialogType === 'add'
+        ? (selectedSource.current_balance || 0) + amount
+        : (selectedSource.current_balance || 0) - amount;
+
       await supabase
         .from('cash_sources')
-        .update({ current_balance: (cashSource.current_balance || 0) + amount, updated_at: new Date().toISOString() })
-        .eq('id', cashSource.id);
+        .update({ current_balance: newBalance, updated_at: new Date().toISOString() })
+        .eq('id', selectedSource.id);
 
-      toast({ title: "تمت الإضافة", description: `تم إضافة ${formatCurrency(amount)} بنجاح` });
+      toast({ title: dialogType === 'add' ? "تمت الإضافة" : "تم السحب", description: `${amount.toLocaleString()} د.ع` });
       fetchData();
     } catch (error) {
-      console.error('Error adding cash:', error);
-      toast({ title: "خطأ", description: "فشل في إضافة الرصيد", variant: "destructive" });
+      console.error('Cash operation error:', error);
+      toast({ title: "خطأ", description: "فشل في تنفيذ العملية", variant: "destructive" });
     }
     setShowDialog(false);
   };
 
-  const handleWithdrawCash = async (amount, description) => {
-    if (!cashSource) return;
+  const handleAddCashSource = async (sourceData) => {
     try {
-      const { error } = await supabase.from('cash_movements').insert({
-        cash_source_id: cashSource.id,
-        movement_type: 'out',
-        amount: amount,
-        description: description || 'سحب رصيد',
-        reference_type: 'capital_withdrawal',
+      const { error } = await supabase.from('cash_sources').insert({
+        ...sourceData,
+        owner_user_id: userId,
         created_by: userId,
+        current_balance: sourceData.initial_balance || 0,
       });
       if (error) throw error;
-
-      await supabase
-        .from('cash_sources')
-        .update({ current_balance: (cashSource.current_balance || 0) - amount, updated_at: new Date().toISOString() })
-        .eq('id', cashSource.id);
-
-      toast({ title: "تم السحب", description: `تم سحب ${formatCurrency(amount)} بنجاح` });
+      toast({ title: "تم بنجاح", description: "تم إضافة مصدر النقد الجديد" });
       fetchData();
     } catch (error) {
-      console.error('Error withdrawing cash:', error);
-      toast({ title: "خطأ", description: "فشل في سحب الرصيد", variant: "destructive" });
+      console.error('Add cash source error:', error);
+      toast({ title: "خطأ", description: "فشل في إضافة مصدر النقد", variant: "destructive" });
     }
-    setShowDialog(false);
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  const handleDeleteSource = (source) => {
+    if (source.current_balance > 0) {
+      toast({ title: "خطأ", description: "لا يمكن حذف مصدر يحتوي على رصيد", variant: "destructive" });
+      return;
+    }
+    setDeleteSource(source);
+  };
 
-  if (!cashSource) {
+  const confirmDeleteSource = async () => {
+    if (!deleteSource) return;
+    try {
+      const { error } = await supabase
+        .from('cash_sources')
+        .update({ is_active: false })
+        .eq('id', deleteSource.id);
+      if (error) throw error;
+      setDeleteSource(null);
+      toast({ title: "تم بنجاح", description: "تم حذف مصدر النقد" });
+      fetchData();
+    } catch (error) {
+      toast({ title: "خطأ", description: "فشل في حذف مصدر النقد", variant: "destructive" });
+    }
+  };
+
+  if (loading && cashSources.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <Wallet className="w-16 h-16 text-muted-foreground" />
-        <h2 className="text-xl font-bold text-muted-foreground">لا توجد قاصة مفعّلة</h2>
-        <p className="text-muted-foreground">تواصل مع المدير لتفعيل قاصتك</p>
-        <Button variant="outline" onClick={() => navigate('/employee-financial-center')}>
-          <ArrowRight className="h-4 w-4 ml-2" />
-          العودة للمركز المالي
-        </Button>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">جاري تحميل بيانات القاصة...</p>
+        </div>
       </div>
     );
   }
@@ -160,132 +210,196 @@ const EmployeeCashManagementPage = () => {
       <Helmet>
         <title>إدارة القاصة - {currentUser?.full_name}</title>
       </Helmet>
+
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" onClick={() => navigate('/employee-financial-center')}>
-            <ArrowRight className="h-4 w-4 ml-2" />
-            رجوع
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">إدارة القاصة</h1>
-            <p className="text-muted-foreground">{currentUser?.full_name} — {cashSource.name}</p>
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/employee-financial-center')} className="text-muted-foreground hover:text-foreground">
+              <ArrowRight className="w-4 h-4 ml-1" />
+              العودة للمركز المالي
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-bold gradient-text">إدارة القاصة</h1>
+            <Wallet className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
           </div>
         </div>
 
-        {/* الإحصائيات */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <StatCard title="الرصيد الحالي" value={stats.balance} icon={Wallet} colors={['sky-500', 'blue-500']} format="currency" />
-          <StatCard title="إجمالي الدخل" value={stats.totalIn} icon={TrendingUp} colors={['green-500', 'emerald-500']} format="currency" />
-          <StatCard title="إجمالي المصروفات" value={stats.totalOut} icon={TrendingDown} colors={['red-500', 'orange-500']} format="currency" />
+        {/* KPI Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          {kpiCards.map((stat, index) => (
+            <StatCard key={`${stat.title}-${index}`} {...stat} />
+          ))}
         </div>
 
-        {/* أزرار الإضافة والسحب */}
-        <div className="flex gap-3">
-          <Button onClick={() => { setDialogType('add'); setShowDialog(true); }}>
-            <Plus className="w-4 h-4 ml-2" />
-            إضافة رصيد
-          </Button>
-          <Button variant="outline" onClick={() => { setDialogType('withdraw'); setShowDialog(true); }}>
-            <Minus className="w-4 h-4 ml-2" />
-            سحب رصيد
-          </Button>
-        </div>
+        {/* Tabs */}
+        <Tabs defaultValue="sources" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="sources" className="flex items-center gap-2">
+              <Wallet className="w-4 h-4" />
+              مصادر النقد
+            </TabsTrigger>
+            <TabsTrigger value="movements" className="flex items-center gap-2">
+              <Activity className="w-4 h-4" />
+              حركات النقد
+            </TabsTrigger>
+            <TabsTrigger value="analytics" className="flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              التحليلات
+            </TabsTrigger>
+          </TabsList>
 
-        {/* معلومات القاصة */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Wallet className="w-5 h-5" />
-              {cashSource.name}
-              <Badge variant={cashSource.is_active ? 'default' : 'secondary'}>
-                {cashSource.is_active ? 'نشطة' : 'غير نشطة'}
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">الرصيد الأولي</p>
-                <p className="text-lg font-bold">{formatCurrency(cashSource.initial_balance)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">الرصيد الحالي</p>
-                <p className={`text-lg font-bold ${cashSource.current_balance >= 0 ? 'text-green-600' : 'text-destructive'}`}>
-                  {formatCurrency(cashSource.current_balance)}
-                </p>
-              </div>
-              {cashSource.initial_capital != null && (
-                <div>
-                  <p className="text-sm text-muted-foreground">رأس المال</p>
-                  <p className="text-lg font-bold">{formatCurrency(cashSource.initial_capital)}</p>
-                </div>
-              )}
-              {cashSource.description && (
-                <div className="col-span-2">
-                  <p className="text-sm text-muted-foreground">الوصف</p>
-                  <p>{cashSource.description}</p>
-                </div>
-              )}
+          {/* مصادر النقد */}
+          <TabsContent value="sources" className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">مصادر النقد النشطة</h2>
+              <AddCashSourceDialog onAdd={handleAddCashSource}>
+                <Button size="sm" className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  إضافة مصدر جديد
+                </Button>
+              </AddCashSourceDialog>
             </div>
-          </CardContent>
-        </Card>
 
-        {/* حركات النقد */}
-        <Card>
-          <CardHeader>
-            <CardTitle>حركات النقد ({movements.length})</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {movements.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">لا توجد حركات بعد</p>
+            {cashSources.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-8">
+                  <Wallet className="w-12 h-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground">لا توجد مصادر نقد</p>
+                  <p className="text-sm text-muted-foreground mt-1">تواصل مع المدير لتفعيل قاصتك</p>
+                </CardContent>
+              </Card>
             ) : (
-              <div className="space-y-2 max-h-[600px] overflow-y-auto">
-                {movements.map((m) => (
-                  <div key={m.id} className="flex justify-between items-center py-3 px-4 rounded-lg bg-secondary/30 border border-border/30">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">{m.description}</p>
-                      <div className="flex gap-2 items-center mt-1">
-                        <p className="text-xs text-muted-foreground">
-                          {m.created_at ? format(parseISO(m.created_at), 'dd/MM/yyyy HH:mm', { locale: ar }) : ''}
-                        </p>
-                        {m.reference_type && (
-                          <Badge variant="outline" className="text-xs">
-                            {m.reference_type === 'order' ? 'طلب' :
-                             m.reference_type === 'expense' ? 'مصروف' :
-                             m.reference_type === 'purchase' ? 'شراء' :
-                             m.reference_type === 'capital_injection' ? 'إضافة رأس مال' :
-                             m.reference_type === 'capital_withdrawal' ? 'سحب' :
-                             m.reference_type === 'employee_dues' ? 'مستحقات' :
-                             m.reference_type}
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                    <div className="text-left min-w-[120px]">
-                      <p className={`font-bold ${m.movement_type === 'in' ? 'text-green-500' : 'text-red-500'}`}>
-                        {m.movement_type === 'in' ? '+' : '-'}{Number(m.amount).toLocaleString()} د.ع
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        الرصيد: {Number(m.balance_after).toLocaleString()}
-                      </p>
-                    </div>
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {cashSources.map((source) => {
+                  const sourceMovements = cashMovements.filter(m => m.cash_source_id === source.id);
+                  return (
+                    <CashSourceCard
+                      key={source.id}
+                      cashSource={source}
+                      movements={sourceMovements}
+                      onAddCash={handleAddCash}
+                      onWithdrawCash={handleWithdrawCash}
+                      onViewDetails={() => {}}
+                      onDelete={handleDeleteSource}
+                      realBalance={source.current_balance}
+                    />
+                  );
+                })}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </TabsContent>
 
-      {showDialog && (
+          {/* حركات النقد */}
+          <TabsContent value="movements">
+            <CashMovementsList
+              movements={cashMovements}
+              cashSources={cashSources}
+            />
+          </TabsContent>
+
+          {/* التحليلات */}
+          <TabsContent value="analytics" className="space-y-6">
+            {/* إحصائيات فترية */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {[
+                { title: 'اليوم', stats: todayStats },
+                { title: 'هذا الأسبوع', stats: weekStats },
+                { title: 'هذا الشهر', stats: monthStats },
+              ].map(({ title, stats }) => (
+                <Card key={title}>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">{title}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-green-600">داخل:</span>
+                        <span className="font-medium">{stats.totalIn.toLocaleString()} د.ع</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="text-red-600">خارج:</span>
+                        <span className="font-medium">{stats.totalOut.toLocaleString()} د.ع</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-bold border-t pt-2">
+                        <span>الصافي:</span>
+                        <span className={stats.net >= 0 ? 'text-green-600' : 'text-red-600'}>
+                          {stats.net.toLocaleString()} د.ع
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* توزيع المصادر */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChart className="w-5 h-5" />
+                  توزيع الأرصدة حسب المصدر
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {cashSources.map((source) => {
+                    const percentage = totalBalance > 0
+                      ? ((source.current_balance / totalBalance) * 100).toFixed(1)
+                      : '0.0';
+                    return (
+                      <div key={source.id} className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{
+                              backgroundColor: source.type === 'bank' ? '#3b82f6' :
+                                source.type === 'digital_wallet' ? '#8b5cf6' : '#10b981'
+                            }}
+                          />
+                          <span className="font-medium">{source.name}</span>
+                        </div>
+                        <div className="text-left">
+                          <span className="font-semibold">{(source.current_balance || 0).toLocaleString()} د.ع</span>
+                          <span className="text-sm text-muted-foreground ml-2">({percentage}%)</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* نافذة إضافة/سحب */}
         <AddCashDialog
           open={showDialog}
           onOpenChange={setShowDialog}
-          onSubmit={dialogType === 'add' ? handleAddCash : handleWithdrawCash}
-          title={dialogType === 'add' ? 'إضافة رصيد' : 'سحب رصيد'}
+          cashSource={selectedSource}
           type={dialogType}
+          onConfirm={handleConfirmOperation}
         />
-      )}
+
+        {/* نافذة تأكيد الحذف */}
+        <AlertDialog open={!!deleteSource} onOpenChange={() => setDeleteSource(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>تأكيد حذف المصدر</AlertDialogTitle>
+              <AlertDialogDescription>
+                هل أنت متأكد من حذف مصدر النقد "{deleteSource?.name}"؟
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>إلغاء</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmDeleteSource} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                حذف المصدر
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
     </>
   );
 };
