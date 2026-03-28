@@ -55,7 +55,7 @@ export const NotificationsProvider = ({ children }) => {
             const supervisedIds = supervisedData?.map(d => d.employee_id) || [];
             const allAllowedIds = [user.id, ...supervisedIds];
             
-            query = query.or(`user_id.in.(${allAllowedIds.join(',')}),and(user_id.is.null,type.not.in.(profit_settlement_request,settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,order_created,cash_correction,balance_correction,main_cash_correction))`);
+            query = query.in('user_id', allAllowedIds);
         } else {
             query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,order_created,cash_correction,balance_correction,main_cash_correction))`);
         }
@@ -138,13 +138,8 @@ export const NotificationsProvider = ({ children }) => {
                     console.log('✅ NotificationsContext: Admin notification accepted');
                 } else {
                     // التحقق من نوع الإشعار للموظفين
-                    const adminOnlyGlobalTypes = ['profit_settlement_request', 'settlement_request', 'profit_settlement_completed', 'new_registration', 'low_stock', 'order_status_update_admin', 'new_order', 'order_created', 'cash_correction', 'balance_correction', 'main_cash_correction'];
-                    if (!adminOnlyGlobalTypes.includes(newNotification.type)) {
-                        shouldShow = true;
-                        console.log('✅ NotificationsContext: Global notification accepted for employee');
-                    } else {
-                        console.log('❌ NotificationsContext: Admin-only notification blocked for employee');
-                    }
+                    // غير المدير لا يرى أي إشعار عام (user_id = null)
+                    console.log('❌ NotificationsContext: Global notification blocked for non-admin');
                 }
             } else {
                 console.log('❌ NotificationsContext: Notification not for this user');
