@@ -448,7 +448,7 @@ export const SuperProvider = ({ children }) => {
               inventory: inventoryData
             }
           })
-        })),
+        }}),
         // توحيد items بحيث تعتمد كل المكونات عليه (OrderCard, ManagerProfitsCard)
         orders: (filteredData.orders || []).map(o => ({
           ...o,
