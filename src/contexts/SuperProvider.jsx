@@ -414,8 +414,14 @@ export const SuperProvider = ({ children }) => {
         ...filteredData,
         // دمج الإعدادات المحملة من قاعدة البيانات
         settings: settingsObject,
-        products: (filteredData.products || []).map(product => ({
+        products: (filteredData.products || []).map(product => {
+          // إضافة اسم مالك المنتج إذا وجد owner_user_id
+          const ownerProfile = product.owner_user_id 
+            ? (filteredData.users || []).find(u => (u.user_id || u.id) === product.owner_user_id)
+            : null;
+          return {
           ...product,
+          owner_profile_name: ownerProfile?.full_name || ownerProfile?.username || null,
           variants: (product.product_variants || []).map(variant => {
             // ربط المخزون بشكل صحيح من جدول inventory
             const inventoryData = Array.isArray(variant.inventory) ? variant.inventory[0] : variant.inventory;
@@ -442,7 +448,7 @@ export const SuperProvider = ({ children }) => {
               inventory: inventoryData
             }
           })
-        })),
+        }}),
         // توحيد items بحيث تعتمد كل المكونات عليه (OrderCard, ManagerProfitsCard)
         orders: (filteredData.orders || []).map(o => ({
           ...o,
