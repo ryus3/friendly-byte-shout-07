@@ -2,7 +2,8 @@ import React, { useState, useMemo } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import ManageProductActions from './ManageProductActions';
 import { cn } from '@/lib/utils';
-import { Star, Hash } from 'lucide-react';
+import { Star, Hash, User } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -67,6 +68,12 @@ const ManageProductListItem = ({ product, isSelected, onSelect, onProductUpdate,
                 <span className="bg-red-100 text-red-700 text-xs px-2 py-1 rounded-full dark:bg-red-900/20 dark:text-red-400">
                   مخفي
                 </span>
+              )}
+              {product.owner_user_id && product.owner_profile_name && (
+                <Badge variant="warning" className="text-[10px] px-1.5 py-0.5 gap-0.5">
+                  <User className="w-3 h-3" />
+                  {product.owner_profile_name}
+                </Badge>
               )}
             </div>
             <div className="flex items-center justify-between text-sm">

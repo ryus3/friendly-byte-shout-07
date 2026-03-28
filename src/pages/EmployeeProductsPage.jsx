@@ -40,12 +40,18 @@ const EmployeeProductsPage = () => {
   // فلترة المنتجات
   const myProducts = useMemo(() => {
     if (!products || !userId) return [];
-    return products.filter(p => p.created_by === userId);
+    return products.filter(p => p.owner_user_id === userId);
   }, [products, userId]);
 
   const displayProducts = useMemo(() => {
     if (showFilter === 'mine') return myProducts;
-    return products || [];
+    // "جميع المنتجات" = المنتجات المصرح بها فقط (ليس حرفياً كل المنتجات)
+    if (!currentUser?.productPermissions || currentUser.productPermissions.length === 0) return myProducts;
+    const allowedIds = currentUser.productPermissions.map(p => p.product_id || p.id);
+    const allowedSystemProducts = (products || []).filter(p => 
+      allowedIds.includes(p.id) || p.owner_user_id === userId
+    );
+    return allowedSystemProducts;
   }, [showFilter, myProducts, products]);
 
   const searchFilteredProducts = useMemo(() => {

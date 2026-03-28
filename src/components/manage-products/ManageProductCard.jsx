@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, Printer, Hash } from 'lucide-react';
+import { Edit, Trash2, Printer, Hash, User } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useNavigate } from 'react-router-dom';
@@ -63,6 +64,12 @@ const ManageProductCard = ({ product, onDelete, onPrint }) => {
           <div className="bg-red-500/90 text-white text-xs px-2 py-1 rounded-full">
             مخفي
           </div>
+        )}
+        {product.owner_user_id && product.owner_profile_name && (
+          <Badge variant="warning" className="text-[10px] px-1.5 py-0.5 gap-0.5">
+            <User className="w-3 h-3" />
+            {product.owner_profile_name}
+          </Badge>
         )}
       </div>
       <div className="aspect-square w-full overflow-hidden relative" onClick={handleEditProduct}>
