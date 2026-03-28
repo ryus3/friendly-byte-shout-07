@@ -100,7 +100,7 @@ const EmployeeProductsPage = () => {
     // Only allow deleting own products
     const ownProducts = selectedProductIds.filter(id => {
       const p = products.find(pr => pr.id === id);
-      return p?.created_by === userId;
+      return p?.owner_user_id === userId;
     });
     if (ownProducts.length === 0) {
       toast({ title: "خطأ", description: "يمكنك حذف منتجاتك فقط", variant: "destructive" });
@@ -121,7 +121,7 @@ const EmployeeProductsPage = () => {
   };
 
   const handleDeleteSingle = useCallback((product) => {
-    if (product.created_by !== userId) {
+    if (product.owner_user_id !== userId) {
       toast({ title: "خطأ", description: "يمكنك حذف منتجاتك فقط", variant: "destructive" });
       return;
     }
@@ -149,7 +149,7 @@ const EmployeeProductsPage = () => {
     setIsPrintDialogOpen(true);
   }, [myProducts]);
 
-  const isMyProduct = useCallback((product) => product.created_by === userId, [userId]);
+  const isMyProduct = useCallback((product) => product.owner_user_id === userId, [userId]);
 
   return (
     <>
@@ -206,7 +206,7 @@ const EmployeeProductsPage = () => {
             size="sm"
             onClick={() => setShowFilter('all')}
           >
-            جميع المنتجات ({products?.length || 0})
+            جميع المنتجات المصرح بها ({displayProducts.length})
           </Button>
         </div>
 

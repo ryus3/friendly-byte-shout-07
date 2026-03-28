@@ -64,7 +64,8 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
           profit_amount: parseFloat(productData.profitAmount) || 0,
           barcode: mainBarcode,
           is_active: productData.isVisible,
-          created_by: user?.user_id || user?.id || '91484496-b887-44f7-9e5d-be9db5567604'
+          created_by: user?.user_id || user?.id || '91484496-b887-44f7-9e5d-be9db5567604',
+          owner_user_id: productData.owner_user_id || null
         })
         .select()
         .single();
