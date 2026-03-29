@@ -588,9 +588,8 @@ const filteredOrders = useMemo(() => {
       
       // ✅ مدير القسم: يرى فقط طلبات الموظفين تحت إشرافه (وليس طلباته)
       if (isDepartmentManager && !isAdmin) {
-        // استبعاد طلبات مدير القسم نفسه
-        if (order.created_by === user?.user_id) return false;
-        // فقط طلبات الموظفين تحت إشرافه
+        if (supervisedEmployeeIds.length === 0) return false;
+        if (order.created_by === user?.user_id || order.created_by === user?.id) return false;
         if (!supervisedEmployeeIds.includes(order.created_by)) return false;
       }
     }
