@@ -22,10 +22,17 @@ import { RefreshCacheButton } from '@/components/products/RefreshCacheButton';
 
 const EmployeeProductsPage = () => {
   const { products, deleteProducts, loading, refreshProducts } = useInventory();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, filterProductsByPermissions } = useAuth();
   const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width: 768px)");
-  const userId = currentUser?.id || currentUser?.user_id;
+  
+  // استخدام كلا المعرفين للمقارنة الموثوقة
+  const userIdPrimary = currentUser?.id;
+  const userIdSecondary = currentUser?.user_id;
+  const isOwner = useCallback((ownerId) => {
+    if (!ownerId) return false;
+    return ownerId === userIdPrimary || ownerId === userIdSecondary;
+  }, [userIdPrimary, userIdSecondary]);
 
   const [viewMode, setViewMode] = useLocalStorage('empProductsViewMode', 'list');
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,26 +40,25 @@ const EmployeeProductsPage = () => {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [showFilter, setShowFilter] = useState('mine'); // 'mine' | 'all'
+  const [showFilter, setShowFilter] = useState('mine');
   const ITEMS_PER_PAGE = 15;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // فلترة المنتجات
+  // فلترة المنتجات - منتجاتي فقط
   const myProducts = useMemo(() => {
-    if (!products || !userId) return [];
-    return products.filter(p => p.owner_user_id === userId);
-  }, [products, userId]);
+    if (!products) return [];
+    return products.filter(p => isOwner(p.owner_user_id));
+  }, [products, isOwner]);
 
+  // "جميع المنتجات المصرح بها" = منتجاتي + منتجات النظام المصرح بها
   const displayProducts = useMemo(() => {
     if (showFilter === 'mine') return myProducts;
-    // "جميع المنتجات" = المنتجات المصرح بها فقط (ليس حرفياً كل المنتجات)
-    if (!currentUser?.productPermissions || currentUser.productPermissions.length === 0) return myProducts;
-    const allowedIds = currentUser.productPermissions.map(p => p.product_id || p.id);
-    const allowedSystemProducts = (products || []).filter(p => 
-      allowedIds.includes(p.id) || p.owner_user_id === userId
-    );
-    return allowedSystemProducts;
-  }, [showFilter, myProducts, products]);
+    // فلترة منتجات النظام (غير ملكي) حسب الصلاحيات
+    const systemProducts = (products || []).filter(p => !isOwner(p.owner_user_id));
+    const allowedSystem = filterProductsByPermissions ? filterProductsByPermissions(systemProducts) : [];
+    // دمج منتجاتي + المنتجات المصرح بها
+    return [...myProducts, ...allowedSystem];
+  }, [showFilter, myProducts, products, isOwner, filterProductsByPermissions]);
 
   const searchFilteredProducts = useMemo(() => {
     if (!searchTerm.trim()) return displayProducts;
@@ -100,7 +106,7 @@ const EmployeeProductsPage = () => {
     // Only allow deleting own products
     const ownProducts = selectedProductIds.filter(id => {
       const p = products.find(pr => pr.id === id);
-      return p?.owner_user_id === userId;
+      return isOwner(p?.owner_user_id);
     });
     if (ownProducts.length === 0) {
       toast({ title: "خطأ", description: "يمكنك حذف منتجاتك فقط", variant: "destructive" });
@@ -121,13 +127,13 @@ const EmployeeProductsPage = () => {
   };
 
   const handleDeleteSingle = useCallback((product) => {
-    if (product.owner_user_id !== userId) {
+    if (!isOwner(product.owner_user_id)) {
       toast({ title: "خطأ", description: "يمكنك حذف منتجاتك فقط", variant: "destructive" });
       return;
     }
     setSelectedProductIds([product.id]);
     setIsDeleteAlertOpen(true);
-  }, [userId]);
+  }, [isOwner]);
 
   const handleScanSuccess = useCallback((decodedText) => {
     setIsScannerOpen(false);
@@ -149,7 +155,7 @@ const EmployeeProductsPage = () => {
     setIsPrintDialogOpen(true);
   }, [myProducts]);
 
-  const isMyProduct = useCallback((product) => product.owner_user_id === userId, [userId]);
+  const isMyProduct = useCallback((product) => isOwner(product.owner_user_id), [isOwner]);
 
   return (
     <>

@@ -94,7 +94,7 @@ const EmployeeFollowUpPage = () => {
     };
     
     fetchSupervisedEmployees();
-  }, [isDepartmentManager, user?.user_id]);
+  }, [isDepartmentManager, user?.id]);
   
   const [searchParams] = useSearchParams();
   
