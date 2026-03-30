@@ -57,10 +57,14 @@ const useOrdersAnalytics = (forceUserDataOnly = false) => {
     devLog.log('📊 حساب الإحصائيات من البيانات الموحدة');
     
     const userUUID = getUserUUID(user);
+    const userId = user?.id;
+    const userIdAlt = user?.user_id;
     
-    const visibleOrders = (canViewAllOrders && !forceUserDataOnly) ? orders : orders.filter(order => 
-      order.created_by === userUUID
-    );
+    const isMyOrder = (order) => {
+      return order.created_by === userUUID || order.created_by === userId || order.created_by === userIdAlt;
+    };
+    
+    const visibleOrders = (canViewAllOrders && !forceUserDataOnly) ? orders : orders.filter(isMyOrder);
 
     let filteredOrders = visibleOrders;
     if (dateRange.from && dateRange.to) {
@@ -74,10 +78,8 @@ const useOrdersAnalytics = (forceUserDataOnly = false) => {
       const hasReceipt = !!order.receipt_received;
       if (!hasReceipt) return false;
       if (['cancelled', 'returned', 'returned_in_stock'].includes(order.status)) return false;
-      if (isAdmin) return true;
-      return profits?.some(
-        (p) => p.order_id === order.id && p.employee_id === userUUID && p.status === 'settled'
-      );
+      // للموظف: الطلب المسلم مع إيصال يكفي (لا حاجة لشرط settled)
+      return true;
     };
 
     const completedOrders = filteredOrders.filter(isOrderCompletedForAnalytics);
@@ -211,7 +213,7 @@ const useOrdersAnalytics = (forceUserDataOnly = false) => {
       }));
 
     const visibleProfits = (canViewAllOrders && !forceUserDataOnly) ? profits : profits?.filter(profit => 
-      profit.employee_id === userUUID
+      profit.employee_id === userUUID || profit.employee_id === userId || profit.employee_id === userIdAlt
     );
     
     const pendingProfits = visibleProfits?.filter(profit => 

@@ -255,7 +255,7 @@ const EmployeeFinancialCenterPage = () => {
 
     const grossProfit = salesWithoutDelivery - cogs;
     const generalExpenses = totalExpenses;
-    const netProfit = grossProfit - generalExpenses - employeeSettledDues;
+    const netProfit = grossProfit - generalExpenses - employeeSettledDues - totalPurchases;
 
     return {
       balance,
@@ -493,6 +493,7 @@ const EmployeeFinancialCenterPage = () => {
                 <StatRow label="تكلفة البضاعة المباعة" value={financialStats.cogs} colorClass="text-orange-500" isNegative />
                 <StatRow label="مجمل الربح" value={financialStats.grossProfit} colorClass="text-blue-500 font-bold" />
                 <StatRow label="المصاريف العامة" value={financialStats.generalExpenses} colorClass="text-red-500" isNegative />
+                <StatRow label="المشتريات" value={financialStats.totalPurchases} colorClass="text-amber-600" isNegative />
                 <StatRow label="المستحقات المدفوعة" value={financialStats.employeeSettledDues} colorClass="text-purple-500" isNegative />
                 <div className="flex justify-between items-center py-3 mt-2 bg-secondary rounded-lg px-4">
                   <p className="font-bold text-lg">صافي الربح</p>
