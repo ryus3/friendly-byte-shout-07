@@ -4124,8 +4124,9 @@ export const AlWaseetProvider = ({ children }) => {
         ).maybeSingle();
 
         if (!localErr && localOrder && canAutoDeleteOrder(localOrder, user)) {
-          console.log(`🗑️ حذف تلقائي للطلب ${trackingNumber} - محذوف من الوسيط`);
-          return await performAutoDelete(localOrder);
+          // ⚠️ تم تعطيل الحذف الفوري — فحص واحد غير كافٍ للتأكد من عدم وجود الطلب
+          console.warn(`⚠️ الطلب ${trackingNumber} لم يُعثر عليه في API لكن لن يُحذف (فحص واحد غير كافٍ)`);
+          // return await performAutoDelete(localOrder);
         }
         
         return null;

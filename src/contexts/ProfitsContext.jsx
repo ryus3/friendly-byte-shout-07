@@ -531,11 +531,18 @@ export const ProfitsProvider = ({ children }) => {
 
       setProfits(profitsData || []);
 
-      const { data: notificationsData, error: notificationsError } = await supabase
+      let notificationsQuery = supabase
         .from('notifications')
         .select('*')
         .in('type', ['settlement_request', 'settlement_invoice'])
         .order('created_at', { ascending: false });
+
+      // غير المدير يرى فقط الإشعارات الموجهة له
+      if (!canViewAllData) {
+        notificationsQuery = notificationsQuery.eq('user_id', user?.id || userUUID);
+      }
+
+      const { data: notificationsData, error: notificationsError } = await notificationsQuery;
 
       if (notificationsError) throw notificationsError;
 
@@ -568,7 +575,7 @@ export const ProfitsProvider = ({ children }) => {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `type=eq.settlement_request`
+          filter: canViewAllData ? `type=eq.settlement_request` : `type=eq.settlement_request,user_id=eq.${user?.id || userUUID}`
         },
         (payload) => {
           // ✅ إضافة طلب التحاسب الجديد فوراً للقائمة

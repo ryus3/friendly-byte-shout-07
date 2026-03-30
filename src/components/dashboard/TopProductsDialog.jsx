@@ -7,7 +7,7 @@ import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
 const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
-  const { analytics, loading, error } = useOrdersAnalytics();
+  const { analytics, loading, error } = useOrdersAnalytics(!!employeeId);
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
