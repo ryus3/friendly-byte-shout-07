@@ -934,7 +934,8 @@ useEffect(() => {
       if (o.created_by === ADMIN_ID) return false;
       
       // ✅ لمدير القسم: فقط طلبات موظفيه المشرف عليهم
-      if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
+      if (isDepartmentManager && !isAdmin) {
+        if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) return false;
         if (!supervisedEmployeeIds.includes(o.created_by)) return false;
       }
       
