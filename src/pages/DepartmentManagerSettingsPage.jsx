@@ -55,12 +55,14 @@ const DepartmentManagerSettingsPage = () => {
   const [permLoading, setPermLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
 
-  // جلب المنتجات
+  // جلب المنتجات والأقسام
   useEffect(() => {
     const fetchProducts = async () => {
+      const userId = user?.id || user?.user_id;
+      // جلب منتجات مدير القسم + منتجات النظام
       const { data, error } = await supabase
         .from('products')
-        .select('id, name')
+        .select('id, name, department_id, owner_user_id')
         .eq('is_active', true)
         .order('name');
       
@@ -68,8 +70,17 @@ const DepartmentManagerSettingsPage = () => {
         setProducts(data);
       }
     };
+    const fetchDepartments = async () => {
+      const { data } = await supabase
+        .from('departments')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+      if (data) setDepartments(data);
+    };
     fetchProducts();
-  }, []);
+    fetchDepartments();
+  }, [user]);
 
   // جلب قواعد الأرباح للموظفين تحت الإشراف
   useEffect(() => {
