@@ -126,7 +126,7 @@ const DepartmentManagerSettingsPage = () => {
         .insert({
           employee_id: newRule.employee_id,
           target_id: newRule.product_id || null,
-          rule_type: newRule.product_id ? 'product' : 'global',
+          rule_type: newRule.product_id ? 'product' : 'default',
           profit_amount: newRule.full_profit ? 0 : newRule.profit_amount,
           profit_percentage: newRule.full_profit ? 100 : null,
           created_by: user?.id,
