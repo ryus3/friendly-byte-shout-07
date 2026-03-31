@@ -521,6 +521,120 @@ const DepartmentManagerSettingsPage = () => {
             </Card>
           </TabsContent>
 
+          {/* تبويب صلاحيات المنتجات */}
+          <TabsContent value="permissions">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  صلاحيات المنتجات
+                </CardTitle>
+                <CardDescription>
+                  التحكم بالمنتجات المتاحة لكل موظف تحت إشرافك
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* اختيار الموظف */}
+                <div>
+                  <Label>اختر الموظف</Label>
+                  <Select value={selectedPermEmployee} onValueChange={setSelectedPermEmployee}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر موظف لإدارة صلاحياته" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {supervisedEmployees.filter(e => e?.user_id).map(emp => (
+                        <SelectItem key={emp.user_id} value={emp.user_id}>
+                          {emp.full_name || emp.employee_code || 'موظف'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedPermEmployee && !permLoading && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground">
+                        {allowedProducts.length === 0 
+                          ? 'لم يتم تحديد منتجات — الموظف يرى كل المنتجات (الوضع الافتراضي)'
+                          : `${allowedProducts.length} منتج مسموح`}
+                      </p>
+                      <Badge variant={allowedProducts.length > 0 ? 'default' : 'secondary'}>
+                        {allowedProducts.length > 0 ? 'مُخصص' : 'افتراضي'}
+                      </Badge>
+                    </div>
+
+                    {/* الأقسام مع المنتجات */}
+                    {departments.map(dept => {
+                      const deptProducts = products.filter(p => p.department_id === dept.id);
+                      if (deptProducts.length === 0) return null;
+                      const allChecked = deptProducts.every(p => allowedProducts.includes(p.id));
+                      const someChecked = deptProducts.some(p => allowedProducts.includes(p.id));
+                      
+                      return (
+                        <div key={dept.id} className="border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Checkbox 
+                              checked={allChecked}
+                              ref={el => { if (el) el.dataset.indeterminate = someChecked && !allChecked; }}
+                              onCheckedChange={() => toggleDepartmentProducts(dept.id)}
+                            />
+                            <span className="font-semibold text-sm">{dept.name}</span>
+                            <Badge variant="outline" className="text-xs">{deptProducts.length}</Badge>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 pr-6">
+                            {deptProducts.map(product => (
+                              <div key={product.id} className="flex items-center gap-2 py-1">
+                                <Checkbox
+                                  checked={allowedProducts.includes(product.id)}
+                                  onCheckedChange={() => toggleProductPermission(product.id)}
+                                />
+                                <span className="text-sm">{product.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* منتجات بدون قسم */}
+                    {(() => {
+                      const noDeptProducts = products.filter(p => !p.department_id);
+                      if (noDeptProducts.length === 0) return null;
+                      return (
+                        <div className="border rounded-lg p-3 space-y-2">
+                          <span className="font-semibold text-sm">بدون قسم</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 pr-6">
+                            {noDeptProducts.map(product => (
+                              <div key={product.id} className="flex items-center gap-2 py-1">
+                                <Checkbox
+                                  checked={allowedProducts.includes(product.id)}
+                                  onCheckedChange={() => toggleProductPermission(product.id)}
+                                />
+                                <span className="text-sm">{product.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {permLoading && (
+                  <div className="text-center py-8 text-muted-foreground">جاري التحميل...</div>
+                )}
+
+                {!selectedPermEmployee && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Shield className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                    <p>اختر موظفاً لإدارة صلاحيات المنتجات الخاصة به</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           {/* تبويب الإحصائيات */}
           <TabsContent value="stats">
             <DepartmentStatsCharts 
