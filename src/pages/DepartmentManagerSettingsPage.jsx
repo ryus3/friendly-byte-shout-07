@@ -49,6 +49,11 @@ const DepartmentManagerSettingsPage = () => {
     totalSales: 0,
     totalProfit: 0
   });
+  // Product permissions state
+  const [selectedPermEmployee, setSelectedPermEmployee] = useState('');
+  const [allowedProducts, setAllowedProducts] = useState([]);
+  const [permLoading, setPermLoading] = useState(false);
+  const [departments, setDepartments] = useState([]);
 
   // جلب المنتجات
   useEffect(() => {
