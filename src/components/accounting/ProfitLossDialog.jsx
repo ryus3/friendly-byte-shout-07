@@ -26,7 +26,7 @@ const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
             <p className="text-sm text-muted-foreground">{label}</p>
             <div className="flex items-center gap-2">
                 <p className={`font-semibold text-base ${colorClass}`}>
-                    {isNegative ? `(${safeValue.toLocaleString()})` : safeValue.toLocaleString()} د.ع
+                    {isNegative ? `(${Math.abs(safeValue).toLocaleString()})` : safeValue.toLocaleString()} د.ع
                 </p>
                 {onClick && <ArrowRight className="w-4 h-4 text-muted-foreground" />}
             </div>
@@ -38,6 +38,7 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
     const navigate = useNavigate();
     const { user, allUsers } = useAuth();
     const [openAccordion, setOpenAccordion] = useState([]);
+    const [includePurchases, setIncludePurchases] = useState(false);
 
     const handleNavigation = (path, filterKey, filterValue) => {
         const params = new URLSearchParams();
@@ -57,12 +58,17 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
     };
 
     const salesDetails = useMemo(() => {
-        // استخدام البيانات المحسوبة مسبقاً من AccountingPage
         return {
             managerSales: summary?.managerSales || 0,
             employeeSales: summary?.employeeSales || 0
         };
     }, [summary]);
+
+    const totalPurchases = summary?.totalPurchases || 0;
+    const baseNetProfit = summary?.netProfit || 0;
+    // netProfit from summary already includes purchases deduction
+    // so: without purchases = netProfit + totalPurchases, with purchases = netProfit
+    const displayNetProfit = includePurchases ? baseNetProfit : (baseNetProfit + totalPurchases);
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
@@ -88,6 +94,23 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
                         </DropdownMenu>
                     </DialogTitle>
                     <DialogDescription className="text-sm">ملخص مالي للفترة المحددة.</DialogDescription>
+                    {/* تبويب مع/بدون المشتريات */}
+                    {totalPurchases > 0 && (
+                        <div className="flex gap-1 mt-2 bg-muted rounded-lg p-1">
+                            <button
+                                onClick={() => setIncludePurchases(false)}
+                                className={`flex-1 text-xs py-1.5 px-2 rounded-md transition-colors ${!includePurchases ? 'bg-background shadow-sm font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            >
+                                بدون المشتريات
+                            </button>
+                            <button
+                                onClick={() => setIncludePurchases(true)}
+                                className={`flex-1 text-xs py-1.5 px-2 rounded-md transition-colors ${includePurchases ? 'bg-background shadow-sm font-semibold text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                            >
+                                مع المشتريات
+                            </button>
+                        </div>
+                    )}
                 </DialogHeader>
                 <div className="flex-1 flex flex-col min-h-0">
                     <ScrollArea className="flex-1 w-full">
@@ -101,7 +124,7 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
                                             cogs: summary?.cogs || 0,
                                             expenses: summary?.generalExpenses || 0,
                                             dues: summary?.employeeSettledDues || 0,
-                                            profit: summary?.netProfit || 0
+                                            profit: displayNetProfit
                                         }
                                     ]} 
                                     type="bar" 
@@ -132,10 +155,13 @@ const ProfitLossDialog = ({ open, onOpenChange, summary, datePeriod, onDatePerio
                                 <StatRow label="مستحقات مدفوعة" value={summary?.employeeSettledDues || 0} colorClass="text-red-400" isNegative onClick={() => handleNavigation('/accounting')}/>
                                 <StatRow label="المصاريف العامة" value={summary?.generalExpenses || 0} colorClass="text-red-500" isNegative onClick={() => handleNavigation('/accounting')}/>
                                 
+                                {includePurchases && totalPurchases > 0 && (
+                                    <StatRow label="المشتريات" value={totalPurchases} colorClass="text-amber-600" isNegative />
+                                )}
 
                                 <div className="flex justify-between items-center py-2 sm:py-3 mt-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg px-3 sm:px-4 border border-primary/20">
-                                    <p className="font-bold text-base sm:text-lg">صافي الربح</p>
-                                    <p className="font-bold text-base sm:text-lg text-primary">{(summary?.netProfit || 0).toLocaleString()} د.ع</p>
+                                    <p className="font-bold text-base sm:text-lg">صافي الربح {includePurchases ? '(مع المشتريات)' : ''}</p>
+                                    <p className={`font-bold text-base sm:text-lg ${displayNetProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>{displayNetProfit.toLocaleString()} د.ع</p>
                                 </div>
                             </div>
                         </div>

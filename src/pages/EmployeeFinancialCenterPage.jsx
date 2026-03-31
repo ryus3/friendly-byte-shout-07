@@ -305,8 +305,10 @@ const EmployeeFinancialCenterPage = () => {
   // طلبات الموظف
   const myOrders = useMemo(() => {
     if (!orders) return [];
-    return orders.filter(o => o.created_by === userId);
-  }, [orders, userId]);
+    const uid = currentUser?.id;
+    const uuid = currentUser?.user_id;
+    return orders.filter(o => o.created_by === userId || o.created_by === uid || o.created_by === uuid);
+  }, [orders, userId, currentUser]);
 
   const totalCapital = initialCapital + inventoryValue;
 

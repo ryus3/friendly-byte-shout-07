@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import DepartmentStatsCharts from '@/components/department/DepartmentStatsCharts';
 import { Switch } from '@/components/ui/switch';
 import { 
@@ -23,7 +24,8 @@ import {
   Trash2,
   Save,
   User,
-  TrendingUp
+  TrendingUp,
+  Shield
 } from 'lucide-react';
 
 const DepartmentManagerSettingsPage = () => {
@@ -47,13 +49,20 @@ const DepartmentManagerSettingsPage = () => {
     totalSales: 0,
     totalProfit: 0
   });
+  // Product permissions state
+  const [selectedPermEmployee, setSelectedPermEmployee] = useState('');
+  const [allowedProducts, setAllowedProducts] = useState([]);
+  const [permLoading, setPermLoading] = useState(false);
+  const [departments, setDepartments] = useState([]);
 
-  // جلب المنتجات
+  // جلب المنتجات والأقسام
   useEffect(() => {
     const fetchProducts = async () => {
+      const userId = user?.id || user?.user_id;
+      // جلب منتجات مدير القسم + منتجات النظام
       const { data, error } = await supabase
         .from('products')
-        .select('id, name')
+        .select('id, name, department_id, owner_user_id')
         .eq('is_active', true)
         .order('name');
       
@@ -61,8 +70,17 @@ const DepartmentManagerSettingsPage = () => {
         setProducts(data);
       }
     };
+    const fetchDepartments = async () => {
+      const { data } = await supabase
+        .from('departments')
+        .select('id, name')
+        .eq('is_active', true)
+        .order('name');
+      if (data) setDepartments(data);
+    };
     fetchProducts();
-  }, []);
+    fetchDepartments();
+  }, [user]);
 
   // جلب قواعد الأرباح للموظفين تحت الإشراف
   useEffect(() => {
@@ -126,7 +144,7 @@ const DepartmentManagerSettingsPage = () => {
         .insert({
           employee_id: newRule.employee_id,
           target_id: newRule.product_id || null,
-          rule_type: newRule.product_id ? 'product' : 'global',
+          rule_type: newRule.product_id ? 'product' : 'default',
           profit_amount: newRule.full_profit ? 0 : newRule.profit_amount,
           profit_percentage: newRule.full_profit ? 100 : null,
           created_by: user?.id,
@@ -168,6 +186,82 @@ const DepartmentManagerSettingsPage = () => {
     if (!error) {
       setProfitRules(prev => prev.filter(r => r.id !== ruleId));
       toast({ title: 'تم الحذف', description: 'تم حذف قاعدة الربح' });
+    }
+  };
+
+  // جلب صلاحيات المنتجات للموظف المحدد
+  useEffect(() => {
+    const fetchAllowedProducts = async () => {
+      if (!selectedPermEmployee) { setAllowedProducts([]); return; }
+      setPermLoading(true);
+      const { data, error } = await supabase
+        .from('employee_allowed_products')
+        .select('product_id')
+        .eq('employee_id', selectedPermEmployee)
+        .eq('is_active', true);
+      if (!error && data) {
+        setAllowedProducts(data.map(d => d.product_id));
+      }
+      setPermLoading(false);
+    };
+    fetchAllowedProducts();
+  }, [selectedPermEmployee]);
+
+  // تبديل صلاحية منتج
+  const toggleProductPermission = async (productId) => {
+    const isAllowed = allowedProducts.includes(productId);
+    if (isAllowed) {
+      // إزالة
+      const { error } = await supabase
+        .from('employee_allowed_products')
+        .delete()
+        .eq('employee_id', selectedPermEmployee)
+        .eq('product_id', productId);
+      if (!error) setAllowedProducts(prev => prev.filter(id => id !== productId));
+    } else {
+      // إضافة
+      const { error } = await supabase
+        .from('employee_allowed_products')
+        .insert({
+          employee_id: selectedPermEmployee,
+          product_id: productId,
+          added_by: user?.id,
+          is_active: true
+        });
+      if (!error) setAllowedProducts(prev => [...prev, productId]);
+      else toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // تبديل كل منتجات قسم
+  const toggleDepartmentProducts = async (departmentId) => {
+    const deptProducts = products.filter(p => p.department_id === departmentId);
+    const deptProductIds = deptProducts.map(p => p.id);
+    const allAllowed = deptProductIds.every(id => allowedProducts.includes(id));
+    
+    if (allAllowed) {
+      // إزالة كل منتجات القسم
+      const { error } = await supabase
+        .from('employee_allowed_products')
+        .delete()
+        .eq('employee_id', selectedPermEmployee)
+        .in('product_id', deptProductIds);
+      if (!error) setAllowedProducts(prev => prev.filter(id => !deptProductIds.includes(id)));
+    } else {
+      // إضافة كل منتجات القسم غير الموجودة
+      const toAdd = deptProductIds.filter(id => !allowedProducts.includes(id));
+      if (toAdd.length > 0) {
+        const { error } = await supabase
+          .from('employee_allowed_products')
+          .insert(toAdd.map(pid => ({
+            employee_id: selectedPermEmployee,
+            product_id: pid,
+            added_by: user?.id,
+            is_active: true
+          })));
+        if (!error) setAllowedProducts(prev => [...prev, ...toAdd]);
+        else toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+      }
     }
   };
 
@@ -234,16 +328,20 @@ const DepartmentManagerSettingsPage = () => {
 
         {/* التبويبات */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="employees" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsTrigger value="employees" className="flex items-center gap-1">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">الموظفين</span>
             </TabsTrigger>
-            <TabsTrigger value="profits" className="flex items-center gap-2">
+            <TabsTrigger value="profits" className="flex items-center gap-1">
               <DollarSign className="w-4 h-4" />
               <span className="hidden sm:inline">قواعد الأرباح</span>
             </TabsTrigger>
-            <TabsTrigger value="stats" className="flex items-center gap-2">
+            <TabsTrigger value="permissions" className="flex items-center gap-1">
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">صلاحيات المنتجات</span>
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="flex items-center gap-1">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">الإحصائيات</span>
             </TabsTrigger>
@@ -419,6 +517,120 @@ const DepartmentManagerSettingsPage = () => {
                     ))
                   )}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* تبويب صلاحيات المنتجات */}
+          <TabsContent value="permissions">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  صلاحيات المنتجات
+                </CardTitle>
+                <CardDescription>
+                  التحكم بالمنتجات المتاحة لكل موظف تحت إشرافك
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* اختيار الموظف */}
+                <div>
+                  <Label>اختر الموظف</Label>
+                  <Select value={selectedPermEmployee} onValueChange={setSelectedPermEmployee}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="اختر موظف لإدارة صلاحياته" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {supervisedEmployees.filter(e => e?.user_id).map(emp => (
+                        <SelectItem key={emp.user_id} value={emp.user_id}>
+                          {emp.full_name || emp.employee_code || 'موظف'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {selectedPermEmployee && !permLoading && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm text-muted-foreground">
+                        {allowedProducts.length === 0 
+                          ? 'لم يتم تحديد منتجات — الموظف يرى كل المنتجات (الوضع الافتراضي)'
+                          : `${allowedProducts.length} منتج مسموح`}
+                      </p>
+                      <Badge variant={allowedProducts.length > 0 ? 'default' : 'secondary'}>
+                        {allowedProducts.length > 0 ? 'مُخصص' : 'افتراضي'}
+                      </Badge>
+                    </div>
+
+                    {/* الأقسام مع المنتجات */}
+                    {departments.map(dept => {
+                      const deptProducts = products.filter(p => p.department_id === dept.id);
+                      if (deptProducts.length === 0) return null;
+                      const allChecked = deptProducts.every(p => allowedProducts.includes(p.id));
+                      const someChecked = deptProducts.some(p => allowedProducts.includes(p.id));
+                      
+                      return (
+                        <div key={dept.id} className="border rounded-lg p-3 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Checkbox 
+                              checked={allChecked}
+                              ref={el => { if (el) el.dataset.indeterminate = someChecked && !allChecked; }}
+                              onCheckedChange={() => toggleDepartmentProducts(dept.id)}
+                            />
+                            <span className="font-semibold text-sm">{dept.name}</span>
+                            <Badge variant="outline" className="text-xs">{deptProducts.length}</Badge>
+                          </div>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 pr-6">
+                            {deptProducts.map(product => (
+                              <div key={product.id} className="flex items-center gap-2 py-1">
+                                <Checkbox
+                                  checked={allowedProducts.includes(product.id)}
+                                  onCheckedChange={() => toggleProductPermission(product.id)}
+                                />
+                                <span className="text-sm">{product.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* منتجات بدون قسم */}
+                    {(() => {
+                      const noDeptProducts = products.filter(p => !p.department_id);
+                      if (noDeptProducts.length === 0) return null;
+                      return (
+                        <div className="border rounded-lg p-3 space-y-2">
+                          <span className="font-semibold text-sm">بدون قسم</span>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 pr-6">
+                            {noDeptProducts.map(product => (
+                              <div key={product.id} className="flex items-center gap-2 py-1">
+                                <Checkbox
+                                  checked={allowedProducts.includes(product.id)}
+                                  onCheckedChange={() => toggleProductPermission(product.id)}
+                                />
+                                <span className="text-sm">{product.name}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {permLoading && (
+                  <div className="text-center py-8 text-muted-foreground">جاري التحميل...</div>
+                )}
+
+                {!selectedPermEmployee && (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Shield className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                    <p>اختر موظفاً لإدارة صلاحيات المنتجات الخاصة به</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

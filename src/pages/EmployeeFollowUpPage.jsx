@@ -934,7 +934,8 @@ useEffect(() => {
       if (o.created_by === ADMIN_ID) return false;
       
       // ✅ لمدير القسم: فقط طلبات موظفيه المشرف عليهم
-      if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
+      if (isDepartmentManager && !isAdmin) {
+        if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) return false;
         if (!supervisedEmployeeIds.includes(o.created_by)) return false;
       }
       
@@ -966,10 +967,16 @@ useEffect(() => {
     }
 
     // ✅ عدد الطلبات المرتجعة (delivery_status = '17') - من orders مباشرة
-    const returnedOrdersCount = orders?.filter(o => 
-      o.delivery_status === '17' && 
-      o.created_by !== ADMIN_ID
-    ).length || 0;
+    const returnedOrdersCount = orders?.filter(o => {
+      if (o.delivery_status !== '17') return false;
+      if (o.created_by === ADMIN_ID) return false;
+      // لمدير القسم: فقط طلبات موظفيه المشرف عليهم
+      if (isDepartmentManager && !isAdmin) {
+        if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) return false;
+        if (!supervisedEmployeeIds.includes(o.created_by)) return false;
+      }
+      return true;
+    }).length || 0;
 
     // ✅ إجمالي الطلبات يستبعد المرتجعة (delivery_status=17) لأنها في كارت منفصل
     const totalOrdersExcludingReturned = filteredOrders.filter(o => o.delivery_status !== '17').length;
