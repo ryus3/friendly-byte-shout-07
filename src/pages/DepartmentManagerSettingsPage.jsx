@@ -328,16 +328,20 @@ const DepartmentManagerSettingsPage = () => {
 
         {/* التبويبات */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="employees" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsTrigger value="employees" className="flex items-center gap-1">
               <Users className="w-4 h-4" />
               <span className="hidden sm:inline">الموظفين</span>
             </TabsTrigger>
-            <TabsTrigger value="profits" className="flex items-center gap-2">
+            <TabsTrigger value="profits" className="flex items-center gap-1">
               <DollarSign className="w-4 h-4" />
               <span className="hidden sm:inline">قواعد الأرباح</span>
             </TabsTrigger>
-            <TabsTrigger value="stats" className="flex items-center gap-2">
+            <TabsTrigger value="permissions" className="flex items-center gap-1">
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">صلاحيات المنتجات</span>
+            </TabsTrigger>
+            <TabsTrigger value="stats" className="flex items-center gap-1">
               <BarChart3 className="w-4 h-4" />
               <span className="hidden sm:inline">الإحصائيات</span>
             </TabsTrigger>
