@@ -189,6 +189,82 @@ const DepartmentManagerSettingsPage = () => {
     }
   };
 
+  // جلب صلاحيات المنتجات للموظف المحدد
+  useEffect(() => {
+    const fetchAllowedProducts = async () => {
+      if (!selectedPermEmployee) { setAllowedProducts([]); return; }
+      setPermLoading(true);
+      const { data, error } = await supabase
+        .from('employee_allowed_products')
+        .select('product_id')
+        .eq('employee_id', selectedPermEmployee)
+        .eq('is_active', true);
+      if (!error && data) {
+        setAllowedProducts(data.map(d => d.product_id));
+      }
+      setPermLoading(false);
+    };
+    fetchAllowedProducts();
+  }, [selectedPermEmployee]);
+
+  // تبديل صلاحية منتج
+  const toggleProductPermission = async (productId) => {
+    const isAllowed = allowedProducts.includes(productId);
+    if (isAllowed) {
+      // إزالة
+      const { error } = await supabase
+        .from('employee_allowed_products')
+        .delete()
+        .eq('employee_id', selectedPermEmployee)
+        .eq('product_id', productId);
+      if (!error) setAllowedProducts(prev => prev.filter(id => id !== productId));
+    } else {
+      // إضافة
+      const { error } = await supabase
+        .from('employee_allowed_products')
+        .insert({
+          employee_id: selectedPermEmployee,
+          product_id: productId,
+          added_by: user?.id,
+          is_active: true
+        });
+      if (!error) setAllowedProducts(prev => [...prev, productId]);
+      else toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+    }
+  };
+
+  // تبديل كل منتجات قسم
+  const toggleDepartmentProducts = async (departmentId) => {
+    const deptProducts = products.filter(p => p.department_id === departmentId);
+    const deptProductIds = deptProducts.map(p => p.id);
+    const allAllowed = deptProductIds.every(id => allowedProducts.includes(id));
+    
+    if (allAllowed) {
+      // إزالة كل منتجات القسم
+      const { error } = await supabase
+        .from('employee_allowed_products')
+        .delete()
+        .eq('employee_id', selectedPermEmployee)
+        .in('product_id', deptProductIds);
+      if (!error) setAllowedProducts(prev => prev.filter(id => !deptProductIds.includes(id)));
+    } else {
+      // إضافة كل منتجات القسم غير الموجودة
+      const toAdd = deptProductIds.filter(id => !allowedProducts.includes(id));
+      if (toAdd.length > 0) {
+        const { error } = await supabase
+          .from('employee_allowed_products')
+          .insert(toAdd.map(pid => ({
+            employee_id: selectedPermEmployee,
+            product_id: pid,
+            added_by: user?.id,
+            is_active: true
+          })));
+        if (!error) setAllowedProducts(prev => [...prev, ...toAdd]);
+        else toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+      }
+    }
+  };
+
   // التحقق من الصلاحيات
   if (!isDepartmentManager && !isAdmin) {
     return (
