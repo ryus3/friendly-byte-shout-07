@@ -199,19 +199,30 @@ export const UnifiedAuthProvider = ({ children }) => {
       return;
     }
 
-    let isInitialized = false;
+    let isMounted = true;
+    let sessionHandled = false;
 
-    // Set up auth state listener FIRST with better error handling
+    // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        if (!isMounted) return;
+        
         // Always update session state immediately
         setSession(session);
         
         if (session?.user) {
-          // Update user state with session data immediately for auth.uid() to work
+          // Prevent duplicate profile fetches
+          if (sessionHandled && event !== 'TOKEN_REFRESHED' && event !== 'SIGNED_IN') {
+            return;
+          }
+          sessionHandled = true;
+          
+          // Use setTimeout to avoid Supabase deadlock
           setTimeout(async () => {
+            if (!isMounted) return;
             try {
               const profile = await fetchUserProfile(session.user);
+              if (!isMounted) return;
               if (profile?.status === 'active') {
                 setUser(profile);
               } else {
@@ -225,9 +236,9 @@ export const UnifiedAuthProvider = ({ children }) => {
                 }
               }
             } catch (error) {
-              setUser(null);
+              if (isMounted) setUser(null);
             } finally {
-              setLoading(false);
+              if (isMounted) setLoading(false);
             }
           }, 0);
         } else {
@@ -237,40 +248,44 @@ export const UnifiedAuthProvider = ({ children }) => {
       }
     );
 
-    // THEN check for existing session with retry logic
+    // THEN check for existing session (browser refresh recovery)
     const checkExistingSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (error) {
-          setLoading(false);
+        if (error || !isMounted) {
+          if (isMounted) setLoading(false);
           return;
         }
 
         setSession(session);
         
-        if (session?.user && !isInitialized) {
-          isInitialized = true;
+        if (session?.user && !sessionHandled) {
+          sessionHandled = true;
           try {
             const profile = await fetchUserProfile(session.user);
+            if (!isMounted) return;
             if (profile?.status === 'active') {
               setUser(profile);
             } else {
               setUser(null);
             }
           } catch (error) {
-            setUser(null);
+            if (isMounted) setUser(null);
           }
         }
-        setLoading(false);
+        if (isMounted) setLoading(false);
       } catch (error) {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     checkExistingSession();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchUserProfile]);
 
   // جلب صلاحيات المستخدم
