@@ -274,12 +274,14 @@ const EmployeeFinancialCenterPage = () => {
     };
   }, [employeeCashSource, cashMovements, employeeProfits, supervisedEmployeeProfits, calculatedDateRange, selectedTimePeriod]);
 
-  // قيمة مخزون الموظف (المنتجات الخاصة)
+  // قيمة مخزون الموظف (المنتجات الخاصة - بناءً على owner_user_id)
   const inventoryValue = useMemo(() => {
     if (!products || !Array.isArray(products)) return 0;
-    // المنتجات المملوكة للموظف
+    const uid = currentUser?.id;
+    const uuid = currentUser?.user_id;
+    // المنتجات المملوكة مالياً للموظف (owner_user_id)
     return products
-      .filter(p => p.created_by === userId)
+      .filter(p => p.owner_user_id === userId || p.owner_user_id === uid || p.owner_user_id === uuid)
       .reduce((sum, p) => {
         if (!p.variants || !Array.isArray(p.variants)) return sum;
         return sum + p.variants.reduce((variantSum, v) => {
