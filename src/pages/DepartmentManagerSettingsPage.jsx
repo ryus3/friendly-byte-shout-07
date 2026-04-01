@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import DepartmentStatsCharts from '@/components/department/DepartmentStatsCharts';
+import ProductPermissionsManager from '@/components/manage-employees/ProductPermissionsManager';
 import { Switch } from '@/components/ui/switch';
 import { 
   Users, 
@@ -521,7 +522,7 @@ const DepartmentManagerSettingsPage = () => {
             </Card>
           </TabsContent>
 
-          {/* تبويب صلاحيات المنتجات */}
+          {/* تبويب صلاحيات المنتجات - نظام كامل مثل المدير */}
           <TabsContent value="permissions">
             <Card>
               <CardHeader>
@@ -530,7 +531,7 @@ const DepartmentManagerSettingsPage = () => {
                   صلاحيات المنتجات
                 </CardTitle>
                 <CardDescription>
-                  التحكم بالمنتجات المتاحة لكل موظف تحت إشرافك
+                  التحكم الكامل بالمنتجات والأقسام والأصناف والألوان والقياسات لكل موظف
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
@@ -551,78 +552,14 @@ const DepartmentManagerSettingsPage = () => {
                   </Select>
                 </div>
 
-                {selectedPermEmployee && !permLoading && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-muted-foreground">
-                        {allowedProducts.length === 0 
-                          ? 'لم يتم تحديد منتجات — الموظف يرى كل المنتجات (الوضع الافتراضي)'
-                          : `${allowedProducts.length} منتج مسموح`}
-                      </p>
-                      <Badge variant={allowedProducts.length > 0 ? 'default' : 'secondary'}>
-                        {allowedProducts.length > 0 ? 'مُخصص' : 'افتراضي'}
-                      </Badge>
-                    </div>
-
-                    {/* الأقسام مع المنتجات */}
-                    {departments.map(dept => {
-                      const deptProducts = products.filter(p => p.department_id === dept.id);
-                      if (deptProducts.length === 0) return null;
-                      const allChecked = deptProducts.every(p => allowedProducts.includes(p.id));
-                      const someChecked = deptProducts.some(p => allowedProducts.includes(p.id));
-                      
-                      return (
-                        <div key={dept.id} className="border rounded-lg p-3 space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Checkbox 
-                              checked={allChecked}
-                              ref={el => { if (el) el.dataset.indeterminate = someChecked && !allChecked; }}
-                              onCheckedChange={() => toggleDepartmentProducts(dept.id)}
-                            />
-                            <span className="font-semibold text-sm">{dept.name}</span>
-                            <Badge variant="outline" className="text-xs">{deptProducts.length}</Badge>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 pr-6">
-                            {deptProducts.map(product => (
-                              <div key={product.id} className="flex items-center gap-2 py-1">
-                                <Checkbox
-                                  checked={allowedProducts.includes(product.id)}
-                                  onCheckedChange={() => toggleProductPermission(product.id)}
-                                />
-                                <span className="text-sm">{product.name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    {/* منتجات بدون قسم */}
-                    {(() => {
-                      const noDeptProducts = products.filter(p => !p.department_id);
-                      if (noDeptProducts.length === 0) return null;
-                      return (
-                        <div className="border rounded-lg p-3 space-y-2">
-                          <span className="font-semibold text-sm">بدون قسم</span>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 pr-6">
-                            {noDeptProducts.map(product => (
-                              <div key={product.id} className="flex items-center gap-2 py-1">
-                                <Checkbox
-                                  checked={allowedProducts.includes(product.id)}
-                                  onCheckedChange={() => toggleProductPermission(product.id)}
-                                />
-                                <span className="text-sm">{product.name}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {permLoading && (
-                  <div className="text-center py-8 text-muted-foreground">جاري التحميل...</div>
+                {selectedPermEmployee && (
+                  <ProductPermissionsManager
+                    user={{ user_id: selectedPermEmployee, full_name: supervisedEmployees.find(e => e?.user_id === selectedPermEmployee)?.full_name }}
+                    onClose={() => setSelectedPermEmployee('')}
+                    onUpdate={() => {
+                      toast({ title: 'تم التحديث', description: 'تم تحديث صلاحيات المنتجات بنجاح' });
+                    }}
+                  />
                 )}
 
                 {!selectedPermEmployee && (

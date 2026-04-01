@@ -195,10 +195,12 @@ const [showExportDialog, setShowExportDialog] = useState(false);
   // طلبات المستخدم الحالي فقط (لمنع احتساب مبيعات الآخرين)
   const eligibleOrdersByUser = useMemo(() => {
     if (!currentUserId) return [];
+    const altId = authUser?.id;
+    const altUuid = authUser?.user_id;
     return eligibleOrders.filter(
-      (o) => (o.created_by && o.created_by === currentUserId) || (o.user_id && o.user_id === currentUserId)
+      (o) => o.created_by === currentUserId || o.created_by === altId || o.created_by === altUuid
     );
-  }, [eligibleOrders, currentUserId]);
+  }, [eligibleOrders, currentUserId, authUser]);
 
   // تحديد جنس المنتج من تصنيف الفئات (رجالي/نسائي)
   const productGenderMap = useMemo(() => {

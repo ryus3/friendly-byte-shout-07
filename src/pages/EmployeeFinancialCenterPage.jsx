@@ -274,12 +274,14 @@ const EmployeeFinancialCenterPage = () => {
     };
   }, [employeeCashSource, cashMovements, employeeProfits, supervisedEmployeeProfits, calculatedDateRange, selectedTimePeriod]);
 
-  // قيمة مخزون الموظف (المنتجات الخاصة)
+  // قيمة مخزون الموظف (المنتجات الخاصة - بناءً على owner_user_id)
   const inventoryValue = useMemo(() => {
     if (!products || !Array.isArray(products)) return 0;
-    // المنتجات المملوكة للموظف
+    const uid = currentUser?.id;
+    const uuid = currentUser?.user_id;
+    // المنتجات المملوكة مالياً للموظف (owner_user_id)
     return products
-      .filter(p => p.created_by === userId)
+      .filter(p => p.owner_user_id === userId || p.owner_user_id === uid || p.owner_user_id === uuid)
       .reduce((sum, p) => {
         if (!p.variants || !Array.isArray(p.variants)) return sum;
         return sum + p.variants.reduce((variantSum, v) => {
@@ -302,13 +304,29 @@ const EmployeeFinancialCenterPage = () => {
     });
   }, [accounting?.expenses, userId, calculatedDateRange, selectedTimePeriod]);
 
-  // طلبات الموظف
+  // طلبات المركز المالي - تشمل طلبات الموظف نفسه + طلبات تخص منتجات يملكها مالياً
   const myOrders = useMemo(() => {
-    if (!orders) return [];
+    if (!orders || !products) return [];
     const uid = currentUser?.id;
     const uuid = currentUser?.user_id;
-    return orders.filter(o => o.created_by === userId || o.created_by === uid || o.created_by === uuid);
-  }, [orders, userId, currentUser]);
+    
+    // المنتجات المملوكة مالياً
+    const myProductIds = new Set(
+      products
+        .filter(p => p.owner_user_id === userId || p.owner_user_id === uid || p.owner_user_id === uuid)
+        .map(p => p.id)
+    );
+    
+    return orders.filter(o => {
+      // طلبات أنشأها الموظف
+      if (o.created_by === userId || o.created_by === uid || o.created_by === uuid) return true;
+      // طلبات تخص منتجات يملكها مالياً (أنشأها موظف تحت إشرافه)
+      if (myProductIds.size > 0 && o.items && Array.isArray(o.items)) {
+        return o.items.some(item => myProductIds.has(item.product_id));
+      }
+      return false;
+    });
+  }, [orders, products, userId, currentUser]);
 
   const totalCapital = initialCapital + inventoryValue;
 
@@ -495,14 +513,24 @@ const EmployeeFinancialCenterPage = () => {
                 <StatRow label="تكلفة البضاعة المباعة" value={financialStats.cogs} colorClass="text-orange-500" isNegative />
                 <StatRow label="مجمل الربح" value={financialStats.grossProfit} colorClass="text-blue-500 font-bold" />
                 <StatRow label="المصاريف العامة" value={financialStats.generalExpenses} colorClass="text-red-500" isNegative />
-                <StatRow label="المشتريات" value={financialStats.totalPurchases} colorClass="text-amber-600" isNegative />
-                <StatRow label="المستحقات المدفوعة" value={financialStats.employeeSettledDues} colorClass="text-purple-500" isNegative />
+              <StatRow label="المستحقات المدفوعة" value={financialStats.employeeSettledDues} colorClass="text-purple-500" isNegative />
+                {financialStats.totalPurchases > 0 && (
+                  <StatRow label="المشتريات" value={financialStats.totalPurchases} colorClass="text-amber-600" isNegative />
+                )}
                 <div className="flex justify-between items-center py-3 mt-2 bg-secondary rounded-lg px-4">
-                  <p className="font-bold text-lg">صافي الربح</p>
+                  <p className="font-bold text-lg">صافي الربح (مع المشتريات)</p>
                   <p className={`font-bold text-lg ${financialStats.netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>
                     {financialStats.netProfit.toLocaleString()} د.ع
                   </p>
                 </div>
+                {financialStats.totalPurchases > 0 && (
+                  <div className="flex justify-between items-center py-2 mt-1 bg-muted/50 rounded-lg px-4">
+                    <p className="font-semibold text-sm">صافي الربح (بدون مشتريات)</p>
+                    <p className={`font-semibold text-sm ${(financialStats.netProfit + financialStats.totalPurchases) >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                      {(financialStats.netProfit + financialStats.totalPurchases).toLocaleString()} د.ع
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
