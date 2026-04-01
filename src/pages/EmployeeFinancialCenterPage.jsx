@@ -304,13 +304,29 @@ const EmployeeFinancialCenterPage = () => {
     });
   }, [accounting?.expenses, userId, calculatedDateRange, selectedTimePeriod]);
 
-  // طلبات الموظف
+  // طلبات المركز المالي - تشمل طلبات الموظف نفسه + طلبات تخص منتجات يملكها مالياً
   const myOrders = useMemo(() => {
-    if (!orders) return [];
+    if (!orders || !products) return [];
     const uid = currentUser?.id;
     const uuid = currentUser?.user_id;
-    return orders.filter(o => o.created_by === userId || o.created_by === uid || o.created_by === uuid);
-  }, [orders, userId, currentUser]);
+    
+    // المنتجات المملوكة مالياً
+    const myProductIds = new Set(
+      products
+        .filter(p => p.owner_user_id === userId || p.owner_user_id === uid || p.owner_user_id === uuid)
+        .map(p => p.id)
+    );
+    
+    return orders.filter(o => {
+      // طلبات أنشأها الموظف
+      if (o.created_by === userId || o.created_by === uid || o.created_by === uuid) return true;
+      // طلبات تخص منتجات يملكها مالياً (أنشأها موظف تحت إشرافه)
+      if (myProductIds.size > 0 && o.items && Array.isArray(o.items)) {
+        return o.items.some(item => myProductIds.has(item.product_id));
+      }
+      return false;
+    });
+  }, [orders, products, userId, currentUser]);
 
   const totalCapital = initialCapital + inventoryValue;
 
