@@ -1510,13 +1510,19 @@ useEffect(() => {
         <UnifiedSettledDuesDialog
           open={isDuesDialogOpen}
           onOpenChange={setIsDuesDialogOpen}
-          invoices={settlementInvoices || []} // ✅ توحيد استخدام settlementInvoices
+          invoices={(isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0)
+            ? (settlementInvoices || []).filter(si => supervisedEmployeeIds.includes(si.employee_id))
+            : (settlementInvoices || [])
+          }
           allUsers={allUsers}
-          profits={profits || []} // تمرير بيانات الأرباح
-          orders={filteredOrders || orders || []} // تمرير بيانات الطلبات
-          timePeriod={filters.timePeriod} // تمرير فلتر الفترة
-          supervisedEmployeeIds={supervisedEmployeeIds} // تمرير الموظفين المشرف عليهم
-          isDepartmentManager={isDepartmentManager && !isAdmin} // تمرير حالة مدير القسم
+          profits={(isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0)
+            ? (profits || []).filter(p => supervisedEmployeeIds.includes(p.employee_id))
+            : (profits || [])
+          }
+          orders={filteredOrders || orders || []}
+          timePeriod={filters.timePeriod}
+          supervisedEmployeeIds={supervisedEmployeeIds}
+          isDepartmentManager={isDepartmentManager && !isAdmin}
         />
 
         {/* إعدادات المزامنة التلقائية الموحدة */}

@@ -513,14 +513,24 @@ const EmployeeFinancialCenterPage = () => {
                 <StatRow label="تكلفة البضاعة المباعة" value={financialStats.cogs} colorClass="text-orange-500" isNegative />
                 <StatRow label="مجمل الربح" value={financialStats.grossProfit} colorClass="text-blue-500 font-bold" />
                 <StatRow label="المصاريف العامة" value={financialStats.generalExpenses} colorClass="text-red-500" isNegative />
-                <StatRow label="المشتريات" value={financialStats.totalPurchases} colorClass="text-amber-600" isNegative />
-                <StatRow label="المستحقات المدفوعة" value={financialStats.employeeSettledDues} colorClass="text-purple-500" isNegative />
+              <StatRow label="المستحقات المدفوعة" value={financialStats.employeeSettledDues} colorClass="text-purple-500" isNegative />
+                {financialStats.totalPurchases > 0 && (
+                  <StatRow label="المشتريات" value={financialStats.totalPurchases} colorClass="text-amber-600" isNegative />
+                )}
                 <div className="flex justify-between items-center py-3 mt-2 bg-secondary rounded-lg px-4">
-                  <p className="font-bold text-lg">صافي الربح</p>
+                  <p className="font-bold text-lg">صافي الربح (مع المشتريات)</p>
                   <p className={`font-bold text-lg ${financialStats.netProfit >= 0 ? 'text-primary' : 'text-destructive'}`}>
                     {financialStats.netProfit.toLocaleString()} د.ع
                   </p>
                 </div>
+                {financialStats.totalPurchases > 0 && (
+                  <div className="flex justify-between items-center py-2 mt-1 bg-muted/50 rounded-lg px-4">
+                    <p className="font-semibold text-sm">صافي الربح (بدون مشتريات)</p>
+                    <p className={`font-semibold text-sm ${(financialStats.netProfit + financialStats.totalPurchases) >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                      {(financialStats.netProfit + financialStats.totalPurchases).toLocaleString()} د.ع
+                    </p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

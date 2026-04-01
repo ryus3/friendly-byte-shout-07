@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import DepartmentStatsCharts from '@/components/department/DepartmentStatsCharts';
+import ProductPermissionsManager from '@/components/manage-employees/ProductPermissionsManager';
 import { Switch } from '@/components/ui/switch';
 import { 
   Users, 
