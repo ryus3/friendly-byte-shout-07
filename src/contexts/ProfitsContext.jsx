@@ -255,6 +255,41 @@ export const ProfitsProvider = ({ children }) => {
 
       devLog.log('💰 إجمالي الأرباح للتحاسب:', totalProfit);
 
+      // ✅ منع خلط ملاك مختلفين في طلب تحاسب واحد
+      const { data: orderItems, error: orderItemsError } = await supabase
+        .from('orders')
+        .select('id, items')
+        .in('id', eligibleOrderIds);
+
+      if (!orderItemsError && orderItems) {
+        // استخراج product_ids من كل الطلبات
+        const allProductIds = new Set();
+        orderItems.forEach(o => {
+          if (Array.isArray(o.items)) {
+            o.items.forEach(item => {
+              if (item.product_id) allProductIds.add(item.product_id);
+              if (item.productId) allProductIds.add(item.productId);
+            });
+          }
+        });
+
+        if (allProductIds.size > 0) {
+          const { data: productsData } = await supabase
+            .from('products')
+            .select('id, owner_user_id')
+            .in('id', [...allProductIds]);
+
+          if (productsData) {
+            const owners = new Set(productsData.map(p => p.owner_user_id || 'system'));
+            devLog.log('🏷️ ملاك المنتجات في طلب التحاسب:', [...owners]);
+            
+            if (owners.size > 1) {
+              throw new Error('لا يمكن تقديم طلب تحاسب واحد لطلبات تخص ملاك مختلفين. الرجاء تحديد طلبات تخص نفس المالك المالي (النظام أو مدير قسم واحد).');
+            }
+          }
+        }
+      }
+
       const { data: profileData } = await supabase
         .from('profiles')
         .select('full_name')

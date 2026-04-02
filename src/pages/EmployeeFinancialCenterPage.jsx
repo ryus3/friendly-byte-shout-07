@@ -24,8 +24,8 @@ import PendingDuesDialog from '@/components/accounting/PendingDuesDialog';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import FinancialPerformanceCard from '@/components/shared/FinancialPerformanceCard';
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
+import CapitalDetailsDialog from '@/components/accounting/CapitalDetailsDialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
@@ -46,53 +46,7 @@ const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
   );
 };
 
-const EditCapitalDialog = ({ open, onOpenChange, currentCapital, onSave, cashSourceId }) => {
-  const [newCapital, setNewCapital] = useState(currentCapital);
-
-  useEffect(() => {
-    setNewCapital(currentCapital);
-  }, [currentCapital, open]);
-
-  const handleSave = async () => {
-    const capitalValue = parseFloat(newCapital);
-    if (isNaN(capitalValue)) {
-      toast({ title: "خطأ", description: "الرجاء إدخال مبلغ صحيح.", variant: "destructive" });
-      return;
-    }
-    try {
-      const { error } = await supabase
-        .from('cash_sources')
-        .update({ initial_capital: capitalValue, updated_at: new Date().toISOString() })
-        .eq('id', cashSourceId);
-      if (error) throw error;
-      onSave(capitalValue);
-      toast({ title: "تم التحديث", description: "تم تحديث رأس المال بنجاح" });
-    } catch (error) {
-      console.error('خطأ في تحديث رأس المال:', error);
-      toast({ title: "خطأ", description: "فشل في تحديث رأس المال", variant: "destructive" });
-    }
-    onOpenChange(false);
-  };
-
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>تعديل رأس المال</AlertDialogTitle>
-          <AlertDialogDescription>أدخل القيمة الجديدة لرأس المال الخاص بقاصتك.</AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="py-4">
-          <Label htmlFor="emp-capital-input">رأس المال (د.ع)</Label>
-          <Input id="emp-capital-input" type="number" value={newCapital} onChange={(e) => setNewCapital(e.target.value)} placeholder="أدخل رأس المال" />
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel>إلغاء</AlertDialogCancel>
-          <AlertDialogAction onClick={handleSave}>حفظ التغييرات</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-};
+// EditCapitalDialog removed - using CapitalDetailsDialog instead
 
 const EmployeeFinancialCenterPage = () => {
   const { orders, purchases, accounting, products, addExpense, deleteExpense, settlementInvoices, calculateProfit } = useInventory();
@@ -617,12 +571,25 @@ const EmployeeFinancialCenterPage = () => {
         datePeriod={selectedTimePeriod}
         onDatePeriodChange={setSelectedTimePeriod}
       />
-      <EditCapitalDialog
+      <CapitalDetailsDialog
         open={dialogs.capital}
         onOpenChange={(open) => setDialogs(d => ({ ...d, capital: open }))}
-        currentCapital={initialCapital}
-        onSave={(v) => setInitialCapital(v)}
-        cashSourceId={employeeCashSource?.id}
+        initialCapital={initialCapital}
+        inventoryValue={inventoryValue}
+        cashBalance={financialStats.balance}
+        onCapitalUpdate={(v) => {
+          setInitialCapital(v);
+          // تحديث القاصة مباشرة
+          if (employeeCashSource?.id) {
+            supabase
+              .from('cash_sources')
+              .update({ initial_capital: v, updated_at: new Date().toISOString() })
+              .eq('id', employeeCashSource.id)
+              .then(({ error }) => {
+                if (error) console.error('خطأ في تحديث رأس المال:', error);
+              });
+          }
+        }}
       />
     </>
   );
