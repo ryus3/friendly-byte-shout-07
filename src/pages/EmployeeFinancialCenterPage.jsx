@@ -24,8 +24,8 @@ import PendingDuesDialog from '@/components/accounting/PendingDuesDialog';
 import ProfitLossDialog from '@/components/accounting/ProfitLossDialog';
 import FinancialPerformanceCard from '@/components/shared/FinancialPerformanceCard';
 import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
+import CapitalDetailsDialog from '@/components/accounting/CapitalDetailsDialog';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
