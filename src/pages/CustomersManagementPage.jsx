@@ -410,7 +410,19 @@ const [showExportDialog, setShowExportDialog] = useState(false);
   }, [filteredCustomers]);
 
   const handleCustomerSelect = (customer) => {
-    setSelectedCustomer(customer);
+    const phone = normalizePhone(customer.phone);
+    const relatedOrders = phone ? ordersByPhone.get(phone) || [] : [];
+    // حساب المبيعات بدون توصيل
+    const totalSalesWithoutDelivery = relatedOrders.reduce((sum, o) => {
+      const total = Number(o.total_amount) || 0;
+      const deliveryFee = Number(o.delivery_fee) || 0;
+      return sum + Math.max(0, total - deliveryFee);
+    }, 0);
+    setSelectedCustomer({
+      ...customer,
+      completedOrders: relatedOrders,
+      totalSalesWithoutDelivery,
+    });
     setShowDetailsDialog(true);
   };
 

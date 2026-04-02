@@ -91,9 +91,12 @@ const AllEmployeesInvoicesView = () => {
         })
         .filter(invoice => {
           if (invoice.owner_user_id === GENERAL_MANAGER_ID) return false;
-          if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
+          if (isDepartmentManager && !isAdmin) {
+            // مدير القسم: فقط فواتير الموظفين تحت إشرافه حصراً (ليس نفسه)
+            if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) return false;
             return supervisedEmployeeIds.includes(invoice.owner_user_id) && 
-                   invoice.owner_user_id !== user?.user_id;
+                   invoice.owner_user_id !== user?.user_id &&
+                   invoice.owner_user_id !== user?.id;
           }
           return true;
         });
