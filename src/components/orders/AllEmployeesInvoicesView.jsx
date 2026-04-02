@@ -53,7 +53,14 @@ const AllEmployeesInvoicesView = () => {
       if (empError) return;
 
       let filteredEmployees = employeesData || [];
-      if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
+      if (isDepartmentManager && !isAdmin) {
+        if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) {
+          // مدير قسم بدون موظفين تحت إشرافه - لا يعرض شيء
+          setEmployees([]);
+          setAllInvoices([]);
+          setLoading(false);
+          return;
+        }
         filteredEmployees = filteredEmployees.filter(emp => 
           supervisedEmployeeIds.includes(emp.user_id)
         );
