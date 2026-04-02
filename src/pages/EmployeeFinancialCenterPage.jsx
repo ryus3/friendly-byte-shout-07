@@ -46,53 +46,7 @@ const StatRow = ({ label, value, colorClass, isNegative = false, onClick }) => {
   );
 };
 
-const EditCapitalDialog = ({ open, onOpenChange, currentCapital, onSave, cashSourceId }) => {
-  const [newCapital, setNewCapital] = useState(currentCapital);
-
-  useEffect(() => {
-    setNewCapital(currentCapital);
-  }, [currentCapital, open]);
-
-  const handleSave = async () => {
-    const capitalValue = parseFloat(newCapital);
-    if (isNaN(capitalValue)) {
-      toast({ title: "خطأ", description: "الرجاء إدخال مبلغ صحيح.", variant: "destructive" });
-      return;
-    }
-    try {
-      const { error } = await supabase
-        .from('cash_sources')
-        .update({ initial_capital: capitalValue, updated_at: new Date().toISOString() })
-        .eq('id', cashSourceId);
-      if (error) throw error;
-      onSave(capitalValue);
-      toast({ title: "تم التحديث", description: "تم تحديث رأس المال بنجاح" });
-    } catch (error) {
-      console.error('خطأ في تحديث رأس المال:', error);
-      toast({ title: "خطأ", description: "فشل في تحديث رأس المال", variant: "destructive" });
-    }
-    onOpenChange(false);
-  };
-
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>تعديل رأس المال</AlertDialogTitle>
-          <AlertDialogDescription>أدخل القيمة الجديدة لرأس المال الخاص بقاصتك.</AlertDialogDescription>
-        </AlertDialogHeader>
-        <div className="py-4">
-          <Label htmlFor="emp-capital-input">رأس المال (د.ع)</Label>
-          <Input id="emp-capital-input" type="number" value={newCapital} onChange={(e) => setNewCapital(e.target.value)} placeholder="أدخل رأس المال" />
-        </div>
-        <AlertDialogFooter>
-          <AlertDialogCancel>إلغاء</AlertDialogCancel>
-          <AlertDialogAction onClick={handleSave}>حفظ التغييرات</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-};
+// EditCapitalDialog removed - using CapitalDetailsDialog instead
 
 const EmployeeFinancialCenterPage = () => {
   const { orders, purchases, accounting, products, addExpense, deleteExpense, settlementInvoices, calculateProfit } = useInventory();
