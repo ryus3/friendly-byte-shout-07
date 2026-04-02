@@ -571,12 +571,25 @@ const EmployeeFinancialCenterPage = () => {
         datePeriod={selectedTimePeriod}
         onDatePeriodChange={setSelectedTimePeriod}
       />
-      <EditCapitalDialog
+      <CapitalDetailsDialog
         open={dialogs.capital}
         onOpenChange={(open) => setDialogs(d => ({ ...d, capital: open }))}
-        currentCapital={initialCapital}
-        onSave={(v) => setInitialCapital(v)}
-        cashSourceId={employeeCashSource?.id}
+        initialCapital={initialCapital}
+        inventoryValue={inventoryValue}
+        cashBalance={financialStats.balance}
+        onCapitalUpdate={(v) => {
+          setInitialCapital(v);
+          // تحديث القاصة مباشرة
+          if (employeeCashSource?.id) {
+            supabase
+              .from('cash_sources')
+              .update({ initial_capital: v, updated_at: new Date().toISOString() })
+              .eq('id', employeeCashSource.id)
+              .then(({ error }) => {
+                if (error) console.error('خطأ في تحديث رأس المال:', error);
+              });
+          }
+        }}
       />
     </>
   );
