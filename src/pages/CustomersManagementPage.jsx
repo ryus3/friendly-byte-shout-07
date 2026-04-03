@@ -294,14 +294,15 @@ const [showExportDialog, setShowExportDialog] = useState(false);
   // فصل العملاء لكل مستخدم (حتى المدير) بالاعتماد على منشئ الطلبات/العميل
   const myCustomers = useMemo(() => {
     if (!currentUserId) return mergedCustomers;
+    const ids = new Set([authUser?.id, authUser?.user_id, currentUserId].filter(Boolean));
     return mergedCustomers.filter((c) => {
       const phone = normalizePhone(c.phone);
       const related = phone ? ordersByPhone.get(phone) || [] : [];
-      const belongsByOrder = related.some((o) => (o.created_by && o.created_by === currentUserId));
-      const belongsByCustomer = c.created_by && c.created_by === currentUserId;
+      const belongsByOrder = related.some((o) => ids.has(o.created_by));
+      const belongsByCustomer = ids.has(c.created_by);
       return belongsByOrder || belongsByCustomer;
     });
-  }, [mergedCustomers, ordersByPhone, currentUserId]);
+  }, [mergedCustomers, ordersByPhone, currentUserId, authUser]);
 
   // تطبيق البحث والفلاتر بعد الدمج والتقسيم
   const filteredCustomers = useMemo(() => {
