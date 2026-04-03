@@ -193,12 +193,14 @@ const [showExportDialog, setShowExportDialog] = useState(false);
   }, [orders]);
 
   // طلبات المستخدم الحالي فقط (لمنع احتساب مبيعات الآخرين)
+  // ✅ مطابقة ثنائية: id و user_id
   const eligibleOrdersByUser = useMemo(() => {
     if (!currentUserId) return [];
-    const altId = authUser?.id;
-    const altUuid = authUser?.user_id;
+    const uid = authUser?.id;
+    const uuid = authUser?.user_id;
+    const ids = new Set([currentUserId, uid, uuid].filter(Boolean));
     return eligibleOrders.filter(
-      (o) => o.created_by === currentUserId || o.created_by === altId || o.created_by === altUuid
+      (o) => ids.has(o.created_by)
     );
   }, [eligibleOrders, currentUserId, authUser]);
 

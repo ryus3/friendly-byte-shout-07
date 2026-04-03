@@ -95,6 +95,10 @@ const DepartmentManagerSettingsPage = () => {
     const fetchProfitRules = async () => {
       if (!isDepartmentManager || supervisedEmployeeIds.length === 0) return;
       
+      const userId = user?.id;
+      const userUuid = user?.user_id;
+      
+      // ✅ جلب القواعد التي أنشأها مدير القسم (بكلا المعرفين)
       const { data, error } = await supabase
         .from('employee_profit_rules')
         .select(`
@@ -103,14 +107,14 @@ const DepartmentManagerSettingsPage = () => {
           product:products!target_id(name)
         `)
         .in('employee_id', supervisedEmployeeIds)
-        .eq('created_by', user?.id);
+        .or(`created_by.eq.${userId}${userUuid && userUuid !== userId ? `,created_by.eq.${userUuid}` : ''}`);
       
       if (!error && data) {
         setProfitRules(data);
       }
     };
     fetchProfitRules();
-  }, [isDepartmentManager, supervisedEmployeeIds, user?.id]);
+  }, [isDepartmentManager, supervisedEmployeeIds, user?.id, user?.user_id]);
 
   // جلب إحصائيات القسم
   useEffect(() => {
