@@ -60,7 +60,7 @@ const DepartmentManagerSettingsPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       const userId = user?.id || user?.user_id;
-      // جلب منتجات مدير القسم + منتجات النظام
+      // ✅ جلب منتجات مدير القسم المملوكة له مالياً فقط (owner_user_id)
       const { data, error } = await supabase
         .from('products')
         .select('id, name, department_id, owner_user_id')
@@ -68,7 +68,14 @@ const DepartmentManagerSettingsPage = () => {
         .order('name');
       
       if (!error && data) {
-        setProducts(data);
+        // فلترة: منتجات يملكها مدير القسم مالياً + منتجات النظام (بدون مالك)
+        const filtered = data.filter(p => 
+          p.owner_user_id === userId || 
+          p.owner_user_id === user?.id || 
+          p.owner_user_id === user?.user_id ||
+          !p.owner_user_id // منتجات النظام
+        );
+        setProducts(filtered);
       }
     };
     const fetchDepartments = async () => {
@@ -88,6 +95,10 @@ const DepartmentManagerSettingsPage = () => {
     const fetchProfitRules = async () => {
       if (!isDepartmentManager || supervisedEmployeeIds.length === 0) return;
       
+      const userId = user?.id;
+      const userUuid = user?.user_id;
+      
+      // ✅ جلب القواعد التي أنشأها مدير القسم (بكلا المعرفين)
       const { data, error } = await supabase
         .from('employee_profit_rules')
         .select(`
@@ -96,14 +107,14 @@ const DepartmentManagerSettingsPage = () => {
           product:products!target_id(name)
         `)
         .in('employee_id', supervisedEmployeeIds)
-        .eq('created_by', user?.id);
+        .or(`created_by.eq.${userId}${userUuid && userUuid !== userId ? `,created_by.eq.${userUuid}` : ''}`);
       
       if (!error && data) {
         setProfitRules(data);
       }
     };
     fetchProfitRules();
-  }, [isDepartmentManager, supervisedEmployeeIds, user?.id]);
+  }, [isDepartmentManager, supervisedEmployeeIds, user?.id, user?.user_id]);
 
   // جلب إحصائيات القسم
   useEffect(() => {

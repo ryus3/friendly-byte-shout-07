@@ -1510,13 +1510,17 @@ useEffect(() => {
         <UnifiedSettledDuesDialog
           open={isDuesDialogOpen}
           onOpenChange={setIsDuesDialogOpen}
-          invoices={(isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0)
-            ? (settlementInvoices || []).filter(si => supervisedEmployeeIds.includes(si.employee_id))
+          invoices={(isDepartmentManager && !isAdmin)
+            ? (supervisedEmployeeIds?.length > 0
+              ? (settlementInvoices || []).filter(si => supervisedEmployeeIds.includes(si.employee_id))
+              : []) // ✅ مدير قسم بدون موظفين = قائمة فارغة
             : (settlementInvoices || [])
           }
           allUsers={allUsers}
-          profits={(isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0)
-            ? (profits || []).filter(p => supervisedEmployeeIds.includes(p.employee_id))
+          profits={(isDepartmentManager && !isAdmin)
+            ? (supervisedEmployeeIds?.length > 0
+              ? (profits || []).filter(p => supervisedEmployeeIds.includes(p.employee_id))
+              : []) // ✅ مدير قسم بدون موظفين = قائمة فارغة
             : (profits || [])
           }
           orders={filteredOrders || orders || []}

@@ -556,6 +556,8 @@ const EmployeeFinancialCenterPage = () => {
         profits={supervisedEmployeeProfits}
         orders={myOrders}
         timePeriod={selectedTimePeriod}
+        supervisedEmployeeIds={supervisedEmployeeIds}
+        isDepartmentManager={true}
       />
       <PendingDuesDialog
         open={dialogs.pendingDues}
