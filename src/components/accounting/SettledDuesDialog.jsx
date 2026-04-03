@@ -451,31 +451,39 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   // جلب الأرباح المسواة والطلبات مع تشغيل الهجرة
   useEffect(() => {
     const fetchSettledProfits = async () => {
+      // ✅ Guard: مدير القسم بدون موظفين = لا شيء
+      if (isDepartmentManager && (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0)) {
+        setSettledProfits([]);
+        return;
+      }
+      
       try {
         // تشغيل هجرة المصروفات إلى فواتير التسوية أولاً
-        
         const { data: migrationResult, error: migrationError } = await supabase
           .rpc('migrate_employee_dues_expenses');
 
         if (migrationError) {
           console.error('❌ خطأ في الهجرة:', migrationError);
-        } else if (migrationResult?.migrated_count > 0) {
-          
         }
-
         
-        const { data, error } = await supabase
+        let query = supabase
           .from('profits')
           .select(`
             *,
             orders!inner(order_number, customer_name, total_amount, created_at)
           `)
           .eq('status', 'settled');
+        
+        // ✅ مدير القسم: فقط أرباح موظفيه
+        if (isDepartmentManager && supervisedEmployeeIds?.length > 0) {
+          query = query.in('employee_id', supervisedEmployeeIds);
+        }
+
+        const { data, error } = await query;
 
         if (error) {
           console.error('❌ خطأ في جلب الأرباح المسواة:', error);
         } else {
-          
           const profitsWithOrderData = data?.map(profit => ({
             ...profit,
             order_number: profit.orders?.order_number,
@@ -484,37 +492,16 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
           })) || [];
           
           setSettledProfits(profitsWithOrderData);
-          
         }
       } catch (error) {
         console.error('❌ خطأ غير متوقع:', error);
       }
     };
 
-    // جلب جميع الطلبات للموظف المحدد
-    const fetchAllOrdersForEmployee = async () => {
-      try {
-        
-        const { data, error } = await supabase
-          .from('orders')
-          .select('*')
-          .eq('created_by', 'fba59dfc-451c-4906-8882-ae4601ff34d4'); // معرف موظف احمد
-
-        if (error) {
-          console.error('❌ خطأ في جلب الطلبات:', error);
-        } else {
-          
-        }
-      } catch (error) {
-        console.error('❌ خطأ غير متوقع في جلب الطلبات:', error);
-      }
-    };
-
     if (open) {
       fetchSettledProfits();
-      fetchAllOrdersForEmployee();
     }
-  }, [open, allUsers]);
+  }, [open, allUsers, isDepartmentManager, supervisedEmployeeIds]);
 
   // جلب فواتير التسوية الحقيقية مع فلتر الفترة الزمنية
   useEffect(() => {
