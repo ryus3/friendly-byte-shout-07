@@ -8435,7 +8435,7 @@ export type Database = {
         Args: {
           p_employee_id: string
           p_order_ids: string[]
-          p_total_profit?: number
+          p_total_profit: number
         }
         Returns: Json
       }
