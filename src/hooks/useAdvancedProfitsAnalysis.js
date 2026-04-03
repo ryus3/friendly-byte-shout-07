@@ -217,9 +217,10 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           
           if (!product) continue;
 
-          // ⭐ فلتر الموظف: فلترة بمالك المنتج (created_by) وليس من أنشأ الطلب
+          // ⭐ فلتر الموظف: فلترة بمالك المنتج المالي (owner_user_id) وليس created_by
           if (filters?.employee && filters.employee !== 'all') {
-            if (product.created_by !== filters.employee) continue;
+            const ownerMatch = product.owner_user_id === filters.employee;
+            if (!ownerMatch) continue;
           }
 
           // تطبيق الفلاتر

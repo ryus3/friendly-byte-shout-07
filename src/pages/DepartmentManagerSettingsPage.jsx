@@ -60,7 +60,7 @@ const DepartmentManagerSettingsPage = () => {
   useEffect(() => {
     const fetchProducts = async () => {
       const userId = user?.id || user?.user_id;
-      // جلب منتجات مدير القسم + منتجات النظام
+      // ✅ جلب منتجات مدير القسم المملوكة له مالياً فقط (owner_user_id)
       const { data, error } = await supabase
         .from('products')
         .select('id, name, department_id, owner_user_id')
@@ -68,7 +68,14 @@ const DepartmentManagerSettingsPage = () => {
         .order('name');
       
       if (!error && data) {
-        setProducts(data);
+        // فلترة: منتجات يملكها مدير القسم مالياً + منتجات النظام (بدون مالك)
+        const filtered = data.filter(p => 
+          p.owner_user_id === userId || 
+          p.owner_user_id === user?.id || 
+          p.owner_user_id === user?.user_id ||
+          !p.owner_user_id // منتجات النظام
+        );
+        setProducts(filtered);
       }
     };
     const fetchDepartments = async () => {

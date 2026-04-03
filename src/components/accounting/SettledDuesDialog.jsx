@@ -519,6 +519,13 @@ const SettledDuesDialog = ({ open, onOpenChange, invoices, allUsers, profits = [
   // جلب فواتير التسوية الحقيقية مع فلتر الفترة الزمنية
   useEffect(() => {
     const fetchRealSettlementInvoices = async () => {
+      // ✅ Guard: مدير القسم بدون موظفين = لا شيء
+      if (isDepartmentManager && (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0)) {
+        setRealSettlementInvoices([]);
+        setLoadingRealInvoices(false);
+        return;
+      }
+      
       setLoadingRealInvoices(true);
       try {
         let query = supabase
