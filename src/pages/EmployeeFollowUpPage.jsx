@@ -72,7 +72,10 @@ const EmployeeFollowUpPage = () => {
   // جلب الموظفين الذين يشرف عليهم مدير القسم
   useEffect(() => {
     const fetchSupervisedEmployees = async () => {
-      if (!isDepartmentManager || !user?.id) return;
+      if (!isDepartmentManager || !user?.id) {
+        setSupervisedLoaded(true);
+        return;
+      }
       
       try {
         const { data, error } = await supabase
@@ -83,14 +86,15 @@ const EmployeeFollowUpPage = () => {
         
         if (error) {
           console.error('خطأ في جلب الموظفين المشرف عليهم:', error);
+          setSupervisedLoaded(true);
           return;
         }
         
-        if (data && data.length > 0) {
-          setSupervisedEmployeeIds(data.map(d => d.employee_id));
-        }
+        setSupervisedEmployeeIds(data?.length > 0 ? data.map(d => d.employee_id) : []);
       } catch (err) {
         console.error('خطأ:', err);
+      } finally {
+        setSupervisedLoaded(true);
       }
     };
     
