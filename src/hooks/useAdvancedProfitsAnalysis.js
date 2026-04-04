@@ -12,6 +12,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
   const [analysisData, setAnalysisData] = useState(null);
   const [orders, setOrders] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [supervisedScope, setSupervisedScope] = useState(null); // null = no restriction, array = restricted
   const [totalSoldProducts, setTotalSoldProducts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
