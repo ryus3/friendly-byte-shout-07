@@ -104,7 +104,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     };
 
     fetchAllData();
-  }, []);
+  }, [filters?.employee]);
 
   // حساب ربح الموظف والنظام بناءً على القواعد المحددة
   const calculateProfitSplit = useCallback((orderItem, employeeId, profitRules) => {
