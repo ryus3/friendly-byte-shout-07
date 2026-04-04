@@ -46,6 +46,7 @@ const EmployeeFollowUpPage = () => {
   const [syncing, setSyncing] = useState(false);
   const [syncingEmployee, setSyncingEmployee] = useState(null);
   const [supervisedEmployeeIds, setSupervisedEmployeeIds] = useState([]);
+  const [supervisedLoaded, setSupervisedLoaded] = useState(false);
   
   const { 
     orders, 
