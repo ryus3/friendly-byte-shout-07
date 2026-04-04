@@ -841,34 +841,40 @@ useEffect(() => {
     }, 0);
 
     // المستحقات المدفوعة - مفلترة حسب الفترة الزمنية والموظفين المشرف عليهم
-    // ✅ لمدير القسم: نستخدم settlement_invoices للحصول على employee_id
+    // ✅ لمدير القسم: guard صارم - لا fallback أبداً
     let paidDues = 0;
-    if (isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0) {
-      // مدير القسم: فقط تسويات موظفيه المشرف عليهم
-      const supervisedSettlements = settlementInvoices?.filter(si => 
-        supervisedEmployeeIds.includes(si.employee_id)
-      ) || [];
-      paidDues = supervisedSettlements
-        .filter(si => {
-          if (filters.timePeriod === 'all') return true;
-          const createdAt = si.created_at;
-          if (!createdAt) return false;
-          const settlementDate = new Date(createdAt);
-          const now = new Date();
-          switch (filters.timePeriod) {
-            case 'today':
-              return settlementDate.toDateString() === now.toDateString();
-            case 'week':
-              return settlementDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-            case 'month':
-              return settlementDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-            case '3months':
-              return settlementDate >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-            default:
-              return true;
-          }
-        })
-        .reduce((sum, si) => sum + (Number(si.total_amount) || 0), 0);
+    if (isDepartmentManager && !isAdmin) {
+      // ✅ guard: إذا لم يتم تحميل القائمة بعد أو فارغة → 0 دائماً
+      if (!supervisedLoaded || supervisedEmployeeIds.length === 0) {
+        paidDues = 0;
+      } else {
+        // مدير القسم: فقط تسويات موظفيه المشرف عليهم
+        const supervisedSettlements = settlementInvoices?.filter(si => {
+          const empId = si.data?.employee_id || si.employee_id;
+          return empId && supervisedEmployeeIds.includes(empId);
+        }) || [];
+        paidDues = supervisedSettlements
+          .filter(si => {
+            if (filters.timePeriod === 'all') return true;
+            const createdAt = si.created_at;
+            if (!createdAt) return false;
+            const settlementDate = new Date(createdAt);
+            const now = new Date();
+            switch (filters.timePeriod) {
+              case 'today':
+                return settlementDate.toDateString() === now.toDateString();
+              case 'week':
+                return settlementDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+              case 'month':
+                return settlementDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+              case '3months':
+                return settlementDate >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+              default:
+                return true;
+            }
+          })
+          .reduce((sum, si) => sum + (Number(si.total_amount) || 0), 0);
+      }
     } else {
       // المدير العام: كل المستحقات المدفوعة
       paidDues = expenses && Array.isArray(expenses)
