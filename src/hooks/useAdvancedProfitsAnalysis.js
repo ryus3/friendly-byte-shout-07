@@ -68,6 +68,21 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           .eq('is_active', true);
         setEmployees(employeesData || []);
         
+        // ✅ إذا كان هناك فلتر موظف من URL (مدير مركز)، جلب نطاق الإشراف
+        const employeeFilter = filters?.employee;
+        if (employeeFilter && employeeFilter !== 'all') {
+          const { data: supervisedData } = await supabase
+            .from('employee_supervisors')
+            .select('employee_id')
+            .eq('supervisor_id', employeeFilter)
+            .eq('is_active', true);
+          const supIds = supervisedData?.map(s => s.employee_id) || [];
+          // النطاق = المدير نفسه + موظفيه
+          setSupervisedScope([employeeFilter, ...supIds]);
+        } else {
+          setSupervisedScope(null);
+        }
+        
         // جلب عدد المنتجات المباعة الفعلي من inventory
         const { data: soldData } = await supabase
           .from('inventory')
