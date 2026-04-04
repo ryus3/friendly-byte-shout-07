@@ -12,6 +12,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
   const [analysisData, setAnalysisData] = useState(null);
   const [orders, setOrders] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [supervisedScope, setSupervisedScope] = useState(null); // null = no restriction, array = restricted
   const [totalSoldProducts, setTotalSoldProducts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -67,6 +68,21 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
           .eq('is_active', true);
         setEmployees(employeesData || []);
         
+        // ✅ إذا كان هناك فلتر موظف من URL (مدير مركز)، جلب نطاق الإشراف
+        const employeeFilter = filters?.employee;
+        if (employeeFilter && employeeFilter !== 'all') {
+          const { data: supervisedData } = await supabase
+            .from('employee_supervisors')
+            .select('employee_id')
+            .eq('supervisor_id', employeeFilter)
+            .eq('is_active', true);
+          const supIds = supervisedData?.map(s => s.employee_id) || [];
+          // النطاق = المدير نفسه + موظفيه
+          setSupervisedScope([employeeFilter, ...supIds]);
+        } else {
+          setSupervisedScope(null);
+        }
+        
         // جلب عدد المنتجات المباعة الفعلي من inventory
         const { data: soldData } = await supabase
           .from('inventory')
@@ -88,7 +104,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     };
 
     fetchAllData();
-  }, []);
+  }, [filters?.employee]);
 
   // حساب ربح الموظف والنظام بناءً على القواعد المحددة
   const calculateProfitSplit = useCallback((orderItem, employeeId, profitRules) => {
@@ -457,6 +473,12 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     processAnalysis();
   }, [processAnalysis]);
 
+  // ✅ فلترة الموظفين حسب نطاق الإشراف
+  const scopedEmployees = useMemo(() => {
+    if (!supervisedScope) return employees;
+    return employees.filter(emp => supervisedScope.includes(emp.user_id));
+  }, [employees, supervisedScope]);
+
   return {
     analysisData,
     loading: loading && !analysisData,
@@ -468,7 +490,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     sizes: cachedSizes || [],
     productTypes: cachedProductTypes || [],
     seasons: cachedSeasons || [],
-    employees,
+    employees: scopedEmployees,
     refreshData
   };
 };
