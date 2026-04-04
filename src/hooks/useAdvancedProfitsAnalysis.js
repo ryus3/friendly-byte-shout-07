@@ -473,6 +473,12 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     processAnalysis();
   }, [processAnalysis]);
 
+  // ✅ فلترة الموظفين حسب نطاق الإشراف
+  const scopedEmployees = useMemo(() => {
+    if (!supervisedScope) return employees;
+    return employees.filter(emp => supervisedScope.includes(emp.user_id));
+  }, [employees, supervisedScope]);
+
   return {
     analysisData,
     loading: loading && !analysisData,
@@ -484,7 +490,7 @@ export const useAdvancedProfitsAnalysis = (dateRange, filters) => {
     sizes: cachedSizes || [],
     productTypes: cachedProductTypes || [],
     seasons: cachedSeasons || [],
-    employees,
+    employees: scopedEmployees,
     refreshData
   };
 };
