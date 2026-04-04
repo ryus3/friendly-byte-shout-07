@@ -1,83 +1,62 @@
 
-المشاكل ما زالت واضحة من الكود الحالي، وسببها ليس شيئاً واحداً بل 4 فجوات رئيسية ما زالت موجودة:
 
-1. متابعة الموظفين ما زالت تتسرّب لأن العزل في `EmployeeFollowUpPage.jsx` يعتمد على `settlementInvoices` القادمة من الـ inventory context، ثم يمررها إلى `SettledDuesDialog` الذي يعيد الجلب بنفسه من `settlement_invoices` بدون guard من نوع “Nothing if Empty”. كذلك المقارنة الحالية تعتمد غالباً على `employee_id` فقط، بينما المشروع كله يعاني من ازدواج `id/user_id`.
-2. تفاصيل العملاء = 0 لأن `CustomersManagementPage.jsx` يبني `ordersByPhone` من `eligibleOrdersByUser` المعتمدة على `created_by` فقط، بينما الواقع عندكم أن بيانات العميل يجب أن تُحتسب من طلبات الهاتف المؤهلة، ومع مطابقة المستخدم بكلا المعرّفين عند الحاجة. لذلك تظهر النقاط من الولاء لكن الطلبات/المشتريات من مجموعة مختلفة.
-3. تحليل أرباح المنتجات ما زال يسحب رقم النظام لأن `useAdvancedProfitsAnalysis.js` يفلتر بالموظف عبر `product.created_by` بدلاً من `product.owner_user_id`. لذلك صفحة التحليل ما تزال تعتبر منتجات النظام أو تستبعد منتجات مدير المركز الفعلية.
-4. إدارة القسم ما زالت ناقصة في الأرباح والمنتجات لأن `DepartmentManagerSettingsPage.jsx` يجلب كل المنتجات النشطة بدون فلترة ملكية، وقواعد الأرباح مربوطة بـ `created_by = user.id` فقط، ما قد يخفي منتجات مدير القسم إذا كانت الملكية الفعلية مبنية على `owner_user_id` أو اختلاف `id/user_id`.
+# خطة إصلاح جذرية شاملة
 
-خطة التنفيذ الجذرية:
+## المشاكل الجذرية المكتشفة بعد فحص الكود
 
-1. عزل “المستحقات المدفوعة” نهائياً
-- توحيد مصدر بيانات المستحقات في `EmployeeFollowUpPage.jsx` و`SettledDuesDialog.jsx`.
-- إضافة guard صارم:
-  - إذا كان المستخدم مدير قسم و`supervisedEmployeeIds` ما زالت فارغة/قيد التحميل → القيم = 0 والقائمة فارغة.
-  - عدم fallback إلى كل الفواتير أبداً.
-- اعتماد مطابقة مزدوجة للموظف: `employee_id` مقابل `user.id` و`user.user_id`.
-- تصفية الفواتير الحقيقية والقديمة legacy بنفس scope، وليس فقط `realSettlementInvoices`.
-- منع ظهور أي فاتورة أو مستحقات لسارة نفسها داخل متابعة الموظفين.
+### 1. مستحقات مدفوعة 587,000 (تسرب بيانات النظام)
+**السبب الحقيقي:** في `EmployeeFollowUpPage.jsx` سطر 841، الشرط `isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0` يفشل أثناء التحميل لأن `supervisedEmployeeIds` تبدأ كمصفوفة فارغة `[]`. هذا يُسقط التنفيذ إلى فرع `else` (سطر 867) الذي يحسب المستحقات من `expenses` النظامية الكاملة. كذلك في فلتر `settlementInvoices` يُقارن `si.employee_id` مباشرة بينما الحقل الفعلي هو `si.data?.employee_id` (مخزن داخل JSON).
 
-2. إصلاح فواتير الموظفين تحت الإشراف فقط
-- في `AllEmployeesInvoicesView.jsx`:
-  - فلترة الموظفين والفواتير عبر كلا المعرفين `id/user_id`.
-  - عدم استخدام `employeesData` الخام في الربط؛ استخدام القائمة المفلترة فقط.
-  - منع ظهور فواتير المدير نفسه حتى لو كان له `owner_user_id`.
-- في `useSupervisedEmployees.js`:
-  - تعديل `filterNotifications` لإلغاء السماح بالإشعارات العامة `user_id = null` لمدير القسم في سياق المتابعة المالية.
-  - جعل `allowedUserIds` و`canViewEmployeeData` تعملان على كلا الحقلين وليس واحداً فقط.
+**الحل:**
+- إضافة حالة تحميل `supervisedLoaded` منفصلة عن `supervisedEmployeeIds.length`
+- عندما يكون مدير قسم: إرجاع `0` دائماً حتى يكتمل تحميل `supervisedEmployeeIds`
+- تصحيح المقارنة من `si.employee_id` إلى `si.data?.employee_id`
 
-3. إصلاح العملاء بحيث لا تبقى الطلبات/المشتريات صفر
-- في `CustomersManagementPage.jsx`:
-  - بناء طلبات العميل من `eligibleOrders` حسب الهاتف أولاً، ثم قصرها على نطاق المستخدم عبر مطابقة `created_by` مع `authUser.id` و`authUser.user_id`.
-  - توحيد مصدر:
-    - `customer_loyalty.total_orders`
-    - `customer_loyalty.total_spent`
-    - `completedOrders`
-    - `totalSalesWithoutDelivery`
-    من نفس dataset الفعلية.
-- عند فتح `CustomerDetailsDialog` يتم تمرير الطلبات المؤهلة نفسها المستعملة في الكرت، لا إعادة حساب مختلف.
-- إذا كانت نقاط الولاء تاريخية ولا تطابق الطلبات الحالية، تبقى النقاط كما هي لكن الطلبات/المشتريات والتفاصيل تعتمد dataset الهاتف المؤهلة الصحيحة فقط.
+### 2. تفاصيل العملاء (طلبات 0، مشتريات 0)
+**السبب:** `ordersByPhone` مبني من `eligibleOrdersByUser` الذي يفلتر بـ `created_by` مقابل `authUser.id/user_id`. المشكلة أن الطلبات المكتملة ربما أُنشئت بواسطة موظف آخر (ليس المستخدم الحالي)، فتكون المطابقة فارغة. العميل لديه نقاط (من `customer_phone_loyalty` المفلتر بـ RLS) لكن طلباته أُنشئت بواسطة موظفين آخرين.
 
-4. إصلاح تحليل أرباح المنتجات لمدير المركز
-- في `useAdvancedProfitsAnalysis.js`:
-  - استبدال فلتر `product.created_by === filters.employee` بفلتر الملكية المالية `product.owner_user_id === filters.employee`.
-  - دعم مطابقة ثنائية `owner_user_id` مع `id/user_id`.
-  - إبقاء الطلب ضمن التحليل فقط إذا كان يحتوي منتجات يملكها ذلك المدير مالياً.
-- في `EmployeeFinancialCenterPage.jsx`:
-  - ربط كرت “تحليل أرباح المنتجات” بعدد الطلبات التي تحتوي منتجات `owner_user_id` الخاصة بمدير المركز فقط، وليس أي طلب للنظام.
-  - التحقق أن الانتقال إلى `advanced-profits-analysis?employee=...` يمرر معرف الملكية الصحيح.
+**الحل:**
+- `ordersByPhone` يجب أن يُبنى من `eligibleOrders` (كل الطلبات المؤهلة) وليس `eligibleOrdersByUser`
+- الفلترة تكون على مستوى العميل (أي عميل له طلبات في النظام) وليس على مستوى منشئ الطلب
+- التصفية حسب المستخدم تبقى على مستوى **العملاء** (من أنشأ سجل العميل) وليس **الطلبات**
 
-5. إصلاح إدارة القسم لتظهر منتجات المدير فعلاً
-- في `DepartmentManagerSettingsPage.jsx`:
-  - فلترة قائمة المنتجات إلى:
-    - منتجات مدير القسم المملوكة له مالياً `owner_user_id`
-    - ومنتجات النظام فقط إذا كان المطلوب السماح له بإدارة قواعد عليها.
-  - عدم جلب كل منتجات النظام/الآخرين بلا scope.
-  - تعديل جلب قواعد الأرباح ليعتمد على كلا المعرفين في `created_by`.
-  - تصحيح نوع القاعدة:
-    - `product` عند تحديد منتج
-    - `general/default` عند “كل المنتجات”
-    بشكل متوافق مع محرك الحساب الفعلي.
-- إبقاء `ProductPermissionsManager` كواجهة الإدارة الكاملة، لكن تمرير scope منتجات مدير القسم فقط حتى تصبح مثل المدير ضمن نطاقه، لا على كامل النظام.
+### 3. تحليل أرباح المنتجات (رقم النظام + موظفين خارج الإشراف)
+**السبب الأول:** كارت "تحليل أرباح المنتجات" في `EmployeeFinancialCenterPage.jsx` يحسب من `myOrders` الذي يشمل طلبات أنشأها الموظف نفسه + طلبات تخص منتجاته. لكن `myOrders` يحسب على أساس `orders` من `useInventory()` الذي قد يجلب جميع الطلبات.
 
-6. مراجعة نافذة رأس المال
-- الكود يفتح `CapitalDetailsDialog` بالفعل داخل `EmployeeFinancialCenterPage.jsx`.
-- سأراجع في التنفيذ props الممرّرة لها مقابل صفحة المدير (`AccountingPage.jsx`) وأجعلها تستخدم نفس البيانات/المعطيات الكاملة حتى تظهر بنفس التفصيل وليس بشكل ناقص.
+**السبب الثاني:** صفحة `AdvancedProfitsAnalysisPage.jsx` تعرض قائمة `employees` من `useAdvancedProfitsAnalysis` التي تجلب جميع الموظفين النشطين (سطر 64-68) بدون أي فلترة حسب الإشراف. فمدير القسم يرى كل الموظفين ويختار أي واحد.
 
-الملفات التي يجب تعديلها:
-- `src/pages/EmployeeFollowUpPage.jsx`
-- `src/components/accounting/SettledDuesDialog.jsx`
-- `src/components/orders/AllEmployeesInvoicesView.jsx`
-- `src/hooks/useSupervisedEmployees.js`
-- `src/pages/CustomersManagementPage.jsx`
-- `src/components/customers/CustomerDetailsDialog.jsx`
-- `src/hooks/useAdvancedProfitsAnalysis.js`
-- `src/pages/EmployeeFinancialCenterPage.jsx`
-- `src/pages/DepartmentManagerSettingsPage.jsx`
+**الحل:**
+- `useAdvancedProfitsAnalysis`: عند وجود `filters.employee` من URL (مدير مركز)، فلترة قائمة الموظفين لتشمل فقط: المدير نفسه + موظفيه المشرف عليهم
+- إضافة `supervisedEmployeeIds` كمدخل أو جلبه داخل الهوك
+- الكارت في `EmployeeFinancialCenterPage` يعدّ فقط الطلبات التي تحتوي منتجات `owner_user_id` وليس كل `myOrders`
 
-معيار القبول بعد التنفيذ:
-- سارة لا ترى أي “مستحقات مدفوعة” إلا لموظفيها فقط، وإذا لا يوجد موظفون تحت إشرافها تكون القيمة 0.
-- لا تظهر فواتير عبدالله ولا فواتير سارة نفسها في قائمة موظفي القسم.
-- العميل الذي لديه نقاط تظهر له طلباته ومشترياته وتفاصيله الحقيقية، لا أصفار وهمية.
-- تحليل أرباح المنتجات يعكس فقط منتجات مدير المركز المملوكة له `owner_user_id`.
-- تبويب أرباح القسم يعرض منتجات مدير القسم فعلاً، وإدارة الموظفين/الصلاحيات تبقى بمستوى المدير لكن ضمن نطاق القسم فقط.
+### 4. إدارة الأرباح - المنتجات لا تظهر في المنسدلة
+**السبب:** في `DepartmentManagerSettingsPage.jsx` سطر 64-78، الجلب يحضر كل المنتجات النشطة ثم يفلتر بـ `owner_user_id`. لكن المقارنة `p.owner_user_id === userId` حيث `userId = user?.id || user?.user_id` قد لا تطابق إذا كان `owner_user_id` محفوظ بـ UUID مختلف عن `user.id`. كذلك يضيف منتجات النظام (`!p.owner_user_id`) ما يخلط البيانات.
+
+**الحل:**
+- استخدام مجموعة `Set` للمقارنة الثنائية: `user.id` و `user.user_id`
+- إزالة منتجات النظام من المنسدلة (مدير القسم يدير فقط منتجاته)
+- أو فصل منتجات النظام في مجموعة مميزة إذا كان مطلوباً السماح بقواعد عليها
+
+---
+
+## الملفات التي ستُعدل
+
+| الملف | التعديل |
+|-------|---------|
+| `EmployeeFollowUpPage.jsx` | إصلاح تسرب paidDues: إضافة guard تحميل + تصحيح `si.data?.employee_id` |
+| `CustomersManagementPage.jsx` | بناء `ordersByPhone` من `eligibleOrders` بدل `eligibleOrdersByUser` |
+| `useAdvancedProfitsAnalysis.js` | فلترة قائمة الموظفين حسب الإشراف عند تواجد employee filter |
+| `AdvancedProfitsAnalysisPage.jsx` | تمرير supervisedEmployeeIds وتقييد الموظفين المعروضين |
+| `DepartmentManagerSettingsPage.jsx` | إصلاح مقارنة owner_user_id بمجموعة ثنائية |
+| `EmployeeFinancialCenterPage.jsx` | حساب كارت التحليل من منتجات owner_user_id فقط |
+
+---
+
+## معايير القبول
+1. مستحقات مدفوعة = 0 إذا لم يوجد تسويات لموظفين تحت الإشراف
+2. تفاصيل العميل تعرض طلباته ومشترياته الحقيقية
+3. تحليل أرباح المنتجات يعرض فقط منتجات المالك المالي
+4. قائمة الموظفين في التحليل تعرض فقط المشرف عليهم
+5. منسدلة المنتجات في إدارة الأرباح تعرض منتجات مدير القسم فعلاً
+
