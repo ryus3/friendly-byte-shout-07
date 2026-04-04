@@ -68,12 +68,10 @@ const DepartmentManagerSettingsPage = () => {
         .order('name');
       
       if (!error && data) {
-        // فلترة: منتجات يملكها مدير القسم مالياً + منتجات النظام (بدون مالك)
+        // ✅ فلترة: منتجات يملكها مدير القسم مالياً فقط (بدون منتجات النظام)
+        const userIds = new Set([user?.id, user?.user_id].filter(Boolean));
         const filtered = data.filter(p => 
-          p.owner_user_id === userId || 
-          p.owner_user_id === user?.id || 
-          p.owner_user_id === user?.user_id ||
-          !p.owner_user_id // منتجات النظام
+          p.owner_user_id && userIds.has(p.owner_user_id)
         );
         setProducts(filtered);
       }

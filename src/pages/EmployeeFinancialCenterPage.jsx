@@ -321,12 +321,29 @@ const EmployeeFinancialCenterPage = () => {
     { key: 'inventory', title: "قيمة المخزون", value: inventoryValue, icon: Box, colors: ['purple-500', 'violet-600'], format: "currency" },
   ];
 
+  // كارت تحليل أرباح المنتجات - يعدّ فقط الطلبات التي تحتوي منتجات owner_user_id
+  const ownerProductOrders = useMemo(() => {
+    if (!orders || !products) return [];
+    const uid = currentUser?.id;
+    const uuid = currentUser?.user_id;
+    const myProductIds = new Set(
+      products
+        .filter(p => p.owner_user_id === userId || p.owner_user_id === uid || p.owner_user_id === uuid)
+        .map(p => p.id)
+    );
+    if (myProductIds.size === 0) return [];
+    return orders.filter(o => {
+      if (o.status !== 'delivered' && !o.receipt_received) return false;
+      return o.items && Array.isArray(o.items) && o.items.some(item => myProductIds.has(item.product_id));
+    });
+  }, [orders, products, userId, currentUser]);
+
   const profitCards = [
     {
       key: 'productProfit',
       title: "تحليل أرباح المنتجات",
-      value: myOrders.filter(o => o.status === 'delivered' || o.receipt_received).length > 0
-        ? `${myOrders.filter(o => o.status === 'delivered' || o.receipt_received).length} طلب مسلّم`
+      value: ownerProductOrders.length > 0
+        ? `${ownerProductOrders.length} طلب مسلّم`
         : 'لا توجد مبيعات',
       icon: PieChart,
       colors: ['violet-500', 'purple-500'],
