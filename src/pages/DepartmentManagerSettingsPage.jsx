@@ -63,7 +63,7 @@ const DepartmentManagerSettingsPage = () => {
       // ✅ جلب منتجات مدير القسم المملوكة له مالياً فقط (owner_user_id)
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, department_id, owner_user_id')
+        .select('id, name, owner_user_id')
         .eq('is_active', true)
         .order('name');
       
