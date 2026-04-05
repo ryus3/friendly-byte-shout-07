@@ -101,7 +101,7 @@ const DepartmentManagerSettingsPage = () => {
     };
     fetchProducts();
     fetchDepartments();
-  }, [user]);
+  }, [user, supervisedEmployeeIds]);
 
   // جلب قواعد الأرباح للموظفين تحت الإشراف
   useEffect(() => {
