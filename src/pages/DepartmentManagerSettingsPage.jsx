@@ -59,8 +59,9 @@ const DepartmentManagerSettingsPage = () => {
   // جلب المنتجات والأقسام
   useEffect(() => {
     const fetchProducts = async () => {
-      const userId = user?.id || user?.user_id;
-      // ✅ جلب منتجات مدير القسم المملوكة له مالياً فقط (owner_user_id)
+      const userIds = new Set([user?.id, user?.user_id].filter(Boolean));
+      
+      // ✅ جلب كل المنتجات النشطة
       const { data, error } = await supabase
         .from('products')
         .select('id, name, owner_user_id')
@@ -68,12 +69,26 @@ const DepartmentManagerSettingsPage = () => {
         .order('name');
       
       if (!error && data) {
-        // ✅ فلترة: منتجات يملكها مدير القسم مالياً فقط (بدون منتجات النظام)
-        const userIds = new Set([user?.id, user?.user_id].filter(Boolean));
-        const filtered = data.filter(p => 
-          p.owner_user_id && userIds.has(p.owner_user_id)
-        );
-        setProducts(filtered);
+        // 1. منتجات يملكها مدير القسم مالياً
+        const ownedProducts = data.filter(p => p.owner_user_id && userIds.has(p.owner_user_id));
+        
+        // 2. جلب منتجات النظام المصرح بها للموظفين تحت الإشراف أو للمدير نفسه
+        const allUserIds = [...userIds, ...(supervisedEmployeeIds || [])].filter(Boolean);
+        const { data: allowedData } = await supabase
+          .from('employee_allowed_products')
+          .select('product_id')
+          .in('employee_id', allUserIds.length > 0 ? allUserIds : ['__none__'])
+          .eq('is_active', true);
+        
+        const allowedProductIds = new Set((allowedData || []).map(a => a.product_id));
+        
+        // 3. منتجات النظام (بدون مالك) المصرح بها
+        const systemAllowed = data.filter(p => !p.owner_user_id && allowedProductIds.has(p.id));
+        
+        // 4. دمج بدون تكرار
+        const mergedMap = new Map();
+        [...ownedProducts, ...systemAllowed].forEach(p => mergedMap.set(p.id, p));
+        setProducts(Array.from(mergedMap.values()));
       }
     };
     const fetchDepartments = async () => {

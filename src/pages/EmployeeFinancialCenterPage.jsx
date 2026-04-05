@@ -530,12 +530,15 @@ const EmployeeFinancialCenterPage = () => {
                       </p>
                       {m.reference_type && (
                         <Badge variant="outline" className="text-xs mt-1">
-                          {m.reference_type === 'order' ? 'طلب' :
-                           m.reference_type === 'expense' ? 'مصروف' :
-                           m.reference_type === 'purchase' ? 'شراء' :
-                           m.reference_type === 'capital_injection' ? 'إضافة رأس مال' :
-                           m.reference_type === 'capital_withdrawal' ? 'سحب' :
-                           m.reference_type}
+                           {m.reference_type === 'order' ? 'طلب' :
+                            m.reference_type === 'expense' ? 'مصروف' :
+                            m.reference_type === 'expense_refund' ? 'إرجاع مصروف محذوف' :
+                            m.reference_type === 'purchase' ? 'شراء' :
+                            m.reference_type === 'purchase_refund' ? 'استرداد مشتريات' :
+                            m.reference_type === 'capital_injection' ? 'إضافة رأس مال' :
+                            m.reference_type === 'capital_withdrawal' ? 'سحب' :
+                            m.reference_type === 'revenue' ? 'إيراد مبيعات' :
+                            m.reference_type}
                         </Badge>
                       )}
                     </div>
