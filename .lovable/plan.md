@@ -1,62 +1,102 @@
 
 
-# خطة إصلاح جذرية شاملة
-
-## المشاكل الجذرية المكتشفة بعد فحص الكود
-
-### 1. مستحقات مدفوعة 587,000 (تسرب بيانات النظام)
-**السبب الحقيقي:** في `EmployeeFollowUpPage.jsx` سطر 841، الشرط `isDepartmentManager && !isAdmin && supervisedEmployeeIds?.length > 0` يفشل أثناء التحميل لأن `supervisedEmployeeIds` تبدأ كمصفوفة فارغة `[]`. هذا يُسقط التنفيذ إلى فرع `else` (سطر 867) الذي يحسب المستحقات من `expenses` النظامية الكاملة. كذلك في فلتر `settlementInvoices` يُقارن `si.employee_id` مباشرة بينما الحقل الفعلي هو `si.data?.employee_id` (مخزن داخل JSON).
-
-**الحل:**
-- إضافة حالة تحميل `supervisedLoaded` منفصلة عن `supervisedEmployeeIds.length`
-- عندما يكون مدير قسم: إرجاع `0` دائماً حتى يكتمل تحميل `supervisedEmployeeIds`
-- تصحيح المقارنة من `si.employee_id` إلى `si.data?.employee_id`
-
-### 2. تفاصيل العملاء (طلبات 0، مشتريات 0)
-**السبب:** `ordersByPhone` مبني من `eligibleOrdersByUser` الذي يفلتر بـ `created_by` مقابل `authUser.id/user_id`. المشكلة أن الطلبات المكتملة ربما أُنشئت بواسطة موظف آخر (ليس المستخدم الحالي)، فتكون المطابقة فارغة. العميل لديه نقاط (من `customer_phone_loyalty` المفلتر بـ RLS) لكن طلباته أُنشئت بواسطة موظفين آخرين.
-
-**الحل:**
-- `ordersByPhone` يجب أن يُبنى من `eligibleOrders` (كل الطلبات المؤهلة) وليس `eligibleOrdersByUser`
-- الفلترة تكون على مستوى العميل (أي عميل له طلبات في النظام) وليس على مستوى منشئ الطلب
-- التصفية حسب المستخدم تبقى على مستوى **العملاء** (من أنشأ سجل العميل) وليس **الطلبات**
-
-### 3. تحليل أرباح المنتجات (رقم النظام + موظفين خارج الإشراف)
-**السبب الأول:** كارت "تحليل أرباح المنتجات" في `EmployeeFinancialCenterPage.jsx` يحسب من `myOrders` الذي يشمل طلبات أنشأها الموظف نفسه + طلبات تخص منتجاته. لكن `myOrders` يحسب على أساس `orders` من `useInventory()` الذي قد يجلب جميع الطلبات.
-
-**السبب الثاني:** صفحة `AdvancedProfitsAnalysisPage.jsx` تعرض قائمة `employees` من `useAdvancedProfitsAnalysis` التي تجلب جميع الموظفين النشطين (سطر 64-68) بدون أي فلترة حسب الإشراف. فمدير القسم يرى كل الموظفين ويختار أي واحد.
-
-**الحل:**
-- `useAdvancedProfitsAnalysis`: عند وجود `filters.employee` من URL (مدير مركز)، فلترة قائمة الموظفين لتشمل فقط: المدير نفسه + موظفيه المشرف عليهم
-- إضافة `supervisedEmployeeIds` كمدخل أو جلبه داخل الهوك
-- الكارت في `EmployeeFinancialCenterPage` يعدّ فقط الطلبات التي تحتوي منتجات `owner_user_id` وليس كل `myOrders`
-
-### 4. إدارة الأرباح - المنتجات لا تظهر في المنسدلة
-**السبب:** في `DepartmentManagerSettingsPage.jsx` سطر 64-78، الجلب يحضر كل المنتجات النشطة ثم يفلتر بـ `owner_user_id`. لكن المقارنة `p.owner_user_id === userId` حيث `userId = user?.id || user?.user_id` قد لا تطابق إذا كان `owner_user_id` محفوظ بـ UUID مختلف عن `user.id`. كذلك يضيف منتجات النظام (`!p.owner_user_id`) ما يخلط البيانات.
-
-**الحل:**
-- استخدام مجموعة `Set` للمقارنة الثنائية: `user.id` و `user.user_id`
-- إزالة منتجات النظام من المنسدلة (مدير القسم يدير فقط منتجاته)
-- أو فصل منتجات النظام في مجموعة مميزة إذا كان مطلوباً السماح بقواعد عليها
+# خطة شاملة لإصلاح 7 مشاكل + مناقشة بوت التليغرام
 
 ---
 
-## الملفات التي ستُعدل
+## المشاكل والحلول
+
+### 1. إدارة العملاء: عرض عملاء الموظف الحقيقيين فقط (من طلباته المكتملة)
+
+**المشكلة:** `ordersByPhone` يُبنى من `eligibleOrders` (كل الطلبات المؤهلة في النظام)، و`myCustomers` يقبل أي عميل له طلب في النظام بأي موظف. النتيجة: كل الموظفين يرون كل العملاء.
+
+**الحل في `CustomersManagementPage.jsx`:**
+- بناء `ordersByPhone` من `eligibleOrdersByUser` (طلبات المستخدم الحالي فقط) بدلاً من `eligibleOrders`
+- إلغاء `myCustomers` الحالي واستبداله بفلتر مباشر: العميل يظهر فقط إذا كان لديه طلبات مكتملة أنشأها هذا الموظف
+- حتى المدير العام يرى فقط عملاء طلباته هو
+
+**عرض رقم التتبع في تفاصيل العميل:**
+- في `CustomerDetailsDialog.jsx` سطر 235: تغيير `order.order_number` إلى `order.tracking_number || order.order_number`
+
+### 2. إدارة الأرباح: إظهار منتجات الموظف + منتجات النظام المصرح بها
+
+**المشكلة:** `DepartmentManagerSettingsPage.jsx` يفلتر فقط منتجات `owner_user_id` (المملوكة مالياً). يتجاهل منتجات النظام التي لدى الموظف صلاحية عليها.
+
+**الحل:**
+- جلب المنتجات المملوكة مالياً (`owner_user_id` = user)
+- جلب المنتجات المصرح بها من `employee_allowed_products` حيث `employee_id` = أحد الموظفين تحت الإشراف أو user نفسه
+- جلب منتجات النظام (`owner_user_id IS NULL`) التي لها صلاحيات للموظفين المشرف عليهم
+- دمج القائمتين مع إزالة التكرار
+
+### 3. تحليل أرباح المنتجات: تقييد قائمة الموظفين
+
+**المشكلة:** `AdvancedProfitsAnalysisPage.jsx` يعرض كل الموظفين النشطين في الـ dropdown حتى لو كان المستخدم مدير قسم. النتائج تعرض أرباح النظام لا أرباح المنتجات المملوكة.
+
+**الحل في `AdvancedProfitsAnalysisPage.jsx`:**
+- عند وجود `employeeFromUrl` (مدير مركز): تصفية `employees` لتعرض فقط المدير نفسه + موظفيه
+- استخدام `supervisedScope` الموجود في `useAdvancedProfitsAnalysis.js` لتقييد القائمة المعروضة
+
+**الحل في `useAdvancedProfitsAnalysis.js`:**
+- إرجاع `supervisedScope` كقيمة من الهوك
+- في الصفحة، فلترة `employees` بناءً على `supervisedScope` إذا كان موجوداً
+
+### 4. حركة إرجاع المصروف تظهر بالإنجليزية
+
+**المشكلة:** في `EmployeeFinancialCenterPage.jsx` سطر 532-538، خريطة الترجمة لا تتضمن `expense_refund`. في `CashMovementsList.jsx` سطر 68 أيضاً لا يوجد.
+
+**الحل:**
+- إضافة `'expense_refund': 'إرجاع مصروف محذوف'` في كلا الملفين:
+  - `CashMovementsList.jsx` → `getMovementTypeLabel`
+  - `EmployeeFinancialCenterPage.jsx` → خريطة reference_type
+
+### 5. فواتير شركة التوصيل تدخل لقاصة مالك المنتج
+
+**المشكلة (مناقشة):** هذا يعتمد على دالة `record_order_revenue_on_receipt` في قاعدة البيانات. يجب التحقق أن هذه الدالة تحدد `cash_source_id` بناءً على `owner_user_id` من المنتج في الطلب.
+
+**الحل:** فحص الدالة في قاعدة البيانات والتأكد من أن الربط الصحيح موجود. إذا لم يكن، تعديل الدالة لتوجيه الإيراد إلى قاصة المالك.
+
+### 6. تسجيل الدخول وحفظ الجلسة
+
+**الوضع الحالي:** `persistSession: true` و `autoRefreshToken: true` مفعلان في `src/integrations/supabase/client.ts`. Supabase يحفظ الجلسة في `localStorage` ويجددها تلقائياً. الجلسة تبقى صالحة ما دام `refresh_token` صالحاً (افتراضياً في Supabase = **90 يوم**). لا يوجد مشكلة تقنية — إذا كان يُطلب تسجيل دخول متكرر، قد يكون المتصفح يمسح `localStorage` أو هناك خطأ في استرجاع الجلسة.
+
+### 7. إدارة الموظفين والأرباح بمستوى المدير
+
+**المشكلة:** تبويب "الموظفين" في `DepartmentManagerSettingsPage.jsx` يعرض فقط قائمة بسيطة (اسم + كود). بينما `ManageEmployeesPage.jsx` يوفر grid/table view + إحصائيات + تعديل + فريق.
+
+**الحل:**
+- إضافة مكونات من `ManageEmployeesPage` (الإحصائيات، أزرار التعديل، عرض التفاصيل) إلى تبويب الموظفين
+- لكن مع تقييد البيانات إلى `supervisedEmployees` فقط
+- إضافة حوارات `UnifiedEmployeeDialog` و`UpdateRolePermissionsDialog` و`TeamManagementDialog`
+
+---
+
+## حول بوت التليغرام - مناقشة
+
+**سؤال 1: نظام "هل تقصد؟" للمنتجات**
+نظام "هل تقصد؟" موجود بالفعل **للمناطق** فقط. لا يوجد نظام مماثل للمنتجات. الفكرة ممتازة وعملية. أقترح:
+- عند عدم تطابق المنتج: عرض أزرار inline بأقرب 3-5 منتجات (مثل المناطق تماماً)
+- إذا كان التطابق جزئياً (ثقة أقل من 90%): عرض "هل تقصد [المنتج]؟ نعم / لا"
+- هذا يتطلب تعديل `telegram-bot/index.ts` وإضافة callback handler جديد مثل `product_select_`
+
+**سؤال 2: توسيع المنتجات الذكي (برشلونة أسود + أبيض اكس)**
+هذه الميزة **غير موجودة حالياً**. الباسر الحالي يعالج كل سطر منتج كعنصر واحد. إضافة هذه الميزة ممكنة لكنها معقدة وتحتاج:
+- تحليل الـ `+` كفاصل بين ألوان/مقاسات
+- اكتشاف السياق: هل الـ `+` يعني لون جديد لنفس المنتج أم منتج جديد
+- 3 حالات مختلفة (لون+لون، مقاس+مقاس، منتج+منتج) تحتاج منطق مختلف
+
+**توصيتي:** البدء بنظام "هل تقصد؟" للمنتجات أولاً (أسهل وأكثر فائدة فورية)، ثم العمل على التوسيع الذكي كمرحلة ثانية.
+
+---
+
+## الملفات المستهدفة
 
 | الملف | التعديل |
 |-------|---------|
-| `EmployeeFollowUpPage.jsx` | إصلاح تسرب paidDues: إضافة guard تحميل + تصحيح `si.data?.employee_id` |
-| `CustomersManagementPage.jsx` | بناء `ordersByPhone` من `eligibleOrders` بدل `eligibleOrdersByUser` |
-| `useAdvancedProfitsAnalysis.js` | فلترة قائمة الموظفين حسب الإشراف عند تواجد employee filter |
-| `AdvancedProfitsAnalysisPage.jsx` | تمرير supervisedEmployeeIds وتقييد الموظفين المعروضين |
-| `DepartmentManagerSettingsPage.jsx` | إصلاح مقارنة owner_user_id بمجموعة ثنائية |
-| `EmployeeFinancialCenterPage.jsx` | حساب كارت التحليل من منتجات owner_user_id فقط |
-
----
-
-## معايير القبول
-1. مستحقات مدفوعة = 0 إذا لم يوجد تسويات لموظفين تحت الإشراف
-2. تفاصيل العميل تعرض طلباته ومشترياته الحقيقية
-3. تحليل أرباح المنتجات يعرض فقط منتجات المالك المالي
-4. قائمة الموظفين في التحليل تعرض فقط المشرف عليهم
-5. منسدلة المنتجات في إدارة الأرباح تعرض منتجات مدير القسم فعلاً
+| `CustomersManagementPage.jsx` | بناء `ordersByPhone` من طلبات المستخدم فقط |
+| `CustomerDetailsDialog.jsx` | عرض `tracking_number` بدلاً من `order_number` |
+| `DepartmentManagerSettingsPage.jsx` | إضافة منتجات النظام المصرح بها + تطوير تبويب الموظفين |
+| `AdvancedProfitsAnalysisPage.jsx` | تقييد dropdown الموظفين بنطاق الإشراف |
+| `useAdvancedProfitsAnalysis.js` | إرجاع `supervisedScope` من الهوك |
+| `EmployeeFinancialCenterPage.jsx` | ترجمة `expense_refund` |
+| `CashMovementsList.jsx` | ترجمة `expense_refund` |
 
