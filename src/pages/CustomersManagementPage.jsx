@@ -227,18 +227,18 @@ const [showExportDialog, setShowExportDialog] = useState(false);
     return map;
   }, [products]);
 
-  // تجميع الطلبات حسب رقم الهاتف - من جميع الطلبات المؤهلة (وليس فقط طلبات المستخدم)
-  // العميل يُعرض حسب created_by (RLS) لكن طلباته تشمل كل النظام
+  // ✅ تجميع الطلبات حسب رقم الهاتف - من طلبات المستخدم الحالي فقط
+  // كل موظف يرى فقط عملاء طلباته المكتملة هو
   const ordersByPhone = useMemo(() => {
     const m = new Map();
-    eligibleOrders.forEach((o) => {
+    eligibleOrdersByUser.forEach((o) => {
       const phone = normalizePhone(extractOrderPhone(o));
       if (!phone) return;
       if (!m.has(phone)) m.set(phone, []);
       m.get(phone).push(o);
     });
     return m;
-  }, [eligibleOrders]);
+  }, [eligibleOrdersByUser]);
 
   // استخدام العملاء من النظام الموحد (مفلترون تلقائياً حسب created_by من RLS)
   const phoneLoyaltyCustomers = customers || [];

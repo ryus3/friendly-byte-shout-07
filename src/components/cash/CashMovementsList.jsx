@@ -69,6 +69,7 @@ const CashMovementsList = ({ movements = [], cashSources = [] }) => {
       'order': 'بيع طلب',
       'order_payment': 'تحصيل طلب',
       'expense': 'مصروف',
+      'expense_refund': 'إرجاع مصروف محذوف',
       'capital_injection': 'إضافة رأس مال',
       'capital_withdrawal': 'سحب رأس مال',
       'withdrawal': 'سحب أموال',

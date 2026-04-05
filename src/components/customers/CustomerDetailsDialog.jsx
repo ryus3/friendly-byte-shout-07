@@ -232,7 +232,7 @@ const CustomerDetailsDialog = ({ customer, open, onOpenChange }) => {
                     {orders.slice(0, 5).map((order) => (
                       <div key={order.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="space-y-1">
-                          <div className="font-medium">طلب #{order.order_number}</div>
+                          <div className="font-medium">طلب #{order.tracking_number || order.order_number}</div>
                           {order.created_at && (
                             <div className="text-sm text-muted-foreground">
                               {format(new Date(order.created_at), 'd MMM yyyy', { locale: ar })}
