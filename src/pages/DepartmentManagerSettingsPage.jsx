@@ -435,19 +435,34 @@ const DepartmentManagerSettingsPage = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* تبويب الموظفين */}
+          {/* تبويب الموظفين - مطور بمستوى المدير */}
           <TabsContent value="employees">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Users className="w-5 h-5" />
-                  الموظفين تحت إشرافي
+                  إدارة الموظفين
                 </CardTitle>
                 <CardDescription>
-                  قائمة الموظفين الذين يمكنك إدارة أرباحهم ومتابعة أدائهم
+                  إدارة شاملة للموظفين تحت إشرافك - تعديل البيانات والصلاحيات
                 </CardDescription>
               </CardHeader>
               <CardContent>
+                {/* شريط البحث */}
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="بحث بالاسم أو الكود..."
+                      value={employeeSearch}
+                      onChange={(e) => setEmployeeSearch(e.target.value)}
+                      className="pr-9"
+                      dir="rtl"
+                    />
+                  </div>
+                  <Badge variant="secondary">{supervisedEmployees.length} موظف</Badge>
+                </div>
+
                 {supervisedLoading ? (
                   <div className="text-center py-8 text-muted-foreground">جاري التحميل...</div>
                 ) : supervisedEmployees.length === 0 ? (
@@ -456,26 +471,89 @@ const DepartmentManagerSettingsPage = () => {
                   </div>
                 ) : (
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {supervisedEmployees.filter(emp => emp != null).map((emp) => (
+                    {supervisedEmployees
+                      .filter(emp => {
+                        if (!emp) return false;
+                        if (!employeeSearch) return true;
+                        const search = employeeSearch.toLowerCase();
+                        return (emp.full_name?.toLowerCase() || '').includes(search) ||
+                               (emp.employee_code?.toLowerCase() || '').includes(search) ||
+                               (emp.email?.toLowerCase() || '').includes(search);
+                      })
+                      .map((emp) => {
+                        const empStats = employeeStats[emp?.user_id] || {};
+                        return (
                       <Card key={emp?.user_id || Math.random()} className="border-2 hover:border-primary/50 transition-colors">
                         <CardContent className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
-                              {emp?.full_name?.charAt(0) || 'م'}
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-semibold">{emp?.full_name || 'موظف'}</p>
+                          <div className="flex items-center gap-3 mb-3">
+                            <Avatar className="h-12 w-12">
+                              <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-bold text-lg">
+                                {emp?.full_name?.charAt(0) || 'م'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold truncate">{emp?.full_name || 'موظف'}</p>
                               <p className="text-sm text-muted-foreground">{emp?.employee_code || emp?.email || '-'}</p>
                             </div>
-                            <Badge variant="outline">نشط</Badge>
+                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">نشط</Badge>
+                          </div>
+                          
+                          {/* إحصائيات سريعة */}
+                          <div className="grid grid-cols-2 gap-2 mb-3 text-center">
+                            <div className="bg-muted/50 rounded p-2">
+                              <p className="text-lg font-bold">{empStats.ordersCount || 0}</p>
+                              <p className="text-xs text-muted-foreground">طلبات</p>
+                            </div>
+                            <div className="bg-muted/50 rounded p-2">
+                              <p className="text-lg font-bold text-green-600">{((empStats.totalProfit || 0) / 1000).toFixed(1)}K</p>
+                              <p className="text-xs text-muted-foreground">أرباح</p>
+                            </div>
+                          </div>
+                          
+                          {/* أزرار الإجراءات */}
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="flex-1"
+                              onClick={() => {
+                                setEditingEmployee(emp);
+                                setIsEditModalOpen(true);
+                              }}
+                            >
+                              <Edit2 className="w-3 h-3 ml-1" />
+                              تعديل
+                            </Button>
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => navigate(`/profile/${emp?.username || emp?.user_id}`)}
+                            >
+                              <Eye className="w-3 h-3 ml-1" />
+                              الملف
+                            </Button>
                           </div>
                         </CardContent>
                       </Card>
-                    ))}
+                        );
+                      })}
                   </div>
                 )}
               </CardContent>
             </Card>
+            
+            {/* حوار تعديل الموظف */}
+            {editingEmployee && (
+              <UnifiedEmployeeDialog
+                employee={editingEmployee}
+                isOpen={isEditModalOpen}
+                onClose={() => {
+                  setIsEditModalOpen(false);
+                  setEditingEmployee(null);
+                }}
+              />
+            )}
           </TabsContent>
 
           {/* تبويب قواعد الأرباح */}
