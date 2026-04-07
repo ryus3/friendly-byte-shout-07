@@ -62,7 +62,41 @@ const DepartmentManagerSettingsPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeStats, setEmployeeStats] = useState({});
+  // Product permissions state
+  const [selectedPermEmployee, setSelectedPermEmployee] = useState('');
+  const [allowedProducts, setAllowedProducts] = useState([]);
+  const [permLoading, setPermLoading] = useState(false);
+  const [departments, setDepartments] = useState([]);
 
+  // جلب إحصائيات الموظفين
+  useEffect(() => {
+    const fetchEmployeeStats = async () => {
+      if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) return;
+      const statsMap = {};
+      for (const empId of supervisedEmployeeIds) {
+        const { count: ordersCount } = await supabase
+          .from('orders')
+          .select('id', { count: 'exact', head: true })
+          .eq('created_by', empId)
+          .in('status', ['delivered', 'completed']);
+        
+        const { data: profitData } = await supabase
+          .from('profits')
+          .select('employee_profit')
+          .eq('employee_id', empId)
+          .in('status', ['invoice_received', 'settlement_requested', 'settled']);
+        
+        const totalProfit = (profitData || []).reduce((sum, p) => sum + (p.employee_profit || 0), 0);
+        
+        statsMap[empId] = {
+          ordersCount: ordersCount || 0,
+          totalProfit
+        };
+      }
+      setEmployeeStats(statsMap);
+    };
+    fetchEmployeeStats();
+  }, [supervisedEmployeeIds]);
   // جلب المنتجات والأقسام - موحد مع نظام الصلاحيات
   useEffect(() => {
     const fetchProducts = async () => {
