@@ -607,7 +607,7 @@ const DepartmentManagerSettingsPage = () => {
                           <SelectItem value="all">كل المنتجات</SelectItem>
                           {products.map((p) => (
                             <SelectItem key={p.id} value={p.id}>
-                              {p.name}
+                              {p.name} {p._source === 'owned' ? '🏷️' : '🔓'}
                             </SelectItem>
                           ))}
                         </SelectContent>
