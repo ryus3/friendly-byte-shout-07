@@ -715,7 +715,7 @@ export const useAlWaseetInvoices = () => {
       // أولاً: جلب internal ID للفاتورة من external_id
       const { data: invoiceRecord, error: invoiceError } = await supabase
         .from('delivery_invoices')
-        .select('id')
+        .select('id, orders_count')
         .eq('external_id', invoiceId)
         .single();
 
@@ -725,7 +725,6 @@ export const useAlWaseetInvoices = () => {
       }
 
       // ثانياً: جلب الطلبات المرتبطة مباشرة من قاعدة البيانات
-      // بدون الاعتماد على API - يضمن عرض جميع الطلبات المرتبطة
       const { data: linkedOrders, error } = await supabase
         .from('delivery_invoice_orders')
         .select(`
@@ -764,15 +763,59 @@ export const useAlWaseetInvoices = () => {
         return [];
       }
 
+      // ✅ Self-healing: إذا الفاتورة فيها طلبات لكن الجدول الوسيط فارغ
+      const linkedWithOrders = (linkedOrders || []).filter(item => item.orders);
+      
+      if (linkedWithOrders.length === 0 && (invoiceRecord.orders_count > 0 || (linkedOrders || []).length === 0)) {
+        console.warn('⚠️ Self-healing: محاولة إنشاء روابط الفاتورة من الطلبات المحلية...');
+        try {
+          const { data: healCount, error: healError } = await supabase
+            .rpc('create_invoice_orders_from_local_orders', { p_invoice_id: invoiceRecord.id });
+          
+          if (!healError && healCount > 0) {
+            console.log(`✅ Self-healing: تم إنشاء ${healCount} رابط جديد`);
+            
+            // إعادة الاستدعاء بعد self-healing
+            await supabase.rpc('link_invoice_orders_to_orders');
+            
+            // إعادة جلب البيانات
+            const { data: refreshedOrders } = await supabase
+              .from('delivery_invoice_orders')
+              .select(`
+                id, external_order_id, amount, status, order_id,
+                orders:order_id (
+                  id, order_number, tracking_number, customer_name, customer_phone,
+                  customer_address, customer_city, delivery_partner, delivery_partner_order_id,
+                  delivery_partner_invoice_id, status, delivery_status, total_amount, discount,
+                  delivery_fee, sales_amount, final_amount, receipt_received, created_at, updated_at
+                )
+              `)
+              .eq('invoice_id', invoiceRecord.id);
+            
+            const refreshedFormatted = (refreshedOrders || [])
+              .filter(item => item.orders)
+              .map(item => ({
+                ...item.orders,
+                invoice_link_id: item.id,
+                invoice_amount: item.amount,
+                invoice_status: item.status
+              }));
+            
+            console.log(`✅ بعد Self-healing: ${refreshedFormatted.length} طلب مرتبط`);
+            return refreshedFormatted;
+          }
+        } catch (healErr) {
+          console.error('❌ فشل Self-healing:', healErr);
+        }
+      }
+
       // تحويل البيانات للصيغة المتوقعة
-      const formattedOrders = (linkedOrders || [])
-        .filter(item => item.orders) // فقط الطلبات الموجودة
-        .map(item => ({
-          ...item.orders,
-          invoice_link_id: item.id,
-          invoice_amount: item.amount,
-          invoice_status: item.status
-        }));
+      const formattedOrders = linkedWithOrders.map(item => ({
+        ...item.orders,
+        invoice_link_id: item.id,
+        invoice_amount: item.amount,
+        invoice_status: item.status
+      }));
 
       console.log(`✅ تم جلب ${formattedOrders.length} طلب مرتبط من قاعدة البيانات`);
       return formattedOrders;

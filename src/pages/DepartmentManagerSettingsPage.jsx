@@ -56,15 +56,15 @@ const DepartmentManagerSettingsPage = () => {
   const [permLoading, setPermLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
 
-  // جلب المنتجات والأقسام
+  // جلب المنتجات والأقسام - موحد مع نظام الصلاحيات
   useEffect(() => {
     const fetchProducts = async () => {
       const userIds = new Set([user?.id, user?.user_id].filter(Boolean));
       
-      // ✅ جلب كل المنتجات النشطة
+      // ✅ جلب كل المنتجات النشطة مع بيانات إضافية
       const { data, error } = await supabase
         .from('products')
-        .select('id, name, owner_user_id')
+        .select('id, name, owner_user_id, is_active')
         .eq('is_active', true)
         .order('name');
       
@@ -72,7 +72,7 @@ const DepartmentManagerSettingsPage = () => {
         // 1. منتجات يملكها مدير القسم مالياً
         const ownedProducts = data.filter(p => p.owner_user_id && userIds.has(p.owner_user_id));
         
-        // 2. جلب منتجات النظام المصرح بها للموظفين تحت الإشراف أو للمدير نفسه
+        // 2. جلب صلاحيات المنتجات من employee_allowed_products
         const allUserIds = [...userIds, ...(supervisedEmployeeIds || [])].filter(Boolean);
         const { data: allowedData } = await supabase
           .from('employee_allowed_products')
@@ -85,9 +85,31 @@ const DepartmentManagerSettingsPage = () => {
         // 3. منتجات النظام (بدون مالك) المصرح بها
         const systemAllowed = data.filter(p => !p.owner_user_id && allowedProductIds.has(p.id));
         
-        // 4. دمج بدون تكرار
+        // 4. منتجات النظام التي تظهر في صلاحيات المنتجات المتقدمة (productPermissions)
+        // جلب أيضاً من employee_product_visibility للمدير نفسه
+        let visibilityProducts = [];
+        const currentUserId = user?.id || user?.user_id;
+        if (currentUserId) {
+          const { data: visData } = await supabase
+            .from('employee_allowed_products')
+            .select('product_id')
+            .eq('employee_id', currentUserId)
+            .eq('is_active', true);
+          
+          if (visData) {
+            const visIds = new Set(visData.map(v => v.product_id));
+            visibilityProducts = data.filter(p => !p.owner_user_id && visIds.has(p.id) && !allowedProductIds.has(p.id));
+          }
+        }
+        
+        // 5. دمج بدون تكرار مع تمييز المصدر
         const mergedMap = new Map();
-        [...ownedProducts, ...systemAllowed].forEach(p => mergedMap.set(p.id, p));
+        ownedProducts.forEach(p => mergedMap.set(p.id, { ...p, _source: 'owned' }));
+        [...systemAllowed, ...visibilityProducts].forEach(p => {
+          if (!mergedMap.has(p.id)) {
+            mergedMap.set(p.id, { ...p, _source: 'system_allowed' });
+          }
+        });
         setProducts(Array.from(mergedMap.values()));
       }
     };
