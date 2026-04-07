@@ -6251,6 +6251,7 @@ export type Database = {
           invoice_number: string
           notes: string | null
           order_ids: string[] | null
+          owner_user_id: string | null
           payment_method: string
           profit_ids: string[] | null
           settled_orders: Json | null
@@ -6270,6 +6271,7 @@ export type Database = {
           invoice_number: string
           notes?: string | null
           order_ids?: string[] | null
+          owner_user_id?: string | null
           payment_method?: string
           profit_ids?: string[] | null
           settled_orders?: Json | null
@@ -6289,6 +6291,7 @@ export type Database = {
           invoice_number?: string
           notes?: string | null
           order_ids?: string[] | null
+          owner_user_id?: string | null
           payment_method?: string
           profit_ids?: string[] | null
           settled_orders?: Json | null
@@ -7321,6 +7324,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_invoice_orders_from_local_orders: {
+        Args: { p_invoice_id: string }
+        Returns: number
+      }
       create_order_deletion_notification: {
         Args: {
           p_employee_id?: string
@@ -8021,6 +8028,7 @@ export type Database = {
       is_financial_admin: { Args: never; Returns: boolean }
       is_hr_admin: { Args: never; Returns: boolean }
       is_manager_user: { Args: { user_id?: string }; Returns: boolean }
+      jsonb_object_keys_count: { Args: { j: Json }; Returns: number }
       link_employee_telegram_code: {
         Args: { p_chat_id: number; p_employee_code: string }
         Returns: Json
@@ -8091,17 +8099,30 @@ export type Database = {
         Args: { p_address_text: string }
         Returns: Json
       }
-      pay_employee_dues_with_invoice: {
-        Args: {
-          p_amount: number
-          p_description?: string
-          p_employee_id: string
-          p_order_ids?: string[]
-          p_paid_by?: string
-          p_profit_ids?: string[]
-        }
-        Returns: Json
-      }
+      pay_employee_dues_with_invoice:
+        | {
+            Args: {
+              p_amount: number
+              p_description?: string
+              p_employee_id: string
+              p_order_ids?: string[]
+              p_paid_by?: string
+              p_profit_ids?: string[]
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_description?: string
+              p_employee_id: string
+              p_order_ids?: string[]
+              p_owner_user_id?: string
+              p_paid_by?: string
+              p_profit_ids?: string[]
+            }
+            Returns: Json
+          }
       process_telegram_order: {
         Args: {
           p_city_id?: number
