@@ -39,6 +39,7 @@ const DepartmentManagerSettingsPage = () => {
   const { user } = useAuth();
   const { isAdmin, isDepartmentManager } = usePermissions();
   const { supervisedEmployees, supervisedEmployeeIds, loading: supervisedLoading } = useSupervisedEmployees();
+  const navigate = useNavigate();
   
   const [activeTab, setActiveTab] = useState('employees');
   const [profitRules, setProfitRules] = useState([]);
@@ -56,11 +57,11 @@ const DepartmentManagerSettingsPage = () => {
     totalSales: 0,
     totalProfit: 0
   });
-  // Product permissions state
-  const [selectedPermEmployee, setSelectedPermEmployee] = useState('');
-  const [allowedProducts, setAllowedProducts] = useState([]);
-  const [permLoading, setPermLoading] = useState(false);
-  const [departments, setDepartments] = useState([]);
+  // Employee management state
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [employeeStats, setEmployeeStats] = useState({});
 
   // جلب المنتجات والأقسام - موحد مع نظام الصلاحيات
   useEffect(() => {
