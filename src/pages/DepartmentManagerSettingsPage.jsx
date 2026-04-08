@@ -231,7 +231,9 @@ const DepartmentManagerSettingsPage = () => {
       toast({ title: 'تم بنجاح', description: newRule.full_profit ? 'تمت إضافة قاعدة كامل الربح' : 'تمت إضافة قاعدة الربح' });
       setNewRule({ employee_id: '', product_id: '', profit_amount: 0, profit_type: 'fixed', full_profit: false });
       
-      // إعادة جلب القواعد
+      // إعادة جلب القواعد فوراً بكلا المعرفين
+      const userId = user?.id;
+      const userUuid = user?.user_id;
       const { data } = await supabase
         .from('employee_profit_rules')
         .select(`
@@ -240,7 +242,7 @@ const DepartmentManagerSettingsPage = () => {
           product:products!target_id(name)
         `)
         .in('employee_id', supervisedEmployeeIds)
-        .eq('created_by', user?.id);
+        .or(`created_by.eq.${userId}${userUuid && userUuid !== userId ? `,created_by.eq.${userUuid}` : ''}`);
       
       if (data) setProfitRules(data);
     } catch (error) {
