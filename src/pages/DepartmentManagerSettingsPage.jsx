@@ -100,29 +100,38 @@ const DepartmentManagerSettingsPage = () => {
     };
     fetchEmployeeStats();
   }, [supervisedEmployeeIds]);
-  // جلب المنتجات والأقسام - موحد مع نظام الصلاحيات الحقيقي
+  // جلب المنتجات والأقسام - يستخدم employee_allowed_products للمنتجات المصرح بها
   useEffect(() => {
     const fetchProducts = async () => {
       const userIds = new Set([user?.id, user?.user_id].filter(Boolean));
+      const userId = user?.id;
       
-      // ✅ استخدام نفس منطق صفحة المنتجات بالضبط (filterProductsByPermissions)
       // 1. منتجات يملكها مدير القسم مالياً
       const ownedProducts = (allSystemProducts || []).filter(p => 
         p.is_active !== false && p.owner_user_id && userIds.has(p.owner_user_id)
       );
       
-      // 2. منتجات النظام المصرح بها عبر نظام الصلاحيات الموحد
-      const systemProducts = (allSystemProducts || []).filter(p => 
-        p.is_active !== false && !p.owner_user_id
-      );
-      const allowedSystem = filterProductsByPermissions 
-        ? filterProductsByPermissions(systemProducts) 
-        : [];
+      // 2. منتجات النظام المصرح بها عبر employee_allowed_products (مصدر الحقيقة)
+      let allowedSystemProducts = [];
+      if (userId) {
+        const { data: allowedData } = await supabase
+          .from('employee_allowed_products')
+          .select('product_id')
+          .eq('employee_id', userId)
+          .eq('is_active', true);
+        
+        if (allowedData?.length > 0) {
+          const allowedIds = new Set(allowedData.map(d => d.product_id));
+          allowedSystemProducts = (allSystemProducts || []).filter(p => 
+            p.is_active !== false && !p.owner_user_id && allowedIds.has(p.id)
+          );
+        }
+      }
       
       // 3. دمج بدون تكرار مع تمييز المصدر
       const mergedMap = new Map();
       ownedProducts.forEach(p => mergedMap.set(p.id, { ...p, _source: 'owned' }));
-      allowedSystem.forEach(p => {
+      allowedSystemProducts.forEach(p => {
         if (!mergedMap.has(p.id)) {
           mergedMap.set(p.id, { ...p, _source: 'system_allowed' });
         }
@@ -142,7 +151,7 @@ const DepartmentManagerSettingsPage = () => {
     };
     fetchProducts();
     fetchDepartments();
-  }, [user, supervisedEmployeeIds, allSystemProducts, filterProductsByPermissions]);
+  }, [user, supervisedEmployeeIds, allSystemProducts]);
 
   // جلب قواعد الأرباح للموظفين تحت الإشراف
   useEffect(() => {
