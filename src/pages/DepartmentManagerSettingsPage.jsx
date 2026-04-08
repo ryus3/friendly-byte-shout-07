@@ -702,6 +702,7 @@ const DepartmentManagerSettingsPage = () => {
                     onUpdate={() => {
                       toast({ title: 'تم التحديث', description: 'تم تحديث صلاحيات المنتجات بنجاح' });
                     }}
+                    managerScope={!isAdmin ? { permissions: managerOwnPermissions || {} } : undefined}
                   />
                 )}
 
