@@ -8035,7 +8035,10 @@ export type Database = {
       }
       link_invoice_orders_to_orders: {
         Args: never
-        Returns: Record<string, unknown>
+        Returns: {
+          fixed_count: number
+          linked_count: number
+        }[]
       }
       link_orders_by_external_id: {
         Args: never

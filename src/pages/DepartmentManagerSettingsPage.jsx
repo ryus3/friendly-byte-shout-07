@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
+import { useInventory } from '@/contexts/InventoryContext';
 import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -38,6 +39,8 @@ import {
 const DepartmentManagerSettingsPage = () => {
   const { user } = useAuth();
   const { isAdmin, isDepartmentManager } = usePermissions();
+  const { products: allSystemProducts } = useInventory();
+  const { filterProductsByPermissions } = useAuth();
   const { supervisedEmployees, supervisedEmployeeIds, loading: supervisedLoading } = useSupervisedEmployees();
   const navigate = useNavigate();
   
@@ -97,60 +100,35 @@ const DepartmentManagerSettingsPage = () => {
     };
     fetchEmployeeStats();
   }, [supervisedEmployeeIds]);
-  // جلب المنتجات والأقسام - موحد مع نظام الصلاحيات
+  // جلب المنتجات والأقسام - موحد مع نظام الصلاحيات الحقيقي
   useEffect(() => {
     const fetchProducts = async () => {
       const userIds = new Set([user?.id, user?.user_id].filter(Boolean));
       
-      // ✅ جلب كل المنتجات النشطة مع بيانات إضافية
-      const { data, error } = await supabase
-        .from('products')
-        .select('id, name, owner_user_id, is_active')
-        .eq('is_active', true)
-        .order('name');
+      // ✅ استخدام نفس منطق صفحة المنتجات بالضبط (filterProductsByPermissions)
+      // 1. منتجات يملكها مدير القسم مالياً
+      const ownedProducts = (allSystemProducts || []).filter(p => 
+        p.is_active !== false && p.owner_user_id && userIds.has(p.owner_user_id)
+      );
       
-      if (!error && data) {
-        // 1. منتجات يملكها مدير القسم مالياً
-        const ownedProducts = data.filter(p => p.owner_user_id && userIds.has(p.owner_user_id));
-        
-        // 2. جلب صلاحيات المنتجات من employee_allowed_products
-        const allUserIds = [...userIds, ...(supervisedEmployeeIds || [])].filter(Boolean);
-        const { data: allowedData } = await supabase
-          .from('employee_allowed_products')
-          .select('product_id')
-          .in('employee_id', allUserIds.length > 0 ? allUserIds : ['__none__'])
-          .eq('is_active', true);
-        
-        const allowedProductIds = new Set((allowedData || []).map(a => a.product_id));
-        
-        // 3. منتجات النظام (بدون مالك) المصرح بها
-        const systemAllowed = data.filter(p => !p.owner_user_id && allowedProductIds.has(p.id));
-        
-        // 4. منتجات النظام التي تظهر في صلاحيات المنتجات المتقدمة (productPermissions)
-        // جلب أيضاً من employee_product_visibility للمدير نفسه
-        let visibilityProducts = [];
-        const currentUserId = user?.id || user?.user_id;
-        if (currentUserId) {
-          const { data: visData } = await supabase
-            .from('employee_allowed_products')
-            .select('product_id')
-            .eq('employee_id', currentUserId)
-            .eq('is_active', true);
-          
-          if (visData) {
-            const visIds = new Set(visData.map(v => v.product_id));
-            visibilityProducts = data.filter(p => !p.owner_user_id && visIds.has(p.id) && !allowedProductIds.has(p.id));
-          }
+      // 2. منتجات النظام المصرح بها عبر نظام الصلاحيات الموحد
+      const systemProducts = (allSystemProducts || []).filter(p => 
+        p.is_active !== false && !p.owner_user_id
+      );
+      const allowedSystem = filterProductsByPermissions 
+        ? filterProductsByPermissions(systemProducts) 
+        : [];
+      
+      // 3. دمج بدون تكرار مع تمييز المصدر
+      const mergedMap = new Map();
+      ownedProducts.forEach(p => mergedMap.set(p.id, { ...p, _source: 'owned' }));
+      allowedSystem.forEach(p => {
+        if (!mergedMap.has(p.id)) {
+          mergedMap.set(p.id, { ...p, _source: 'system_allowed' });
         }
-        
-        // 5. دمج بدون تكرار مع تمييز المصدر
-        const mergedMap = new Map();
-        ownedProducts.forEach(p => mergedMap.set(p.id, { ...p, _source: 'owned' }));
-        [...systemAllowed, ...visibilityProducts].forEach(p => {
-          if (!mergedMap.has(p.id)) {
-            mergedMap.set(p.id, { ...p, _source: 'system_allowed' });
-          }
-        });
+      });
+      
+      if (mergedMap.size > 0) {
         setProducts(Array.from(mergedMap.values()));
       }
     };
@@ -164,7 +142,7 @@ const DepartmentManagerSettingsPage = () => {
     };
     fetchProducts();
     fetchDepartments();
-  }, [user, supervisedEmployeeIds]);
+  }, [user, supervisedEmployeeIds, allSystemProducts, filterProductsByPermissions]);
 
   // جلب قواعد الأرباح للموظفين تحت الإشراف
   useEffect(() => {

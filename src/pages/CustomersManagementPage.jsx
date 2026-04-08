@@ -241,69 +241,106 @@ const [showExportDialog, setShowExportDialog] = useState(false);
   }, [eligibleOrdersByUser]);
 
   // استخدام العملاء من النظام الموحد (مفلترون تلقائياً حسب created_by من RLS)
-  const phoneLoyaltyCustomers = customers || [];
+  // ✅ بناء قائمة العملاء الحقيقيين من طلبات المستخدم المكتملة فقط
+  // بدلاً من الاعتماد على جدول customers أو customer_phone_loyalty
+  const phoneLoyaltyCustomers = useMemo(() => {
+    // بناء العملاء من الطلبات المكتملة للمستخدم
+    const phoneMap = new Map();
+    eligibleOrdersByUser.forEach((o) => {
+      const phone = normalizePhone(extractOrderPhone(o));
+      if (!phone) return;
+      if (!phoneMap.has(phone)) {
+        phoneMap.set(phone, {
+          id: phone,
+          phone_number: phone,
+          customer_name: o.customer_name || 'عميل',
+          customer_city: o.customer_city || '',
+          customer_province: o.customer_province || '',
+          total_points: 0,
+          total_orders: 0,
+          total_spent: 0,
+          points_expiry_date: null,
+          loyalty_tiers: null,
+          orders: []
+        });
+      }
+      phoneMap.get(phone).orders.push(o);
+    });
+
+    // حساب الإحصائيات من الطلبات الفعلية
+    const result = [];
+    phoneMap.forEach((entry) => {
+      const ordersCount = entry.orders.length;
+      let spentNoDelivery = 0;
+      entry.orders.forEach((o) => {
+        const deliveryFee = Number(o.delivery_fee) || 0;
+        const totalAmount = Number(o.total_amount) || 0;
+        spentNoDelivery += Math.max(0, totalAmount - deliveryFee);
+      });
+
+      // جلب بيانات الولاء من customers_unified_loyalty إذا وجدت في context
+      const loyaltyMatch = (customers || []).find(c => {
+        const cPhone = normalizePhone(c.phone_number || c.phone || '');
+        return cPhone === entry.phone_number;
+      });
+
+      result.push({
+        id: loyaltyMatch?.id || entry.id,
+        phone_number: entry.phone_number,
+        customer_name: loyaltyMatch?.customer_name || entry.customer_name,
+        customer_city: loyaltyMatch?.customer_city || entry.customer_city,
+        customer_province: loyaltyMatch?.customer_province || entry.customer_province,
+        total_points: loyaltyMatch?.total_points || 0,
+        total_orders: ordersCount,
+        total_spent: spentNoDelivery,
+        points_expiry_date: loyaltyMatch?.points_expiry_date || null,
+        loyalty_tiers: loyaltyMatch?.loyalty_tiers || (loyaltyMatch ? {
+          name: loyaltyMatch.tier_name,
+          name_en: loyaltyMatch.tier_name_en,
+          discount_percentage: loyaltyMatch.discount_percentage,
+          icon: loyaltyMatch.tier_icon,
+          color: loyaltyMatch.tier_color,
+          points_expiry_months: loyaltyMatch.points_expiry_months
+        } : null),
+        created_at: loyaltyMatch?.created_at || null,
+      });
+    });
+
+    return result;
+  }, [eligibleOrdersByUser, customers]);
   const loadingPhoneLoyalty = loading;
 
   // دمج العملاء الموحدين مع البيانات المحلية
   const mergedCustomers = useMemo(() => {
     return phoneLoyaltyCustomers.map((cpl) => {
-      const phone = cpl.phone_number;
-      const relatedOrders = phone ? ordersByPhone.get(normalizePhone(phone)) || [] : [];
-
-      // حساب المشتريات بدون التوصيل من الطلبات الحقيقية
-      let ordersCount = 0;
-      let spentNoDelivery = 0;
-
-      relatedOrders.forEach((o) => {
-        ordersCount += 1;
-        const deliveryFee = Number(o.delivery_fee) || 0;
-        const totalAmount = Number(o.total_amount) || 0;
-        const itemsTotal = Array.isArray(o.items)
-          ? o.items.reduce(
-              (s, it) => s + (Number(it.unit_price ?? it.price ?? 0) * (Number(it.quantity) || 0)),
-              0
-            )
-          : 0;
-        const revenueNoDelivery = totalAmount > 0 ? Math.max(0, totalAmount - deliveryFee) : itemsTotal;
-        spentNoDelivery += revenueNoDelivery;
-      });
-
       // توليد بروموكود ثابت بناءً على الهاتف والمستوى
+      const phone = normalizePhone(cpl.phone_number || '');
+      const relatedOrders = phone ? ordersByPhone.get(phone) || [] : [];
       const tierNameEn = cpl.loyalty_tiers?.name_en || 'BR';
-      const promoCode = `RY${phone.slice(-4)}${tierNameEn.slice(0, 2).toUpperCase()}`;
+      const promoCode = phone ? `RY${phone.slice(-4)}${tierNameEn.slice(0, 2).toUpperCase()}` : '';
 
       return {
         id: cpl.id,
-        name: cpl.customer_name,
+        name: cpl.customer_name || 'عميل',
         phone: cpl.phone_number,
         city: cpl.customer_city,
         province: cpl.customer_province,
-        created_by: currentUserId, // سيتم فلترته لاحقاً
+        created_by: currentUserId,
         customer_loyalty: {
           total_points: cpl.total_points || 0,
-          total_orders: ordersCount,
-          total_spent: spentNoDelivery,
+          total_orders: cpl.total_orders || relatedOrders.length,
+          total_spent: cpl.total_spent || 0,
           points_expiry_date: cpl.points_expiry_date,
           loyalty_tiers: cpl.loyalty_tiers,
         },
         promoCode,
-        gender_type: null, // سيتم جلبه من customer_gender_segments إذا لزم
+        gender_type: null,
       };
     });
   }, [phoneLoyaltyCustomers, ordersByPhone, currentUserId]);
 
-  // فصل العملاء لكل مستخدم (حتى المدير) بالاعتماد على منشئ الطلبات/العميل
-  const myCustomers = useMemo(() => {
-    if (!currentUserId) return mergedCustomers;
-    const ids = new Set([authUser?.id, authUser?.user_id, currentUserId].filter(Boolean));
-    return mergedCustomers.filter((c) => {
-      const phone = normalizePhone(c.phone);
-      const related = phone ? ordersByPhone.get(phone) || [] : [];
-      const belongsByOrder = related.some((o) => ids.has(o.created_by));
-      const belongsByCustomer = ids.has(c.created_by);
-      return belongsByOrder || belongsByCustomer;
-    });
-  }, [mergedCustomers, ordersByPhone, currentUserId, authUser]);
+  // ✅ العملاء مبنيون أصلاً من طلبات المستخدم فقط - لا حاجة لفلترة إضافية
+  const myCustomers = mergedCustomers;
 
   // تطبيق البحث والفلاتر بعد الدمج والتقسيم
   const filteredCustomers = useMemo(() => {
