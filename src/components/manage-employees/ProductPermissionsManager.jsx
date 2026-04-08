@@ -17,7 +17,8 @@ import { Package, Palette, Ruler, Building, Tag, Calendar, CheckCircle, XCircle,
 import { useFiltersData } from '@/hooks/useFiltersData';
 import ProductSelectionDialog from './ProductSelectionDialog';
 
-const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) => {
+const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate, managerScope }) => {
+  // managerScope: optional { permissions: {...}, ownedProductIds: Set } to restrict delegation
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [permissions, setPermissions] = useState({
@@ -60,16 +61,27 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate }) =>
 
   useEffect(() => {
     if (!filtersLoading) {
+      // ✅ إذا كان هناك managerScope، نقيد العناصر المعروضة بما يملكه المدير فقط
+      const scopeFilter = (items, type) => {
+        if (!managerScope?.permissions?.[type]) return items;
+        const mgr = managerScope.permissions[type];
+        if (mgr.has_full_access) return items;
+        if (mgr.allowed_items?.length > 0) {
+          return items.filter(item => mgr.allowed_items.includes(item.id));
+        }
+        return []; // المدير ليس لديه أي صلاحية على هذا النوع
+      };
+
       setAvailableOptions({
-        categories: filterCategories || [],
-        colors: filterColors || [],
-        sizes: filterSizes || [],
-        departments: filterDepartments || [],
-        product_types: filterProductTypes || [],
-        seasons_occasions: filterSeasonsOccasions || []
+        categories: scopeFilter(filterCategories || [], 'category'),
+        colors: scopeFilter(filterColors || [], 'color'),
+        sizes: scopeFilter(filterSizes || [], 'size'),
+        departments: scopeFilter(filterDepartments || [], 'department'),
+        product_types: scopeFilter(filterProductTypes || [], 'product_type'),
+        seasons_occasions: scopeFilter(filterSeasonsOccasions || [], 'season_occasion')
       });
     }
-  }, [filtersLoading, filterCategories, filterDepartments, filterProductTypes, filterSeasonsOccasions, filterColors, filterSizes]);
+  }, [filtersLoading, filterCategories, filterDepartments, filterProductTypes, filterSeasonsOccasions, filterColors, filterSizes, managerScope]);
 
   useEffect(() => {
     if (!selectedUser?.user_id) return;
