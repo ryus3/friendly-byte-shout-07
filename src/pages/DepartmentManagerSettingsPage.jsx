@@ -38,7 +38,7 @@ import {
 
 const DepartmentManagerSettingsPage = () => {
   const { user } = useAuth();
-  const { isAdmin, isDepartmentManager } = usePermissions();
+  const { isAdmin, isDepartmentManager, productPermissions: managerOwnPermissions } = usePermissions();
   const { products: allSystemProducts } = useInventory();
   const { filterProductsByPermissions } = useAuth();
   const { supervisedEmployees, supervisedEmployeeIds, loading: supervisedLoading } = useSupervisedEmployees();
