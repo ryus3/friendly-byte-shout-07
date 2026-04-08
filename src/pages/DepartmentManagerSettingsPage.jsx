@@ -38,9 +38,9 @@ import {
 
 const DepartmentManagerSettingsPage = () => {
   const { user } = useAuth();
-  const { isAdmin, isDepartmentManager } = usePermissions();
+  const { isAdmin, isDepartmentManager, productPermissions: managerOwnPermissions } = usePermissions();
   const { products: allSystemProducts } = useInventory();
-  const { filterProductsByPermissions } = useAuth();
+  // filterProductsByPermissions removed - now using employee_allowed_products directly
   const { supervisedEmployees, supervisedEmployeeIds, loading: supervisedLoading } = useSupervisedEmployees();
   const navigate = useNavigate();
   
@@ -100,29 +100,38 @@ const DepartmentManagerSettingsPage = () => {
     };
     fetchEmployeeStats();
   }, [supervisedEmployeeIds]);
-  // جلب المنتجات والأقسام - موحد مع نظام الصلاحيات الحقيقي
+  // جلب المنتجات والأقسام - يستخدم employee_allowed_products للمنتجات المصرح بها
   useEffect(() => {
     const fetchProducts = async () => {
       const userIds = new Set([user?.id, user?.user_id].filter(Boolean));
+      const userId = user?.id;
       
-      // ✅ استخدام نفس منطق صفحة المنتجات بالضبط (filterProductsByPermissions)
       // 1. منتجات يملكها مدير القسم مالياً
       const ownedProducts = (allSystemProducts || []).filter(p => 
         p.is_active !== false && p.owner_user_id && userIds.has(p.owner_user_id)
       );
       
-      // 2. منتجات النظام المصرح بها عبر نظام الصلاحيات الموحد
-      const systemProducts = (allSystemProducts || []).filter(p => 
-        p.is_active !== false && !p.owner_user_id
-      );
-      const allowedSystem = filterProductsByPermissions 
-        ? filterProductsByPermissions(systemProducts) 
-        : [];
+      // 2. منتجات النظام المصرح بها عبر employee_allowed_products (مصدر الحقيقة)
+      let allowedSystemProducts = [];
+      if (userId) {
+        const { data: allowedData } = await supabase
+          .from('employee_allowed_products')
+          .select('product_id')
+          .eq('employee_id', userId)
+          .eq('is_active', true);
+        
+        if (allowedData?.length > 0) {
+          const allowedIds = new Set(allowedData.map(d => d.product_id));
+          allowedSystemProducts = (allSystemProducts || []).filter(p => 
+            p.is_active !== false && !p.owner_user_id && allowedIds.has(p.id)
+          );
+        }
+      }
       
       // 3. دمج بدون تكرار مع تمييز المصدر
       const mergedMap = new Map();
       ownedProducts.forEach(p => mergedMap.set(p.id, { ...p, _source: 'owned' }));
-      allowedSystem.forEach(p => {
+      allowedSystemProducts.forEach(p => {
         if (!mergedMap.has(p.id)) {
           mergedMap.set(p.id, { ...p, _source: 'system_allowed' });
         }
@@ -142,7 +151,7 @@ const DepartmentManagerSettingsPage = () => {
     };
     fetchProducts();
     fetchDepartments();
-  }, [user, supervisedEmployeeIds, allSystemProducts, filterProductsByPermissions]);
+  }, [user, supervisedEmployeeIds, allSystemProducts]);
 
   // جلب قواعد الأرباح للموظفين تحت الإشراف
   useEffect(() => {
@@ -222,7 +231,9 @@ const DepartmentManagerSettingsPage = () => {
       toast({ title: 'تم بنجاح', description: newRule.full_profit ? 'تمت إضافة قاعدة كامل الربح' : 'تمت إضافة قاعدة الربح' });
       setNewRule({ employee_id: '', product_id: '', profit_amount: 0, profit_type: 'fixed', full_profit: false });
       
-      // إعادة جلب القواعد
+      // إعادة جلب القواعد فوراً بكلا المعرفين
+      const userId = user?.id;
+      const userUuid = user?.user_id;
       const { data } = await supabase
         .from('employee_profit_rules')
         .select(`
@@ -231,7 +242,7 @@ const DepartmentManagerSettingsPage = () => {
           product:products!target_id(name)
         `)
         .in('employee_id', supervisedEmployeeIds)
-        .eq('created_by', user?.id);
+        .or(`created_by.eq.${userId}${userUuid && userUuid !== userId ? `,created_by.eq.${userUuid}` : ''}`);
       
       if (data) setProfitRules(data);
     } catch (error) {
@@ -525,10 +536,10 @@ const DepartmentManagerSettingsPage = () => {
             {editingEmployee && (
               <UnifiedEmployeeDialog
                 employee={editingEmployee}
-                isOpen={isEditModalOpen}
-                onClose={() => {
-                  setIsEditModalOpen(false);
-                  setEditingEmployee(null);
+                open={isEditModalOpen}
+                onOpenChange={(val) => {
+                  setIsEditModalOpen(val);
+                  if (!val) setEditingEmployee(null);
                 }}
               />
             )}
@@ -702,6 +713,7 @@ const DepartmentManagerSettingsPage = () => {
                     onUpdate={() => {
                       toast({ title: 'تم التحديث', description: 'تم تحديث صلاحيات المنتجات بنجاح' });
                     }}
+                    managerScope={!isAdmin ? { permissions: managerOwnPermissions || {} } : undefined}
                   />
                 )}
 

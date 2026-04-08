@@ -96,14 +96,14 @@ export const useSupervisedEmployees = () => {
         if (n.user_id === user?.id) return true;
         // إشعارات موظفيه
         if (supervisedEmployeeIds.includes(n.user_id)) return true;
-        // الإشعارات العامة (user_id = null)
-        if (!n.user_id) return true;
+        // ✅ الإشعارات العامة (user_id = null) - محظورة على مدير القسم
+        // فقط المدير العام يرى الإشعارات العامة
         return false;
       });
     }
     
-    // الموظف العادي: إشعاراته فقط + العامة
-    return notifications.filter(n => n.user_id === user?.id || !n.user_id);
+    // الموظف العادي: إشعاراته فقط
+    return notifications.filter(n => n.user_id === user?.id);
   }, [isAdmin, isDepartmentManager, user?.id, supervisedEmployeeIds]);
 
   // جميع المعرفات المسموح بها (الشخص نفسه + الموظفين تحت إشرافه)

@@ -255,14 +255,15 @@ export const ProfitsProvider = ({ children }) => {
 
       devLog.log('💰 إجمالي الأرباح للتحاسب:', totalProfit);
 
-      // ✅ منع خلط ملاك مختلفين في طلب تحاسب واحد
+      // ✅ تقسيم تلقائي حسب مالك المنتج بدلاً من منع الخلط
       const { data: orderItems, error: orderItemsError } = await supabase
         .from('orders')
         .select('id, items')
         .in('id', eligibleOrderIds);
 
+      // بناء خريطة الملاك لكل طلب
+      const orderOwnerMap = new Map(); // orderId -> ownerKey
       if (!orderItemsError && orderItems) {
-        // استخراج product_ids من كل الطلبات
         const allProductIds = new Set();
         orderItems.forEach(o => {
           if (Array.isArray(o.items)) {
@@ -273,22 +274,47 @@ export const ProfitsProvider = ({ children }) => {
           }
         });
 
+        let productOwnerMap = new Map();
         if (allProductIds.size > 0) {
           const { data: productsData } = await supabase
             .from('products')
             .select('id, owner_user_id')
             .in('id', [...allProductIds]);
-
           if (productsData) {
-            const owners = new Set(productsData.map(p => p.owner_user_id || 'system'));
-            devLog.log('🏷️ ملاك المنتجات في طلب التحاسب:', [...owners]);
-            
-            if (owners.size > 1) {
-              throw new Error('لا يمكن تقديم طلب تحاسب واحد لطلبات تخص ملاك مختلفين. الرجاء تحديد طلبات تخص نفس المالك المالي (النظام أو مدير قسم واحد).');
-            }
+            productsData.forEach(p => productOwnerMap.set(p.id, p.owner_user_id || null));
           }
         }
+
+        // تحديد المالك الأغلبي لكل طلب (الأعلى قيمة)
+        orderItems.forEach(o => {
+          const ownerCounts = {};
+          if (Array.isArray(o.items)) {
+            o.items.forEach(item => {
+              const pid = item.product_id || item.productId;
+              const owner = productOwnerMap.get(pid) || 'system';
+              ownerCounts[owner] = (ownerCounts[owner] || 0) + ((item.price || 0) * (item.quantity || 1));
+            });
+          }
+          // المالك ذو القيمة الأعلى
+          let topOwner = 'system';
+          let topValue = 0;
+          Object.entries(ownerCounts).forEach(([owner, val]) => {
+            if (val > topValue) { topOwner = owner; topValue = val; }
+          });
+          orderOwnerMap.set(o.id, topOwner);
+        });
       }
+
+      // تجميع الطلبات حسب المالك
+      const ownerGroups = {};
+      eligibleOrderIds.forEach(orderId => {
+        const owner = orderOwnerMap.get(orderId) || 'system';
+        if (!ownerGroups[owner]) ownerGroups[owner] = [];
+        ownerGroups[owner].push(orderId);
+      });
+
+      const ownerKeys = Object.keys(ownerGroups);
+      devLog.log('🏷️ تقسيم التحاسب حسب الملاك:', ownerKeys.map(k => `${k}: ${ownerGroups[k].length} طلبات`));
 
       const { data: profileData } = await supabase
         .from('profiles')
@@ -296,22 +322,30 @@ export const ProfitsProvider = ({ children }) => {
         .eq('user_id', currentUserId)
         .single();
 
-      let notifResult = null;
-      try {
-        const { data: notifData, error: notifError } = await supabase
-          .rpc('upsert_settlement_request_notification', {
-            p_employee_id: currentUserId,
-            p_order_ids: eligibleOrderIds,
-            p_total_profit: totalProfit,
-          });
+      const allNotifResults = [];
 
-        if (notifError) {
-          devLog.warn('⚠️ فشل استدعاء دالة إشعار التحاسب:', notifError.message || notifError);
-        } else {
-          notifResult = notifData;
+      // إنشاء طلب تحاسب منفصل لكل مالك
+      for (const ownerKey of ownerKeys) {
+        const groupOrderIds = ownerGroups[ownerKey];
+        const groupProfits = eligibleProfits.filter(p => groupOrderIds.includes(p.order_id));
+        const groupTotal = groupProfits.reduce((sum, p) => sum + (p.employee_profit ?? p.profit_amount ?? 0), 0);
+
+        try {
+          const { data: notifData, error: notifError } = await supabase
+            .rpc('upsert_settlement_request_notification', {
+              p_employee_id: currentUserId,
+              p_order_ids: groupOrderIds,
+              p_total_profit: groupTotal,
+            });
+
+          if (notifError) {
+            devLog.warn(`⚠️ فشل إشعار التحاسب للمالك ${ownerKey}:`, notifError.message);
+          } else {
+            allNotifResults.push(notifData);
+          }
+        } catch (e) {
+          devLog.warn(`⚠️ تعذر إنشاء إشعار تحاسب للمالك ${ownerKey}:`, e?.message);
         }
-      } catch (e) {
-        devLog.warn('⚠️ تعذر إنشاء/تحديث إشعار طلب التحاسب:', e?.message || e);
       }
 
       const { error: updateError } = await supabase
@@ -330,18 +364,24 @@ export const ProfitsProvider = ({ children }) => {
           : p
       ));
 
-      // تحديث قائمة طلبات التحاسب لتظهر الطلب الجديد
-      if (notifResult?.notification) {
-        setSettlementRequests(prev => [...prev, notifResult.notification]);
-      }
+      // تحديث قائمة طلبات التحاسب
+      allNotifResults.forEach(nr => {
+        if (nr?.notification) {
+          setSettlementRequests(prev => [...prev, nr.notification]);
+        }
+      });
+
+      const splitMsg = ownerKeys.length > 1 
+        ? ` (تم تقسيمه إلى ${ownerKeys.length} طلبات حسب المالك المالي)`
+        : '';
 
       toast({
         title: "تم إرسال طلب التحاسب",
-        description: `طلب تحاسب بقيمة ${totalProfit.toLocaleString()} د.ع للطلبات: ${eligibleProfits.length}`,
+        description: `طلب تحاسب بقيمة ${totalProfit.toLocaleString()} د.ع للطلبات: ${eligibleProfits.length}${splitMsg}`,
         variant: "success"
       });
 
-      return { success: true, notification: notifResult?.notification ?? null };
+      return { success: true, notifications: allNotifResults };
     } catch (error) {
       devLog.error('❌ خطأ في طلب التحاسب:', error);
       toast({

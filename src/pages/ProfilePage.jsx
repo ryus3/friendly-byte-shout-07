@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { 
@@ -208,9 +209,12 @@ const ProfilePage = () => {
     };
   };
 
+  // ✅ مدير القسم يستطيع تعديل ملفات موظفيه
+  const { supervisedEmployeeIds } = useSupervisedEmployees();
   const canEdit = user && profile && (
     user.user_id === profile.user_id || 
-    hasPermission('view_all_users')
+    hasPermission('view_all_users') ||
+    supervisedEmployeeIds.includes(profile.user_id)
   );
 
   if (loading) {

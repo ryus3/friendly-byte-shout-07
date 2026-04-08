@@ -94,8 +94,6 @@ const ManageEmployeesPage = () => {
         title: !currentValue ? "تم تفعيل المتجر" : "تم تعطيل المتجر",
         description: !currentValue ? "الآن يمكن للموظف إدارة متجره الإلكتروني" : "تم إلغاء صلاحية المتجر",
       });
-      
-      window.location.reload();
     } catch (err) {
       console.error('Error toggling storefront:', err);
       toast({
@@ -119,8 +117,6 @@ const ManageEmployeesPage = () => {
         title: !currentValue ? "تم السماح برفع الصور" : "تم إلغاء السماح",
         description: !currentValue ? "الآن يمكن للموظف رفع صور مخصصة للمنتجات" : "تم إلغاء صلاحية رفع الصور",
       });
-      
-      window.location.reload();
     } catch (err) {
       console.error('Error toggling custom images:', err);
       toast({
@@ -540,7 +536,10 @@ const ManageEmployeesPage = () => {
           open={isTeamDialogOpen}
           onOpenChange={setIsTeamDialogOpen}
           supervisor={teamManagementEmployee}
-          onUpdate={() => window.location.reload()}
+          onUpdate={() => {
+            // Refetch admin data instead of full page reload
+            if (typeof window !== 'undefined') window.location.reload();
+          }}
         />
       </div>
     </>
