@@ -117,8 +117,6 @@ const ManageEmployeesPage = () => {
         title: !currentValue ? "تم السماح برفع الصور" : "تم إلغاء السماح",
         description: !currentValue ? "الآن يمكن للموظف رفع صور مخصصة للمنتجات" : "تم إلغاء صلاحية رفع الصور",
       });
-      
-      window.location.reload();
     } catch (err) {
       console.error('Error toggling custom images:', err);
       toast({
