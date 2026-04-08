@@ -525,10 +525,10 @@ const DepartmentManagerSettingsPage = () => {
             {editingEmployee && (
               <UnifiedEmployeeDialog
                 employee={editingEmployee}
-                isOpen={isEditModalOpen}
-                onClose={() => {
-                  setIsEditModalOpen(false);
-                  setEditingEmployee(null);
+                open={isEditModalOpen}
+                onOpenChange={(val) => {
+                  setIsEditModalOpen(val);
+                  if (!val) setEditingEmployee(null);
                 }}
               />
             )}
