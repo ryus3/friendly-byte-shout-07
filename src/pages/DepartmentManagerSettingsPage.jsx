@@ -40,7 +40,7 @@ const DepartmentManagerSettingsPage = () => {
   const { user } = useAuth();
   const { isAdmin, isDepartmentManager, productPermissions: managerOwnPermissions } = usePermissions();
   const { products: allSystemProducts } = useInventory();
-  const { filterProductsByPermissions } = useAuth();
+  // filterProductsByPermissions removed - now using employee_allowed_products directly
   const { supervisedEmployees, supervisedEmployeeIds, loading: supervisedLoading } = useSupervisedEmployees();
   const navigate = useNavigate();
   
