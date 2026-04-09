@@ -20,7 +20,7 @@ import {
   X
 } from 'lucide-react';
 
-const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpenChange }) => {
+const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpenChange, maxAllowedLevel }) => {
   const [availableRoles, setAvailableRoles] = useState([]);
   const [userRoles, setUserRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,7 +40,11 @@ const UnifiedRoleManager = ({ user: selectedUser, onClose, onUpdate, open, onOpe
 
       if (rolesError) throw rolesError;
 
-      setAvailableRoles(roles || []);
+      // فلترة الأدوار حسب مستوى المتصل - مدير القسم لا يرى أدوار أعلى منه
+      const filteredRoles = maxAllowedLevel 
+        ? (roles || []).filter(r => r.hierarchy_level >= maxAllowedLevel)
+        : (roles || []);
+      setAvailableRoles(filteredRoles);
 
       // جلب أدوار المستخدم الحالية
       if (selectedUser) {

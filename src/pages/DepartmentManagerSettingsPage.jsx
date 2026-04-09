@@ -161,7 +161,7 @@ const DepartmentManagerSettingsPage = () => {
       const userId = user?.id;
       const userUuid = user?.user_id;
       
-      // ✅ جلب القواعد التي أنشأها مدير القسم (بكلا المعرفين)
+      // ✅ جلب كل القواعد للموظفين المشرف عليهم (بدون فلتر created_by)
       const { data, error } = await supabase
         .from('employee_profit_rules')
         .select(`
@@ -169,8 +169,7 @@ const DepartmentManagerSettingsPage = () => {
           employee:profiles!employee_id(full_name, employee_code),
           product:products!target_id(name)
         `)
-        .in('employee_id', supervisedEmployeeIds)
-        .or(`created_by.eq.${userId}${userUuid && userUuid !== userId ? `,created_by.eq.${userUuid}` : ''}`);
+        .in('employee_id', supervisedEmployeeIds);
       
       if (!error && data) {
         setProfitRules(data);
@@ -231,9 +230,7 @@ const DepartmentManagerSettingsPage = () => {
       toast({ title: 'تم بنجاح', description: newRule.full_profit ? 'تمت إضافة قاعدة كامل الربح' : 'تمت إضافة قاعدة الربح' });
       setNewRule({ employee_id: '', product_id: '', profit_amount: 0, profit_type: 'fixed', full_profit: false });
       
-      // إعادة جلب القواعد فوراً بكلا المعرفين
-      const userId = user?.id;
-      const userUuid = user?.user_id;
+      // إعادة جلب القواعد فوراً (بدون فلتر created_by)
       const { data } = await supabase
         .from('employee_profit_rules')
         .select(`
@@ -241,8 +238,7 @@ const DepartmentManagerSettingsPage = () => {
           employee:profiles!employee_id(full_name, employee_code),
           product:products!target_id(name)
         `)
-        .in('employee_id', supervisedEmployeeIds)
-        .or(`created_by.eq.${userId}${userUuid && userUuid !== userId ? `,created_by.eq.${userUuid}` : ''}`);
+        .in('employee_id', supervisedEmployeeIds);
       
       if (data) setProfitRules(data);
     } catch (error) {
@@ -257,8 +253,7 @@ const DepartmentManagerSettingsPage = () => {
     const { error } = await supabase
       .from('employee_profit_rules')
       .delete()
-      .eq('id', ruleId)
-      .eq('created_by', user?.id);
+      .eq('id', ruleId);
 
     if (!error) {
       setProfitRules(prev => prev.filter(r => r.id !== ruleId));

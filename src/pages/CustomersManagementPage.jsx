@@ -290,7 +290,7 @@ const [showExportDialog, setShowExportDialog] = useState(false);
         customer_name: loyaltyMatch?.customer_name || entry.customer_name,
         customer_city: loyaltyMatch?.customer_city || entry.customer_city,
         customer_province: loyaltyMatch?.customer_province || entry.customer_province,
-        total_points: loyaltyMatch?.total_points || 0,
+        total_points: loyaltyMatch?.total_points || Math.floor(spentNoDelivery / 1000),
         total_orders: ordersCount,
         total_spent: spentNoDelivery,
         points_expiry_date: loyaltyMatch?.points_expiry_date || null,
