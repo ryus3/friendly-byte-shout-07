@@ -1,54 +1,66 @@
 
-## المشاكل المكتشفة والحلول
+## الإصلاحات المطلوبة - 7 مشاكل مكتشفة
 
-### 1. نقاط العملاء تظهر 0
-**السبب**: النقاط تُجلب من `customer_phone_loyalty` عبر `loyaltyMatch` لكن RLS يحصر الوصول بـ `created_by = auth.uid()`. إذا لم يُنشئ المستخدم سجل الولاء، يعود `loyaltyMatch = null` والنقاط = 0.
+### 1. نقل ملكية منتجات "نسائي" إلى سارة (Migration)
+المنتجات التي owner_user_id = NULL في تصنيف نسائي:
+- ترانش طويل، سوت مايسترو، سوت شيك، سكارف، بلوز بقلاوه، سوت جنز
 
-**الحل**: حساب النقاط مباشرة من الطلبات المكتملة (مثلاً 1 نقطة لكل 1000 د.ع إنفاق بعد خصم التوصيل) في `CustomersManagementPage.jsx` بدلاً من الاعتماد على جدول الولاء المقيّد.
+Migration SQL:
+```sql
+UPDATE products SET owner_user_id = 'f10d8ed9-24d3-45d6-a310-d45db5a747a0'
+WHERE id IN (SELECT DISTINCT pc.product_id FROM product_categories pc 
+  JOIN categories c ON c.id = pc.category_id WHERE c.name = 'نسائي')
+AND owner_user_id IS NULL;
+```
 
-### 2. مدير القسم يستطيع تعيين دور "مدير عام" - كارثة أمنية
-**السبب**: `UnifiedRoleManager` يعرض كل الأدوار من جدول `roles` بدون تقييد حسب مستوى المستخدم الحالي. وعندما يُفتح من `UnifiedEmployeeDialog` في صفحة مدير القسم، لا يوجد فلتر.
+### 2. منسدلة "مصدر الأموال" لا تفتح لسارة
+**السبب**: `useCashSources.js` سطر 17 يفلتر `.is('owner_user_id', null)` فلا تظهر قاصة سارة.
+**الحل**: إزالة فلتر `owner_user_id IS NULL` من `fetchCashSources` وجلب كل القاصات النشطة. الفلترة تتم في الواجهة عبر `filterByOwnerUserId`.
 
-**الحل**: 
-- إضافة prop `maxAllowedLevel` لـ `UnifiedRoleManager`
-- في `UnifiedEmployeeDialog` تمرير `callerRole` أو مستوى المتصل
-- مدير القسم (`hierarchy_level = 2`) لا يرى إلا الأدوار ذات `hierarchy_level >= 3` (sales_employee, warehouse_employee, cashier, delivery_coordinator)
-- المدير العام فقط يمنح أدوار المستوى 1 و 2
-
-### 3. قواعد الأرباح لا تُنشأ (لم تظهر بعد الإضافة)
-**السبب**: الجلب بعد الإضافة يستخدم `.or(created_by.eq....)` مما يعني أنه يجلب فقط القواعد التي أنشأها مدير القسم. لكن المشكلة الأساسية أن الإدخال ربما يفشل بصمت بسبب RLS أو constraint.
-
+### 3. مدير القسم يعطي دور "مدير عام" - كارثة أمنية
+**السبب**: `UnifiedRoleManager.jsx` يعرض كل الأدوار بدون تقييد.
 **الحل**:
-- إزالة فلتر `created_by` من جلب القواعد - يكفي `.in('employee_id', supervisedEmployeeIds)` لأن المدير يجب أن يرى كل قواعد موظفيه
-- إضافة `console.error` و toast واضح عند فشل الإدخال مع عرض `error.message`
-- التحقق من RLS على `employee_profit_rules` يسمح لمدير القسم بالإدراج
+- إضافة prop `maxAllowedLevel` لـ `UnifiedRoleManager`
+- في `UnifiedEmployeeDialog` تمرير `maxAllowedLevel` بناءً على دور المتصل
+- فلترة `availableRoles` في العرض: `availableRoles.filter(r => !maxAllowedLevel || r.hierarchy_level >= maxAllowedLevel)`
+- مدير القسم (level 2) يرى فقط level >= 3 (sales, warehouse, cashier, delivery)
 
-### 4. منتجات تصنيف "نسائي" لم تُنقل لسارة
-**السبب**: لم تُنفّذ migration لنقل الملكية.
+في `UnifiedEmployeeDialog.jsx`:
+- استيراد `usePermissions` والحصول على `isDepartmentManager`
+- تمرير `maxAllowedLevel={isDepartmentManager ? 3 : undefined}` لـ `UnifiedRoleManager`
 
-**الحل**: migration تحديث `products.owner_user_id` لكل المنتجات في تصنيف نسائي التي `owner_user_id IS NULL` إلى UUID سارة (`f10d8ed9-24d3-45d6-a310-d45db5a747a0`). المنتجات: ترانش طويل، سوت مايسترو، سوت شيك، سكارف، بلوز بقلاوه، سوت جنز.
+### 4. قواعد الأرباح لا تُنشأ/تظهر لمدير القسم
+**السبب**: جلب القواعد يستخدم `.or(created_by.eq....)` مما يحصر النتائج بالقواعد التي أنشأها المدير فقط.
+**الحل** في `DepartmentManagerSettingsPage.jsx`:
+- إزالة فلتر `.or(created_by...)` من سطري 173 و 245
+- الإبقاء على `.in('employee_id', supervisedEmployeeIds)` فقط - كافٍ لضمان العزل
+- إضافة console.error وتشخيص واضح عند فشل الإدراج
 
-### 5. منسدلة "مصدر الأموال" لا تفتح في مشتريات سارة
-**السبب**: `useCashSources` يجلب فقط `.is('owner_user_id', null)` (القاصات العامة). قاصة سارة لها `owner_user_id = f10d8ed9...` فلا تظهر. والـ `filterByOwnerUserId` في `AddPurchaseDialog` يُفلتر من قائمة فارغة أصلاً.
+### 5. نقاط العملاء تظهر 0
+**السبب**: النقاط تأتي من `customer_phone_loyalty` عبر `loyaltyMatch` لكن RLS يحصر بـ `created_by = auth.uid()`. إذا لم يوجد سجل ولاء، النقاط = 0.
+**الحل** في `CustomersManagementPage.jsx`:
+- حساب النقاط مباشرة من الطلبات: `Math.floor(spentNoDelivery / 1000)` (1 نقطة لكل 1000 د.ع)
+- تغيير `total_points: loyaltyMatch?.total_points || 0` إلى `total_points: loyaltyMatch?.total_points || Math.floor(spentNoDelivery / 1000)`
 
-**الحل**: تعديل `useCashSources` ليقبل `includeOwned` أو تعديل `AddPurchaseDialog` ليجلب قاصات المالك مباشرة عند وجود `filterByOwnerUserId`. أو الأبسط: جلب كل القاصات النشطة في `useCashSources` وترك الفلترة للواجهة.
+### 6. صلاحيات المنتجات - تأكيد
+نعم كلامك صحيح: الموظف يمكن أن يحصل على صلاحيات من مصدرين:
+- من النظام (المدير العام)
+- من مدير القسم
+كلاهما يكتبان في `employee_allowed_products` ويتراكمان. هذا التصميم سليم.
 
-### 6. أداة نقل ملكية المنتجات في صفحة المدير
-**الحل**: إضافة زر/حوار في `ManageProductsPage` يسمح بتحديد منتجات ونقل ملكيتها لموظف أو مدير قسم مع تحديد تاريخ التحويل.
-
-### 7. تحديد مالك المنتج في المشتريات
-**الحل**: إضافة حقل اختياري "المالك المالي" في `AddPurchaseDialog` يتيح للمدير تحديد من يملك المنتج المُشترى (النظام أو مدير قسم معين).
-
-### 8. صلاحيات المنتجات: الموظف يمكن أن يحصل على صلاحيات من النظام ومن مدير القسم
-نعم هذا صحيح ومنطقي. الموظف يمكن أن يكون لديه صلاحيات منتجات من مصدرين:
-- صلاحيات من النظام (المدير العام)
-- صلاحيات من مدير القسم
-كلا المصدرين يكتبان في `employee_allowed_products` / `user_product_permissions` ويتراكمان.
+### 7. أداة نقل ملكية المنتجات للمدير + تحديد مالك في المشتريات
+- إضافة حوار "نقل الملكية" في صفحة إدارة المنتجات يسمح بتحديد منتجات ونقلها لمالك جديد
+- إضافة حقل "المالك المالي" اختياري في `AddPurchaseDialog` للمدير
 
 ## ترتيب التنفيذ
 1. Migration: نقل ملكية منتجات نسائي لسارة
-2. إصلاح `useCashSources` لدعم قاصات المالك
-3. تقييد أدوار `UnifiedRoleManager` حسب مستوى المتصل
-4. إصلاح قواعد الأرباح (إزالة فلتر `created_by` وتحسين التشخيص)
+2. إصلاح `useCashSources.js` (إزالة فلتر owner_user_id IS NULL)
+3. تقييد أدوار `UnifiedRoleManager` (إضافة maxAllowedLevel)
+4. إصلاح جلب قواعد الأرباح (إزالة فلتر created_by)
 5. حساب نقاط العملاء من الطلبات
-6. أداة نقل ملكية المنتجات + تحديد المالك في المشتريات
+6. أداة نقل الملكية + تحديد المالك في المشتريات
+
+### تفاصيل تقنية
+- الملفات المتأثرة: `useCashSources.js`, `UnifiedRoleManager.jsx`, `UnifiedEmployeeDialog.jsx`, `DepartmentManagerSettingsPage.jsx`, `CustomersManagementPage.jsx`, `AddPurchaseDialog.jsx`
+- Migration واحدة لنقل الملكية
+- لا تغييرات في بنية الجداول - فقط تحديث بيانات وكود واجهة
