@@ -253,8 +253,7 @@ const DepartmentManagerSettingsPage = () => {
     const { error } = await supabase
       .from('employee_profit_rules')
       .delete()
-      .eq('id', ruleId)
-      .eq('created_by', user?.id);
+      .eq('id', ruleId);
 
     if (!error) {
       setProfitRules(prev => prev.filter(r => r.id !== ruleId));
