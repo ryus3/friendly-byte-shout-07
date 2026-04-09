@@ -14,7 +14,6 @@ export const useCashSources = () => {
         .from('cash_sources')
         .select('*')
         .eq('is_active', true)
-        .is('owner_user_id', null)
         .order('created_at');
 
       if (error) throw error;
