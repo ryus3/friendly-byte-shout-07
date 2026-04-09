@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { Badge } from '@/components/ui/badge';
 import { Shield, Package, User, Settings, Eye } from 'lucide-react';
 import { toast } from '@/components/ui/use-toast';
@@ -14,6 +15,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 
 const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
   const { refetchAdminData } = useAuth();
+  const { isDepartmentManager } = usePermissions();
   
   // إعداد القيم الأولية مع التحديث عند تغيير employee
   const [status, setStatus] = useState('pending');
@@ -215,6 +217,7 @@ const UnifiedEmployeeDialog = ({ employee, open, onOpenChange }) => {
                 onClose={() => setIsEditModalOpen(false)}
                 open={activeTab === 'roles'}
                 onOpenChange={() => {}}
+                maxAllowedLevel={isDepartmentManager ? 3 : undefined}
               />
             </TabsContent>
 
