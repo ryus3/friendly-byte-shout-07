@@ -14,12 +14,13 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DepartmentStatsCharts from '@/components/department/DepartmentStatsCharts';
 import ProductPermissionsManager from '@/components/manage-employees/ProductPermissionsManager';
 import UnifiedEmployeeDialog from '@/components/manage-employees/UnifiedEmployeeDialog';
 import { Switch } from '@/components/ui/switch';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
   Users, 
   DollarSign, 
@@ -33,7 +34,13 @@ import {
   Shield,
   Edit2,
   Eye,
-  Search
+  Search,
+  Send,
+  Hash,
+  Store,
+  ExternalLink,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 
 const DepartmentManagerSettingsPage = () => {
