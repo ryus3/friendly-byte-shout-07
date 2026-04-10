@@ -109,6 +109,36 @@ const DepartmentManagerSettingsPage = () => {
     };
     fetchEmployeeStats();
   }, [supervisedEmployeeIds]);
+
+  // فلترة الموظفين حسب البحث والحالة
+  const filteredSupervisedEmployees = useMemo(() => {
+    return supervisedEmployees.filter(emp => {
+      if (!emp) return false;
+      const search = employeeSearch.toLowerCase();
+      const searchMatch = !search || 
+        (emp.full_name?.toLowerCase() || '').includes(search) ||
+        (emp.employee_code?.toLowerCase() || '').includes(search) ||
+        (emp.email?.toLowerCase() || '').includes(search) ||
+        (emp.username?.toLowerCase() || '').includes(search);
+      const statusMatch = employeeStatusFilter === 'all' || emp.status === employeeStatusFilter;
+      return searchMatch && statusMatch;
+    });
+  }, [supervisedEmployees, employeeSearch, employeeStatusFilter]);
+
+  // تبديل صلاحية المتجر
+  const handleToggleStorefront = async (employeeId, currentValue) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ has_storefront_access: !currentValue })
+        .eq('user_id', employeeId);
+      if (error) throw error;
+      toast({ title: !currentValue ? 'تم تفعيل المتجر' : 'تم تعطيل المتجر' });
+    } catch (err) {
+      toast({ title: 'خطأ', description: 'فشل تحديث صلاحية المتجر', variant: 'destructive' });
+    }
+  };
+
   // جلب المنتجات والأقسام - يستخدم employee_allowed_products للمنتجات المصرح بها
   useEffect(() => {
     const fetchProducts = async () => {
