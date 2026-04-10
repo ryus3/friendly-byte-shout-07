@@ -72,6 +72,8 @@ const DepartmentManagerSettingsPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeStats, setEmployeeStats] = useState({});
+  const [employeeViewMode, setEmployeeViewMode] = useState('grid');
+  const [employeeStatusFilter, setEmployeeStatusFilter] = useState('all');
   // Product permissions state
   const [selectedPermEmployee, setSelectedPermEmployee] = useState('');
   const [allowedProducts, setAllowedProducts] = useState([]);
