@@ -213,9 +213,7 @@ const DepartmentManagerSettingsPage = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('employee_profit_rules')
-        .insert({
+      const ruleData = {
           employee_id: newRule.employee_id,
           target_id: newRule.product_id || null,
           rule_type: newRule.product_id ? 'product' : 'default',
@@ -223,7 +221,11 @@ const DepartmentManagerSettingsPage = () => {
           profit_percentage: newRule.full_profit ? 100 : null,
           created_by: user?.id,
           is_active: true
-        });
+        };
+
+      const { error } = await supabase
+        .from('employee_profit_rules')
+        .upsert(ruleData, { onConflict: 'employee_id,rule_type,target_id' });
 
       if (error) throw error;
 

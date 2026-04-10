@@ -180,6 +180,8 @@ export const calculateGeneralExpenses = (expenses, dateRange) => {
     if (affectsCOGS) return false;
     if (isDeliveryExpense) return false; // منع تكرار مصاريف التوصيل
 
+    // استبعاد المصاريف المحذوفة أو الملغاة
+    if (expense.status === 'deleted' || expense.status === 'cancelled' || expense.status === 'refunded') return false;
     // اعتماد الحالة إذا وُجدت فقط
     if (expense.status && expense.status !== 'approved') return false;
 
