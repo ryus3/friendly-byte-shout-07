@@ -1,66 +1,56 @@
 
-## الإصلاحات المطلوبة - 7 مشاكل مكتشفة
 
-### 1. نقل ملكية منتجات "نسائي" إلى سارة (Migration)
-المنتجات التي owner_user_id = NULL في تصنيف نسائي:
-- ترانش طويل، سوت مايسترو، سوت شيك، سكارف، بلوز بقلاوه، سوت جنز
+## خطة الإصلاح الشاملة - 8 مشاكل
 
-Migration SQL:
-```sql
-UPDATE products SET owner_user_id = 'f10d8ed9-24d3-45d6-a310-d45db5a747a0'
-WHERE id IN (SELECT DISTINCT pc.product_id FROM product_categories pc 
-  JOIN categories c ON c.id = pc.category_id WHERE c.name = 'نسائي')
-AND owner_user_id IS NULL;
-```
+### 1. نقاط الولاء: 25 نقطة لكل 1000 دينار
+الكود الحالي في `CustomersManagementPage.jsx` يحسب `Math.floor(spentNoDelivery / 1000)` أي نقطة واحدة لكل 1000.
+- تغيير المعادلة إلى `Math.floor(spentNoDelivery / 1000) * 25`
+- إضافة تعريف مستويات الولاء حسب النقاط (برونزي/فضي/ذهبي/ماسي)
 
-### 2. منسدلة "مصدر الأموال" لا تفتح لسارة
-**السبب**: `useCashSources.js` سطر 17 يفلتر `.is('owner_user_id', null)` فلا تظهر قاصة سارة.
-**الحل**: إزالة فلتر `owner_user_id IS NULL` من `fetchCashSources` وجلب كل القاصات النشطة. الفلترة تتم في الواجهة عبر `filterByOwnerUserId`.
+### 2. خطأ "duplicate key" عند إضافة قاعدة ربح
+قاعدة البيانات لديها قيد `UNIQUE (employee_id, rule_type, target_id)`. عند محاولة إضافة قاعدة لنفس الموظف والمنتج يحصل خطأ.
+- تحويل `insert` إلى `upsert` مع `onConflict: 'employee_id,rule_type,target_id'` في `DepartmentManagerSettingsPage.jsx`
+- نفس التعديل في أي مكان آخر يضيف قواعد ربح
 
-### 3. مدير القسم يعطي دور "مدير عام" - كارثة أمنية
-**السبب**: `UnifiedRoleManager.jsx` يعرض كل الأدوار بدون تقييد.
-**الحل**:
-- إضافة prop `maxAllowedLevel` لـ `UnifiedRoleManager`
-- في `UnifiedEmployeeDialog` تمرير `maxAllowedLevel` بناءً على دور المتصل
-- فلترة `availableRoles` في العرض: `availableRoles.filter(r => !maxAllowedLevel || r.hierarchy_level >= maxAllowedLevel)`
-- مدير القسم (level 2) يرى فقط level >= 3 (sales, warehouse, cashier, delivery)
+### 3. المصاريف المحذوفة تظهر (5000 مصاريف عامة)
+حركات القاصة تحتوي على المصروف الأصلي (-5000) والإرجاع (+5000). المجموع = 0 لكن الواجهة تعرض بطاقة "المصاريف العامة: 5000" لأنها تحسب فقط الحركات الخارجة بدون خصم الإرجاعات.
+- تعديل حساب المصاريف ليخصم `expense_refund` من المصاريف العامة
+- أو فلترة المصاريف التي لها إرجاع مقابل
 
-في `UnifiedEmployeeDialog.jsx`:
-- استيراد `usePermissions` والحصول على `isDepartmentManager`
-- تمرير `maxAllowedLevel={isDepartmentManager ? 3 : undefined}` لـ `UnifiedRoleManager`
+### 4. أداة نقل ملكية المنتجات (لم تُبنَ بعد)
+إضافة مكون `TransferOwnershipDialog` في `ManageProductsPage.jsx`:
+- زر "نقل الملكية" يظهر عند تحديد منتجات
+- اختيار المالك الجديد من قائمة المديرين/الموظفين
+- تحديث `owner_user_id` مع تسجيل `ownership_transferred_at = NOW()`
+- إضافة عمود `ownership_transferred_at` للجدول عبر migration
+- المنتجات المنقولة تُحسب مالياً من تاريخ النقل فقط
 
-### 4. قواعد الأرباح لا تُنشأ/تظهر لمدير القسم
-**السبب**: جلب القواعد يستخدم `.or(created_by.eq....)` مما يحصر النتائج بالقواعد التي أنشأها المدير فقط.
-**الحل** في `DepartmentManagerSettingsPage.jsx`:
-- إزالة فلتر `.or(created_by...)` من سطري 173 و 245
-- الإبقاء على `.in('employee_id', supervisedEmployeeIds)` فقط - كافٍ لضمان العزل
-- إضافة console.error وتشخيص واضح عند فشل الإدراج
+### 5. منتجات نسائي المنقولة لسارة - الحساب من تاريخ النقل
+المنتجات نُقلت عبر migration بدون تاريخ نقل. يجب:
+- Migration لإضافة عمود `ownership_transferred_at` لجدول `products`
+- Migration ثانية لتحديث المنتجات الـ 6 التي نُقلت لسارة بتاريخ النقل = تاريخ الـ migration السابقة
+- تعديل حسابات الإيرادات والأرباح لتحترم `ownership_transferred_at` (طلبات بعد هذا التاريخ فقط تُحسب للمالك الجديد)
 
-### 5. نقاط العملاء تظهر 0
-**السبب**: النقاط تأتي من `customer_phone_loyalty` عبر `loyaltyMatch` لكن RLS يحصر بـ `created_by = auth.uid()`. إذا لم يوجد سجل ولاء، النقاط = 0.
-**الحل** في `CustomersManagementPage.jsx`:
-- حساب النقاط مباشرة من الطلبات: `Math.floor(spentNoDelivery / 1000)` (1 نقطة لكل 1000 د.ع)
-- تغيير `total_points: loyaltyMatch?.total_points || 0` إلى `total_points: loyaltyMatch?.total_points || Math.floor(spentNoDelivery / 1000)`
+### 6. تعديل الموظف من مدير القسم لا يُحفظ
+`UnifiedEmployeeDialog` يحتاج فحص - على الأرجح مشكلة صلاحيات RLS على جدول `profiles` عند التحديث من مدير القسم.
+- التحقق من سياسة UPDATE على profiles
+- ضمان أن مدير القسم يستطيع تعديل بيانات الموظفين تحت إشرافه
 
-### 6. صلاحيات المنتجات - تأكيد
-نعم كلامك صحيح: الموظف يمكن أن يحصل على صلاحيات من مصدرين:
-- من النظام (المدير العام)
-- من مدير القسم
-كلاهما يكتبان في `employee_allowed_products` ويتراكمان. هذا التصميم سليم.
+### 7. إدارة الموظفين لمدير القسم = نسخة كاملة من المدير
+تبويب الموظفين الحالي في `DepartmentManagerSettingsPage` مبسط. المطلوب:
+- إضافة أزرار التليغرام ومنح الرموز
+- إضافة إدارة الفريق (TeamManagementDialog)
+- إضافة تحديث الصلاحيات (UpdateRolePermissionsDialog)
+- إضافة وضع العرض grid/table مثل ManageEmployeesPage
+- تصفية الحالة والدور
+- كل ذلك مع تقييد البيانات على `supervisedEmployees` فقط
 
-### 7. أداة نقل ملكية المنتجات للمدير + تحديد مالك في المشتريات
-- إضافة حوار "نقل الملكية" في صفحة إدارة المنتجات يسمح بتحديد منتجات ونقلها لمالك جديد
-- إضافة حقل "المالك المالي" اختياري في `AddPurchaseDialog` للمدير
-
-## ترتيب التنفيذ
-1. Migration: نقل ملكية منتجات نسائي لسارة
-2. إصلاح `useCashSources.js` (إزالة فلتر owner_user_id IS NULL)
-3. تقييد أدوار `UnifiedRoleManager` (إضافة maxAllowedLevel)
-4. إصلاح جلب قواعد الأرباح (إزالة فلتر created_by)
-5. حساب نقاط العملاء من الطلبات
-6. أداة نقل الملكية + تحديد المالك في المشتريات
+### 8. التحقق من Real-time على الدومين المخصص
+- التأكد من أن Supabase realtime subscriptions تعمل على `pos.ryusbrand.com`
+- التأكد من أن إضافة/تعديل المنتجات تستخدم refetch فوري وليس reload
 
 ### تفاصيل تقنية
-- الملفات المتأثرة: `useCashSources.js`, `UnifiedRoleManager.jsx`, `UnifiedEmployeeDialog.jsx`, `DepartmentManagerSettingsPage.jsx`, `CustomersManagementPage.jsx`, `AddPurchaseDialog.jsx`
-- Migration واحدة لنقل الملكية
-- لا تغييرات في بنية الجداول - فقط تحديث بيانات وكود واجهة
+- الملفات المتأثرة: `CustomersManagementPage.jsx`, `DepartmentManagerSettingsPage.jsx`, `ManageProductsPage.jsx`, حسابات المركز المالي
+- Migrations: إضافة `ownership_transferred_at` + تحديث المنتجات المنقولة
+- أولوية التنفيذ: خطأ الـ duplicate key أولاً (يمنع العمل)، ثم النقاط، ثم أداة النقل، ثم ترقية إدارة الموظفين
+
