@@ -17,6 +17,7 @@ import { toast } from '@/components/ui/use-toast';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import SmartPagination from '@/components/ui/SmartPagination';
+import TransferOwnershipDialog from '@/components/manage-products/TransferOwnershipDialog';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -34,6 +35,7 @@ const ManageProductsPage = () => {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
   
 
   // استخدام hook الفلترة المحسن
