@@ -243,6 +243,27 @@ const ManageProductsPage = () => {
           isMobile={isMobile}
         />
 
+        {/* زر نقل الملكية - يظهر فقط للمدير عند تحديد منتجات */}
+        {isAdmin && selectedProductIds.length > 0 && (
+          <Button 
+            variant="outline" 
+            className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
+            onClick={() => setIsTransferOpen(true)}
+          >
+            نقل ملكية {selectedProductIds.length} منتج
+          </Button>
+        )}
+
+        <TransferOwnershipDialog
+          open={isTransferOpen}
+          onOpenChange={setIsTransferOpen}
+          selectedProducts={selectedProducts}
+          onTransferComplete={() => {
+            setSelectedProductIds([]);
+            refreshProducts();
+          }}
+        />
+
         {searchFilteredProducts.length > 0 && viewMode === 'list' && (
           <div className="flex items-center gap-4 p-3 bg-card border rounded-lg
                        shadow-lg shadow-black/10 
