@@ -14,12 +14,13 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import DepartmentStatsCharts from '@/components/department/DepartmentStatsCharts';
 import ProductPermissionsManager from '@/components/manage-employees/ProductPermissionsManager';
 import UnifiedEmployeeDialog from '@/components/manage-employees/UnifiedEmployeeDialog';
 import { Switch } from '@/components/ui/switch';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { 
   Users, 
   DollarSign, 
@@ -33,7 +34,13 @@ import {
   Shield,
   Edit2,
   Eye,
-  Search
+  Search,
+  Send,
+  Hash,
+  Store,
+  ExternalLink,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 
 const DepartmentManagerSettingsPage = () => {
@@ -65,6 +72,8 @@ const DepartmentManagerSettingsPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeStats, setEmployeeStats] = useState({});
+  const [employeeViewMode, setEmployeeViewMode] = useState('grid');
+  const [employeeStatusFilter, setEmployeeStatusFilter] = useState('all');
   // Product permissions state
   const [selectedPermEmployee, setSelectedPermEmployee] = useState('');
   const [allowedProducts, setAllowedProducts] = useState([]);
@@ -100,6 +109,36 @@ const DepartmentManagerSettingsPage = () => {
     };
     fetchEmployeeStats();
   }, [supervisedEmployeeIds]);
+
+  // فلترة الموظفين حسب البحث والحالة
+  const filteredSupervisedEmployees = useMemo(() => {
+    return supervisedEmployees.filter(emp => {
+      if (!emp) return false;
+      const search = employeeSearch.toLowerCase();
+      const searchMatch = !search || 
+        (emp.full_name?.toLowerCase() || '').includes(search) ||
+        (emp.employee_code?.toLowerCase() || '').includes(search) ||
+        (emp.email?.toLowerCase() || '').includes(search) ||
+        (emp.username?.toLowerCase() || '').includes(search);
+      const statusMatch = employeeStatusFilter === 'all' || emp.status === employeeStatusFilter;
+      return searchMatch && statusMatch;
+    });
+  }, [supervisedEmployees, employeeSearch, employeeStatusFilter]);
+
+  // تبديل صلاحية المتجر
+  const handleToggleStorefront = async (employeeId, currentValue) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ has_storefront_access: !currentValue })
+        .eq('user_id', employeeId);
+      if (error) throw error;
+      toast({ title: !currentValue ? 'تم تفعيل المتجر' : 'تم تعطيل المتجر' });
+    } catch (err) {
+      toast({ title: 'خطأ', description: 'فشل تحديث صلاحية المتجر', variant: 'destructive' });
+    }
+  };
+
   // جلب المنتجات والأقسام - يستخدم employee_allowed_products للمنتجات المصرح بها
   useEffect(() => {
     const fetchProducts = async () => {
@@ -213,9 +252,7 @@ const DepartmentManagerSettingsPage = () => {
 
     setLoading(true);
     try {
-      const { error } = await supabase
-        .from('employee_profit_rules')
-        .insert({
+      const ruleData = {
           employee_id: newRule.employee_id,
           target_id: newRule.product_id || null,
           rule_type: newRule.product_id ? 'product' : 'default',
@@ -223,7 +260,11 @@ const DepartmentManagerSettingsPage = () => {
           profit_percentage: newRule.full_profit ? 100 : null,
           created_by: user?.id,
           is_active: true
-        });
+        };
+
+      const { error } = await supabase
+        .from('employee_profit_rules')
+        .upsert(ruleData, { onConflict: 'employee_id,rule_type,target_id' });
 
       if (error) throw error;
 
@@ -419,7 +460,7 @@ const DepartmentManagerSettingsPage = () => {
             </TabsTrigger>
           </TabsList>
 
-          {/* تبويب الموظفين - مطور بمستوى المدير */}
+          {/* تبويب الموظفين - نسخة كاملة مثل المدير */}
           <TabsContent value="employees">
             <Card>
               <CardHeader>
@@ -428,101 +469,203 @@ const DepartmentManagerSettingsPage = () => {
                   إدارة الموظفين
                 </CardTitle>
                 <CardDescription>
-                  إدارة شاملة للموظفين تحت إشرافك - تعديل البيانات والصلاحيات
+                  إدارة شاملة للموظفين تحت إشرافك - تعديل البيانات والصلاحيات والتليغرام
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {/* شريط البحث */}
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="relative flex-1">
+                {/* فلاتر وأدوات بحث */}
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 mb-4">
+                  <div className="relative lg:col-span-2">
                     <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="بحث بالاسم أو الكود..."
+                      placeholder="بحث بالاسم أو الكود أو البريد..."
                       value={employeeSearch}
                       onChange={(e) => setEmployeeSearch(e.target.value)}
                       className="pr-9"
                       dir="rtl"
                     />
                   </div>
-                  <Badge variant="secondary">{supervisedEmployees.length} موظف</Badge>
+                  <Select value={employeeStatusFilter} onValueChange={setEmployeeStatusFilter}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">كل الحالات</SelectItem>
+                      <SelectItem value="active">نشط</SelectItem>
+                      <SelectItem value="pending">قيد المراجعة</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Button variant={employeeViewMode === 'grid' ? 'default' : 'outline'} size="sm" onClick={() => setEmployeeViewMode('grid')} className="flex-1">
+                      <LayoutGrid className="w-4 h-4 ml-1" /> بطاقات
+                    </Button>
+                    <Button variant={employeeViewMode === 'table' ? 'default' : 'outline'} size="sm" onClick={() => setEmployeeViewMode('table')} className="flex-1">
+                      <List className="w-4 h-4 ml-1" /> جدول
+                    </Button>
+                    <Badge variant="secondary">{filteredSupervisedEmployees.length} موظف</Badge>
+                  </div>
                 </div>
 
                 {supervisedLoading ? (
                   <div className="text-center py-8 text-muted-foreground">جاري التحميل...</div>
-                ) : supervisedEmployees.length === 0 ? (
+                ) : filteredSupervisedEmployees.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    لا يوجد موظفين تحت إشرافك حالياً
+                    <User className="w-12 h-12 mx-auto mb-3 opacity-40" />
+                    <p>لا يوجد موظفين مطابقين</p>
+                  </div>
+                ) : employeeViewMode === 'grid' ? (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {filteredSupervisedEmployees.map((emp, index) => {
+                      const empStats = employeeStats[emp?.user_id] || {};
+                      return (
+                        <motion.div key={emp?.user_id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: index * 0.05 }}>
+                          <Card className="group border-2 hover:border-primary/30 hover:shadow-xl transition-all duration-300">
+                            <CardContent className="p-5">
+                              {/* Header */}
+                              <div className="flex items-start gap-3 mb-4">
+                                <div className="relative">
+                                  <Avatar className="w-14 h-14 border-2 border-primary/20">
+                                    <AvatarImage src={emp?.avatar_url} />
+                                    <AvatarFallback className="bg-gradient-to-br from-primary to-purple-600 text-primary-foreground font-bold text-lg">
+                                      {emp?.full_name?.charAt(0) || 'م'}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-card ${emp?.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-bold text-lg truncate group-hover:text-primary transition-colors">{emp?.full_name || 'موظف'}</p>
+                                  <p className="text-sm text-muted-foreground">@{emp?.username || '-'}</p>
+                                  <Badge variant="outline" className="mt-1 text-xs">{emp?.roles?.[0] === 'sales_employee' ? 'مبيعات' : emp?.roles?.[0] === 'warehouse_employee' ? 'مخزن' : emp?.roles?.[0] === 'cashier' ? 'كاشير' : 'موظف'}</Badge>
+                                </div>
+                              </div>
+
+                              {/* Info Grid */}
+                              <div className="grid grid-cols-2 gap-2 mb-3 text-sm">
+                                <div className="flex items-center gap-2 p-2 bg-secondary/20 rounded-md">
+                                  <Hash className="w-4 h-4 text-primary flex-shrink-0" />
+                                  <span className="truncate font-mono text-xs">{emp?.employee_code || <span className="text-muted-foreground italic">غير محدد</span>}</span>
+                                </div>
+                                <div className={`flex items-center gap-2 p-2 rounded-md border ${emp?.telegram_linked ? 'bg-green-50 dark:bg-green-950/30 border-green-200/30' : 'bg-gray-50 dark:bg-gray-950/30 border-gray-200/30'}`}>
+                                  <Send className={`w-4 h-4 ${emp?.telegram_linked ? 'text-green-600' : 'text-gray-400'}`} />
+                                  <div className="flex-1 min-w-0">
+                                    {emp?.telegram_code ? (
+                                      <div className="flex items-center gap-1">
+                                        <span className="font-mono text-xs font-semibold">{emp.telegram_code}</span>
+                                        <Badge variant={emp.telegram_linked ? "success" : "outline"} className={`text-[10px] px-1 py-0 ${emp.telegram_linked ? 'bg-green-500 text-white' : ''}`}>
+                                          {emp.telegram_linked ? 'متصل' : 'غير متصل'}
+                                        </Badge>
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground italic">لم يُضف</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* إحصائيات */}
+                              <div className="grid grid-cols-2 gap-2 mb-3 text-center">
+                                <div className="bg-muted/50 rounded p-2">
+                                  <p className="text-lg font-bold">{empStats.ordersCount || 0}</p>
+                                  <p className="text-xs text-muted-foreground">طلبات</p>
+                                </div>
+                                <div className="bg-muted/50 rounded p-2">
+                                  <p className="text-lg font-bold text-green-600">{((empStats.totalProfit || 0) / 1000).toFixed(1)}K</p>
+                                  <p className="text-xs text-muted-foreground">أرباح</p>
+                                </div>
+                              </div>
+
+                              {/* Storefront Controls */}
+                              {emp?.status === 'active' && (
+                                <div className="mb-3 p-2 bg-gradient-to-r from-purple-50/50 to-blue-50/50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-lg border border-purple-200/30 space-y-2">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-1.5">
+                                      <Store className="w-3.5 h-3.5 text-purple-600" />
+                                      <span className="text-xs font-medium">المتجر</span>
+                                    </div>
+                                    <Switch
+                                      checked={emp?.has_storefront_access || false}
+                                      onCheckedChange={() => handleToggleStorefront(emp.user_id, emp.has_storefront_access)}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* أزرار */}
+                              <div className="flex gap-2">
+                                <Button variant="outline" size="sm" className="flex-1" onClick={() => { setEditingEmployee(emp); setIsEditModalOpen(true); }}>
+                                  <Edit2 className="w-3 h-3 ml-1" /> تعديل
+                                </Button>
+                                <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/profile/${emp?.username || emp?.user_id}`)}>
+                                  <Eye className="w-3 h-3 ml-1" /> الملف
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {supervisedEmployees
-                      .filter(emp => {
-                        if (!emp) return false;
-                        if (!employeeSearch) return true;
-                        const search = employeeSearch.toLowerCase();
-                        return (emp.full_name?.toLowerCase() || '').includes(search) ||
-                               (emp.employee_code?.toLowerCase() || '').includes(search) ||
-                               (emp.email?.toLowerCase() || '').includes(search);
-                      })
-                      .map((emp) => {
-                        const empStats = employeeStats[emp?.user_id] || {};
-                        return (
-                      <Card key={emp?.user_id || Math.random()} className="border-2 hover:border-primary/50 transition-colors">
-                        <CardContent className="p-4">
-                          <div className="flex items-center gap-3 mb-3">
-                            <Avatar className="h-12 w-12">
-                              <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-500 text-white font-bold text-lg">
-                                {emp?.full_name?.charAt(0) || 'م'}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-semibold truncate">{emp?.full_name || 'موظف'}</p>
-                              <p className="text-sm text-muted-foreground">{emp?.employee_code || emp?.email || '-'}</p>
-                            </div>
-                            <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">نشط</Badge>
-                          </div>
-                          
-                          {/* إحصائيات سريعة */}
-                          <div className="grid grid-cols-2 gap-2 mb-3 text-center">
-                            <div className="bg-muted/50 rounded p-2">
-                              <p className="text-lg font-bold">{empStats.ordersCount || 0}</p>
-                              <p className="text-xs text-muted-foreground">طلبات</p>
-                            </div>
-                            <div className="bg-muted/50 rounded p-2">
-                              <p className="text-lg font-bold text-green-600">{((empStats.totalProfit || 0) / 1000).toFixed(1)}K</p>
-                              <p className="text-xs text-muted-foreground">أرباح</p>
-                            </div>
-                          </div>
-                          
-                          {/* أزرار الإجراءات */}
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="flex-1"
-                              onClick={() => {
-                                setEditingEmployee(emp);
-                                setIsEditModalOpen(true);
-                              }}
-                            >
-                              <Edit2 className="w-3 h-3 ml-1" />
-                              تعديل
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              className="flex-1"
-                              onClick={() => navigate(`/profile/${emp?.username || emp?.user_id}`)}
-                            >
-                              <Eye className="w-3 h-3 ml-1" />
-                              الملف
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                        );
-                      })}
-                  </div>
+                  /* Table View */
+                  <Card>
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-secondary/50">
+                            <tr>
+                              <th className="text-right p-3 font-semibold text-sm">الموظف</th>
+                              <th className="text-right p-3 font-semibold text-sm">الكود</th>
+                              <th className="text-right p-3 font-semibold text-sm">التليغرام</th>
+                              <th className="text-right p-3 font-semibold text-sm">الحالة</th>
+                              <th className="text-right p-3 font-semibold text-sm">الطلبات</th>
+                              <th className="text-center p-3 font-semibold text-sm">إجراءات</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredSupervisedEmployees.map((emp) => {
+                              const empStats = employeeStats[emp?.user_id] || {};
+                              return (
+                                <tr key={emp?.user_id} className="border-b hover:bg-secondary/20">
+                                  <td className="p-3">
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="w-8 h-8">
+                                        <AvatarFallback className="bg-primary text-primary-foreground text-xs">{emp?.full_name?.charAt(0)}</AvatarFallback>
+                                      </Avatar>
+                                      <div>
+                                        <p className="font-medium text-sm">{emp?.full_name}</p>
+                                        <p className="text-xs text-muted-foreground">@{emp?.username}</p>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="p-3 text-sm font-mono">{emp?.employee_code || '-'}</td>
+                                  <td className="p-3 text-sm">
+                                    {emp?.telegram_code ? (
+                                      <Badge variant={emp.telegram_linked ? "default" : "outline"} className="text-xs">
+                                        {emp.telegram_code} {emp.telegram_linked ? '✓' : ''}
+                                      </Badge>
+                                    ) : '-'}
+                                  </td>
+                                  <td className="p-3">
+                                    <div className={`w-2 h-2 rounded-full inline-block ml-1 ${emp?.status === 'active' ? 'bg-green-500' : 'bg-yellow-500'}`} />
+                                    <span className="text-sm">{emp?.status === 'active' ? 'نشط' : 'معلق'}</span>
+                                  </td>
+                                  <td className="p-3 text-sm font-medium">{empStats.ordersCount || 0}</td>
+                                  <td className="p-3 text-center">
+                                    <div className="flex justify-center gap-1">
+                                      <Button variant="ghost" size="sm" onClick={() => { setEditingEmployee(emp); setIsEditModalOpen(true); }}>
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                      <Button variant="ghost" size="sm" onClick={() => navigate(`/profile/${emp?.username || emp?.user_id}`)}>
+                                        <Eye className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </CardContent>
+                  </Card>
                 )}
               </CardContent>
             </Card>

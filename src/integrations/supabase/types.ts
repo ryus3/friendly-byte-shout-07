@@ -4930,6 +4930,7 @@ export type Database = {
           last_updated_by: string | null
           name: string
           owner_user_id: string | null
+          ownership_transferred_at: string | null
           profit_amount: number | null
           updated_at: string
         }
@@ -4947,6 +4948,7 @@ export type Database = {
           last_updated_by?: string | null
           name: string
           owner_user_id?: string | null
+          ownership_transferred_at?: string | null
           profit_amount?: number | null
           updated_at?: string
         }
@@ -4964,6 +4966,7 @@ export type Database = {
           last_updated_by?: string | null
           name?: string
           owner_user_id?: string | null
+          ownership_transferred_at?: string | null
           profit_amount?: number | null
           updated_at?: string
         }

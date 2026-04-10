@@ -17,6 +17,7 @@ import { toast } from '@/components/ui/use-toast';
 import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import SmartPagination from '@/components/ui/SmartPagination';
+import TransferOwnershipDialog from '@/components/manage-products/TransferOwnershipDialog';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -34,6 +35,7 @@ const ManageProductsPage = () => {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
   
 
   // استخدام hook الفلترة المحسن
@@ -239,6 +241,27 @@ const ManageProductsPage = () => {
           onBarcodeSearch={() => setIsScannerOpen(true)}
           onQuickPrintLabels={handleQuickPrintLabels}
           isMobile={isMobile}
+        />
+
+        {/* زر نقل الملكية - يظهر فقط للمدير عند تحديد منتجات */}
+        {isAdmin && selectedProductIds.length > 0 && (
+          <Button 
+            variant="outline" 
+            className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
+            onClick={() => setIsTransferOpen(true)}
+          >
+            نقل ملكية {selectedProductIds.length} منتج
+          </Button>
+        )}
+
+        <TransferOwnershipDialog
+          open={isTransferOpen}
+          onOpenChange={setIsTransferOpen}
+          selectedProducts={selectedProducts}
+          onTransferComplete={() => {
+            setSelectedProductIds([]);
+            refreshProducts();
+          }}
         />
 
         {searchFilteredProducts.length > 0 && viewMode === 'list' && (
