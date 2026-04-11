@@ -206,7 +206,7 @@ const DepartmentManagerSettingsPage = () => {
         .select(`
           *,
           employee:profiles!employee_id(full_name, employee_code),
-          product:products!target_id(name)
+          product:products(name)
         `)
         .in('employee_id', supervisedEmployeeIds);
       
@@ -277,7 +277,7 @@ const DepartmentManagerSettingsPage = () => {
         .select(`
           *,
           employee:profiles!employee_id(full_name, employee_code),
-          product:products!target_id(name)
+          product:products(name)
         `)
         .in('employee_id', supervisedEmployeeIds);
       

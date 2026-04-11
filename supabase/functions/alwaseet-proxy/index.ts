@@ -3,7 +3,7 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const ALWASEET_BASE_URL = 'https://api.alwaseet-iq.net/v1';
+const ALWASEET_BASE_URL = 'https://api.alwaseet-iq.net/v1/merchant';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -34,7 +34,7 @@ Deno.serve(async (req) => {
     const qs = params.toString();
     if (qs) url += `?${qs}`;
 
-    console.log(`[AlWaseet Proxy] ${method} ${endpoint}`);
+    console.log(`[AlWaseet Proxy] ${method} ${url}`);
 
     const fetchOptions: RequestInit = {
       method: method.toUpperCase(),
@@ -42,14 +42,11 @@ Deno.serve(async (req) => {
         'Accept': 'application/json',
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         'Accept-Language': 'ar,en;q=0.9',
-        'Referer': 'https://api.alwaseet-iq.net/',
-        'Origin': 'https://api.alwaseet-iq.net',
       },
     };
 
-    // For POST/PUT, handle payload
+    // For POST/PUT, handle payload as FormData (AlWaseet requires multipart/form-data)
     if (payload && (method.toUpperCase() === 'POST' || method.toUpperCase() === 'PUT')) {
-      // Use FormData for AlWaseet API compatibility
       const formData = new FormData();
       for (const [key, value] of Object.entries(payload)) {
         if (value !== null && value !== undefined) {
