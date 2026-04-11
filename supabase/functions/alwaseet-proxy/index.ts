@@ -5,6 +5,11 @@ const corsHeaders = {
 
 const ALWASEET_BASE_URL = 'https://api.alwaseet-iq.net/v1/merchant';
 
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  return 'Unknown proxy error';
+};
+
 const buildFetchOptions = (method: string, payload?: Record<string, unknown>): RequestInit => {
   const upperMethod = method.toUpperCase();
   const fetchOptions: RequestInit = { method: upperMethod };
@@ -96,7 +101,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('AlWaseet Proxy Error:', error);
     return new Response(
-      JSON.stringify({ ok: false, msg: error.message }),
+      JSON.stringify({ ok: false, msg: getErrorMessage(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
