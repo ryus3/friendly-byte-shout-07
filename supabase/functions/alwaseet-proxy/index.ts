@@ -5,6 +5,34 @@ const corsHeaders = {
 
 const ALWASEET_BASE_URL = 'https://api.alwaseet-iq.net/v1/merchant';
 
+const getErrorMessage = (error: unknown) => {
+  if (error instanceof Error) return error.message;
+  return 'Unknown proxy error';
+};
+
+const buildFetchOptions = (method: string, payload?: Record<string, unknown>): RequestInit => {
+  const upperMethod = method.toUpperCase();
+  const fetchOptions: RequestInit = { method: upperMethod };
+
+  if (upperMethod === 'GET' || upperMethod === 'DELETE') {
+    fetchOptions.headers = {
+      'Accept': 'application/json',
+    };
+  }
+
+  if (payload && (upperMethod === 'POST' || upperMethod === 'PUT')) {
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(payload)) {
+      if (value !== null && value !== undefined) {
+        formData.append(key, String(value));
+      }
+    }
+    fetchOptions.body = formData;
+  }
+
+  return fetchOptions;
+};
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -36,23 +64,7 @@ Deno.serve(async (req) => {
 
     console.log(`[AlWaseet Proxy] ${method} ${url}`);
 
-    const fetchOptions: RequestInit = {
-      method: method.toUpperCase(),
-      headers: {
-        'Accept': 'application/json, text/plain, */*',
-      },
-    };
-
-    // For POST/PUT, handle payload as FormData (AlWaseet requires multipart/form-data)
-    if (payload && (method.toUpperCase() === 'POST' || method.toUpperCase() === 'PUT')) {
-      const formData = new FormData();
-      for (const [key, value] of Object.entries(payload)) {
-        if (value !== null && value !== undefined) {
-          formData.append(key, String(value));
-        }
-      }
-      fetchOptions.body = formData;
-    }
+    const fetchOptions = buildFetchOptions(method, payload);
 
     const response = await fetch(url, fetchOptions);
     
@@ -89,7 +101,7 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('AlWaseet Proxy Error:', error);
     return new Response(
-      JSON.stringify({ ok: false, msg: error.message }),
+      JSON.stringify({ ok: false, msg: getErrorMessage(error) }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

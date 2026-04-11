@@ -3,93 +3,169 @@
 
 import { supabase } from './customSupabaseClient';
 
-const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 2) => {
-  for (let attempt = 1; attempt <= retries; attempt++) {
+const REQUEST_GAP_MS = 450;
+const SHORT_CACHE_TTL_MS = 60 * 1000;
+const LONG_CACHE_TTL_MS = 5 * 60 * 1000;
+const inflightRequests = new Map();
+const responseCache = new Map();
+let requestQueue = Promise.resolve();
+let lastRequestAt = 0;
+
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const buildRequestKey = (endpoint, method, token, payload, queryParams) => JSON.stringify({
+  endpoint,
+  method,
+  token,
+  payload: payload || null,
+  queryParams: queryParams || null,
+});
+
+const getCacheTtl = (endpoint) => {
+  if (endpoint === 'citys' || endpoint === 'package-sizes') return LONG_CACHE_TTL_MS;
+  if (endpoint === 'statuses') return SHORT_CACHE_TTL_MS;
+  return 0;
+};
+
+const runQueuedRequest = async (requestFactory) => {
+  const run = async () => {
+    const elapsed = Date.now() - lastRequestAt;
+    if (elapsed < REQUEST_GAP_MS) {
+      await wait(REQUEST_GAP_MS - elapsed);
+    }
+
     try {
-      const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {
-        body: { endpoint, method, token, payload, queryParams }
-      });
+      return await requestFactory();
+    } finally {
+      lastRequestAt = Date.now();
+    }
+  };
 
-      if (error) {
-        let errorMessage = `فشل الاتصال بالخادم الوكيل: ${error.message}`;
-        let retryAfter = null;
-        
-        // ✅ تحسين معالجة أخطاء الشبكة
-        const isNetworkError = error.message?.includes('Failed to fetch') || 
-                              error.message?.includes('Network') ||
-                              error.message?.includes('ECONNREFUSED');
-        
-        try {
-          const errorBody = await error.context.json();
-          errorMessage = errorBody.msg || errorMessage;
-          retryAfter = errorBody.retryAfter;
-        } catch {
-          // If we can't parse the error body, use the default message
+  const scheduled = requestQueue.then(run, run);
+  requestQueue = scheduled.then(() => undefined, () => undefined);
+  return scheduled;
+};
+
+const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 3) => {
+  const requestKey = buildRequestKey(endpoint, method, token, payload, queryParams);
+  const cachedEntry = responseCache.get(requestKey);
+  if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
+    return cachedEntry.data;
+  }
+
+  if (inflightRequests.has(requestKey)) {
+    return inflightRequests.get(requestKey);
+  }
+
+  const requestPromise = (async () => {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        const { data, error } = await runQueuedRequest(() => supabase.functions.invoke('alwaseet-proxy', {
+          body: { endpoint, method, token, payload, queryParams }
+        }));
+
+        if (error) {
+          let errorMessage = `فشل الاتصال بالخادم الوكيل: ${error.message}`;
+          let retryAfter = null;
+          
+          // ✅ تحسين معالجة أخطاء الشبكة
+          const isNetworkError = error.message?.includes('Failed to fetch') || 
+                                error.message?.includes('Network') ||
+                                error.message?.includes('ECONNREFUSED');
+          
+          try {
+            const errorBody = await error.context.json();
+            errorMessage = errorBody.msg || errorBody.raw || errorMessage;
+            retryAfter = errorBody.retryAfter;
+          } catch {
+            // If we can't parse the error body, use the default message
+          }
+          
+          const err = new Error(errorMessage);
+          err.retryAfter = retryAfter;
+          err.isNetworkError = isNetworkError;
+          throw err;
         }
         
-        const err = new Error(errorMessage);
-        err.retryAfter = retryAfter;
-        err.isNetworkError = isNetworkError;
-        throw err;
-      }
-      
-      if (!data) {
-        throw new Error('لم يتم استلام رد من الخادم.');
-      }
-      
-      // معالجة خاصة لـ edit-order: فحص رسالة النجاح بدلاً من الأكواد فقط
-      if (endpoint === 'edit-order') {
-        const isSuccessMessage = data.msg && data.msg.includes('تم التعديل بنجاح');
-        const isSuccessCode = data.errNum === "S000" && data.status;
-        
-        if (!isSuccessMessage && !isSuccessCode) {
-          throw new Error(data.msg || 'فشل تحديث الطلب في شركة التوصيل.');
+        if (!data) {
+          throw new Error('لم يتم استلام رد من الخادم.');
         }
         
-        return data.data || data;
-      }
-      
-      // المعالجة العادية للـ endpoints الأخرى
-      if (data.errNum !== "S000" || !data.status) {
-        throw new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
-      }
+        // معالجة خاصة لـ edit-order: فحص رسالة النجاح بدلاً من الأكواد فقط
+        if (endpoint === 'edit-order') {
+          const isSuccessMessage = data.msg && data.msg.includes('تم التعديل بنجاح');
+          const isSuccessCode = data.errNum === "S000" && data.status;
+          
+          if (!isSuccessMessage && !isSuccessCode) {
+            throw new Error(data.msg || 'فشل تحديث الطلب في شركة التوصيل.');
+          }
+          
+          return data.data || data;
+        }
+        
+        // المعالجة العادية للـ endpoints الأخرى
+        if (data.errNum !== "S000" || !data.status) {
+          throw new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
+        }
 
-      return data.data;
-    } catch (error) {
-      // ✅ معالجة ذكية لـ Rate Limiting مع Adaptive Delays
-      const isRateLimitError = 
-        error.message?.includes('تجاوزت الحد المسموح به') || 
-        error.message?.includes('rate limit') ||
-        error.message?.includes('429');
-      
-      const isNetworkError = error.isNetworkError || 
-                            error.message?.includes('Failed to fetch') ||
-                            error.message?.includes('Network');
-      
-      // إذا كان rate limit وليست آخر محاولة، ننتظر ونعيد
-      if (isRateLimitError && attempt < retries) {
-        const waitTime = error.retryAfter || Math.min(1000 * attempt, 3000);
-        console.warn(`⚠️ Rate limit مؤقت لـ ${endpoint} - إعادة المحاولة ${attempt}/${retries} بعد ${waitTime/1000}s...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-        continue;
-      }
-      
-      // ✅ معالجة هادئة لأخطاء الشبكة الخارجية
-      if (isNetworkError && attempt === retries) {
-        // آخر محاولة وخطأ شبكة - تسجيل مُختصر بدون spam
-        console.warn(`⚠️ خطأ شبكة لـ ${endpoint} - API خارجي غير متاح`);
+        const result = data.data;
+        const cacheTtl = getCacheTtl(endpoint);
+        if (cacheTtl > 0) {
+          responseCache.set(requestKey, {
+            data: result,
+            expiresAt: Date.now() + cacheTtl,
+          });
+        }
+
+        return result;
+      } catch (error) {
+        // ✅ معالجة ذكية لـ Rate Limiting مع Adaptive Delays
+        const isRateLimitError = 
+          error.message?.includes('تجاوزت الحد المسموح به') || 
+          error.message?.includes('rate limit') ||
+          error.message?.includes('429');
+
+        const isCloudflareBlock =
+          error.message?.includes('Cloudflare') ||
+          error.message?.includes('Attention Required') ||
+          error.message?.includes('blocked');
+        
+        const isNetworkError = error.isNetworkError || 
+                              error.message?.includes('Failed to fetch') ||
+                              error.message?.includes('Network');
+        
+        if ((isRateLimitError || isCloudflareBlock) && attempt < retries) {
+          const waitTime = error.retryAfter || Math.min(1200 * attempt, 4000);
+          console.warn(`⚠️ تأخير وقائي لـ ${endpoint} - إعادة المحاولة ${attempt}/${retries} بعد ${waitTime/1000}s...`);
+          await wait(waitTime);
+          continue;
+        }
+        
+        // ✅ معالجة هادئة لأخطاء الشبكة الخارجية
+        if (isNetworkError && attempt === retries) {
+          // آخر محاولة وخطأ شبكة - تسجيل مُختصر بدون spam
+          console.warn(`⚠️ خطأ شبكة لـ ${endpoint} - API خارجي غير متاح`);
+          throw error;
+        }
+        
+        // معالجة الخطأ النهائية
+        if (isRateLimitError || isCloudflareBlock) {
+          console.warn(`⚠️ تم حظر/تقييد ${endpoint} مؤقتاً من مزود الخدمة`);
+        } else if (!isNetworkError) {
+          console.error(`API call failed for ${endpoint}:`, error);
+        }
+        
         throw error;
       }
-      
-      // معالجة الخطأ النهائية
-      if (isRateLimitError) {
-        console.warn(`⚠️ Rate limit مؤقت لـ ${endpoint} - تم تجاوز عدد المحاولات`);
-      } else if (!isNetworkError) {
-        console.error(`API call failed for ${endpoint}:`, error);
-      }
-      
-      throw error;
     }
+  })();
+
+  inflightRequests.set(requestKey, requestPromise);
+
+  try {
+    return await requestPromise;
+  } finally {
+    inflightRequests.delete(requestKey);
   }
 };
 
