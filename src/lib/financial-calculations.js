@@ -134,12 +134,19 @@ export const calculateCOGS = (orders, dateRange) => {
 /**
  * حساب المصاريف العامة (استبعاد النظامية ومستحقات الموظفين ومصاريف التوصيل)
  */
-export const calculateGeneralExpenses = (expenses, dateRange) => {
+export const calculateGeneralExpenses = (expenses, dateRange, cashMovements) => {
   if (!expenses || !Array.isArray(expenses)) return 0;
   
   const filteredExpenses = filterByDateRange(expenses, dateRange, 'transaction_date');
   
-  return filteredExpenses.filter(expense => {
+  // حساب مبالغ إرجاع المصاريف المحذوفة (expense_refund) لخصمها من الإجمالي
+  const expenseRefunds = Array.isArray(cashMovements) 
+    ? filterByDateRange(cashMovements, dateRange, 'effective_at')
+        .filter(m => m.reference_type === 'expense_refund')
+        .reduce((sum, m) => sum + (m.amount || 0), 0)
+    : 0;
+  
+  const total = filteredExpenses.filter(expense => {
     const isSystemExpense = expense.expense_type === EXCLUDED_EXPENSE_TYPES.SYSTEM;
     const isEmployeeDue = (
       expense.category === EXCLUDED_EXPENSE_TYPES.EMPLOYEE_DUES ||
@@ -187,6 +194,9 @@ export const calculateGeneralExpenses = (expenses, dateRange) => {
 
     return true;
   }).reduce((sum, expense) => sum + (expense.amount || 0), 0);
+  
+  // خصم مبالغ الإرجاع من الإجمالي (المصاريف الملغاة تظهر بصافي صفر)
+  return Math.max(0, total - expenseRefunds);
 };
 
 /**
