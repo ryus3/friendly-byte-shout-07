@@ -221,7 +221,7 @@ export const calculateEmployeeDuesPaid = (expenses, dateRange) => {
 /**
  * حساب جميع المؤشرات المالية
  */
-export const calculateFinancialMetrics = (orders, expenses, timePeriod = TIME_PERIODS.ALL) => {
+export const calculateFinancialMetrics = (orders, expenses, timePeriod = TIME_PERIODS.ALL, cashMovements = []) => {
   try {
     console.log('🔧 بدء حساب المؤشرات المالية:', { 
       ordersCount: orders?.length, 
@@ -237,7 +237,7 @@ export const calculateFinancialMetrics = (orders, expenses, timePeriod = TIME_PE
     const salesWithoutDelivery = FINANCIAL_FORMULAS.SALES_WITHOUT_DELIVERY(totalRevenue, deliveryFees);
     const cogs = calculateCOGS(orders, dateRange);
     const grossProfit = FINANCIAL_FORMULAS.GROSS_PROFIT(salesWithoutDelivery, cogs);
-    const generalExpenses = calculateGeneralExpenses(expenses, dateRange);
+    const generalExpenses = calculateGeneralExpenses(expenses, dateRange, cashMovements);
     const employeeDuesPaid = calculateEmployeeDuesPaid(expenses, dateRange);
     const netProfit = FINANCIAL_FORMULAS.NET_PROFIT(grossProfit, generalExpenses, employeeDuesPaid);
     
