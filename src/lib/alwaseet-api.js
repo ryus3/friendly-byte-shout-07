@@ -175,8 +175,27 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
 };
 
 export const getCities = async (token) => {
-  // Note: The API endpoint is "citys" not "cities"
-  return handleApiCall('citys', 'GET', token);
+  try {
+    return await handleApiCall('citys', 'GET', token);
+  } catch (error) {
+    // ✅ Fallback to local DB cache when API is blocked
+    if (error.isCloudflareBlock || error.message?.includes('حظر')) {
+      console.warn('⚠️ getCities: استخدام الكاش المحلي بسبب حظر Cloudflare');
+      try {
+        const { data } = await supabase
+          .from('cities_cache')
+          .select('alwaseet_id, name, name_ar, name_en, is_active')
+          .eq('is_active', true)
+          .order('name');
+        if (data && data.length > 0) {
+          return data.map(c => ({ id: c.alwaseet_id, name: c.name_ar || c.name, name_en: c.name_en }));
+        }
+      } catch (dbErr) {
+        console.warn('⚠️ getCities DB fallback failed:', dbErr.message);
+      }
+    }
+    throw error;
+  }
 };
 
 export const getRegionsByCity = async (token, cityId) => {
