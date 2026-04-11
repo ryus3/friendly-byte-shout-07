@@ -21,6 +21,9 @@ verify_jwt = true
 verify_jwt = true
 
 # Delivery partners proxy
+[functions.alwaseet-proxy]
+verify_jwt = true
+
 [functions.modon-proxy]
 verify_jwt = true
 
