@@ -46,7 +46,7 @@ const runQueuedRequest = async (requestFactory) => {
   return scheduled;
 };
 
-const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 3) => {
+const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 2) => {
   const requestKey = buildRequestKey(endpoint, method, token, payload, queryParams);
   const cachedEntry = responseCache.get(requestKey);
   if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
@@ -67,8 +67,6 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         if (error) {
           let errorMessage = `فشل الاتصال بالخادم الوكيل: ${error.message}`;
           let retryAfter = null;
-          
-          // ✅ تحسين معالجة أخطاء الشبكة
           const isNetworkError = error.message?.includes('Failed to fetch') || 
                                 error.message?.includes('Network') ||
                                 error.message?.includes('ECONNREFUSED');
@@ -78,7 +76,7 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
             errorMessage = errorBody.msg || errorBody.raw || errorMessage;
             retryAfter = errorBody.retryAfter;
           } catch {
-            // If we can't parse the error body, use the default message
+            // can't parse error body
           }
           
           const err = new Error(errorMessage);
@@ -90,8 +88,16 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         if (!data) {
           throw new Error('لم يتم استلام رد من الخادم.');
         }
+
+        // ✅ Detect structured Cloudflare block from proxy (returned as 200 with fallback flag)
+        if (data.errNum === 'CF_BLOCKED' || data.error === 'DELIVERY_SERVICE_BLOCKED' || data.fallback === true) {
+          const cfErr = new Error(data.msg || 'مزود التوصيل حظر الطلب مؤقتاً');
+          cfErr.isCloudflareBlock = true;
+          cfErr.rayId = data.details?.rayId;
+          throw cfErr;
+        }
         
-        // معالجة خاصة لـ edit-order: فحص رسالة النجاح بدلاً من الأكواد فقط
+        // معالجة خاصة لـ edit-order
         if (endpoint === 'edit-order') {
           const isSuccessMessage = data.msg && data.msg.includes('تم التعديل بنجاح');
           const isSuccessCode = data.errNum === "S000" && data.status;
@@ -103,7 +109,7 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
           return data.data || data;
         }
         
-        // المعالجة العادية للـ endpoints الأخرى
+        // المعالجة العادية
         if (data.errNum !== "S000" || !data.status) {
           throw new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
         }
@@ -119,7 +125,12 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
 
         return result;
       } catch (error) {
-        // ✅ معالجة ذكية لـ Rate Limiting مع Adaptive Delays
+        // ✅ Cloudflare block: NO retries - fail fast
+        if (error.isCloudflareBlock) {
+          console.warn(`⛔ Cloudflare حظر ${endpoint} - rayId: ${error.rayId || 'N/A'}`);
+          throw error;
+        }
+
         const isRateLimitError = 
           error.message?.includes('تجاوزت الحد المسموح به') || 
           error.message?.includes('rate limit') ||
@@ -135,24 +146,18 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
                               error.message?.includes('Network');
         
         if ((isRateLimitError || isCloudflareBlock) && attempt < retries) {
-          const waitTime = error.retryAfter || Math.min(1200 * attempt, 4000);
-          console.warn(`⚠️ تأخير وقائي لـ ${endpoint} - إعادة المحاولة ${attempt}/${retries} بعد ${waitTime/1000}s...`);
+          const waitTime = error.retryAfter || Math.min(2000 * attempt, 5000);
+          console.warn(`⚠️ تأخير لـ ${endpoint} - محاولة ${attempt}/${retries} بعد ${waitTime/1000}s`);
           await wait(waitTime);
           continue;
         }
         
-        // ✅ معالجة هادئة لأخطاء الشبكة الخارجية
-        if (isNetworkError && attempt === retries) {
-          // آخر محاولة وخطأ شبكة - تسجيل مُختصر بدون spam
-          console.warn(`⚠️ خطأ شبكة لـ ${endpoint} - API خارجي غير متاح`);
-          throw error;
-        }
-        
-        // معالجة الخطأ النهائية
-        if (isRateLimitError || isCloudflareBlock) {
-          console.warn(`⚠️ تم حظر/تقييد ${endpoint} مؤقتاً من مزود الخدمة`);
-        } else if (!isNetworkError) {
-          console.error(`API call failed for ${endpoint}:`, error);
+        if (attempt === retries) {
+          if (isNetworkError) {
+            console.warn(`⚠️ خطأ شبكة لـ ${endpoint}`);
+          } else if (isRateLimitError || isCloudflareBlock) {
+            console.warn(`⚠️ حظر/تقييد ${endpoint} مؤقتاً`);
+          }
         }
         
         throw error;
@@ -170,8 +175,27 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
 };
 
 export const getCities = async (token) => {
-  // Note: The API endpoint is "citys" not "cities"
-  return handleApiCall('citys', 'GET', token);
+  try {
+    return await handleApiCall('citys', 'GET', token);
+  } catch (error) {
+    // ✅ Fallback to local DB cache when API is blocked
+    if (error.isCloudflareBlock || error.message?.includes('حظر')) {
+      console.warn('⚠️ getCities: استخدام الكاش المحلي بسبب حظر Cloudflare');
+      try {
+        const { data } = await supabase
+          .from('cities_cache')
+          .select('alwaseet_id, name, name_ar, name_en, is_active')
+          .eq('is_active', true)
+          .order('name');
+        if (data && data.length > 0) {
+          return data.map(c => ({ id: c.alwaseet_id, name: c.name_ar || c.name, name_en: c.name_en }));
+        }
+      } catch (dbErr) {
+        console.warn('⚠️ getCities DB fallback failed:', dbErr.message);
+      }
+    }
+    throw error;
+  }
 };
 
 export const getRegionsByCity = async (token, cityId) => {
