@@ -39,9 +39,7 @@ Deno.serve(async (req) => {
     const fetchOptions: RequestInit = {
       method: method.toUpperCase(),
       headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'ar,en;q=0.9',
+        'Accept': 'application/json, text/plain, */*',
       },
     };
 
