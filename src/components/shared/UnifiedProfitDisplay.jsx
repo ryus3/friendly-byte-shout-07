@@ -264,12 +264,7 @@ const UnifiedProfitDisplay = ({
       if (e.status && e.status !== 'approved') return false;
       return true;
     }).reduce((sum, e) => sum + (e.amount || 0), 0);
-    
-    // خصم إرجاعات المصاريف المحذوفة من حركات النقد
-    const expenseRefunds = (cashMovements || []).filter(m =>
-      m.movement_type === 'in' && m.reference_type === 'expense_refund' && filterByDate(m.created_at)
-    ).reduce((sum, m) => sum + Number(m.amount || 0), 0);
-    const generalExpenses = Math.max(0, generalExpensesGross - expenseRefunds);
+    const generalExpenses = generalExpensesGross;
     
     // صافي الربح = من النظام الموحد فقط - بدون أي حسابات تقليدية احتياطية
     const netProfit = unifiedProfitData?.netProfit || 0;
