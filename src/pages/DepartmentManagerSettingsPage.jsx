@@ -252,26 +252,51 @@ const DepartmentManagerSettingsPage = () => {
 
     setLoading(true);
     try {
-      const ruleData = {
-          employee_id: newRule.employee_id,
-          target_id: newRule.product_id || null,
-          rule_type: newRule.product_id ? 'product' : 'default',
-          profit_amount: newRule.full_profit ? 0 : newRule.profit_amount,
-          profit_percentage: newRule.full_profit ? 100 : null,
-          created_by: user?.id,
-          is_active: true
-        };
+      const ruleType = newRule.product_id ? 'product' : 'default';
+      const targetId = newRule.product_id || null;
+      const profitAmount = newRule.full_profit ? 0 : newRule.profit_amount;
+      const profitPercentage = newRule.full_profit ? 100 : null;
 
-      const { error } = await supabase
-        .from('employee_profit_rules')
-        .upsert(ruleData, { onConflict: 'employee_id,rule_type,target_id' });
+      // للقواعد بدون منتج محدد (default): فحص يدوي ثم update/insert
+      // لأن NULL != NULL في UNIQUE constraints بـ PostgreSQL
+      if (!targetId) {
+        const { data: existing } = await supabase
+          .from('employee_profit_rules')
+          .select('id')
+          .eq('employee_id', newRule.employee_id)
+          .eq('rule_type', 'default')
+          .is('target_id', null)
+          .eq('is_active', true)
+          .maybeSingle();
 
-      if (error) throw error;
+        if (existing) {
+          const { error } = await supabase
+            .from('employee_profit_rules')
+            .update({ profit_amount: profitAmount, profit_percentage: profitPercentage, updated_at: new Date().toISOString() })
+            .eq('id', existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('employee_profit_rules')
+            .insert({ employee_id: newRule.employee_id, target_id: null, rule_type: 'default', profit_amount: profitAmount, profit_percentage: profitPercentage, created_by: user?.id, is_active: true });
+          if (error) throw error;
+        }
+      } else {
+        // للقواعد مع منتج محدد: upsert يعمل بشكل طبيعي
+        const { error } = await supabase
+          .from('employee_profit_rules')
+          .upsert({
+            employee_id: newRule.employee_id, target_id: targetId, rule_type: ruleType,
+            profit_amount: profitAmount, profit_percentage: profitPercentage,
+            created_by: user?.id, is_active: true
+          }, { onConflict: 'employee_id,rule_type,target_id' });
+        if (error) throw error;
+      }
 
       toast({ title: 'تم بنجاح', description: newRule.full_profit ? 'تمت إضافة قاعدة كامل الربح' : 'تمت إضافة قاعدة الربح' });
       setNewRule({ employee_id: '', product_id: '', profit_amount: 0, profit_type: 'fixed', full_profit: false });
       
-      // إعادة جلب القواعد فوراً (بدون فلتر created_by)
+      // إعادة جلب القواعد فوراً
       const { data } = await supabase
         .from('employee_profit_rules')
         .select(`
@@ -283,6 +308,7 @@ const DepartmentManagerSettingsPage = () => {
       
       if (data) setProfitRules(data);
     } catch (error) {
+      console.error('❌ خطأ في حفظ قاعدة الربح:', error);
       toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     } finally {
       setLoading(false);

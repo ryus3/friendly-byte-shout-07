@@ -170,11 +170,15 @@ const EmployeeFinancialCenterPage = () => {
     );
     const totalRevenue = revenueMovements.reduce((s, m) => s + Number(m.amount), 0);
 
-    // مصاريف (حركات خروج - مصاريف عامة)
+    // مصاريف (حركات خروج - مصاريف عامة) مع خصم إرجاعات المصاريف المحذوفة
     const expenseMovements = cashMovements.filter(m =>
       m.movement_type === 'out' && m.reference_type === 'expense' && filterByDate(m.created_at)
     );
-    const totalExpenses = expenseMovements.reduce((s, m) => s + Number(m.amount), 0);
+    const expenseRefundMovements = cashMovements.filter(m =>
+      m.movement_type === 'in' && m.reference_type === 'expense_refund' && filterByDate(m.created_at)
+    );
+    const totalExpenses = expenseMovements.reduce((s, m) => s + Number(m.amount), 0) 
+      - expenseRefundMovements.reduce((s, m) => s + Number(m.amount), 0);
 
     // رسوم التوصيل
     const deliveryFeeMovements = cashMovements.filter(m =>
