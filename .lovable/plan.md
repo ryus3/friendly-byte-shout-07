@@ -1,78 +1,56 @@
 
-المشكلة الحالية ليست مجرد خطأ برمجي بسيط داخل الواجهة. من الفحص الحالي ظهرت 3 حقائق مهمة:
 
-1) الدالة الحالية `supabase/functions/alwaseet-proxy/index.ts` الآن تستخدم المسار الصحيح:
-`https://api.alwaseet-iq.net/v1/merchant`
-ولا ترسل حالياً `User-Agent / Accept-Language / Origin / Referer`.
-يعني الخطأ القديم الخاص بالمسار أو الهيدر المشبوه ليس هو التفسير الأقوى الآن.
+## خطة إصلاح 4 مشاكل محددة
 
-2) سجلات الشبكة والـ runtime تؤكد أن الطلب يصل إلى `alwaseet-proxy` ثم يرجع 403 مع صفحة Cloudflare نفسها من `alwaseet-iq.net`.
-هذا يعني أن المنع يحصل من جهة المصدر الخارجي، وليس من Supabase auth أو من CORS في المتصفح.
+### المشكلة 1: المصاريف العامة تظهر 5,000 عند سارة رغم حذف المصروف
 
-3) توجد كثافة طلبات واضحة من التطبيق على نفس اللحظة:
-`merchant-orders`, `package-sizes`, `statuses`, `get-orders-by-ids-bulk`, `citys`
-ومعها عدة cold starts وعناوين IPv6 مختلفة في السجلات.
-هذا يرجح أحد أمرين:
-- Cloudflare/WAF عند الوسيط بدأ يحظر IP ranges الخاصة بـ Supabase Edge
-- أو أن نمط الطلبات السريع/المتكرر من مشروعنا صار يثير الحظر
+**السبب**: في `EmployeeFinancialCenterPage.jsx` سطر 174-177، يحسب المصاريف فقط من حركات `movement_type === 'out' && reference_type === 'expense'` (5000 دينار). لكنه لا يخصم حركات إرجاع المصاريف المحذوفة (`movement_type === 'in' && reference_type === 'expense_refund'` = 5000 دينار). النتيجة: يعرض 5000 بدل 0.
 
-ما سأفعله عند التنفيذ:
+نفس المشكلة موجودة في `UnifiedProfitDisplay.jsx` سطر 249 - يحسب المصاريف من جدول `expenses` فقط بدون خصم الإرجاعات من `cash_movements`.
 
-1. تثبيت التشخيص داخل `alwaseet-proxy`
-- جعل الدالة تعيد JSON منظّم دائماً حتى عند 403 بدل تمرير HTML الخام فقط
-- إضافة diagnostics مختصرة: endpoint, upstreamStatus, rayId, blockedByCloudflare, requestedUrl
-- إبقاء الاستجابة قابلة للقراءة من الواجهة بدون blank/error loop
+**الإصلاح**:
+- **`src/pages/EmployeeFinancialCenterPage.jsx`**: إضافة حساب `expense_refund` وخصمها من `totalExpenses`
+- **`src/components/shared/UnifiedProfitDisplay.jsx`**: نفس المنطق - خصم حركات `expense_refund` من `generalExpenses`
 
-2. إيقاف عاصفة الطلبات من الواجهة
-- مراجعة `src/contexts/AlWaseetContext.jsx` لأن هناك تحميل مكرر للمدن/الأحجام:
-  - useEffect عند login
-  - useEffect آخر عند توفر token
-- دمج التحميل التمهيدي في مسار واحد فقط
-- منع استدعاء `statuses/citys/package-sizes` أكثر من مرة عند الإقلاع
-- تشديد single-flight / dedupe في `src/lib/alwaseet-api.js`
+---
 
-3. تقليل ما يذهب إلى الوسيط فورياً
-- استخدام fallback محلي للبيانات الثابتة:
-  - المدن من الكاش/قاعدة البيانات بدل طلب مباشر عند كل تحميل
-  - أحجام الطرود والحالات تُخزن مؤقتاً محلياً وتُعرض من cache عند فشل الوسيط
-- إذا فشل `merchant-orders` أو `get-orders-by-ids-bulk` نعرض رسالة واضحة: “مزود التوصيل حظر الطلب مؤقتاً” بدل انهيار الصفحة
+### المشكلة 2: المدن والأحجام تُجلب من API الخارجي في كل مرة يُفتح الموقع
 
-4. توحيد أسلوب الاتصال الخارجي في كل الدوال ذات الصلة
-سأراجع وأصلح أيضاً أي دوال طرفية أخرى ما زالت تتصل بالوسيط مباشرة بهيدر قد يثير الحظر، خصوصاً:
-- `supabase/functions/sync-order-updates/index.ts`
-- `supabase/functions/smart-invoice-sync/index.ts`
-- `supabase/functions/refresh-delivery-partner-tokens/index.ts`
-والهدف:
-- إزالة أي هيدر غير ضروري في GET
-- عدم استخدام `Authorization: Bearer` إذا الـ API أصلاً يعتمد `?token=...`
-- توحيد fetch pattern الآمن مع الوسيط
+**السبب**: في `AlWaseetContext.jsx` سطر 4402-4418 يوجد useEffect يستدعي `fetchCities()` و `fetchPackageSizes()` مباشرة من API الوسيط عند كل تحميل. هذا غير ضروري لأن المدن والمناطق محفوظة في الكاش (18 مدينة و 6232 منطقة).
 
-5. مقارنة واسترجاع ما قبل يومين بطريقة آمنة
-بما أنك طلبت الرجوع لما قبل يومين، سأراجع ملفات الربط الأكثر ارتباطاً وأقارنها ثم أرجع فقط ما يخص الربط إذا كان أحدث تغيير هو سبب التدهور:
-- `supabase/functions/alwaseet-proxy/index.ts`
-- `src/lib/alwaseet-api.js`
-- أي دالة طرفية أخرى تتصل مباشرة بـ `api.alwaseet-iq.net`
-إذا تبين أن السبب ليس من تغييراتنا بل من حظر المصدر، فلن أرجع عشوائياً كل شيء؛ سأثبت النسخة الآمنة الحالية وأضيف fallback حتى لا يتعطل النظام.
+**الإصلاح**:
+- **`src/contexts/AlWaseetContext.jsx`**: تغيير `fetchCities` ليجلب أولاً من `cities_master` (الكاش المحلي). فقط إذا كان الكاش فارغاً يذهب للـ API الخارجي.
+- نفس الشيء لـ `fetchPackageSizes` - جلب من الكاش أولاً.
 
-6. نتيجة متوقعة بعد التنفيذ
-- الواجهة لن تنهار حتى لو استمر الحظر الخارجي
-- الطلبات التكرارية ستنخفض بشكل كبير
-- البيانات الثابتة ستستمر بالعمل من الكاش
-- سنعرف يقيناً هل السبب:
-  - تعديل منا
-  - أم حظر جديد من Cloudflare/الوسيط
-  - أم مزيج بين الاثنين
+---
 
-7. خلاصة التقييم الحالي
-من الفحص العميق الحالي:
-- نعم حصلت تعديلات في ملفات الربط خلال اليومين الماضيين، وأهمها `alwaseet-proxy` و `alwaseet-api`
-- لكن الكود الحالي في `alwaseet-proxy` لا يظهر فيه الآن الخطأ القديم الواضح
-- لذلك الاحتمال الأقوى حالياً: المصدر الخارجي بدأ يحظر طلبات Supabase Edge أو حسّس WAF بسبب نمط الطلبات
-- مع ذلك ما زال عندنا شغل ضروري داخل المشروع لتقليل الطلبات ومنع الانهيار وتحسين fallback
+### المشكلة 3: تحديث كاش المدن والمناطق لا يجلب المناطق (0 منطقة)
 
-التنفيذ سيكون على هذا الترتيب:
-1) تثبيت `alwaseet-proxy` بإرجاع JSON تشخيصي آمن
-2) إزالة التحميل المكرر في `AlWaseetContext`
-3) تفعيل fallback للكاش للمدن/الأحجام/الحالات
-4) تنظيف بقية الدوال التي تستدعي الوسيط مباشرة
-5) اختبار المسارات الأساسية: dashboard + quick order + جلب الطلبات + الحالات + المدن
+**السبب**: دالة `update-cities-cache/index.ts` تستدعي `alwaseet-proxy` عبر `supabase.functions.invoke`. عند حظر Cloudflare، الـ proxy يرجع `{errNum: 'CF_BLOCKED', fallback: true}` - وهذا كائن بدون `.data` فيعتبره الكود "لا توجد بيانات" ويرجع مصفوفة فارغة بصمت. أيضاً حسب الذاكرة المعمارية، يجب استخدام `fetch` مباشر بدل `supabase.functions.invoke` في العمليات الطويلة.
+
+**الإصلاح**:
+- **`supabase/functions/update-cities-cache/index.ts`**: 
+  - إضافة فحص `CF_BLOCKED` / `fallback` في `fetchCitiesFromAlWaseet` و `fetchRegionsFromAlWaseet`
+  - عند اكتشاف الحظر: إعادة محاولة بعد 2 ثانية، ثم فشل واضح مع رسالة خطأ
+
+---
+
+### المشكلة 4: قواعد الربح من مدير القسم لا تُحفظ
+
+**السبب مؤكد**: UNIQUE constraint في PostgreSQL هو `(employee_id, rule_type, target_id)`. عند إضافة قاعدة "كل المنتجات" (default)، `target_id = null`. في PostgreSQL، `NULL != NULL` في UNIQUE constraints، فالـ `upsert` مع `onConflict: 'employee_id,rule_type,target_id'` لا يجد conflict ويحاول INSERT جديد كل مرة. النتيجة: إما خطأ صامت أو عدم حفظ.
+
+**الإصلاح**:
+- **`src/pages/DepartmentManagerSettingsPage.jsx`**: 
+  - للقواعد بدون منتج محدد: استخدام `select` ثم `update` أو `insert` يدوياً بدل `upsert`
+  - فحص وجود قاعدة `default` للموظف أولاً، إذا وجدت: `update`، إذا لا: `insert`
+  - إضافة معالجة أخطاء واضحة (عرض الخطأ الفعلي من Supabase)
+
+---
+
+### ملخص الملفات المطلوب تعديلها:
+1. `src/pages/EmployeeFinancialCenterPage.jsx` - خصم expense_refund
+2. `src/components/shared/UnifiedProfitDisplay.jsx` - خصم expense_refund  
+3. `src/contexts/AlWaseetContext.jsx` - جلب المدن من الكاش المحلي أولاً
+4. `supabase/functions/update-cities-cache/index.ts` - فحص CF_BLOCKED + إعادة محاولة
+5. `src/pages/DepartmentManagerSettingsPage.jsx` - إصلاح حفظ قواعد الربح بـ select+update/insert
+
