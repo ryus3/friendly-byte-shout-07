@@ -4256,35 +4256,45 @@ export const AlWaseetProvider = ({ children }) => {
   }, [token, activePartner]);
 
   const fetchCities = useCallback(async () => {
-    if (token) {
-      try {
-        let data;
-        
-        // ✅ استدعاء API المناسب حسب الشريك النشط
-        if (activePartner === 'modon') {
-          data = await ModonAPI.getCities(token);
-          // تحويل صيغة مدن إلى صيغة موحدة
-          data = data.map(city => ({
-            id: city.id,
-            name: city.city_name
-          }));
-        } else if (activePartner === 'alwaseet') {
-          data = await AlWaseetAPI.getCities(token);
-        } else {
-          data = [];
-        }
-        
-        if (Array.isArray(data)) {
-          setCities(data);
-        } else if (typeof data === 'object' && data !== null) {
-          setCities(Object.values(data));
-        } else {
-          setCities([]);
-        }
-      } catch (error) {
-        toast({ title: "خطأ", description: `فشل جلب المدن: ${error.message}`, variant: "destructive" });
+    if (!token) return;
+    try {
+      // ✅ جلب المدن من الكاش المحلي أولاً (بدون استهلاك API خارجي)
+      const cacheTable = activePartner === 'modon' ? 'modon_cities_cache' : 'cities_master';
+      const { data: cachedCities, error: cacheErr } = await supabase
+        .from(cacheTable)
+        .select('id, name, name_ar')
+        .eq('is_active', true)
+        .order('name');
+      
+      if (!cacheErr && cachedCities && cachedCities.length > 0) {
+        const mapped = cachedCities.map(c => ({ id: c.id, name: c.name_ar || c.name }));
+        setCities(mapped);
+        console.log(`✅ تم جلب ${mapped.length} مدينة من الكاش المحلي (${cacheTable})`);
+        return;
+      }
+      
+      // fallback: جلب من API الخارجي فقط إذا الكاش فارغ
+      console.log('⚠️ الكاش فارغ، جلب المدن من API الخارجي...');
+      let data;
+      if (activePartner === 'modon') {
+        data = await ModonAPI.getCities(token);
+        data = data.map(city => ({ id: city.id, name: city.city_name }));
+      } else if (activePartner === 'alwaseet') {
+        data = await AlWaseetAPI.getCities(token);
+      } else {
+        data = [];
+      }
+      
+      if (Array.isArray(data)) {
+        setCities(data);
+      } else if (typeof data === 'object' && data !== null) {
+        setCities(Object.values(data));
+      } else {
         setCities([]);
       }
+    } catch (error) {
+      toast({ title: "خطأ", description: `فشل جلب المدن: ${error.message}`, variant: "destructive" });
+      setCities([]);
     }
   }, [token, activePartner]);
 

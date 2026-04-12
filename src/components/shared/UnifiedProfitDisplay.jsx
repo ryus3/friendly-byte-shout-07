@@ -245,8 +245,8 @@ const UnifiedProfitDisplay = ({
     
     const systemProfit = managerTotalProfit + employeeSystemProfit;
     
-    // المصاريف العامة (استبعاد المصاريف النظامية ومستحقات الموظفين)
-    const generalExpenses = expensesInRange.filter(e => {
+    // المصاريف العامة (استبعاد المصاريف النظامية ومستحقات الموظفين والمحذوفة/الملغاة)
+    const generalExpensesGross = expensesInRange.filter(e => {
       const isSystem = e.expense_type === 'system';
       const isEmployeeDue = (
         e.category === 'مستحقات الموظفين' ||
@@ -260,9 +260,16 @@ const UnifiedProfitDisplay = ({
       if (isSystem) return false;
       if (isEmployeeDue) return false;
       if (isPurchaseRelated) return false;
+      if (e.status && ['deleted', 'cancelled', 'refunded'].includes(e.status)) return false;
       if (e.status && e.status !== 'approved') return false;
       return true;
     }).reduce((sum, e) => sum + (e.amount || 0), 0);
+    
+    // خصم إرجاعات المصاريف المحذوفة من حركات النقد
+    const expenseRefunds = (cashMovements || []).filter(m =>
+      m.movement_type === 'in' && m.reference_type === 'expense_refund' && filterByDate(m.created_at)
+    ).reduce((sum, m) => sum + Number(m.amount || 0), 0);
+    const generalExpenses = Math.max(0, generalExpensesGross - expenseRefunds);
     
     // صافي الربح = من النظام الموحد فقط - بدون أي حسابات تقليدية احتياطية
     const netProfit = unifiedProfitData?.netProfit || 0;
