@@ -164,9 +164,9 @@ const EmployeeFinancialCenterPage = () => {
   const financialStats = useMemo(() => {
     const balance = employeeCashSource?.current_balance || 0;
 
-    // إيرادات (حركات دخول من طلبات)
+    // إيرادات (حركات دخول من طلبات) - استثناء إرجاعات المصاريف لأنها ليست إيرادات حقيقية
     const revenueMovements = cashMovements.filter(m =>
-      m.movement_type === 'in' && filterByDate(m.created_at)
+      m.movement_type === 'in' && m.reference_type !== 'expense_refund' && filterByDate(m.created_at)
     );
     const totalRevenue = revenueMovements.reduce((s, m) => s + Number(m.amount), 0);
 
