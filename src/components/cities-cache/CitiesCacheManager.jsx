@@ -212,7 +212,7 @@ const CitiesCacheManager = () => {
             <MapPin className="h-4 w-4 text-blue-500" />
             <span className="text-sm text-muted-foreground">عدد المدن:</span>
             <Badge variant="secondary">
-              {syncInfo?.cities_count || cities?.length || 0}
+              {cities?.length || syncInfo?.cities_count || 0}
             </Badge>
           </div>
           
@@ -220,7 +220,7 @@ const CitiesCacheManager = () => {
             <Building2 className="h-4 w-4 text-orange-500" />
             <span className="text-sm text-muted-foreground">عدد المناطق:</span>
             <Badge variant="secondary">
-              {syncInfo?.regions_count || regions?.length || 0}
+              {regions?.length || syncInfo?.regions_count || 0}
             </Badge>
           </div>
           

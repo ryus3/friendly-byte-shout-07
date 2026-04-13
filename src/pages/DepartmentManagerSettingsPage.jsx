@@ -259,8 +259,10 @@ const DepartmentManagerSettingsPage = () => {
 
       // للقواعد بدون منتج محدد (default): فحص يدوي ثم update/insert
       // لأن NULL != NULL في UNIQUE constraints بـ PostgreSQL
+      // ملاحظة: بعض القواعد القديمة تستخدم target_id='default' بدلاً من null
       if (!targetId) {
-        const { data: existing } = await supabase
+        // فحص كلا الحالتين: target_id IS NULL أو target_id = 'default'
+        const { data: existingNull } = await supabase
           .from('employee_profit_rules')
           .select('id')
           .eq('employee_id', newRule.employee_id)
@@ -268,6 +270,17 @@ const DepartmentManagerSettingsPage = () => {
           .is('target_id', null)
           .eq('is_active', true)
           .maybeSingle();
+
+        const { data: existingDefault } = await supabase
+          .from('employee_profit_rules')
+          .select('id')
+          .eq('employee_id', newRule.employee_id)
+          .eq('rule_type', 'default')
+          .eq('target_id', 'default')
+          .eq('is_active', true)
+          .maybeSingle();
+
+        const existing = existingNull || existingDefault;
 
         if (existing) {
           const { error } = await supabase
