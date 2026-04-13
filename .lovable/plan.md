@@ -1,56 +1,65 @@
 
 
-## خطة إصلاح 4 مشاكل محددة
+## خطة إصلاح 4 مشاكل
 
-### المشكلة 1: المصاريف العامة تظهر 5,000 عند سارة رغم حذف المصروف
+### المشكلة 1: المصاريف العامة والأرباح - 5000 دينار تظهر كأرباح
 
-**السبب**: في `EmployeeFinancialCenterPage.jsx` سطر 174-177، يحسب المصاريف فقط من حركات `movement_type === 'out' && reference_type === 'expense'` (5000 دينار). لكنه لا يخصم حركات إرجاع المصاريف المحذوفة (`movement_type === 'in' && reference_type === 'expense_refund'` = 5000 دينار). النتيجة: يعرض 5000 بدل 0.
+**السبب الجذري**: في `EmployeeFinancialCenterPage.jsx` سطر 168-171، يحسب الإيرادات من **كل** حركات `movement_type === 'in'` بدون استثناء. حركة `expense_refund` (+5000) التي نتجت عن حذف المصروف يتم احتسابها كإيراد (revenue)! النتيجة: إيرادات = 5000، مصاريف = 0 (صحيح بعد الإصلاح السابق)، مشتريات = 1000. صافي الربح = 5000 - 0 - 1000 = **4000** (خطأ!)
 
-نفس المشكلة موجودة في `UnifiedProfitDisplay.jsx` سطر 249 - يحسب المصاريف من جدول `expenses` فقط بدون خصم الإرجاعات من `cash_movements`.
+**الحل الجذري**: يجب استثناء `expense_refund` من حساب الإيرادات. بالإضافة لذلك، **الحل الأنظف** هو حذف حركتي المصروف والإرجاع معاً من قاعدة البيانات (حيث أن المصروف أُلغي أصلاً ولا معنى لبقاء حركتين متعاكستين).
 
-**الإصلاح**:
-- **`src/pages/EmployeeFinancialCenterPage.jsx`**: إضافة حساب `expense_refund` وخصمها من `totalExpenses`
-- **`src/components/shared/UnifiedProfitDisplay.jsx`**: نفس المنطق - خصم حركات `expense_refund` من `generalExpenses`
-
----
-
-### المشكلة 2: المدن والأحجام تُجلب من API الخارجي في كل مرة يُفتح الموقع
-
-**السبب**: في `AlWaseetContext.jsx` سطر 4402-4418 يوجد useEffect يستدعي `fetchCities()` و `fetchPackageSizes()` مباشرة من API الوسيط عند كل تحميل. هذا غير ضروري لأن المدن والمناطق محفوظة في الكاش (18 مدينة و 6232 منطقة).
-
-**الإصلاح**:
-- **`src/contexts/AlWaseetContext.jsx`**: تغيير `fetchCities` ليجلب أولاً من `cities_master` (الكاش المحلي). فقط إذا كان الكاش فارغاً يذهب للـ API الخارجي.
-- نفس الشيء لـ `fetchPackageSizes` - جلب من الكاش أولاً.
+**الملفات**:
+- `src/pages/EmployeeFinancialCenterPage.jsx`: استثناء `expense_refund` من `revenueMovements`
+- حذف الحركتين من قاعدة البيانات (migration)
 
 ---
 
-### المشكلة 3: تحديث كاش المدن والمناطق لا يجلب المناطق (0 منطقة)
+### المشكلة 2: كاش المدن والمناطق يظهر 0 مناطق
 
-**السبب**: دالة `update-cities-cache/index.ts` تستدعي `alwaseet-proxy` عبر `supabase.functions.invoke`. عند حظر Cloudflare، الـ proxy يرجع `{errNum: 'CF_BLOCKED', fallback: true}` - وهذا كائن بدون `.data` فيعتبره الكود "لا توجد بيانات" ويرجع مصفوفة فارغة بصمت. أيضاً حسب الذاكرة المعمارية، يجب استخدام `fetch` مباشر بدل `supabase.functions.invoke` في العمليات الطويلة.
+**الوضع الحالي**: قاعدة البيانات تحتوي 6232 منطقة و 18 مدينة (الكاش ممتلئ وسليم). المشكلة هي أن **زر التحديث** (update-cities-cache) يفشل بسبب حظر Cloudflare، فيسجل 0 في آخر sync log.
 
-**الإصلاح**:
-- **`supabase/functions/update-cities-cache/index.ts`**: 
-  - إضافة فحص `CF_BLOCKED` / `fallback` في `fetchCitiesFromAlWaseet` و `fetchRegionsFromAlWaseet`
-  - عند اكتشاف الحظر: إعادة محاولة بعد 2 ثانية، ثم فشل واضح مع رسالة خطأ
+**السبب**: الواجهة تعرض `syncInfo?.regions_count` من آخر سجل مزامنة (الذي فشل = 0) بدل عدد المناطق الفعلي في الكاش.
 
----
-
-### المشكلة 4: قواعد الربح من مدير القسم لا تُحفظ
-
-**السبب مؤكد**: UNIQUE constraint في PostgreSQL هو `(employee_id, rule_type, target_id)`. عند إضافة قاعدة "كل المنتجات" (default)، `target_id = null`. في PostgreSQL، `NULL != NULL` في UNIQUE constraints، فالـ `upsert` مع `onConflict: 'employee_id,rule_type,target_id'` لا يجد conflict ويحاول INSERT جديد كل مرة. النتيجة: إما خطأ صامت أو عدم حفظ.
-
-**الإصلاح**:
-- **`src/pages/DepartmentManagerSettingsPage.jsx`**: 
-  - للقواعد بدون منتج محدد: استخدام `select` ثم `update` أو `insert` يدوياً بدل `upsert`
-  - فحص وجود قاعدة `default` للموظف أولاً، إذا وجدت: `update`، إذا لا: `insert`
-  - إضافة معالجة أخطاء واضحة (عرض الخطأ الفعلي من Supabase)
+**الحل**:
+- `src/components/cities-cache/CitiesCacheManager.jsx`: عرض عدد المناطق الفعلي من `allRegions.length` أو استعلام مباشر بدل الاعتماد على `syncInfo` فقط
+- الكاش نفسه يعمل (6232 منطقة) والمدن تُجلب من الكاش المحلي (التعديل السابق صحيح)
 
 ---
 
-### ملخص الملفات المطلوب تعديلها:
-1. `src/pages/EmployeeFinancialCenterPage.jsx` - خصم expense_refund
-2. `src/components/shared/UnifiedProfitDisplay.jsx` - خصم expense_refund  
-3. `src/contexts/AlWaseetContext.jsx` - جلب المدن من الكاش المحلي أولاً
-4. `supabase/functions/update-cities-cache/index.ts` - فحص CF_BLOCKED + إعادة محاولة
-5. `src/pages/DepartmentManagerSettingsPage.jsx` - إصلاح حفظ قواعد الربح بـ select+update/insert
+### المشكلة 3: قواعد الربح من مدير القسم
+
+**الوضع الحالي**: الكود المُعدَّل (select then update/insert) صحيح منطقياً. آخر قاعدة حُفظت بنجاح في 8 أبريل. لكن يجب التأكد من:
+- أن `fetchProfitRules` بعد الحفظ يجلب القواعد الجديدة بشكل صحيح (بما فيها القواعد بدون منتج - LEFT JOIN)
+- أن واجهة العرض تعرض القواعد العامة (target_id = null)
+- إضافة عرض toast الخطأ الفعلي عند الفشل
+
+**الملف**: `src/pages/DepartmentManagerSettingsPage.jsx` - مراجعة جلب وعرض القواعد
+
+---
+
+### المشكلة 4: حظر شركة التوصيل (Cloudflare 403)
+
+**الوضع الحالي من السجلات**: جميع الطلبات (login, statuses, package-sizes, invoices, orders) مازالت محظورة من Cloudflare. هذا **ليس خطأ برمجي منا** - إنه حظر WAF من جهة `alwaseet-iq.net` لعناوين IP الخاصة بـ Supabase Edge Functions.
+
+**حقائق مهمة بخصوص الـ IP**:
+- Supabase Edge Functions تعمل من خوادم AWS ولها عناوين IP **متغيرة** (ليست ثابتة)
+- لا يمكنك الحصول على IP ثابت من Supabase
+- **Vercel** أيضاً لا توفر IP ثابت بشكل افتراضي (تحتاج Enterprise plan)
+- الحل: أن تطلب من شركة الوسيط إضافة **نطاق IP** كامل لـ AWS أو **إزالة حظر WAF** للـ API endpoint
+
+**خيارات الحل**:
+1. التواصل مع الوسيط وطلب whitelist لنطاقات Supabase/AWS
+2. استخدام خدمة وسيطة تعطي IP ثابت (مثل Fixie أو QuotaGuard) - تكلفة إضافية
+3. الاستمرار بالعمل من الكاش المحلي (وظائف المدن والمناطق والأحجام تعمل من الكاش)
+
+---
+
+### ملخص التنفيذ
+
+| الملف | التغيير |
+|-------|---------|
+| `EmployeeFinancialCenterPage.jsx` | استثناء `expense_refund` من الإيرادات |
+| `CitiesCacheManager.jsx` | عرض العدد الفعلي من الكاش بدل syncInfo |
+| `DepartmentManagerSettingsPage.jsx` | التأكد من جلب وعرض القواعد العامة |
+| Migration | حذف حركتي المصروف التجريبي والإرجاع |
 
