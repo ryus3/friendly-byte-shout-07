@@ -1,56 +1,56 @@
 
 
-## خطة إصلاح 3 مشاكل
+## خطة إصلاح 4 مشاكل محددة
 
-### المشكلة 1: الأرباح تظهر 5,000 خطأ (المصاريف 0 صحيح)
+### المشكلة 1: المصاريف العامة تظهر 5,000 عند سارة رغم حذف المصروف
 
-**السبب المؤكد**: في `EmployeeFinancialCenterPage.jsx` سطر 168-171، `totalRevenue` يحسب **كل** حركات `movement_type === 'in'` كإيرادات. حركة `expense_refund` بمبلغ 5,000 (إرجاع المصروف المحذوف) تُحسب كإيراد مبيعات!
+**السبب**: في `EmployeeFinancialCenterPage.jsx` سطر 174-177، يحسب المصاريف فقط من حركات `movement_type === 'out' && reference_type === 'expense'` (5000 دينار). لكنه لا يخصم حركات إرجاع المصاريف المحذوفة (`movement_type === 'in' && reference_type === 'expense_refund'` = 5000 دينار). النتيجة: يعرض 5000 بدل 0.
 
-بيانات قاصة سارة الفعلية:
-- حركة خروج: مصروف "تجربة" = 5,000 (expense)
-- حركة خروج: شراء بضاعة = 1,000 (purchase)
-- حركة دخول: إرجاع مصروف محذوف = 5,000 (expense_refund)
-
-المصاريف العامة = 5000 - 5000 = 0 ← صحيح (تم إصلاحه سابقاً)
-لكن المبيعات = 5000 ← خطأ! لأنها تحسب expense_refund كإيراد
-
-**الإصلاح**: تعديل فلتر `totalRevenue` في سطر 168-171 لاستثناء `expense_refund` من الإيرادات:
-```javascript
-const revenueMovements = cashMovements.filter(m =>
-  m.movement_type === 'in' && 
-  m.reference_type !== 'expense_refund' &&
-  filterByDate(m.created_at)
-);
-```
-
-بعد الإصلاح: المبيعات = 0، مجمل الربح = 0، صافي الربح (مع المشتريات) = -1000
-
----
-
-### المشكلة 2: كاش المدن يعرض 0 مناطق
-
-**سببان**:
-
-1. **واجهة العرض**: `CitiesCacheManager.jsx` يستخدم `regions` (الذي يبقى فارغاً دائماً) بدل `allRegions` (الذي يحتوي 6232 منطقة). السطر 223 يعرض `syncInfo?.regions_count || regions?.length || 0` - وبما أن `syncInfo.regions_count = 0` (من آخر مزامنة فاشلة) و `regions.length = 0` (لأن regions state لا يُملأ أبداً)، يظهر 0.
-
-2. **دالة المزامنة**: آخر مزامنة ناجحة بأرقام حقيقية (18 مدينة، 6232 منطقة) كانت في 29 مارس. جميع المزامنات بعد 11 أبريل تُسجل `cities_count: 0, regions_count: 0` مع `success: true`. السبب: الدالة تستخدم `directFetch` الجديد الذي قد يفشل صامتاً، أو أن `syncLogId` يكون `null` بسبب خطأ في الإدخال.
+نفس المشكلة موجودة في `UnifiedProfitDisplay.jsx` سطر 249 - يحسب المصاريف من جدول `expenses` فقط بدون خصم الإرجاعات من `cash_movements`.
 
 **الإصلاح**:
-- **`CitiesCacheManager.jsx`**: استخدام `allRegions` بدل `regions`، وعرض عدد المناطق من `allRegions.length` كـ fallback
-- **`update-cities-cache/index.ts`**: إضافة `delivery_partner: 'alwaseet'` صريحاً في insert السجل، وإضافة logging عند فشل الإدخال
+- **`src/pages/EmployeeFinancialCenterPage.jsx`**: إضافة حساب `expense_refund` وخصمها من `totalExpenses`
+- **`src/components/shared/UnifiedProfitDisplay.jsx`**: نفس المنطق - خصم حركات `expense_refund` من `generalExpenses`
 
 ---
 
-### المشكلة 3: التأكد من جلب المدن/المناطق من الكاش
+### المشكلة 2: المدن والأحجام تُجلب من API الخارجي في كل مرة يُفتح الموقع
 
-`useCitiesCache.js` يجلب المدن والمناطق من `cities_master` و `regions_master` (قاعدة البيانات المحلية) وليس من API الخارجي ← هذا صحيح وسليم.
+**السبب**: في `AlWaseetContext.jsx` سطر 4402-4418 يوجد useEffect يستدعي `fetchCities()` و `fetchPackageSizes()` مباشرة من API الوسيط عند كل تحميل. هذا غير ضروري لأن المدن والمناطق محفوظة في الكاش (18 مدينة و 6232 منطقة).
 
-`AlWaseetContext.jsx` تم تعديله سابقاً ليجلب من الكاش أولاً ← يحتاج تأكيد فقط.
+**الإصلاح**:
+- **`src/contexts/AlWaseetContext.jsx`**: تغيير `fetchCities` ليجلب أولاً من `cities_master` (الكاش المحلي). فقط إذا كان الكاش فارغاً يذهب للـ API الخارجي.
+- نفس الشيء لـ `fetchPackageSizes` - جلب من الكاش أولاً.
 
 ---
 
-### ملخص الملفات:
-1. `src/pages/EmployeeFinancialCenterPage.jsx` - استثناء expense_refund من الإيرادات
-2. `src/components/cities-cache/CitiesCacheManager.jsx` - استخدام allRegions بدل regions
-3. `supabase/functions/update-cities-cache/index.ts` - إصلاح تسجيل المزامنة
+### المشكلة 3: تحديث كاش المدن والمناطق لا يجلب المناطق (0 منطقة)
+
+**السبب**: دالة `update-cities-cache/index.ts` تستدعي `alwaseet-proxy` عبر `supabase.functions.invoke`. عند حظر Cloudflare، الـ proxy يرجع `{errNum: 'CF_BLOCKED', fallback: true}` - وهذا كائن بدون `.data` فيعتبره الكود "لا توجد بيانات" ويرجع مصفوفة فارغة بصمت. أيضاً حسب الذاكرة المعمارية، يجب استخدام `fetch` مباشر بدل `supabase.functions.invoke` في العمليات الطويلة.
+
+**الإصلاح**:
+- **`supabase/functions/update-cities-cache/index.ts`**: 
+  - إضافة فحص `CF_BLOCKED` / `fallback` في `fetchCitiesFromAlWaseet` و `fetchRegionsFromAlWaseet`
+  - عند اكتشاف الحظر: إعادة محاولة بعد 2 ثانية، ثم فشل واضح مع رسالة خطأ
+
+---
+
+### المشكلة 4: قواعد الربح من مدير القسم لا تُحفظ
+
+**السبب مؤكد**: UNIQUE constraint في PostgreSQL هو `(employee_id, rule_type, target_id)`. عند إضافة قاعدة "كل المنتجات" (default)، `target_id = null`. في PostgreSQL، `NULL != NULL` في UNIQUE constraints، فالـ `upsert` مع `onConflict: 'employee_id,rule_type,target_id'` لا يجد conflict ويحاول INSERT جديد كل مرة. النتيجة: إما خطأ صامت أو عدم حفظ.
+
+**الإصلاح**:
+- **`src/pages/DepartmentManagerSettingsPage.jsx`**: 
+  - للقواعد بدون منتج محدد: استخدام `select` ثم `update` أو `insert` يدوياً بدل `upsert`
+  - فحص وجود قاعدة `default` للموظف أولاً، إذا وجدت: `update`، إذا لا: `insert`
+  - إضافة معالجة أخطاء واضحة (عرض الخطأ الفعلي من Supabase)
+
+---
+
+### ملخص الملفات المطلوب تعديلها:
+1. `src/pages/EmployeeFinancialCenterPage.jsx` - خصم expense_refund
+2. `src/components/shared/UnifiedProfitDisplay.jsx` - خصم expense_refund  
+3. `src/contexts/AlWaseetContext.jsx` - جلب المدن من الكاش المحلي أولاً
+4. `supabase/functions/update-cities-cache/index.ts` - فحص CF_BLOCKED + إعادة محاولة
+5. `src/pages/DepartmentManagerSettingsPage.jsx` - إصلاح حفظ قواعد الربح بـ select+update/insert
 

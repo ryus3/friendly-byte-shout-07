@@ -228,20 +228,15 @@ serve(async (req) => {
 
     console.log('🚀 بدء مزامنة المدن والمناطق (direct fetch):', user_id);
 
-    const { data: syncLogData, error: syncLogError } = await supabase
+    const { data: syncLogData } = await supabase
       .from('cities_regions_sync_log')
       .insert({
         started_at: startTime.toISOString(),
         success: false,
-        triggered_by: user_id,
-        delivery_partner: 'alwaseet'
+        triggered_by: user_id
       })
       .select()
       .single();
-
-    if (syncLogError) {
-      console.error('⚠️ فشل إنشاء سجل المزامنة:', syncLogError);
-    }
 
     const syncLogId = syncLogData?.id;
 

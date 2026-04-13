@@ -166,9 +166,7 @@ const EmployeeFinancialCenterPage = () => {
 
     // إيرادات (حركات دخول من طلبات)
     const revenueMovements = cashMovements.filter(m =>
-      m.movement_type === 'in' && 
-      m.reference_type !== 'expense_refund' &&
-      filterByDate(m.created_at)
+      m.movement_type === 'in' && filterByDate(m.created_at)
     );
     const totalRevenue = revenueMovements.reduce((s, m) => s + Number(m.amount), 0);
 
