@@ -18,6 +18,7 @@ const CitiesCacheManager = () => {
   const { 
     cities, 
     regions,
+    allRegions,
     loading, 
     lastUpdated, 
     syncInfo,
@@ -220,7 +221,7 @@ const CitiesCacheManager = () => {
             <Building2 className="h-4 w-4 text-orange-500" />
             <span className="text-sm text-muted-foreground">عدد المناطق:</span>
             <Badge variant="secondary">
-              {syncInfo?.regions_count || regions?.length || 0}
+              {allRegions?.length || syncInfo?.regions_count || regions?.length || 0}
             </Badge>
           </div>
           
