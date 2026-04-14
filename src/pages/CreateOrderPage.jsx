@@ -3,7 +3,8 @@ import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
-import { getCities, getRegionsByCity, createAlWaseetOrder } from '@/lib/alwaseet-api';
+import { createAlWaseetOrder } from '@/lib/alwaseet-api';
+import { useCitiesCache } from '@/hooks/useCitiesCache';
 import { supabase } from '@/lib/customSupabaseClient';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -36,42 +37,36 @@ const CreateOrderPage = () => {
   const subtotal = cart.reduce((sum, item) => sum + item.total, 0);
   const total = subtotal - discount;
 
+  // ✅ استخدام الكاش المحلي للمدن والمناطق
+  const { cities: cachedCities, getRegionsByCity: getCachedRegions, isLoaded: isCacheLoaded } = useCitiesCache();
+
   useEffect(() => {
     if(isWaseetLoggedIn && activePartner === 'alwaseet') {
       setFormData(prev => ({...prev, price: total}));
-      const fetchCitiesData = async () => {
-        setLoadingCities(true);
-        try {
-          const citiesData = await getCities(waseetToken);
-          setCities(citiesData);
-        } catch (error) {
-          toast({ title: "خطأ", description: "فشل تحميل المدن من الوسيط.", variant: "destructive" });
-        } finally {
-          setLoadingCities(false);
-        }
-      };
-      fetchCitiesData();
+      if (isCacheLoaded && cachedCities.length > 0) {
+        const mapped = cachedCities.map(c => ({ id: c.alwaseet_id || c.id, name: c.name }));
+        setCities(mapped);
+        console.log(`✅ CreateOrderPage: تم جلب ${mapped.length} مدينة من الكاش المحلي`);
+      }
     }
-  }, [isWaseetLoggedIn, waseetToken, activePartner, total]);
+  }, [isWaseetLoggedIn, activePartner, total, isCacheLoaded, cachedCities]);
 
   useEffect(() => {
-    if (formData.city_id && isWaseetLoggedIn) {
-      const fetchRegionsData = async () => {
-        setLoadingRegions(true);
-        setRegions([]);
-        setFormData(prev => ({ ...prev, region_id: '' }));
-        try {
-          const regionsData = await getRegionsByCity(waseetToken, formData.city_id);
-          setRegions(regionsData);
-        } catch (error) {
-          toast({ title: "خطأ", description: "فشل تحميل المناطق من الوسيط.", variant: "destructive" });
-        } finally {
-          setLoadingRegions(false);
-        }
-      };
-      fetchRegionsData();
+    if (formData.city_id && isWaseetLoggedIn && isCacheLoaded) {
+      setLoadingRegions(true);
+      setRegions([]);
+      setFormData(prev => ({ ...prev, region_id: '' }));
+      
+      // ✅ فلترة المناطق من الكاش المحلي مباشرة (بدون API)
+      const cachedRegions = getCachedRegions(formData.city_id);
+      if (cachedRegions && cachedRegions.length > 0) {
+        const mapped = cachedRegions.map(r => ({ id: r.alwaseet_id || r.id, name: r.name }));
+        setRegions(mapped);
+        console.log(`✅ CreateOrderPage: تم فلترة ${mapped.length} منطقة من الكاش`);
+      }
+      setLoadingRegions(false);
     }
-  }, [formData.city_id, isWaseetLoggedIn, waseetToken]);
+  }, [formData.city_id, isWaseetLoggedIn, isCacheLoaded, getCachedRegions]);
   
   useEffect(() => {
     // تصفية العناصر null/undefined وحساب البيانات بأمان
