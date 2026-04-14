@@ -3,7 +3,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { toast } from '@/components/ui/use-toast';
-import { createAlWaseetOrder, editAlWaseetOrder, getPackageSizes } from '@/lib/alwaseet-api';
+import { createAlWaseetOrder, editAlWaseetOrder } from '@/lib/alwaseet-api';
 import { useCitiesCache } from '@/hooks/useCitiesCache';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -733,12 +733,24 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 id: city.alwaseet_id,
                 name: city.name
               }));
-              packageSizesData = await getPackageSizes(waseetToken);
+              // ✅ أحجام الطرود من الكاش المحلي أيضاً
+              const { data: cachedSizes } = await supabase
+                .from('package_sizes_cache')
+                .select('external_id, size_name')
+                .eq('partner_name', 'alwaseet')
+                .eq('is_active', true);
+              
+              if (cachedSizes && cachedSizes.length > 0) {
+                packageSizesData = cachedSizes.map(s => ({ id: s.external_id, size: s.size_name }));
+                console.log(`✅ تم جلب ${packageSizesData.length} حجم طرد من الكاش المحلي`);
+              } else {
+                packageSizesData = [{ id: '1', size: 'Normal' }, { id: '2', size: 'Medium' }, { id: '3', size: 'Large' }, { id: '4', size: 'X-Large' }];
+              }
             } else if (!isCacheLoaded) {
               return;
             } else {
               citiesData = [];
-              packageSizesData = await getPackageSizes(waseetToken);
+              packageSizesData = [{ id: '1', size: 'Normal' }, { id: '2', size: 'Medium' }, { id: '3', size: 'Large' }, { id: '4', size: 'X-Large' }];
             }
           }
           
