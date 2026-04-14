@@ -4299,66 +4299,90 @@ export const AlWaseetProvider = ({ children }) => {
   }, [token, activePartner]);
 
   const fetchRegions = useCallback(async (cityId) => {
-    if (token && cityId) {
-      try {
-        let data;
-        
-        // ✅ استدعاء API المناسب حسب الشريك النشط
-        if (activePartner === 'modon') {
-          data = await ModonAPI.getRegionsByCity(token, cityId);
-          // تحويل صيغة مدن إلى صيغة موحدة
-          data = data.map(region => ({
-            id: region.id,
-            name: region.region_name
-          }));
-        } else if (activePartner === 'alwaseet') {
-          data = await AlWaseetAPI.getRegionsByCity(token, cityId);
-        } else {
-          data = [];
-        }
-        
-        if (Array.isArray(data)) {
-          setRegions(data);
-        } else if (typeof data === 'object' && data !== null) {
-          setRegions(Object.values(data));
-        } else {
-          setRegions([]);
-        }
-      } catch (error) {
-        toast({ title: "خطأ", description: `فشل جلب المناطق: ${error.message}`, variant: "destructive" });
+    if (!cityId) return;
+    try {
+      // ✅ جلب المناطق من الكاش المحلي أولاً
+      const { data: cachedRegions, error: cacheErr } = await supabase
+        .from('regions_master')
+        .select('id, name, city_id, alwaseet_id')
+        .eq('city_id', cityId)
+        .eq('is_active', true)
+        .order('name');
+      
+      if (!cacheErr && cachedRegions && cachedRegions.length > 0) {
+        const mapped = cachedRegions.map(r => ({ id: r.alwaseet_id || r.id, name: r.name }));
+        setRegions(mapped);
+        console.log(`✅ تم جلب ${mapped.length} منطقة من الكاش المحلي للمدينة ${cityId}`);
+        return;
+      }
+      
+      // fallback: جلب من API الخارجي فقط إذا الكاش فارغ
+      if (!token) { setRegions([]); return; }
+      console.log('⚠️ كاش المناطق فارغ، جلب من API الخارجي...');
+      let data;
+      if (activePartner === 'modon') {
+        data = await ModonAPI.getRegionsByCity(token, cityId);
+        data = data.map(region => ({ id: region.id, name: region.region_name }));
+      } else if (activePartner === 'alwaseet') {
+        data = await AlWaseetAPI.getRegionsByCity(token, cityId);
+      } else {
+        data = [];
+      }
+      
+      if (Array.isArray(data)) {
+        setRegions(data);
+      } else if (typeof data === 'object' && data !== null) {
+        setRegions(Object.values(data));
+      } else {
         setRegions([]);
       }
+    } catch (error) {
+      toast({ title: "خطأ", description: `فشل جلب المناطق: ${error.message}`, variant: "destructive" });
+      setRegions([]);
     }
   }, [token, activePartner]);
 
   const fetchPackageSizes = useCallback(async () => {
-    if (token) {
-      try {
-        let data;
-        
-        // ✅ استدعاء API المناسب حسب الشريك النشط
-        if (activePartner === 'modon') {
-          data = await ModonAPI.getPackageSizes(token);
-          // صيغة مدن مطابقة للوسيط، لا حاجة للتحويل
-        } else if (activePartner === 'alwaseet') {
-          data = await AlWaseetAPI.getPackageSizes(token);
-        } else {
-          data = [];
-        }
-        
-        if (Array.isArray(data)) {
-          setPackageSizes(data);
-        } else if (typeof data === 'object' && data !== null) {
-          setPackageSizes(Object.values(data));
-        } else {
-          setPackageSizes([]);
-        }
-      } catch (error) {
-        toast({ title: "خطأ", description: `فشل جلب أحجام الطرود: ${error.message}`, variant: "destructive" });
+    try {
+      // ✅ جلب أحجام الطرود من الكاش المحلي أولاً
+      const partnerName = activePartner || 'alwaseet';
+      const { data: cachedSizes, error: cacheErr } = await supabase
+        .from('package_sizes_cache')
+        .select('external_id, size_name')
+        .eq('partner_name', partnerName)
+        .eq('is_active', true);
+      
+      if (!cacheErr && cachedSizes && cachedSizes.length > 0) {
+        const mapped = cachedSizes.map(s => ({ id: s.external_id, size: s.size_name }));
+        setPackageSizes(mapped);
+        console.log(`✅ تم جلب ${mapped.length} حجم طرد من الكاش المحلي (${partnerName})`);
+        return;
+      }
+      
+      // fallback: جلب من API الخارجي فقط إذا الكاش فارغ
+      if (!token) { setPackageSizes([]); return; }
+      console.log('⚠️ كاش الأحجام فارغ، جلب من API الخارجي...');
+      let data;
+      if (activePartner === 'modon') {
+        data = await ModonAPI.getPackageSizes(token);
+      } else if (activePartner === 'alwaseet') {
+        data = await AlWaseetAPI.getPackageSizes(token);
+      } else {
+        data = [];
+      }
+      
+      if (Array.isArray(data)) {
+        setPackageSizes(data);
+      } else if (typeof data === 'object' && data !== null) {
+        setPackageSizes(Object.values(data));
+      } else {
         setPackageSizes([]);
       }
+    } catch (error) {
+      toast({ title: "خطأ", description: `فشل جلب أحجام الطرود: ${error.message}`, variant: "destructive" });
+      setPackageSizes([]);
     }
-  }, [token]);
+  }, [token, activePartner]);
 
   const createOrder = useCallback(async (orderData) => {
     // استخدام توكن المستخدم الحالي لإنشاء الطلب
