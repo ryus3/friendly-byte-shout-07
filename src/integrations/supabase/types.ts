@@ -4392,6 +4392,36 @@ export type Database = {
         }
         Relationships: []
       }
+      package_sizes_cache: {
+        Row: {
+          created_at: string | null
+          external_id: string
+          id: number
+          is_active: boolean | null
+          partner_name: string
+          size_name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          external_id: string
+          id?: number
+          is_active?: boolean | null
+          partner_name?: string
+          size_name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          external_id?: string
+          id?: number
+          is_active?: boolean | null
+          partner_name?: string
+          size_name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       partial_delivery_history: {
         Row: {
           created_at: string
