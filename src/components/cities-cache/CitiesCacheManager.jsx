@@ -140,6 +140,7 @@ const CitiesCacheManager = () => {
               setTimeout(() => {
                 fetchSyncInfo(activePartner);
                 fetchCities();
+                fetchAllRegions();
               }, 500);
             }
           }
@@ -150,12 +151,12 @@ const CitiesCacheManager = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [fetchSyncInfo, fetchCities, activePartner]);
+  }, [fetchSyncInfo, fetchCities, fetchAllRegions, activePartner]);
 
   // ✅ Force refresh syncInfo حسب الشريك الحالي عند التحميل أو تغيير الشريك
   useEffect(() => {
     fetchSyncInfo(activePartner);
-  }, [activePartner, cities?.length, regions?.length]);
+  }, [activePartner, cities?.length, allRegions?.length]);
 
   return (
     <Card className="w-full">
@@ -220,7 +221,7 @@ const CitiesCacheManager = () => {
             <Building2 className="h-4 w-4 text-orange-500" />
             <span className="text-sm text-muted-foreground">عدد المناطق:</span>
             <Badge variant="secondary">
-              {regions?.length || syncInfo?.regions_count || 0}
+              {allRegions?.length || syncInfo?.regions_count || 0}
             </Badge>
           </div>
           
@@ -237,7 +238,7 @@ const CitiesCacheManager = () => {
             <Database className="h-4 w-4 text-purple-500" />
             <span className="text-sm text-muted-foreground">الحالة:</span>
             <Badge variant={isCacheEmpty() ? "destructive" : "default"}>
-              {isCacheEmpty() ? "فارغ" : cities.length > 0 && regions.length > 0 ? "محدث" : "يحتاج تحديث"}
+              {isCacheEmpty() ? "فارغ" : cities.length > 0 && allRegions.length > 0 ? "محدث" : "يحتاج تحديث"}
             </Badge>
           </div>
         </div>
