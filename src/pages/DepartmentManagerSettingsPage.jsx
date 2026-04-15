@@ -325,17 +325,29 @@ const DepartmentManagerSettingsPage = () => {
       toast({ title: 'تم بنجاح', description: newRule.full_profit ? 'تمت إضافة قاعدة كامل الربح' : 'تمت إضافة قاعدة الربح' });
       setNewRule({ employee_id: '', product_id: '', profit_amount: 0, profit_type: 'fixed', full_profit: false });
       
-      // إعادة جلب القواعد فوراً
+      // إعادة جلب القواعد فوراً مع أسماء المنتجات
       const { data } = await supabase
         .from('employee_profit_rules')
         .select(`
           *,
-          employee:profiles!employee_id(full_name, employee_code),
-          product:products(name)
+          employee:profiles!employee_id(full_name, employee_code)
         `)
         .in('employee_id', supervisedEmployeeIds);
       
-      if (data) setProfitRules(data);
+      if (data) {
+        const productTargetIds = data
+          .filter(r => r.rule_type === 'product' && r.target_id && r.target_id !== 'default')
+          .map(r => r.target_id);
+        let productsMap = {};
+        if (productTargetIds.length > 0) {
+          const { data: productsData } = await supabase
+            .from('products')
+            .select('id, name')
+            .in('id', productTargetIds);
+          productsData?.forEach(p => { productsMap[p.id] = p; });
+        }
+        setProfitRules(data.map(r => ({ ...r, product: productsMap[r.target_id] || null })));
+      }
     } catch (error) {
       console.error('❌ خطأ في حفظ قاعدة الربح:', error);
       toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
