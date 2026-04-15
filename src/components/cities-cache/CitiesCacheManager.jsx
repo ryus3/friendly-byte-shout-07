@@ -17,14 +17,14 @@ const CitiesCacheManager = () => {
   
   const { 
     cities, 
-    regions,
+    allRegions,
     loading, 
     lastUpdated, 
     syncInfo,
     updateCache, 
     isCacheEmpty,
     fetchCities,
-    fetchRegionsByCity,
+    fetchAllRegions,
     fetchSyncInfo
   } = useCitiesCache();
 
