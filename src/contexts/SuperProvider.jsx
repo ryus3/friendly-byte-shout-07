@@ -827,6 +827,22 @@ export const SuperProvider = ({ children }) => {
         return; // لا إعادة جلب كامل - التحديث المباشر يكفي
       }
 
+      // تحديث فوري للمنتجات بدون إعادة جلب كامل
+      if (table === 'products' || table === 'product_variants') {
+        devLog.log('📦 تحديث فوري للمنتجات');
+        if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
+        reloadTimerRef.current = setTimeout(async () => {
+          try {
+            await dbRefetchProducts();
+            const freshData = await superAPI.fetchAllData();
+            if (freshData?.products) {
+              setAllData(prev => ({ ...prev, products: freshData.products }));
+            }
+          } catch (e) { console.error('فشل تحديث المنتجات:', e); }
+        }, 300);
+        return;
+      }
+
       // تحديث محدود للجداول الأخرى فقط
       if (['customers', 'expenses', 'purchases'].includes(table)) {
         if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
