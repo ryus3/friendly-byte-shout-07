@@ -197,21 +197,37 @@ const DepartmentManagerSettingsPage = () => {
     const fetchProfitRules = async () => {
       if (!isDepartmentManager || supervisedEmployeeIds.length === 0) return;
       
-      const userId = user?.id;
-      const userUuid = user?.user_id;
-      
-      // ✅ جلب كل القواعد للموظفين المشرف عليهم (بدون فلتر created_by)
+      // جلب القواعد مع بيانات الموظف فقط (لا يوجد FK لـ products)
       const { data, error } = await supabase
         .from('employee_profit_rules')
         .select(`
           *,
-          employee:profiles!employee_id(full_name, employee_code),
-          product:products(name)
+          employee:profiles!employee_id(full_name, employee_code)
         `)
         .in('employee_id', supervisedEmployeeIds);
       
       if (!error && data) {
-        setProfitRules(data);
+        // جلب أسماء المنتجات يدوياً للقواعد التي لها target_id منتج
+        const productTargetIds = data
+          .filter(r => r.rule_type === 'product' && r.target_id && r.target_id !== 'default')
+          .map(r => r.target_id);
+        
+        let productsMap = {};
+        if (productTargetIds.length > 0) {
+          const { data: productsData } = await supabase
+            .from('products')
+            .select('id, name')
+            .in('id', productTargetIds);
+          productsData?.forEach(p => { productsMap[p.id] = p; });
+        }
+        
+        // دمج أسماء المنتجات مع القواعد
+        const enrichedRules = data.map(r => ({
+          ...r,
+          product: productsMap[r.target_id] || null
+        }));
+        
+        setProfitRules(enrichedRules);
       }
     };
     fetchProfitRules();
