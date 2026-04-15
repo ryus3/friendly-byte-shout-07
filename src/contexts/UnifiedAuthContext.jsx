@@ -60,24 +60,15 @@ export const UnifiedAuthProvider = ({ children }) => {
     if (!supabase || !supabaseUser) return null;
     
     try {
-      // جلب بيانات المستخدم الأساسية مع الأدوار
+      // 1. جلب البروفايل أولاً بدون inner join على الأدوار
       const { data: profile, error } = await supabase
         .from('profiles')
-        .select(`
-          *,
-          user_roles!user_roles_user_id_fkey!inner(
-            roles(
-              name,
-              display_name,
-              hierarchy_level
-            )
-          )
-        `)
+        .select('*')
         .eq('user_id', supabaseUser.id)
-        .eq('user_roles.is_active', true)
         .maybeSingle();
 
       if (error) {
+        console.error('Profile fetch error:', error);
         return null;
       }
 
@@ -85,7 +76,21 @@ export const UnifiedAuthProvider = ({ children }) => {
         return { ...supabaseUser, is_new: true, status: 'pending' };
       }
 
-      // 🔥 جلب الشركة الافتراضية من delivery_partner_tokens وحفظها
+      // 2. جلب الأدوار في استعلام مستقل (لا يؤثر فشله على البروفايل)
+      let roles = [];
+      try {
+        const { data: rolesData } = await supabase
+          .from('user_roles')
+          .select('roles(name, display_name, hierarchy_level)')
+          .eq('user_id', supabaseUser.id)
+          .eq('is_active', true);
+        
+        roles = rolesData?.map(ur => ur.roles?.name).filter(Boolean) || [];
+      } catch (rolesErr) {
+        console.warn('Roles fetch failed, continuing with empty roles:', rolesErr);
+      }
+
+      // 3. جلب الشركة الافتراضية
       const { data: defaultPartner } = await supabase
         .from('delivery_partner_tokens')
         .select('partner_name')
@@ -96,10 +101,8 @@ export const UnifiedAuthProvider = ({ children }) => {
         .maybeSingle();
 
       if (defaultPartner?.partner_name) {
-        // حفظ في localStorage
         localStorage.setItem('active_delivery_partner', defaultPartner.partner_name);
         
-        // حفظ في profiles.selected_delivery_partner
         await supabase
           .from('profiles')
           .update({ 
@@ -109,18 +112,13 @@ export const UnifiedAuthProvider = ({ children }) => {
           .eq('id', profile.id);
       }
 
-      // استخراج الأدوار
-      const roles = profile.user_roles?.map(ur => ur.roles.name) || [];
-      
       return { 
         ...supabaseUser, 
         ...profile,
-        user_id: supabaseUser.id, // تأكد من وجود user_id
-        uuid: supabaseUser.id,    // إضافة uuid للتوافق
+        user_id: supabaseUser.id,
+        uuid: supabaseUser.id,
         roles,
-        // توحيد المعرف: استخدم id من supabaseUser (وهو auth.users.id)
         id: supabaseUser.id,
-        user_id: supabaseUser.id  // للتوافق مع الكود القديم
       };
     } catch (error) {
       console.error('Profile fetch failed:', error);
