@@ -198,7 +198,62 @@ export const UnifiedAuthProvider = ({ children }) => {
     }
 
     let isMounted = true;
-    let sessionHandled = false;
+    let currentUserId = null; // تتبع المستخدم الحالي لتجنب التكرار
+    let profileFetchRetries = 0;
+    const MAX_RETRIES = 3;
+
+    // دالة مشتركة لجلب البروفايل مع retry
+    const handleSession = async (session, source) => {
+      if (!isMounted || !session?.user) return;
+      
+      // تجنب إعادة الجلب لنفس المستخدم (إلا عند TOKEN_REFRESHED)
+      if (currentUserId === session.user.id && source !== 'SIGNED_IN') {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const profile = await fetchUserProfile(session.user);
+        if (!isMounted) return;
+        
+        if (profile?.status === 'active') {
+          currentUserId = session.user.id;
+          profileFetchRetries = 0;
+          setUser(profile);
+        } else if (profile?.status === 'pending') {
+          setUser(null);
+          toast({ 
+            title: "حسابك قيد المراجعة", 
+            description: "سيقوم المدير بمراجعة طلبك وتفعيله قريباً.", 
+            duration: 7000 
+          });
+        } else if (!profile && session.user) {
+          // فشل جلب البروفايل لكن الجلسة صالحة - retry
+          if (profileFetchRetries < MAX_RETRIES) {
+            profileFetchRetries++;
+            console.warn(`⚠️ فشل جلب البروفايل، محاولة ${profileFetchRetries}/${MAX_RETRIES}`);
+            setTimeout(() => {
+              if (isMounted) handleSession(session, 'retry');
+            }, 1500 * profileFetchRetries);
+            return; // لا نضع loading = false أثناء retry
+          } else {
+            // بعد كل المحاولات، نعرض المستخدم بدون بروفايل كامل بدلاً من logout
+            console.error('❌ فشل جلب البروفايل بعد كل المحاولات');
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Profile fetch error in handleSession:', error);
+        // لا نمسح المستخدم إذا كان موجوداً وكانت الجلسة صالحة
+        if (!currentUserId) {
+          if (isMounted) setUser(null);
+        }
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
 
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -209,37 +264,14 @@ export const UnifiedAuthProvider = ({ children }) => {
         setSession(session);
         
         if (session?.user) {
-          // Prevent duplicate profile fetches
-          if (sessionHandled && event !== 'TOKEN_REFRESHED' && event !== 'SIGNED_IN') {
+          if (event === 'TOKEN_REFRESHED') {
+            // لا نعيد جلب البروفايل عند تجديد التوكن - فقط نحدث الجلسة
             return;
           }
-          sessionHandled = true;
-          
           // Use setTimeout to avoid Supabase deadlock
-          setTimeout(async () => {
-            if (!isMounted) return;
-            try {
-              const profile = await fetchUserProfile(session.user);
-              if (!isMounted) return;
-              if (profile?.status === 'active') {
-                setUser(profile);
-              } else {
-                setUser(null);
-                if (profile?.status === 'pending') {
-                  toast({ 
-                    title: "حسابك قيد المراجعة", 
-                    description: "سيقوم المدير بمراجعة طلبك وتفعيله قريباً.", 
-                    duration: 7000 
-                  });
-                }
-              }
-            } catch (error) {
-              if (isMounted) setUser(null);
-            } finally {
-              if (isMounted) setLoading(false);
-            }
-          }, 0);
+          setTimeout(() => handleSession(session, event), 0);
         } else {
+          currentUserId = null;
           setUser(null);
           setLoading(false);
         }
@@ -258,21 +290,11 @@ export const UnifiedAuthProvider = ({ children }) => {
 
         setSession(session);
         
-        if (session?.user && !sessionHandled) {
-          sessionHandled = true;
-          try {
-            const profile = await fetchUserProfile(session.user);
-            if (!isMounted) return;
-            if (profile?.status === 'active') {
-              setUser(profile);
-            } else {
-              setUser(null);
-            }
-          } catch (error) {
-            if (isMounted) setUser(null);
-          }
+        if (session?.user) {
+          await handleSession(session, 'INITIAL_SESSION');
+        } else {
+          if (isMounted) setLoading(false);
         }
-        if (isMounted) setLoading(false);
       } catch (error) {
         if (isMounted) setLoading(false);
       }

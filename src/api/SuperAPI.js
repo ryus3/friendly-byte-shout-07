@@ -448,15 +448,16 @@ return this.fetch('all_data', async () => {
         }, (payload) => {
           // معالجة فورية للطلبات وعناصرها بدون تأخير
           if (table === 'orders' || table === 'order_items') {
-            // إبطال فوري للطلبات لضمان الحصول على أحدث البيانات
-            this.invalidate('all_data');
+            // إبطال فوري للطلبات فقط
             this.invalidate('orders_only');
           } else if (table === 'ai_orders') {
             // ⚡ لا invalidate للطلبات الذكية - التحديث المباشر في SuperProvider يكفي
-            // فقط نُمرر الـ callback بدون مسح البيانات
+          } else if (table === 'products' || table === 'inventory') {
+            // ⚡ فقط invalidate المنتجات - ليس كل البيانات
+            this.invalidate('products_only');
           } else {
             // حذف البيانات المحفوظة بشكل مجمّع للجداول الأخرى
-            this.debouncedInvalidateAll(50);
+            this.debouncedInvalidateAll(200);
           }
           
           if (callback) callback(table, payload);
