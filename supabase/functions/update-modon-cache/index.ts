@@ -6,23 +6,15 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const MODON_BASE_URL = 'https://mcht.modon-express.net/v1/merchant';
+const RATE_LIMIT_DELAY = 200;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-interface ModonCity {
-  id: string | number;
-  city_name: string;
-}
+const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-interface ModonRegion {
-  id: string | number;
-  region_name: string;
-}
-
-// ✅ Direct fetch to MODON API - no proxy needed
 async function fetchFromModon(endpoint: string, token: string, queryParams?: Record<string, string>): Promise<any> {
   const url = new URL(`${MODON_BASE_URL}/${endpoint}`);
   url.searchParams.set('token', token);
@@ -31,8 +23,6 @@ async function fetchFromModon(endpoint: string, token: string, queryParams?: Rec
       url.searchParams.set(key, value);
     }
   }
-
-  console.log(`🌐 Fetching: ${endpoint}${queryParams ? ' with params: ' + JSON.stringify(queryParams) : ''}`);
 
   const response = await fetch(url.toString(), {
     method: 'GET',
@@ -54,35 +44,23 @@ async function fetchFromModon(endpoint: string, token: string, queryParams?: Rec
   return data.data || [];
 }
 
-async function fetchCitiesFromModon(token: string): Promise<ModonCity[]> {
-  try {
-    const citiesData = await fetchFromModon('citys', token);
-
-    if (!Array.isArray(citiesData)) {
-      console.error('❌ Cities data is not an array:', typeof citiesData);
-      return [];
-    }
-
-    console.log(`✅ تم جلب ${citiesData.length} مدينة من مدن`);
-    return citiesData.map((city: any) => ({
-      id: String(city.id),
-      city_name: city.city_name
-    }));
-  } catch (error) {
-    console.error('❌ خطأ في جلب المدن من مدن:', error);
-    throw error;
+async function fetchCitiesFromModon(token: string) {
+  const citiesData = await fetchFromModon('citys', token);
+  if (!Array.isArray(citiesData)) {
+    console.error('❌ Cities data is not an array:', typeof citiesData);
+    return [];
   }
+  console.log(`✅ تم جلب ${citiesData.length} مدينة من مدن`);
+  return citiesData.map((city: any) => ({
+    id: String(city.id),
+    city_name: city.city_name
+  }));
 }
 
-async function fetchRegionsFromModon(token: string, cityId: string): Promise<ModonRegion[]> {
+async function fetchRegionsFromModon(token: string, cityId: string) {
   try {
     const regionsData = await fetchFromModon('regions', token, { city_id: cityId });
-
-    if (!Array.isArray(regionsData)) {
-      console.log(`⚠️ لا توجد مناطق للمدينة ${cityId}`);
-      return [];
-    }
-
+    if (!Array.isArray(regionsData)) return [];
     return regionsData.map((region: any) => ({
       id: String(region.id),
       region_name: region.region_name
@@ -93,134 +71,114 @@ async function fetchRegionsFromModon(token: string, cityId: string): Promise<Mod
   }
 }
 
-async function updateCitiesCache(cities: ModonCity[]): Promise<number> {
+// Batch upsert cities for MODON - lookup/create in cities_master then batch upsert mappings
+async function upsertCitiesBatch(cities: { id: string; city_name: string }[]) {
   let updatedCount = 0;
+  const timestamp = new Date().toISOString();
 
+  // Build city master IDs
+  const cityMasterMap: Record<string, number> = {};
+  
   for (const city of cities) {
     try {
-      const modonCityId = parseInt(String(city.id));
-
-      const { data: existingCity } = await supabase
+      const { data: existing } = await supabase
         .from('cities_master')
         .select('id')
         .eq('name', city.city_name)
         .maybeSingle();
 
-      let cityMasterId: number;
-
-      if (existingCity) {
-        cityMasterId = existingCity.id;
+      if (existing) {
+        cityMasterMap[city.id] = existing.id;
       } else {
-        const { data: newCity, error: insertError } = await supabase
+        const { data: newCity, error } = await supabase
           .from('cities_master')
-          .insert({
-            name: city.city_name,
-            name_ar: city.city_name,
-            is_active: true
-          })
+          .insert({ name: city.city_name, name_ar: city.city_name, is_active: true })
           .select('id')
           .single();
-
-        if (insertError || !newCity) {
-          console.error(`❌ خطأ في إنشاء المدينة ${city.city_name}:`, insertError);
-          continue;
-        }
-        cityMasterId = newCity.id;
+        if (error || !newCity) continue;
+        cityMasterMap[city.id] = newCity.id;
       }
-
-      const { error: mappingError } = await supabase
-        .from('city_delivery_mappings')
-        .upsert({
-          city_id: cityMasterId,
-          delivery_partner: 'modon',
-          external_id: String(modonCityId),
-          external_name: city.city_name,
-          is_active: true,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'city_id,delivery_partner'
-        });
-
-      if (mappingError) {
-        console.error(`❌ خطأ في تحديث mappings للمدينة ${city.city_name}:`, mappingError);
-      } else {
-        updatedCount++;
-      }
-    } catch (error) {
-      console.error(`❌ خطأ في معالجة المدينة ${city.city_name}:`, error);
+    } catch (e) {
+      console.error(`❌ خطأ مدينة ${city.city_name}:`, e);
     }
+  }
+
+  // Batch upsert mappings
+  const mappings = Object.entries(cityMasterMap).map(([externalId, cityId]) => {
+    const city = cities.find(c => c.id === externalId);
+    return {
+      city_id: cityId,
+      delivery_partner: 'modon',
+      external_id: externalId,
+      external_name: city?.city_name || '',
+      is_active: true,
+      updated_at: timestamp
+    };
+  });
+
+  if (mappings.length > 0) {
+    const { error } = await supabase.from('city_delivery_mappings').upsert(mappings, { onConflict: 'city_id,delivery_partner' });
+    if (error) console.error('❌ city_delivery_mappings batch:', error);
+    else updatedCount = mappings.length;
+  }
+
+  return { updatedCount, cityMasterMap };
+}
+
+// Batch upsert regions for one city
+async function upsertRegionsBatch(cityMasterId: number, regions: { id: string; region_name: string }[]) {
+  if (regions.length === 0) return 0;
+  const timestamp = new Date().toISOString();
+  let updatedCount = 0;
+
+  // Lookup/create region master records
+  const regionMasterMap: Record<string, number> = {};
+  
+  for (const region of regions) {
+    try {
+      const { data: existing } = await supabase
+        .from('regions_master')
+        .select('id')
+        .eq('city_id', cityMasterId)
+        .eq('name', region.region_name)
+        .maybeSingle();
+
+      if (existing) {
+        regionMasterMap[region.id] = existing.id;
+      } else {
+        const { data: newRegion, error } = await supabase
+          .from('regions_master')
+          .insert({ city_id: cityMasterId, name: region.region_name, is_active: true })
+          .select('id')
+          .single();
+        if (error || !newRegion) continue;
+        regionMasterMap[region.id] = newRegion.id;
+      }
+    } catch (e) {
+      console.error(`❌ خطأ منطقة ${region.region_name}:`, e);
+    }
+  }
+
+  // Batch upsert region mappings
+  const mappings = Object.entries(regionMasterMap).map(([externalId, regionId]) => {
+    const region = regions.find(r => r.id === externalId);
+    return {
+      region_id: regionId,
+      delivery_partner: 'modon',
+      external_id: externalId,
+      external_name: region?.region_name || '',
+      is_active: true,
+      updated_at: timestamp
+    };
+  });
+
+  if (mappings.length > 0) {
+    const { error } = await supabase.from('region_delivery_mappings').upsert(mappings, { onConflict: 'region_id,delivery_partner' });
+    if (!error) updatedCount = mappings.length;
+    else console.error('❌ region_delivery_mappings batch:', error);
   }
 
   return updatedCount;
-}
-
-async function updateRegionsCache(cityMasterId: number, modonCityId: string, regions: ModonRegion[]): Promise<number> {
-  if (regions.length === 0) return 0;
-
-  try {
-    const timestamp = new Date().toISOString();
-    let updatedCount = 0;
-
-    for (const region of regions) {
-      try {
-        const modonRegionId = parseInt(String(region.id));
-
-        const { data: existingRegion } = await supabase
-          .from('regions_master')
-          .select('id')
-          .eq('city_id', cityMasterId)
-          .eq('name', region.region_name)
-          .maybeSingle();
-
-        let regionMasterId: number;
-
-        if (existingRegion) {
-          regionMasterId = existingRegion.id;
-        } else {
-          const { data: newRegion, error: insertError } = await supabase
-            .from('regions_master')
-            .insert({
-              city_id: cityMasterId,
-              name: region.region_name,
-              is_active: true
-            })
-            .select('id')
-            .single();
-
-          if (insertError || !newRegion) {
-            console.error(`❌ خطأ في إنشاء المنطقة ${region.region_name}:`, insertError);
-            continue;
-          }
-          regionMasterId = newRegion.id;
-        }
-
-        const { error: mappingError } = await supabase
-          .from('region_delivery_mappings')
-          .upsert({
-            region_id: regionMasterId,
-            delivery_partner: 'modon',
-            external_id: String(modonRegionId),
-            external_name: region.region_name,
-            is_active: true,
-            updated_at: timestamp
-          }, {
-            onConflict: 'region_id,delivery_partner'
-          });
-
-        if (!mappingError) {
-          updatedCount++;
-        }
-      } catch (regionError) {
-        console.error(`❌ خطأ في معالجة المنطقة ${region.region_name}:`, regionError);
-        // Continue with next region - don't break
-      }
-    }
-
-    return updatedCount;
-  } catch (error) {
-    console.error('❌ خطأ في معالجة المناطق:', error);
-    return 0;
-  }
 }
 
 serve(async (req) => {
@@ -241,9 +199,8 @@ serve(async (req) => {
       );
     }
 
-    console.log('🚀 بدء مزامنة مدن والمناطق (Direct API) للمستخدم:', user_id);
+    console.log('🚀 بدء مزامنة مدن والمناطق (batch) للمستخدم:', user_id);
 
-    // إنشاء سجل في cities_regions_sync_log
     const { data: syncLogData } = await supabase
       .from('cities_regions_sync_log')
       .insert({
@@ -257,58 +214,42 @@ serve(async (req) => {
 
     syncLogId = syncLogData?.id;
 
-    // ✅ جلب المدن مباشرة من MODON API (بدون modon-proxy)
     const cities = await fetchCitiesFromModon(token);
     console.log(`📦 تم جلب ${cities.length} مدينة من مدن`);
 
-    const citiesUpdated = await updateCitiesCache(cities);
-    console.log(`✅ تم تحديث ${citiesUpdated} مدينة في الـ cache`);
+    const { updatedCount: citiesUpdated, cityMasterMap } = await upsertCitiesBatch(cities);
+    console.log(`✅ تم تحديث ${citiesUpdated} مدينة في الكاش`);
 
     let totalRegionsUpdated = 0;
-    let citiesProcessed = 0;
 
-    for (const city of cities) {
+    for (let i = 0; i < cities.length; i++) {
+      const city = cities[i];
       try {
         const modonCityId = String(city.id);
+        const cityMasterId = cityMasterMap[modonCityId];
 
-        const { data: cityMapping } = await supabase
-          .from('city_delivery_mappings')
-          .select('city_id')
-          .eq('delivery_partner', 'modon')
-          .eq('external_id', modonCityId)
-          .single();
-
-        if (!cityMapping) {
-          console.log(`⚠️ لم يتم العثور على mapping للمدينة ${city.city_name}`);
-          citiesProcessed++;
+        if (!cityMasterId) {
+          console.log(`⚠️ لم يتم العثور على master ID للمدينة ${city.city_name}`);
           continue;
         }
 
-        // ✅ Rate limiting - 300ms delay between city region fetches
-        if (citiesProcessed > 0) {
-          await new Promise(resolve => setTimeout(resolve, 300));
-        }
+        if (i > 0) await delay(RATE_LIMIT_DELAY);
 
         const regions = await fetchRegionsFromModon(token, modonCityId);
 
-        if (regions.length === 0) {
-          console.log(`⚠️ لا توجد مناطق للمدينة ${city.city_name}`);
-          citiesProcessed++;
-          continue;
+        if (regions.length > 0) {
+          const regionsUpdated = await upsertRegionsBatch(cityMasterId, regions);
+          totalRegionsUpdated += regionsUpdated;
         }
 
-        const regionsUpdated = await updateRegionsCache(cityMapping.city_id, modonCityId, regions);
-        totalRegionsUpdated += regionsUpdated;
-        citiesProcessed++;
+        console.log(`✅ [${i + 1}/${cities.length}] ${city.city_name}: ${regions.length} منطقة`);
 
-        console.log(`✅ [${citiesProcessed}/${cities.length}] ${city.city_name}: ${regionsUpdated} منطقة`);
-
-        // تحديث Progress كل 3 مدن
-        if (syncLogId && citiesProcessed % 3 === 0) {
+        // تحديث التقدم بعد كل مدينة
+        if (syncLogId) {
           await supabase
             .from('cities_regions_sync_log')
             .update({
-              cities_count: citiesProcessed,
+              cities_count: i + 1,
               regions_count: totalRegionsUpdated,
               last_sync_at: new Date().toISOString()
             })
@@ -316,15 +257,12 @@ serve(async (req) => {
         }
       } catch (error) {
         console.error(`❌ خطأ في معالجة المدينة ${city.city_name}:`, error);
-        citiesProcessed++;
-        // ✅ Continue with next city - don't break the whole sync
       }
     }
 
     const endTime = new Date();
     const duration = (endTime.getTime() - startTime.getTime()) / 1000;
 
-    // ✅ تحديث سجل المزامنة - success
     if (syncLogId) {
       await supabase
         .from('cities_regions_sync_log')
@@ -361,7 +299,6 @@ serve(async (req) => {
 
     console.error('❌ خطأ في مزامنة مدن:', error);
 
-    // ✅ تحديث سجل المزامنة حتى عند الفشل (لمنع ended_at = null)
     if (syncLogId) {
       await supabase
         .from('cities_regions_sync_log')

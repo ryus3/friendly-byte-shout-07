@@ -7,31 +7,15 @@ const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 const ALWASEET_BASE_URL = 'https://api.alwaseet-iq.net/v1/merchant';
-const RATE_LIMIT_DELAY = 300; // ms between requests
+const RATE_LIMIT_DELAY = 200;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface AlWaseetCity {
-  id: number;
-  name: string;
-  name_ar?: string;
-  name_en?: string;
-}
-
-interface AlWaseetRegion {
-  id: number;
-  city_id: number;
-  name: string;
-  name_ar?: string;
-  name_en?: string;
-}
-
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
-// Direct fetch to AlWaseet API (bypasses proxy to avoid JWT hangs in long operations)
 async function directFetch(endpoint: string, token: string, queryParams?: Record<string, unknown>): Promise<unknown> {
   let url = `${ALWASEET_BASE_URL}/${endpoint}?token=${token}`;
   if (queryParams) {
@@ -47,7 +31,6 @@ async function directFetch(endpoint: string, token: string, queryParams?: Record
 
   const text = await resp.text();
 
-  // Detect Cloudflare block
   if ((resp.status === 403 || resp.status === 503) && 
       (text.includes('Cloudflare') || text.includes('cf-error'))) {
     throw new Error(`CF_BLOCKED: Cloudflare حظر الطلب (${resp.status}) للـ ${endpoint}`);
@@ -64,20 +47,14 @@ async function directFetch(endpoint: string, token: string, queryParams?: Record
   }
 }
 
-async function fetchCitiesFromAlWaseet(token: string): Promise<AlWaseetCity[]> {
+async function fetchCities(token: string) {
   const raw = await directFetch('citys', token);
-  
   let citiesData: unknown[] | null = null;
-  if (Array.isArray(raw)) {
-    citiesData = raw;
-  } else if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as Record<string, unknown>).data)) {
+  if (Array.isArray(raw)) citiesData = raw;
+  else if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as Record<string, unknown>).data)) {
     citiesData = (raw as Record<string, unknown>).data as unknown[];
   }
-
-  if (!citiesData || citiesData.length === 0) {
-    throw new Error('لا توجد مدن في الاستجابة');
-  }
-
+  if (!citiesData || citiesData.length === 0) throw new Error('لا توجد مدن في الاستجابة');
   console.log(`✅ تم جلب ${citiesData.length} مدينة`);
   return citiesData.map((city: Record<string, unknown>) => ({
     id: parseInt(String(city.id)) || (city.id as number),
@@ -87,21 +64,15 @@ async function fetchCitiesFromAlWaseet(token: string): Promise<AlWaseetCity[]> {
   }));
 }
 
-async function fetchRegionsFromAlWaseet(token: string, cityId: number): Promise<AlWaseetRegion[]> {
+async function fetchRegions(token: string, cityId: number) {
   try {
     const raw = await directFetch('regions', token, { city_id: cityId });
-    
     let regionsData: unknown[] | null = null;
-    if (Array.isArray(raw)) {
-      regionsData = raw;
-    } else if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as Record<string, unknown>).data)) {
+    if (Array.isArray(raw)) regionsData = raw;
+    else if (raw && typeof raw === 'object' && 'data' in raw && Array.isArray((raw as Record<string, unknown>).data)) {
       regionsData = (raw as Record<string, unknown>).data as unknown[];
     }
-
-    if (!regionsData || regionsData.length === 0) {
-      return [];
-    }
-
+    if (!regionsData || regionsData.length === 0) return [];
     return regionsData.map((region: Record<string, unknown>) => ({
       id: parseInt(String(region.id)) || (region.id as number),
       city_id: cityId,
@@ -115,98 +86,50 @@ async function fetchRegionsFromAlWaseet(token: string, cityId: number): Promise<
   }
 }
 
-async function updateCitiesCache(cities: AlWaseetCity[]): Promise<number> {
-  let updatedCount = 0;
+// Batch upsert cities
+async function upsertCitiesBatch(cities: { id: number; name: string; name_ar: string; name_en?: string }[]) {
+  const timestamp = new Date().toISOString();
   
-  for (const city of cities) {
-    try {
-      const { error: masterError } = await supabase
-        .from('cities_master')
-        .upsert({
-          id: city.id,
-          alwaseet_id: city.id,
-          name: city.name,
-          name_ar: city.name_ar || city.name,
-          name_en: city.name_en || null,
-          is_active: true,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'id' });
+  const masterRecords = cities.map(c => ({
+    id: c.id, alwaseet_id: c.id, name: c.name,
+    name_ar: c.name_ar || c.name, name_en: c.name_en || null,
+    is_active: true, updated_at: timestamp
+  }));
+  const { error: me } = await supabase.from('cities_master').upsert(masterRecords, { onConflict: 'id' });
+  if (me) console.error('❌ cities_master batch:', me);
 
-      if (masterError) {
-        console.error(`❌ cities_master ${city.name}:`, masterError);
-        continue;
-      }
+  const mappingRecords = cities.map(c => ({
+    city_id: c.id, delivery_partner: 'alwaseet',
+    external_id: String(c.id), external_name: c.name,
+    is_active: true, updated_at: timestamp
+  }));
+  const { error: mpe } = await supabase.from('city_delivery_mappings').upsert(mappingRecords, { onConflict: 'city_id,delivery_partner' });
+  if (mpe) console.error('❌ city_delivery_mappings batch:', mpe);
 
-      const { error: mappingError } = await supabase
-        .from('city_delivery_mappings')
-        .upsert({
-          city_id: city.id,
-          delivery_partner: 'alwaseet',
-          external_id: String(city.id),
-          external_name: city.name,
-          is_active: true,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'city_id,delivery_partner' });
-
-      if (mappingError) {
-        console.error(`❌ mappings ${city.name}:`, mappingError);
-      } else {
-        updatedCount++;
-      }
-    } catch (error) {
-      console.error(`❌ ${city.name}:`, error);
-    }
-  }
-  return updatedCount;
+  return me || mpe ? 0 : cities.length;
 }
 
-async function updateRegionsCache(regions: AlWaseetRegion[]): Promise<number> {
+// Batch upsert regions for one city
+async function upsertRegionsBatch(regions: { id: number; city_id: number; name: string; name_ar?: string; name_en?: string }[]) {
   if (regions.length === 0) return 0;
-  
-  try {
-    const timestamp = new Date().toISOString();
-    
-    const masterRecords = regions.map(region => ({
-      id: region.id,
-      alwaseet_id: region.id,
-      city_id: region.city_id,
-      name: region.name,
-      is_active: true,
-      updated_at: timestamp
-    }));
+  const timestamp = new Date().toISOString();
 
-    const { error: masterError } = await supabase
-      .from('regions_master')
-      .upsert(masterRecords, { onConflict: 'id' });
+  const masterRecords = regions.map(r => ({
+    id: r.id, alwaseet_id: r.id, city_id: r.city_id,
+    name: r.name, is_active: true, updated_at: timestamp
+  }));
+  const { error: me } = await supabase.from('regions_master').upsert(masterRecords, { onConflict: 'id' });
+  if (me) { console.error('❌ regions_master batch:', me); return 0; }
 
-    if (masterError) {
-      console.error('❌ regions_master:', masterError);
-      return 0;
-    }
+  const mappingRecords = regions.map(r => ({
+    region_id: r.id, delivery_partner: 'alwaseet',
+    external_id: String(r.id), external_name: r.name,
+    is_active: true, updated_at: timestamp
+  }));
+  const { error: mpe } = await supabase.from('region_delivery_mappings').upsert(mappingRecords, { onConflict: 'region_id,delivery_partner' });
+  if (mpe) { console.error('❌ region_delivery_mappings batch:', mpe); return 0; }
 
-    const mappingRecords = regions.map(region => ({
-      region_id: region.id,
-      delivery_partner: 'alwaseet',
-      external_id: String(region.id),
-      external_name: region.name,
-      is_active: true,
-      updated_at: timestamp
-    }));
-
-    const { error: mappingError } = await supabase
-      .from('region_delivery_mappings')
-      .upsert(mappingRecords, { onConflict: 'region_id,delivery_partner' });
-
-    if (mappingError) {
-      console.error('❌ region_delivery_mappings:', mappingError);
-      return 0;
-    }
-
-    return regions.length;
-  } catch (error) {
-    console.error('❌ معالجة المناطق:', error);
-    return 0;
-  }
+  return regions.length;
 }
 
 serve(async (req) => {
@@ -226,56 +149,56 @@ serve(async (req) => {
       );
     }
 
-    console.log('🚀 بدء مزامنة المدن والمناطق (direct fetch):', user_id);
+    console.log('🚀 بدء مزامنة المدن والمناطق (batch):', user_id);
 
     const { data: syncLogData } = await supabase
       .from('cities_regions_sync_log')
       .insert({
         started_at: startTime.toISOString(),
         success: false,
-        triggered_by: user_id
+        triggered_by: user_id,
+        delivery_partner: 'alwaseet'
       })
       .select()
       .single();
 
     const syncLogId = syncLogData?.id;
 
-    // جلب المدن مباشرة من API
-    const cities = await fetchCitiesFromAlWaseet(token);
-    console.log(`📦 ${cities.length} مدينة`);
-
-    const citiesUpdated = await updateCitiesCache(cities);
+    // جلب المدن
+    const cities = await fetchCities(token);
+    const citiesUpdated = await upsertCitiesBatch(cities);
+    console.log(`📦 ${citiesUpdated} مدينة محدثة`);
 
     let totalRegionsUpdated = 0;
-    let citiesProcessed = 0;
-    
-    for (const city of cities) {
+
+    // جلب المناطق لكل مدينة مع تحديث التقدم بعد كل مدينة
+    for (let i = 0; i < cities.length; i++) {
+      const city = cities[i];
       try {
-        // Rate limit delay
-        await delay(RATE_LIMIT_DELAY);
+        if (i > 0) await delay(RATE_LIMIT_DELAY);
         
-        const regions = await fetchRegionsFromAlWaseet(token, city.id);
+        const regions = await fetchRegions(token, city.id);
         
         if (regions.length > 0) {
-          const regionsUpdated = await updateRegionsCache(regions);
+          const regionsUpdated = await upsertRegionsBatch(regions);
           totalRegionsUpdated += regionsUpdated;
         }
-        citiesProcessed++;
-        
-        console.log(`✅ [${citiesProcessed}/${cities.length}] ${city.name}: ${regions.length} منطقة`);
 
-        if (syncLogId && citiesProcessed % 5 === 0) {
+        console.log(`✅ [${i + 1}/${cities.length}] ${city.name}: ${regions.length} منطقة`);
+
+        // تحديث التقدم بعد كل مدينة (وليس كل 5)
+        if (syncLogId) {
           await supabase
             .from('cities_regions_sync_log')
             .update({
-              cities_count: citiesProcessed,
+              cities_count: i + 1,
               regions_count: totalRegionsUpdated,
+              last_sync_at: new Date().toISOString()
             })
             .eq('id', syncLogId);
         }
       } catch (error) {
         console.error(`❌ ${city.name}:`, error);
-        citiesProcessed++;
       }
     }
 

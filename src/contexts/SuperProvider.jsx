@@ -834,12 +834,10 @@ export const SuperProvider = ({ children }) => {
         reloadTimerRef.current = setTimeout(async () => {
           try {
             await dbRefetchProducts();
-            const freshData = await superAPI.fetchAllData();
-            if (freshData?.products) {
-              setAllData(prev => ({ ...prev, products: freshData.products }));
-            }
+            // فقط invalidate المنتجات، ليس كل البيانات
+            superAPI.invalidate('products_only');
           } catch (e) { console.error('فشل تحديث المنتجات:', e); }
-        }, 300);
+        }, 100);
         return;
       }
 
@@ -848,7 +846,7 @@ export const SuperProvider = ({ children }) => {
         if (reloadTimerRef.current) clearTimeout(reloadTimerRef.current);
         reloadTimerRef.current = setTimeout(() => {
           fetchAllData();
-        }, 500);
+        }, 200);
       }
     };
 

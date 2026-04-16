@@ -195,9 +195,14 @@ const DepartmentManagerSettingsPage = () => {
   // جلب قواعد الأرباح للموظفين تحت الإشراف
   useEffect(() => {
     const fetchProfitRules = async () => {
-      if (!isDepartmentManager || supervisedEmployeeIds.length === 0) return;
+      if (!isDepartmentManager || supervisedEmployeeIds.length === 0) {
+        console.log('⚠️ [ProfitRules] تخطي الجلب:', { isDepartmentManager, supervisedCount: supervisedEmployeeIds.length });
+        return;
+      }
       
-      // جلب القواعد مع بيانات الموظف فقط (لا يوجد FK لـ products)
+      console.log('🔄 [ProfitRules] جلب القواعد لـ', supervisedEmployeeIds.length, 'موظف:', supervisedEmployeeIds);
+      
+      // جلب القواعد - تشمل قواعد المدير العام أيضاً (بغض النظر عن created_by)
       const { data, error } = await supabase
         .from('employee_profit_rules')
         .select(`
@@ -206,7 +211,14 @@ const DepartmentManagerSettingsPage = () => {
         `)
         .in('employee_id', supervisedEmployeeIds);
       
-      if (!error && data) {
+      if (error) {
+        console.error('❌ [ProfitRules] خطأ في الجلب:', error);
+        return;
+      }
+      
+      console.log('✅ [ProfitRules] تم جلب', data?.length || 0, 'قاعدة');
+      
+      if (data) {
         // جلب أسماء المنتجات يدوياً للقواعد التي لها target_id منتج
         const productTargetIds = data
           .filter(r => r.rule_type === 'product' && r.target_id && r.target_id !== 'default')
