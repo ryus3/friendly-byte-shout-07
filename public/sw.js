@@ -1,13 +1,9 @@
-// ✅ Service Worker متقدم للعمل Offline - RYUS System
-console.log('🔄 Enhanced Service Worker loaded');
-
-const VERSION = 'v2.0.0';
+// ✅ Service Worker v3.0.0 - يستثني Supabase تماماً لضمان عمل Realtime على المنشور
+const VERSION = 'v3.0.0';
 const STATIC_CACHE = `ryus-static-${VERSION}`;
 const DYNAMIC_CACHE = `ryus-dynamic-${VERSION}`;
-const API_CACHE = `ryus-api-${VERSION}`;
 const IMAGE_CACHE = `ryus-images-${VERSION}`;
 
-// ✅ الملفات الثابتة للتخزين المسبق (App Shell)
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -15,61 +11,52 @@ const STATIC_ASSETS = [
   '/favicon.ico',
 ];
 
-// ✅ التثبيت - تخزين App Shell
 self.addEventListener('install', (event) => {
-  console.log('✅ Service Worker installing...');
-  
   event.waitUntil(
     caches.open(STATIC_CACHE)
-      .then(cache => {
-        console.log('📦 Caching app shell');
-        return cache.addAll(STATIC_ASSETS);
-      })
+      .then(cache => cache.addAll(STATIC_ASSETS).catch(() => {}))
       .then(() => self.skipWaiting())
-      .catch(err => console.error('❌ Cache installation failed:', err))
   );
 });
 
-// ✅ التفعيل - حذف Cache القديمة
+// ✅ التفعيل - حذف كل الـ caches القديمة (مهما كان اسمها)
 self.addEventListener('activate', (event) => {
-  console.log('🚀 Service Worker activating...');
-  
   event.waitUntil(
     caches.keys()
-      .then(cacheNames => {
-        return Promise.all(
-          cacheNames
-            .filter(name => name.startsWith('ryus-') && !name.includes(VERSION))
-            .map(name => {
-              console.log('🗑️ Deleting old cache:', name);
-              return caches.delete(name);
-            })
-        );
-      })
+      .then(cacheNames => Promise.all(
+        cacheNames
+          .filter(name => !name.endsWith(VERSION))
+          .map(name => caches.delete(name))
+      ))
       .then(() => self.clients.claim())
   );
 });
 
-// ✅ Fetch - استراتيجيات Caching الذكية
+// ✅ Fetch - يتجاهل Supabase تماماً لضمان عمل Realtime/Auth بدون اعتراض
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
 
-  // تجاهل طلبات Chrome Extension
   if (url.protocol === 'chrome-extension:') return;
 
-  // ✅ استراتيجية 1: Cache First للملفات الثابتة (JS, CSS, Fonts)
+  // 🚫 لا تعترض Supabase أبداً (REST/Realtime/Auth/Storage/Functions)
   if (
-    request.destination === 'script' ||
-    request.destination === 'style' ||
-    request.destination === 'font' ||
-    url.pathname.match(/\.(js|css|woff2?|ttf|eot)$/)
+    url.hostname.endsWith('.supabase.co') ||
+    url.hostname.endsWith('.supabase.in') ||
+    url.hostname.includes('supabase')
   ) {
-    event.respondWith(cacheFirst(request, STATIC_CACHE));
+    return; // مرور مباشر للشبكة
+  }
+
+  // 🚫 لا تعترض WebSocket
+  if (request.headers.get('upgrade') === 'websocket') {
     return;
   }
 
-  // ✅ استراتيجية 2: Stale While Revalidate للصور
+  // 🚫 لا تعترض غير GET
+  if (request.method !== 'GET') return;
+
+  // ✅ صور: Stale-While-Revalidate
   if (
     request.destination === 'image' ||
     url.pathname.match(/\.(jpg|jpeg|png|gif|svg|webp|ico)$/)
@@ -78,134 +65,74 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // ✅ استراتيجية 3: Network First للـ API مع Offline Fallback
+  // ✅ JS/CSS/Fonts: Network First (لتجنب bundles قديمة على المنشور)
   if (
-    url.hostname.includes('supabase.co') ||
-    url.pathname.startsWith('/api/')
+    request.destination === 'script' ||
+    request.destination === 'style' ||
+    request.destination === 'font' ||
+    url.pathname.match(/\.(js|css|woff2?|ttf|eot)$/)
   ) {
-    event.respondWith(networkFirstWithCache(request, API_CACHE));
+    event.respondWith(networkFirst(request, STATIC_CACHE));
     return;
   }
 
-  // ✅ استراتيجية 4: Network First لباقي الطلبات
-  event.respondWith(networkFirstWithCache(request, DYNAMIC_CACHE));
+  // ✅ الباقي: Network First
+  event.respondWith(networkFirst(request, DYNAMIC_CACHE));
 });
 
-// ✅ Cache First Strategy
-async function cacheFirst(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  const cached = await cache.match(request);
-  
-  if (cached) {
-    return cached;
-  }
-
+async function networkFirst(request, cacheName) {
   try {
     const response = await fetch(request);
     if (response.ok) {
-      cache.put(request, response.clone());
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone()).catch(() => {});
     }
     return response;
   } catch (error) {
-    console.error('❌ Fetch failed:', error);
+    const cache = await caches.open(cacheName);
+    const cached = await cache.match(request);
+    if (cached) return cached;
     throw error;
   }
 }
 
-// ✅ Network First with Cache Fallback Strategy
-async function networkFirstWithCache(request, cacheName) {
-  const cache = await caches.open(cacheName);
-  
-  try {
-    const response = await fetch(request);
-    
-    // ✅ تخزين الاستجابات الناجحة فقط
-    if (response.ok && request.method === 'GET') {
-      cache.put(request, response.clone());
-    }
-    
-    return response;
-  } catch (error) {
-    console.log('📡 Network failed, trying cache...');
-    const cached = await cache.match(request);
-    
-    if (cached) {
-      return cached;
-    }
-    
-    // ✅ إذا لم يوجد في Cache، إرجاع offline page
-    return new Response(
-      JSON.stringify({
-        error: 'offline',
-        message: 'لا يوجد اتصال بالإنترنت',
-        offline: true
-      }),
-      {
-        status: 503,
-        headers: { 'Content-Type': 'application/json' }
-      }
-    );
-  }
-}
-
-// ✅ Stale While Revalidate Strategy
 async function staleWhileRevalidate(request, cacheName) {
   const cache = await caches.open(cacheName);
   const cached = await cache.match(request);
-  
   const fetchPromise = fetch(request)
     .then(response => {
-      if (response.ok) {
-        cache.put(request, response.clone());
-      }
+      if (response.ok) cache.put(request, response.clone()).catch(() => {});
       return response;
     })
     .catch(() => cached);
-
   return cached || fetchPromise;
 }
 
-// ✅ Background Sync للطلبات المعلقة
+// ✅ Background Sync
 self.addEventListener('sync', (event) => {
-  console.log('🔄 Background sync triggered:', event.tag);
-  
   if (event.tag === 'sync-orders') {
     event.waitUntil(syncPendingOrders());
   }
 });
 
-// ✅ مزامنة الطلبات المعلقة
 async function syncPendingOrders() {
   try {
-    console.log('📤 Syncing pending orders...');
-    
-    // ✅ إرسال رسالة للتطبيق لبدء المزامنة
     const clients = await self.clients.matchAll();
     clients.forEach(client => {
-      client.postMessage({
-        type: 'SYNC_PENDING_ORDERS',
-        timestamp: Date.now()
-      });
+      client.postMessage({ type: 'SYNC_PENDING_ORDERS', timestamp: Date.now() });
     });
-    
-    return Promise.resolve();
   } catch (error) {
-    console.error('❌ Sync failed:', error);
     return Promise.reject(error);
   }
 }
 
-// ✅ التعامل مع الرسائل من التطبيق الرئيسي
+// ✅ رسائل من التطبيق
 self.addEventListener('message', (event) => {
-  console.log('📨 SW received message:', event.data);
-  
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   }
-  
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, body, icon, badge, tag, data } = event.data.payload;
-    
     self.registration.showNotification(title, {
       body,
       icon: icon || '/icon-192x192.png',
@@ -214,70 +141,41 @@ self.addEventListener('message', (event) => {
       data: data || {},
       requireInteraction: true,
       actions: [
-        {
-          action: 'view',
-          title: 'عرض',
-          icon: '/icon-192x192.png'
-        },
-        {
-          action: 'dismiss',
-          title: 'تجاهل'
-        }
+        { action: 'view', title: 'عرض', icon: '/icon-192x192.png' },
+        { action: 'dismiss', title: 'تجاهل' }
       ]
     });
   }
 });
 
-// ✅ التعامل مع النقر على الإشعارات
+// ✅ النقر على الإشعار
 self.addEventListener('notificationclick', (event) => {
-  console.log('🔔 Notification clicked:', event.notification.data);
-  
   event.notification.close();
-  
   const data = event.notification.data || {};
-  
-  if (event.action === 'dismiss') {
-    return;
-  }
-  
+  if (event.action === 'dismiss') return;
   event.waitUntil(
     self.clients.matchAll().then((clients) => {
       const client = clients.find(c => c.visibilityState === 'visible');
-      
       if (client) {
-        client.postMessage({
-          type: 'NOTIFICATION_CLICKED',
-          data: data
-        });
+        client.postMessage({ type: 'NOTIFICATION_CLICKED', data });
         return client.focus();
       } else {
         let url = '/';
-        if (data.type === 'new_ai_order') {
-          url = '/ai-orders';
-        } else if (data.type === 'new_order') {
-          url = '/orders';
-        } else if (data.type === 'low_stock') {
-          url = '/products';
-        }
-        
+        if (data.type === 'new_ai_order') url = '/ai-orders';
+        else if (data.type === 'new_order') url = '/orders';
+        else if (data.type === 'low_stock') url = '/products';
         return self.clients.openWindow(url);
       }
     })
   );
 });
 
-// ✅ التعامل مع إغلاق الإشعارات
-self.addEventListener('notificationclose', (event) => {
-  console.log('🔕 Notification closed:', event.notification.tag);
-});
+self.addEventListener('notificationclose', () => {});
 
-// ✅ Push notifications
+// ✅ Push
 self.addEventListener('push', (event) => {
-  console.log('📬 Push notification received:', event.data);
-  
   if (event.data) {
     const data = event.data.json();
-    
     event.waitUntil(
       self.registration.showNotification(data.title, {
         body: data.body,
@@ -290,5 +188,3 @@ self.addEventListener('push', (event) => {
     );
   }
 });
-
-console.log('✅ Enhanced Service Worker ready!');

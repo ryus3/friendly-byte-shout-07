@@ -56,14 +56,8 @@ if ('serviceWorker' in navigator) {
       });
   });
   
-  // ✅ إعادة تحميل عند تفعيل SW جديد
-  let refreshing = false;
-  navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (!refreshing) {
-      refreshing = true;
-      window.location.reload();
-    }
-  });
+  // ✅ لا إعادة تحميل تلقائية عند تفعيل SW جديد - يحافظ على الجلسة
+  // المستخدم سيحصل على آخر نسخة عند فتح صفحة جديدة طبيعياً
   
   // ✅ معالجة رسائل SW
   navigator.serviceWorker.addEventListener('message', (event) => {
