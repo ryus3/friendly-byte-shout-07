@@ -3969,8 +3969,13 @@ export const AlWaseetProvider = ({ children }) => {
   };
 
 
-  // دالة محسنة للحذف التلقائي مع تحقق متعدد
+  // 🛡️ معطّلة: كانت تستخدم endpoint /api/alwaseet/check-order غير موجود
+  // وكانت تعتبر فشل الـ fetch دليلاً على عدم وجود الطلب → حذف خاطئ
+  // الحذف التلقائي يتم الآن فقط عبر performDeletionPassAfterStatusSync (مع double-check + circuit breaker)
   const performAutoCleanup = async () => {
+    console.warn('⚠️ performAutoCleanup معطّلة لأسباب أمنية — استخدم performDeletionPassAfterStatusSync بدلاً منها');
+    return;
+    // eslint-disable-next-line no-unreachable
     try {
       const ordersToCheck = orders.filter(shouldDeleteOrder);
       
