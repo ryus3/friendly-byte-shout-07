@@ -3777,6 +3777,7 @@ export const AlWaseetProvider = ({ children }) => {
                 return { 
                   ...deleteResult, 
                   autoDeleted: true,
+                  apiConfirmedNotFound: true, // 🛡️ تأكيد قاطع: API استجاب وأكد عدم وجود الطلب في جميع الحسابات (مع double-check)
                   message: `تم حذف الطلب ${localOrder.tracking_number || qrId} تلقائياً - مؤكد عدم وجوده في جميع حسابات ${partnerDisplayName}`
                 };
               }
