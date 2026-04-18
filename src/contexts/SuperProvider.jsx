@@ -3012,8 +3012,9 @@ export const SuperProvider = ({ children }) => {
       }
     },
     updateVariantStock: async (...args) => {
+      // ⚡ التحديث الفوري: useProducts يحدّث الحالة محلياً + Realtime يحدّث باقي الأجهزة
+      // لا نحتاج fetchAllData (كان يسبب تأخير 2-3 ثوانٍ)
       const res = await dbUpdateVariantStock(...args);
-      await fetchAllData();
       return res;
     },
     getLowStockProducts: dbGetLowStockProducts,
