@@ -404,7 +404,7 @@ export const SuperProvider = ({ children }) => {
           if (permanentlyDeletedOrders.has(order.id)) {
             // إعادة تأكيد الحذف النهائي
             try {
-              localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
+              persistDeletedSet('permanentlyDeletedOrders', permanentlyDeletedOrders);
             } catch {}
             return false;
           }
@@ -416,7 +416,7 @@ export const SuperProvider = ({ children }) => {
           if (permanentlyDeletedAiOrders.has(order.id)) {
             // إعادة تأكيد الحذف النهائي
             try {
-              localStorage.setItem('permanentlyDeletedAiOrders', JSON.stringify([...permanentlyDeletedAiOrders]));
+              persistDeletedSet('permanentlyDeletedAiOrders', permanentlyDeletedAiOrders);
             } catch {}
             return false;
           }
@@ -811,7 +811,7 @@ export const SuperProvider = ({ children }) => {
         if (orderId) {
           permanentlyDeletedOrders.add(orderId);
           try {
-            localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
+            persistDeletedSet('permanentlyDeletedOrders', permanentlyDeletedOrders);
           } catch {}
         }
         return; // لا إعادة جلب نهائياً للطلبات المحذوفة
@@ -1390,7 +1390,7 @@ export const SuperProvider = ({ children }) => {
         (orderIds || []).filter(id => id != null).forEach(id => permanentlyDeletedAiOrders.add(id));
         // حفظ في localStorage للحماية الدائمة
         try {
-          localStorage.setItem('permanentlyDeletedAiOrders', JSON.stringify([...permanentlyDeletedAiOrders]));
+          persistDeletedSet('permanentlyDeletedAiOrders', permanentlyDeletedAiOrders);
         } catch {}
         setAllData(prev => ({
           ...prev,
@@ -1425,7 +1425,7 @@ export const SuperProvider = ({ children }) => {
         (orderIds || []).filter(id => id != null).forEach(id => permanentlyDeletedOrders.add(id));
         // حفظ في localStorage للحماية الدائمة
         try {
-          localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
+          persistDeletedSet('permanentlyDeletedOrders', permanentlyDeletedOrders);
         } catch {}
         setAllData(prev => ({
           ...prev,
