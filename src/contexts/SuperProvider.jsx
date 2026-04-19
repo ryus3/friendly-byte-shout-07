@@ -279,11 +279,27 @@ export const SuperProvider = ({ children }) => {
     return variantLookupMap.get(variantId) || null;
   }, [variantLookupMap]);
   
-  // Set للطلبات المحذوفة نهائياً مع localStorage persistence
+  // Set للطلبات المحذوفة نهائياً - 🛡️ TTL: 1 ساعة فقط (وليس للأبد)
+  // هذا يمنع كارثة "الطلب المحذوف خطأ يبقى مخفياً للأبد بعد استعادته"
   const [permanentlyDeletedOrders] = useState(() => {
     try {
       const saved = localStorage.getItem('permanentlyDeletedOrders');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
+      const parsed = saved ? JSON.parse(saved) : null;
+      // ✅ دعم التنسيق القديم (array) والجديد ({ts, ids})
+      if (Array.isArray(parsed)) {
+        // تنسيق قديم → نتجاهله بعد ساعة (نمسح القديم)
+        localStorage.removeItem('permanentlyDeletedOrders');
+        return new Set();
+      }
+      if (parsed?.ts && parsed?.ids) {
+        const ageMs = Date.now() - parsed.ts;
+        if (ageMs < 60 * 60 * 1000) { // ساعة واحدة
+          return new Set(parsed.ids);
+        }
+        // انتهت مدة الحماية → مسح
+        localStorage.removeItem('permanentlyDeletedOrders');
+      }
+      return new Set();
     } catch {
       return new Set();
     }
@@ -291,11 +307,30 @@ export const SuperProvider = ({ children }) => {
   const [permanentlyDeletedAiOrders] = useState(() => {
     try {
       const saved = localStorage.getItem('permanentlyDeletedAiOrders');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (Array.isArray(parsed)) {
+        localStorage.removeItem('permanentlyDeletedAiOrders');
+        return new Set();
+      }
+      if (parsed?.ts && parsed?.ids) {
+        const ageMs = Date.now() - parsed.ts;
+        if (ageMs < 60 * 60 * 1000) {
+          return new Set(parsed.ids);
+        }
+        localStorage.removeItem('permanentlyDeletedAiOrders');
+      }
+      return new Set();
     } catch {
       return new Set();
     }
   });
+  
+  // 🛡️ helper لحفظ Set في localStorage بالتنسيق الجديد مع timestamp
+  const persistDeletedSet = (key, set) => {
+    try {
+      localStorage.setItem(key, JSON.stringify({ ts: Date.now(), ids: [...set] }));
+    } catch {}
+  };
   
   // جلب البيانات الموحدة عند بدء التشغيل - مع تصفية employee_code
   const fetchAllData = useCallback(async () => {
@@ -369,7 +404,7 @@ export const SuperProvider = ({ children }) => {
           if (permanentlyDeletedOrders.has(order.id)) {
             // إعادة تأكيد الحذف النهائي
             try {
-              localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
+              persistDeletedSet('permanentlyDeletedOrders', permanentlyDeletedOrders);
             } catch {}
             return false;
           }
@@ -381,7 +416,7 @@ export const SuperProvider = ({ children }) => {
           if (permanentlyDeletedAiOrders.has(order.id)) {
             // إعادة تأكيد الحذف النهائي
             try {
-              localStorage.setItem('permanentlyDeletedAiOrders', JSON.stringify([...permanentlyDeletedAiOrders]));
+              persistDeletedSet('permanentlyDeletedAiOrders', permanentlyDeletedAiOrders);
             } catch {}
             return false;
           }
@@ -776,7 +811,7 @@ export const SuperProvider = ({ children }) => {
         if (orderId) {
           permanentlyDeletedOrders.add(orderId);
           try {
-            localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
+            persistDeletedSet('permanentlyDeletedOrders', permanentlyDeletedOrders);
           } catch {}
         }
         return; // لا إعادة جلب نهائياً للطلبات المحذوفة
@@ -896,9 +931,9 @@ export const SuperProvider = ({ children }) => {
         orders: prev.orders.filter(order => order.id !== id)
       }));
       
-      const deletedOrders = JSON.parse(localStorage.getItem('permanentlyDeletedOrders') || '[]');
-      deletedOrders.push(id);
-      localStorage.setItem('permanentlyDeletedOrders', JSON.stringify(deletedOrders));
+      // 🛡️ استخدام Set + persistDeletedSet للحفاظ على TTL ساعة
+      permanentlyDeletedOrders.add(id);
+      persistDeletedSet('permanentlyDeletedOrders', permanentlyDeletedOrders);
     };
 
     window.addEventListener('aiOrderCreated', handleAiOrderCreated);
@@ -1355,7 +1390,7 @@ export const SuperProvider = ({ children }) => {
         (orderIds || []).filter(id => id != null).forEach(id => permanentlyDeletedAiOrders.add(id));
         // حفظ في localStorage للحماية الدائمة
         try {
-          localStorage.setItem('permanentlyDeletedAiOrders', JSON.stringify([...permanentlyDeletedAiOrders]));
+          persistDeletedSet('permanentlyDeletedAiOrders', permanentlyDeletedAiOrders);
         } catch {}
         setAllData(prev => ({
           ...prev,
@@ -1390,7 +1425,7 @@ export const SuperProvider = ({ children }) => {
         (orderIds || []).filter(id => id != null).forEach(id => permanentlyDeletedOrders.add(id));
         // حفظ في localStorage للحماية الدائمة
         try {
-          localStorage.setItem('permanentlyDeletedOrders', JSON.stringify([...permanentlyDeletedOrders]));
+          persistDeletedSet('permanentlyDeletedOrders', permanentlyDeletedOrders);
         } catch {}
         setAllData(prev => ({
           ...prev,
