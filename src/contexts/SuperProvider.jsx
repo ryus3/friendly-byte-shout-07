@@ -279,11 +279,27 @@ export const SuperProvider = ({ children }) => {
     return variantLookupMap.get(variantId) || null;
   }, [variantLookupMap]);
   
-  // Set للطلبات المحذوفة نهائياً مع localStorage persistence
+  // Set للطلبات المحذوفة نهائياً - 🛡️ TTL: 1 ساعة فقط (وليس للأبد)
+  // هذا يمنع كارثة "الطلب المحذوف خطأ يبقى مخفياً للأبد بعد استعادته"
   const [permanentlyDeletedOrders] = useState(() => {
     try {
       const saved = localStorage.getItem('permanentlyDeletedOrders');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
+      const parsed = saved ? JSON.parse(saved) : null;
+      // ✅ دعم التنسيق القديم (array) والجديد ({ts, ids})
+      if (Array.isArray(parsed)) {
+        // تنسيق قديم → نتجاهله بعد ساعة (نمسح القديم)
+        localStorage.removeItem('permanentlyDeletedOrders');
+        return new Set();
+      }
+      if (parsed?.ts && parsed?.ids) {
+        const ageMs = Date.now() - parsed.ts;
+        if (ageMs < 60 * 60 * 1000) { // ساعة واحدة
+          return new Set(parsed.ids);
+        }
+        // انتهت مدة الحماية → مسح
+        localStorage.removeItem('permanentlyDeletedOrders');
+      }
+      return new Set();
     } catch {
       return new Set();
     }
@@ -291,11 +307,30 @@ export const SuperProvider = ({ children }) => {
   const [permanentlyDeletedAiOrders] = useState(() => {
     try {
       const saved = localStorage.getItem('permanentlyDeletedAiOrders');
-      return saved ? new Set(JSON.parse(saved)) : new Set();
+      const parsed = saved ? JSON.parse(saved) : null;
+      if (Array.isArray(parsed)) {
+        localStorage.removeItem('permanentlyDeletedAiOrders');
+        return new Set();
+      }
+      if (parsed?.ts && parsed?.ids) {
+        const ageMs = Date.now() - parsed.ts;
+        if (ageMs < 60 * 60 * 1000) {
+          return new Set(parsed.ids);
+        }
+        localStorage.removeItem('permanentlyDeletedAiOrders');
+      }
+      return new Set();
     } catch {
       return new Set();
     }
   });
+  
+  // 🛡️ helper لحفظ Set في localStorage بالتنسيق الجديد مع timestamp
+  const persistDeletedSet = (key, set) => {
+    try {
+      localStorage.setItem(key, JSON.stringify({ ts: Date.now(), ids: [...set] }));
+    } catch {}
+  };
   
   // جلب البيانات الموحدة عند بدء التشغيل - مع تصفية employee_code
   const fetchAllData = useCallback(async () => {
