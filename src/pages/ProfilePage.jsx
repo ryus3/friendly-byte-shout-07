@@ -50,7 +50,8 @@ const ProfilePage = () => {
     }
   }, [identifier, user]);
 
-  const fetchProfileData = async () => {
+  // 🛡️ retry logic لتجنب race condition عند تحميل الصفحة قبل اكتمال auth
+  const fetchProfileData = async (retryCount = 0) => {
     try {
       setLoading(true);
 
@@ -84,10 +85,20 @@ const ProfilePage = () => {
 
       if (profileError) {
         console.error('Profile fetch error:', profileError);
+        // 🛡️ retry on transient errors
+        if (retryCount < 2) {
+          await new Promise(r => setTimeout(r, 800 * (retryCount + 1)));
+          return fetchProfileData(retryCount + 1);
+        }
         throw profileError;
       }
 
       if (!profileData) {
+        // 🛡️ retry up to 3 times — قد يكون auth لم يكتمل بعد
+        if (retryCount < 3) {
+          await new Promise(r => setTimeout(r, 600 * (retryCount + 1)));
+          return fetchProfileData(retryCount + 1);
+        }
         toast({
           title: 'خطأ',
           description: 'لم يتم العثور على الملف الشخصي',
