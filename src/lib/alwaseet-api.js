@@ -436,13 +436,23 @@ export const receiveInvoice = async (token, invoiceId) => {
 };
 
 // ✅ Get specific order by QR/tracking number - استخدام bulk API بدلاً من merchant-orders
+// 🛡️ CRITICAL SAFETY: تُرجع كائناً مفصّلاً يميّز بين "غير موجود فعلاً" و "خطأ API"
+// لمنع الحذف الكارثي للطلبات بسبب فشل الاتصال أو حظر Cloudflare
 export const getOrderByQR = async (token, qrId) => {
   try {
     // ✅ استخدام getOrdersByIdsBulk بدلاً من جلب كل الطلبات
     // هذا يرسل استدعاء واحد فقط بـ ID محدد بدلاً من جلب آلاف الطلبات
     const orders = await getOrdersByIdsBulk(token, [qrId]);
     
-    if (!orders || !Array.isArray(orders) || orders.length === 0) {
+    if (!orders || !Array.isArray(orders)) {
+      // 🛡️ استجابة غير متوقعة من API - لا نعتبرها "غير موجود"
+      const err = new Error('Unexpected API response shape');
+      err.isApiError = true;
+      throw err;
+    }
+    
+    if (orders.length === 0) {
+      // ✅ API استجاب بنجاح برد فارغ = الطلب غير موجود فعلاً
       return null;
     }
     
@@ -457,18 +467,26 @@ export const getOrderByQR = async (token, qrId) => {
     
     return found;
   } catch (error) {
-    // ✅ معالجة هادئة للأخطاء - خاصة أخطاء الشبكة
+    // 🛡️ كل الأخطاء (شبكة، CF blocked، 5xx) تُرفع للأعلى
+    // المستدعي يجب أن يميّز بين null (غير موجود) و throw (خطأ غير مؤكد)
     const isNetworkError = error.message?.includes('Failed to fetch') || 
-                          error.message?.includes('Network');
+                          error.message?.includes('Network') ||
+                          error.message?.includes('ECONNREFUSED');
+    const isCfBlocked = error.isCloudflareBlock || error.message?.includes('CF_BLOCKED');
     
     if (isNetworkError) {
-      // تسجيل واحد هادئ بدون spam
       console.warn(`⚠️ getOrderByQR: API خارجي غير متاح (${qrId})`);
+      error.isNetworkError = true;
+    } else if (isCfBlocked) {
+      console.warn(`🛑 getOrderByQR: Cloudflare حظر الطلب (${qrId})`);
+      error.isCloudflareBlock = true;
     } else {
       console.warn(`⚠️ getOrderByQR failed for ${qrId}:`, error.message);
     }
     
-    return null;
+    // 🛡️ قاعدة ذهبية: الخطأ != غير موجود — أعد رفع الخطأ
+    error.isApiError = true;
+    throw error;
   }
 };
 

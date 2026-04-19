@@ -3779,6 +3779,45 @@ export type Database = {
           },
         ]
       }
+      order_deletion_attempts: {
+        Row: {
+          api_response_status: string | null
+          attempt_reason: string
+          attempted_by: string | null
+          block_reason: string | null
+          blocked_by_safety: boolean | null
+          created_at: string | null
+          id: string
+          order_id: string | null
+          order_number: string | null
+          tracking_number: string | null
+        }
+        Insert: {
+          api_response_status?: string | null
+          attempt_reason: string
+          attempted_by?: string | null
+          block_reason?: string | null
+          blocked_by_safety?: boolean | null
+          created_at?: string | null
+          id?: string
+          order_id?: string | null
+          order_number?: string | null
+          tracking_number?: string | null
+        }
+        Update: {
+          api_response_status?: string | null
+          attempt_reason?: string
+          attempted_by?: string | null
+          block_reason?: string | null
+          blocked_by_safety?: boolean | null
+          created_at?: string | null
+          id?: string
+          order_id?: string | null
+          order_number?: string | null
+          tracking_number?: string | null
+        }
+        Relationships: []
+      }
       order_discounts: {
         Row: {
           affects_employee_profit: boolean | null
