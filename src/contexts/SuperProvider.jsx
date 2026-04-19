@@ -931,9 +931,9 @@ export const SuperProvider = ({ children }) => {
         orders: prev.orders.filter(order => order.id !== id)
       }));
       
-      const deletedOrders = JSON.parse(localStorage.getItem('permanentlyDeletedOrders') || '[]');
-      deletedOrders.push(id);
-      localStorage.setItem('permanentlyDeletedOrders', JSON.stringify(deletedOrders));
+      // 🛡️ استخدام Set + persistDeletedSet للحفاظ على TTL ساعة
+      permanentlyDeletedOrders.add(id);
+      persistDeletedSet('permanentlyDeletedOrders', permanentlyDeletedOrders);
     };
 
     window.addEventListener('aiOrderCreated', handleAiOrderCreated);
