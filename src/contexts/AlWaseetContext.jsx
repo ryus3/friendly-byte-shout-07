@@ -3697,22 +3697,23 @@ export const AlWaseetProvider = ({ children }) => {
       devLog.log(`🔑 استخدام توكن من: ${tokenSource} للطلب ${qrId}`);
 
       // البحث المتقدم بجميع التوكنات المتاحة لمالك الطلب قبل اعتبار الطلب محذوف
+      // 🛡️ يُرجع: { found: order|null, hadApiError: bool, accountsChecked: number }
       const checkOrderWithAllTokens = async (orderId) => {
         const orderOwnerId = localOrder?.created_by;
-        if (!orderOwnerId) return null;
+        if (!orderOwnerId) return { found: null, hadApiError: true, accountsChecked: 0 };
         const partner = localOrder?.delivery_partner || 'alwaseet';
-        // جلب جميع حسابات مالك الطلب
         const ownerAccounts = await getUserDeliveryAccounts(orderOwnerId, partner);
         
-        // ✅ حماية: لا تحذف إذا لم يوجد توكن صالح
         if (ownerAccounts.length === 0) {
           devLog.warn(`⛔ إيقاف الحذف التلقائي للطلب ${orderId} - لا يوجد توكن صالح للتحقق`);
-          return { noValidToken: true }; // إرجاع كائن خاص يمنع الحذف
+          return { found: null, hadApiError: true, noValidToken: true, accountsChecked: 0 };
         }
         
         devLog.log(`🔍 فحص الطلب ${orderId} بجميع التوكنات (${ownerAccounts.length} حساب)`);
         
-        // تجربة كل توكن
+        let hadApiError = false;
+        let successfulChecks = 0;
+        
         for (const account of ownerAccounts) {
           if (!account.token) continue;
           
@@ -3727,66 +3728,119 @@ export const AlWaseetProvider = ({ children }) => {
             } else {
               foundOrder = await AlWaseetAPI.getOrderByQR(account.token, orderId);
             }
+            successfulChecks++;
             if (foundOrder) {
               devLog.log(`✅ وُجد الطلب ${orderId} بحساب: ${account.account_username}`);
-              return foundOrder;
+              return { found: foundOrder, hadApiError: false, accountsChecked: successfulChecks };
             }
           } catch (error) {
-            devLog.warn(`⚠️ فشل البحث بحساب ${account.account_username}:`, error.message);
+            // 🛡️ خطأ API = لا يمكن التأكد من عدم الوجود → نمنع الحذف
+            hadApiError = true;
+            devLog.warn(`⛔ فشل API بحساب ${account.account_username}:`, error.message);
           }
         }
         
-        devLog.log(`❌ الطلب ${orderId} غير موجود في جميع حسابات المالك (${ownerAccounts.length} حساب)`);
-        return null;
+        if (hadApiError && successfulChecks === 0) {
+          devLog.error(`🛑 جميع التوكنات فشلت بـ API errors للطلب ${orderId} — لن يُحذف!`);
+          return { found: null, hadApiError: true, accountsChecked: 0 };
+        }
+        
+        devLog.log(`❌ الطلب ${orderId} غير موجود في ${successfulChecks} حساب من حسابات المالك (hadApiError: ${hadApiError})`);
+        return { found: null, hadApiError, accountsChecked: successfulChecks };
       };
 
       // ✅ جلب الطلب من الشريك المناسب باستخدام التوكن المناسب
       let remoteOrder;
-      if (isModonOrder) {
-        devLog.log(`🔄 جلب طلب مدن ${qrId}...`);
-        const modonOrders = await ModonAPI.getMerchantOrders(effectiveToken);
-        remoteOrder = modonOrders.find(o => 
-          String(o.qr_id) === String(qrId) || String(o.id) === String(qrId) || String(o.tracking_number) === String(qrId)
-        );
-        if (remoteOrder) {
-          devLog.log(`✅ وُجد طلب مدن ${qrId}:`, { id: remoteOrder.id, status_id: remoteOrder.status_id });
+      let initialFetchHadError = false;
+      try {
+        if (isModonOrder) {
+          devLog.log(`🔄 جلب طلب مدن ${qrId}...`);
+          const modonOrders = await ModonAPI.getMerchantOrders(effectiveToken);
+          remoteOrder = modonOrders.find(o => 
+            String(o.qr_id) === String(qrId) || String(o.id) === String(qrId) || String(o.tracking_number) === String(qrId)
+          );
+          if (remoteOrder) {
+            devLog.log(`✅ وُجد طلب مدن ${qrId}:`, { id: remoteOrder.id, status_id: remoteOrder.status_id });
+          }
+        } else {
+          remoteOrder = await AlWaseetAPI.getOrderByQR(effectiveToken, qrId);
         }
-      } else {
-        remoteOrder = await AlWaseetAPI.getOrderByQR(effectiveToken, qrId);
+      } catch (e) {
+        initialFetchHadError = true;
+        devLog.warn(`⛔ فشل الجلب الأولي للطلب ${qrId}:`, e.message);
+        remoteOrder = null;
       }
       
       if (!remoteOrder) {
-        devLog.warn(`❌ لم يتم العثور على الطلب ${qrId} بالتوكن الأولي (${tokenSource})`);
+        devLog.warn(`❌ لم يتم العثور على الطلب ${qrId} (initialError: ${initialFetchHadError})`);
         
         devLog.log(`🔍 بدء الفحص المتقدم بجميع التوكنات للطلب ${qrId}...`);
-        remoteOrder = await checkOrderWithAllTokens(qrId);
+        const advancedCheck = await checkOrderWithAllTokens(qrId);
+        remoteOrder = advancedCheck.found;
         
         if (!remoteOrder) {
-          devLog.warn(`❌ تأكيد: الطلب ${qrId} غير موجود في جميع الحسابات`);
+          // 🛡️ الحماية الحاسمة: لا نحذف إذا حدث أي خطأ API
+          if (advancedCheck.hadApiError || advancedCheck.accountsChecked === 0 || initialFetchHadError) {
+            devLog.error(`🛑 [حماية] الطلب ${qrId} لن يُحذف — حدث خطأ API`);
+            try {
+              await supabase.from('order_deletion_attempts').insert({
+                order_id: localOrder?.id,
+                order_number: localOrder?.order_number,
+                tracking_number: localOrder?.tracking_number || qrId,
+                attempt_reason: 'sync check returned no result',
+                api_response_status: advancedCheck.noValidToken ? 'no_valid_token' : 'api_error',
+                blocked_by_safety: true,
+                block_reason: `API errors — refused to delete. checks=${advancedCheck.accountsChecked}, initialError=${initialFetchHadError}`,
+                attempted_by: user?.id
+              });
+            } catch {}
+            return null;
+          }
+          
+          devLog.warn(`❌ تأكيد: الطلب ${qrId} غير موجود في ${advancedCheck.accountsChecked} حساب (نظيف بدون أخطاء)`);
           
           if (localOrder && canAutoDeleteOrder(localOrder, user)) {
-            devLog.log(`⚠️ التحقق من حذف الطلب ${qrId} - مؤكد عدم وجوده في جميع الحسابات`);
+            devLog.log(`⚠️ التحقق النهائي قبل حذف الطلب ${qrId} (انتظار 30 ثانية)`);
             
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // ⏱️ انتظار 30 ثانية للتأكد من استقرار API
+            await new Promise(resolve => setTimeout(resolve, 30000));
             const finalCheck = await checkOrderWithAllTokens(qrId);
             
-            if (!finalCheck) {
-              devLog.log(`🗑️ تأكيد نهائي: حذف الطلب ${qrId} - غير موجود في جميع حسابات المالك`);
+            // 🛡️ الفحص النهائي يجب أن يكون نظيفاً تماماً
+            if (finalCheck.hadApiError || finalCheck.accountsChecked === 0) {
+              devLog.error(`🛑 [حماية] الفحص النهائي للطلب ${qrId} فشل — لن يُحذف`);
+              try {
+                await supabase.from('order_deletion_attempts').insert({
+                  order_id: localOrder.id,
+                  order_number: localOrder.order_number,
+                  tracking_number: localOrder.tracking_number || qrId,
+                  attempt_reason: 'final check failed',
+                  api_response_status: 'api_error_final',
+                  blocked_by_safety: true,
+                  block_reason: `Final check had API errors — refused to delete`,
+                  attempted_by: user?.id
+                });
+              } catch {}
+              return null;
+            }
+            
+            if (!finalCheck.found) {
+              devLog.log(`🗑️ تأكيد نهائي قاطع: حذف الطلب ${qrId}`);
               const deleteResult = await performAutoDelete(localOrder);
               if (deleteResult) {
                 return { 
                   ...deleteResult, 
                   autoDeleted: true,
-                  apiConfirmedNotFound: true, // 🛡️ تأكيد قاطع: API استجاب وأكد عدم وجود الطلب في جميع الحسابات (مع double-check)
-                  message: `تم حذف الطلب ${localOrder.tracking_number || qrId} تلقائياً - مؤكد عدم وجوده في جميع حسابات ${partnerDisplayName}`
+                  apiConfirmedNotFound: true,
+                  message: `تم حذف الطلب ${localOrder.tracking_number || qrId} تلقائياً - مؤكد عدم وجوده`
                 };
               }
             } else {
               devLog.log(`✅ الطلب ${qrId} موجود فعلياً بعد الفحص النهائي - لن يُحذف`);
-              remoteOrder = finalCheck;
+              remoteOrder = finalCheck.found;
             }
           } else {
-            devLog.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي أو لا يملكه المستخدم الحالي`);
+            devLog.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي`);
           }
           
           if (!remoteOrder) {
