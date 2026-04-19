@@ -192,58 +192,74 @@ const DepartmentManagerSettingsPage = () => {
     fetchDepartments();
   }, [user, supervisedEmployeeIds, allSystemProducts]);
 
-  // جلب قواعد الأرباح للموظفين تحت الإشراف
+  // جلب قواعد الأرباح للموظفين تحت الإشراف + Realtime
+  const fetchProfitRules = React.useCallback(async () => {
+    if (!isDepartmentManager || supervisedEmployeeIds.length === 0) {
+      console.log('⚠️ [ProfitRules] تخطي الجلب:', { isDepartmentManager, supervisedCount: supervisedEmployeeIds.length });
+      setProfitRules([]);
+      return;
+    }
+    
+    console.log('🔄 [ProfitRules] جلب القواعد لـ', supervisedEmployeeIds.length, 'موظف:', supervisedEmployeeIds);
+    
+    const { data, error } = await supabase
+      .from('employee_profit_rules')
+      .select(`
+        *,
+        employee:profiles!employee_id(full_name, employee_code)
+      `)
+      .in('employee_id', supervisedEmployeeIds)
+      .eq('is_active', true);
+    
+    if (error) {
+      console.error('❌ [ProfitRules] خطأ في الجلب:', error);
+      return;
+    }
+    
+    console.log('✅ [ProfitRules] تم جلب', data?.length || 0, 'قاعدة');
+    
+    if (data) {
+      const productTargetIds = data
+        .filter(r => r.rule_type === 'product' && r.target_id && r.target_id !== 'default')
+        .map(r => r.target_id);
+      
+      let productsMap = {};
+      if (productTargetIds.length > 0) {
+        const { data: productsData } = await supabase
+          .from('products')
+          .select('id, name')
+          .in('id', productTargetIds);
+        productsData?.forEach(p => { productsMap[p.id] = p; });
+      }
+      
+      const enrichedRules = data.map(r => ({
+        ...r,
+        product: productsMap[r.target_id] || null
+      }));
+      
+      setProfitRules(enrichedRules);
+    }
+  }, [isDepartmentManager, supervisedEmployeeIds]);
+  
   useEffect(() => {
-    const fetchProfitRules = async () => {
-      if (!isDepartmentManager || supervisedEmployeeIds.length === 0) {
-        console.log('⚠️ [ProfitRules] تخطي الجلب:', { isDepartmentManager, supervisedCount: supervisedEmployeeIds.length });
-        return;
-      }
-      
-      console.log('🔄 [ProfitRules] جلب القواعد لـ', supervisedEmployeeIds.length, 'موظف:', supervisedEmployeeIds);
-      
-      // جلب القواعد - تشمل قواعد المدير العام أيضاً (بغض النظر عن created_by)
-      const { data, error } = await supabase
-        .from('employee_profit_rules')
-        .select(`
-          *,
-          employee:profiles!employee_id(full_name, employee_code)
-        `)
-        .in('employee_id', supervisedEmployeeIds);
-      
-      if (error) {
-        console.error('❌ [ProfitRules] خطأ في الجلب:', error);
-        return;
-      }
-      
-      console.log('✅ [ProfitRules] تم جلب', data?.length || 0, 'قاعدة');
-      
-      if (data) {
-        // جلب أسماء المنتجات يدوياً للقواعد التي لها target_id منتج
-        const productTargetIds = data
-          .filter(r => r.rule_type === 'product' && r.target_id && r.target_id !== 'default')
-          .map(r => r.target_id);
-        
-        let productsMap = {};
-        if (productTargetIds.length > 0) {
-          const { data: productsData } = await supabase
-            .from('products')
-            .select('id, name')
-            .in('id', productTargetIds);
-          productsData?.forEach(p => { productsMap[p.id] = p; });
-        }
-        
-        // دمج أسماء المنتجات مع القواعد
-        const enrichedRules = data.map(r => ({
-          ...r,
-          product: productsMap[r.target_id] || null
-        }));
-        
-        setProfitRules(enrichedRules);
-      }
-    };
     fetchProfitRules();
-  }, [isDepartmentManager, supervisedEmployeeIds, user?.id, user?.user_id]);
+  }, [fetchProfitRules]);
+  
+  // 🔄 Realtime: تحديث القواعد فور أي تغيير
+  useEffect(() => {
+    if (!isDepartmentManager || supervisedEmployeeIds.length === 0) return;
+    const channel = supabase
+      .channel('dept-mgr-profit-rules')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_profit_rules' }, (payload) => {
+        const row = payload.new || payload.old;
+        if (row?.employee_id && supervisedEmployeeIds.includes(row.employee_id)) {
+          console.log('🔄 [ProfitRules Realtime] تغيير مكتشف، إعادة الجلب');
+          fetchProfitRules();
+        }
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [isDepartmentManager, supervisedEmployeeIds, fetchProfitRules]);
 
   // جلب إحصائيات القسم
   useEffect(() => {
