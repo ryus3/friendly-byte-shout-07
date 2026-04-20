@@ -40,7 +40,9 @@ import {
   Store,
   ExternalLink,
   LayoutGrid,
-  List
+  List,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 const DepartmentManagerSettingsPage = () => {
