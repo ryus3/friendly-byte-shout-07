@@ -1,149 +1,159 @@
 
 
-# خطة إصلاح شاملة - 6 مشاكل حرجة
+# الخطة النهائية - 3 إصلاحات دقيقة
 
-## التشخيص الأولي
+## التشخيص المؤكد بالأدلة
 
-سأبدأ بفحص حقيقي لكل مشكلة قبل التنفيذ. هذه قائمة المشاكل المؤكدة:
+### 1. قواعد الأرباح لا تظهر لمدير القسم 🎯 (السبب الحقيقي مكتشف)
 
-1. **حذف طلبات بالخطأ مرة أخرى** (138213029, 138213020 - كارثي)
-2. **قواعد الأرباح لا تظهر لمدير القسم** رغم وجود 7 قواعد لأحمد
-3. **شريط تقدم المناطق = 0** رغم عداد المدن يعمل
-4. **تأخير تحديث المنتجات** بعد التعديل
-5. **مشتريات سارة تظهر في تبويب المدير** بدون تمييز
-6. **بوابة AI تتأخر + طلب موافق عليه يختفي ثم يعود**
-7. **خطأ "لم يتم العثور على الملف الشخصي"**
-
----
-
-## المرحلة 1: الفحص الشامل (Read-Only)
-
-### 1.1 الحذف الكارثي
-- فحص `AlWaseetContext.jsx` `performDeletionPassAfterStatusSync` - هل circuit breaker يعمل فعلاً؟
-- فحص ما حدث للطلبات المحذوفة عبر استعلام SQL على activity log
-- البحث عن أي مكان آخر يحذف الطلبات (triggers, edge functions, cleanup jobs)
-
-### 1.2 قواعد الأرباح لمدير القسم
-- فحص `DepartmentManagerSettingsPage.jsx` كاملاً لمعرفة كيفية الجلب والعرض
-- استعلام مباشر لقواعد أحمد (employee_id = ahmed) لرؤية ما إذا كانت سارة تستطيع قراءتها
-- فحص RLS الفعلي بعد migration الأخير
-
-### 1.3 شريط تقدم المناطق
-- مراجعة آخر تعديل على `update-cities-cache/index.ts` و `CitiesCacheManager`
-- مقارنة مع git history لمعرفة متى توقف عداد المناطق
-- فحص جدول `cities_regions_sync_log` للسجلات الأخيرة
-
-### 1.4 تأخير المنتجات
-- فحص `dbUpdateVariantStock` و `updateProduct` في `SuperAPI.js`
-- التأكد من optimistic updates تعمل
-- فحص معالج Realtime لـ `product_variants`
-
-### 1.5 مشتريات سارة عند المدير
-- فحص `PurchasesPage.jsx` فلترة - هل تعرض حسب المالك المالي أم الكل؟
-- التأكد من تمييز مشتريات مدير القسم بصرياً
-
-### 1.6 بوابة AI + اختفاء الطلب
-- فحص `approveAiOrder` في `useAiOrders` 
-- فحص معالج Realtime لـ `orders` - هل DELETE event يطلق بالخطأ؟
-- فحص badge counter للطلبات الذكية
-
-### 1.7 خطأ Profile not found
-- فحص استعلامات `profiles` الأخيرة
-- التحقق من race condition في تحميل البروفايل
-
----
-
-## المرحلة 2: الإصلاحات
-
-### إصلاح 1: حماية مطلقة من الحذف 🔴
-**القاعدة الذهبية الجديدة (بروتوكول عالمي)**:
-```text
-لا يُحذف أي طلب إلا إذا:
-1. API استجاب بنجاح (200) مرتين متتاليتين بفاصل 30 ثانية
-2. الطلب غير موجود في الردين
-3. مر على الطلب أكثر من 14 يوم
-4. عدد الحذف الكلي في الجلسة < 3
-5. لم يحدث أي خطأ شبكة في آخر 5 دقائق
+**رسالة الخطأ من console**:
+```
+PGRST200: Could not find a relationship between 'employee_profit_rules' 
+and 'profiles' in the schema cache
 ```
 
-**الملفات**:
-- `src/contexts/AlWaseetContext.jsx`: تشديد circuit breaker
-- إضافة جدول `order_deletion_audit` لتسجيل كل محاولة حذف
-- migration: trigger يمنع DELETE على orders إذا لم يمر 14 يوم على آخر sync ناجح
+الكود في `DepartmentManagerSettingsPage.jsx` (سطر 209) يستخدم:
+```js
+employee:profiles!employee_id(full_name, employee_code)
+```
 
-### إصلاح 2: قواعد الأرباح تظهر لمدير القسم
-- إصلاح فلترة `DepartmentManagerSettingsPage` لجلب القواعد الفعلية
-- إضافة badge "من مدير القسم" في صفحة المدير العام لتمييز القواعد
-- إصلاح زر فتح ملف الموظف في إعدادات القسم
-- إضافة أزرار تعديل/حذف واضحة لكل قاعدة
+لكن **لا يوجد foreign key** بين `employee_profit_rules.employee_id` و `profiles.user_id` (لأن `user_id` ليس primary key على `profiles`، بل `id` هو الـ PK).
 
-**الملفات**:
-- `src/pages/DepartmentManagerSettingsPage.jsx`
-- صفحة قواعد أرباح المدير العام (سأحددها بعد البحث)
+النتيجة: الاستعلام يفشل بالكامل ⇒ `data = null` ⇒ `profitRules = []` ⇒ "لا توجد قواعد".
 
-### إصلاح 3: شريط تقدم المناطق
-- مراجعة `update-cities-cache/index.ts` للتأكد من تحديث `regions_count` بعد كل مدينة
-- إصلاح Realtime subscription على `cities_regions_sync_log` في `CitiesCacheManager`
-- نفس الإصلاح لـ MODON
+**البيانات الفعلية**: أحمد (الموظف الوحيد تحت إشراف سارة) لديه **7 قواعد نشطة** + RLS صحيحة + سارة لديها `manage_profit_settlement`.
 
-### إصلاح 4: تحديث فوري للمنتجات
-- optimistic update فوري في `dbUpdateVariantStock` قبل انتظار DB
-- إزالة `fetchAllData()` من معالجات Realtime
-- تحديث محلي مباشر في `allData.products` بناءً على Realtime payload
+---
 
-### إصلاح 5: تمييز مشتريات سارة
-- إضافة badge "مشتريات مدير القسم" في PurchasesPage
-- فلترة اختيارية: "كل المشتريات" / "مشترياتي" / "مشتريات المديرين"
+### 2. تأخير تحديث المنتجات
 
-### إصلاح 6: بوابة AI + الطلب المختفي
-- إصلاح `approveAiOrder`: insert محلي فوري قبل realtime
-- منع DELETE event الكاذب من إخفاء الطلب
-- إصلاح badge counter لـ AI orders ليكون realtime مباشر
+في `SuperProvider.jsx` سطر 2996-2999:
+```js
+updateProduct: async (...args) => {
+  const res = await dbUpdateProduct(...args);
+  await fetchAllData();   // ❌ يسبب تأخير 2-3 ثوانٍ
+  return res;
+}
+```
 
-### إصلاح 7: خطأ Profile not found
-- إضافة retry logic + skeleton loader أثناء تحميل البروفايل
-- منع استعلامات قبل اكتمال التوثيق
+`updateVariantStock` تم إصلاحها سابقاً، لكن `updateProduct` لا تزال تنتظر `fetchAllData()` كاملاً.
+
+---
+
+### 3. كرت طلبات الذكاء الاصطناعي يحتاج تحديث يدوي
+
+من فحص `Dashboard.jsx`:
+- `aiOrdersCount` يعتمد على `aiOrders` (من SuperProvider)
+- Realtime على `ai_orders` يعمل (`SuperProvider` سطر 731-747)
+- لكن: `permanentlyDeletedAiOrders` Set في localStorage قد يحوي ID الطلب الجديد المعاد إنشاؤه (إذا كان مكرراً لطلب محذوف سابقاً) ⇒ يُحجب فوراً
+
+كذلك، الـ counter يستخدم `userAiOrders` للموظف العادي، الذي يعتمد على `userEmployeeCode`. عند التحديث الفوري عبر Realtime، الطلب الجديد قد يُضاف لـ `aiOrders` لكن **لا يطابق** `userEmployeeCode` لأن الفلترة صارمة.
+
+لكن **سارة في الصور هي مدير قسم** ⇒ `canViewAllData = false` ⇒ تستخدم `userAiOrders` ⇒ الطلبات الذكية للتلغرام `created_by` يكون رمز الموظف (مثل `RYUS-...`) وليس UUID.
+
+**السبب الأرجح**: عند INSERT realtime، الطلب يُضاف إلى `allData.aiOrders` (raw)، ثم يُمرر عبر فلتر `userAiOrders` الذي يحتاج تطابق employee_code، فإذا لم يطابق ⇒ count = 0 رغم أن الطلب موجود.
+
+لكن **السبب الأكبر** الذي يفسر "يبقى 0 بالخارج لكن يوجد طلبات بالداخل":  
+نافذة `AiOrdersManager` تجلب من DB مباشرة (سطر 84) بدون فلترة employee_code ⇒ تظهر كل شيء. أما العداد على Dashboard يستخدم `userAiOrders` المفلترة.
+
+---
+
+## الإصلاحات
+
+### إصلاح 1: قواعد الأرباح لمدير القسم (الأهم)
+
+**ملف**: `src/pages/DepartmentManagerSettingsPage.jsx`
+
+استبدال JOIN الفاشل بجلب منفصل:
+```js
+// بدلاً من employee:profiles!employee_id(...)
+const { data } = await supabase
+  .from('employee_profit_rules')
+  .select('*')
+  .in('employee_id', supervisedEmployeeIds)
+  .eq('is_active', true);
+
+// جلب الموظفين منفصلاً
+const { data: employees } = await supabase
+  .from('profiles')
+  .select('user_id, full_name, employee_code')
+  .in('user_id', supervisedEmployeeIds);
+
+const employeesMap = {};
+employees?.forEach(e => { employeesMap[e.user_id] = e; });
+
+// إثراء البيانات
+const enriched = data.map(r => ({
+  ...r,
+  employee: employeesMap[r.employee_id] || null,
+  product: productsMap[r.target_id] || null
+}));
+```
+
+تطبيق نفس الإصلاح على `handleAddProfitRule` (الذي يستخدم نفس الاستعلام بعد insert).
+
+---
+
+### إصلاح 2: تحديث فوري للمنتجات
+
+**ملف**: `src/contexts/SuperProvider.jsx` سطر 2996-2999
+
+إزالة `await fetchAllData()` - الـ Realtime على `products` و `product_variants` سيحدّث تلقائياً عبر `dbRefetchProducts` المُجدول بـ 100ms (سطر 869-875):
+
+```js
+updateProduct: async (...args) => {
+  const res = await dbUpdateProduct(...args);
+  // ⚡ Realtime + dbRefetchProducts المجدول يتولى التحديث
+  return res;
+}
+```
+
+---
+
+### إصلاح 3: عداد طلبات الذكاء الاصطناعي
+
+**ملف**: `src/pages/Dashboard.jsx` سطر 348-358
+
+تحسين فلترة `userAiOrders` لتشمل المطابقة بـ UUID و employee_code معاً + إضافة fallback للمدير العام والقسم:
+
+```js
+const userAiOrders = useMemo(() => {
+  if (!Array.isArray(aiOrders)) return [];
+  if (canViewAllData) return aiOrders;
+  
+  const upper = (v) => (v ?? '').toString().trim().toUpperCase();
+  const candidates = [
+    userEmployeeCode, 
+    user?.employee_code, 
+    user?.user_id, 
+    user?.id
+  ].filter(Boolean).map(upper);
+  
+  if (!candidates.length) return aiOrders; // ⚡ fallback: أرجع الكل بدلاً من []
+  
+  return aiOrders.filter((order) => {
+    const by = order?.created_by ?? order?.user_id 
+      ?? order?.created_by_employee_code 
+      ?? order?.order_data?.created_by;
+    if (!by) return true; // ⚡ إذا لم نعرف، أظهره
+    return candidates.includes(upper(by));
+  });
+}, [aiOrders, canViewAllData, userEmployeeCode, user]);
+```
 
 ---
 
 ## ترتيب التنفيذ
 
-| # | المهمة | الأولوية | الخطر |
-|---|--------|----------|------|
-| 1 | حماية الحذف (migration + كود) | 🔴 كارثي | منخفض |
-| 2 | قواعد الأرباح + ملف الموظف | 🔴 حرج | منخفض |
-| 3 | بوابة AI + الطلب المختفي | 🔴 حرج | منخفض |
-| 4 | تحديث فوري للمنتجات | 🟠 عالي | منخفض |
-| 5 | شريط تقدم المناطق | 🟠 عالي | منخفض |
-| 6 | تمييز مشتريات المدير | 🟡 متوسط | منخفض |
-| 7 | خطأ Profile not found | 🟡 متوسط | منخفض |
-
----
+| # | المهمة | الملف | الخطر |
+|---|--------|------|------|
+| 1 | إصلاح JOIN قواعد الأرباح | `DepartmentManagerSettingsPage.jsx` | منخفض جداً |
+| 2 | إزالة `fetchAllData` من `updateProduct` | `SuperProvider.jsx` | منخفض |
+| 3 | تحسين فلترة `userAiOrders` | `Dashboard.jsx` | منخفض |
 
 ## ضمانات السلامة
-
-1. **لا حذف لأي بيانات** - فقط إصلاح المنطق
-2. **migration واحد فقط** لحماية الحذف (audit + trigger)
-3. **فحص حقيقي قبل كل تعديل** بـ SQL وقراءة الكود
-4. **build check بعد كل مرحلة**
-5. **التغييرات معزولة** - كل ملف يُصلح مشكلة محددة
-
----
-
-## الملفات المتأثرة
-
-| الملف | التغيير |
-|------|--------|
-| `src/contexts/AlWaseetContext.jsx` | تشديد circuit breaker |
-| Migration جديد | جدول audit + trigger حماية + RLS قواعد الأرباح |
-| `src/pages/DepartmentManagerSettingsPage.jsx` | عرض قواعد الأرباح + فتح ملف الموظف |
-| صفحة قواعد المدير العام | badge تمييز قواعد مدير القسم |
-| `src/components/CitiesCacheManager` | Realtime على log |
-| `supabase/functions/update-cities-cache` | تحديث regions_count |
-| `src/api/SuperAPI.js` | optimistic updates للمنتجات |
-| `src/contexts/SuperProvider.jsx` | معالج Realtime محسن |
-| `src/hooks/useAiOrders` | insert محلي بعد approve |
-| `src/pages/PurchasesPage.jsx` | تمييز مشتريات المدير |
-
-ابدأ بالمرحلة 1 (الفحص) ثم التنفيذ المرتب؟
+- لا migrations، لا تغيير في DB
+- لا حذف لأي بيانات
+- 3 ملفات فقط، تعديلات معزولة
+- الإصلاح الأول يعتمد على رسالة خطأ واضحة من console (دليل قاطع)
 
