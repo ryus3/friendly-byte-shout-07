@@ -238,15 +238,18 @@ const DepartmentManagerSettingsPage = () => {
         productsData?.forEach(p => { productsMap[p.id] = p; });
       }
       
+      const managerUUID = user?.user_id || user?.id;
       const enrichedRules = data.map(r => ({
         ...r,
         employee: employeesMap[r.employee_id] || null,
-        product: productsMap[r.target_id] || null
+        product: productsMap[r.target_id] || null,
+        // ✅ القاعدة من مدير القسم نفسه؟ (قابلة للتعديل/الحذف)
+        is_own_rule: !!managerUUID && r.created_by === managerUUID
       }));
       
       setProfitRules(enrichedRules);
     }
-  }, [isDepartmentManager, supervisedEmployeeIds]);
+  }, [isDepartmentManager, supervisedEmployeeIds, user]);
   
   useEffect(() => {
     fetchProfitRules();
@@ -385,10 +388,12 @@ const DepartmentManagerSettingsPage = () => {
             .in('id', productTargetIds);
           productsData?.forEach(p => { productsMap[p.id] = p; });
         }
+        const managerUUID = user?.user_id || user?.id;
         setProfitRules(data.map(r => ({
           ...r,
           employee: employeesMap[r.employee_id] || null,
-          product: productsMap[r.target_id] || null
+          product: productsMap[r.target_id] || null,
+          is_own_rule: !!managerUUID && r.created_by === managerUUID
         })));
       }
     } catch (error) {
@@ -894,14 +899,22 @@ const DepartmentManagerSettingsPage = () => {
                     profitRules.map((rule) => (
                       <div 
                         key={rule.id} 
-                        className="flex items-center justify-between p-4 border rounded-lg bg-card"
+                        className={`flex items-center justify-between p-4 border rounded-lg ${rule.is_own_rule ? 'bg-card' : 'bg-muted/40 border-dashed'}`}
                       >
                         <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-emerald-400 flex items-center justify-center text-white">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${rule.is_own_rule ? 'bg-gradient-to-br from-green-500 to-emerald-400' : 'bg-gradient-to-br from-slate-400 to-slate-500'}`}>
                             <DollarSign className="w-5 h-5" />
                           </div>
                           <div>
-                            <p className="font-semibold">{rule.employee?.full_name || 'موظف'}</p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <p className="font-semibold">{rule.employee?.full_name || 'موظف'}</p>
+                              {!rule.is_own_rule && (
+                                <Badge variant="secondary" className="text-[10px] gap-1">
+                                  <Shield className="w-3 h-3" />
+                                  من المدير العام
+                                </Badge>
+                              )}
+                            </div>
                             <p className="text-sm text-muted-foreground">
                               {rule.product?.name || 'كل المنتجات'} - {rule.profit_percentage === 100 
                                 ? <Badge className="bg-emerald-500 text-white">كامل الربح</Badge>
@@ -909,13 +922,21 @@ const DepartmentManagerSettingsPage = () => {
                             </p>
                           </div>
                         </div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleDeleteRule(rule.id)}
-                        >
-                          <Trash2 className="w-4 h-4 text-destructive" />
-                        </Button>
+                        {rule.is_own_rule ? (
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            onClick={() => handleDeleteRule(rule.id)}
+                            title="حذف القاعدة"
+                          >
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        ) : (
+                          <Badge variant="outline" className="gap-1 text-xs">
+                            <Eye className="w-3 h-3" />
+                            للقراءة فقط
+                          </Badge>
+                        )}
                       </div>
                     ))
                   )}
