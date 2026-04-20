@@ -2995,7 +2995,7 @@ export const SuperProvider = ({ children }) => {
     },
     updateProduct: async (...args) => {
       const res = await dbUpdateProduct(...args);
-      await fetchAllData();
+      // ⚡ Realtime على products/product_variants + dbRefetchProducts المُجدول يتولى التحديث الفوري
       return res;
     },
     deleteProducts: async (productIds) => {

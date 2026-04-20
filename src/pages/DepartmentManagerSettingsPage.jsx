@@ -202,12 +202,10 @@ const DepartmentManagerSettingsPage = () => {
     
     console.log('🔄 [ProfitRules] جلب القواعد لـ', supervisedEmployeeIds.length, 'موظف:', supervisedEmployeeIds);
     
+    // ✅ جلب منفصل (لا يوجد FK بين employee_profit_rules.employee_id و profiles.user_id)
     const { data, error } = await supabase
       .from('employee_profit_rules')
-      .select(`
-        *,
-        employee:profiles!employee_id(full_name, employee_code)
-      `)
+      .select('*')
       .in('employee_id', supervisedEmployeeIds)
       .eq('is_active', true);
     
@@ -219,6 +217,14 @@ const DepartmentManagerSettingsPage = () => {
     console.log('✅ [ProfitRules] تم جلب', data?.length || 0, 'قاعدة');
     
     if (data) {
+      // جلب الموظفين منفصلاً
+      const { data: employees } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, employee_code')
+        .in('user_id', supervisedEmployeeIds);
+      const employeesMap = {};
+      employees?.forEach(e => { employeesMap[e.user_id] = e; });
+
       const productTargetIds = data
         .filter(r => r.rule_type === 'product' && r.target_id && r.target_id !== 'default')
         .map(r => r.target_id);
@@ -234,6 +240,7 @@ const DepartmentManagerSettingsPage = () => {
       
       const enrichedRules = data.map(r => ({
         ...r,
+        employee: employeesMap[r.employee_id] || null,
         product: productsMap[r.target_id] || null
       }));
       
@@ -353,16 +360,20 @@ const DepartmentManagerSettingsPage = () => {
       toast({ title: 'تم بنجاح', description: newRule.full_profit ? 'تمت إضافة قاعدة كامل الربح' : 'تمت إضافة قاعدة الربح' });
       setNewRule({ employee_id: '', product_id: '', profit_amount: 0, profit_type: 'fixed', full_profit: false });
       
-      // إعادة جلب القواعد فوراً مع أسماء المنتجات
+      // إعادة جلب القواعد فوراً (جلب منفصل بدون JOIN)
       const { data } = await supabase
         .from('employee_profit_rules')
-        .select(`
-          *,
-          employee:profiles!employee_id(full_name, employee_code)
-        `)
+        .select('*')
         .in('employee_id', supervisedEmployeeIds);
       
       if (data) {
+        const { data: employees } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, employee_code')
+          .in('user_id', supervisedEmployeeIds);
+        const employeesMap = {};
+        employees?.forEach(e => { employeesMap[e.user_id] = e; });
+
         const productTargetIds = data
           .filter(r => r.rule_type === 'product' && r.target_id && r.target_id !== 'default')
           .map(r => r.target_id);
@@ -374,7 +385,11 @@ const DepartmentManagerSettingsPage = () => {
             .in('id', productTargetIds);
           productsData?.forEach(p => { productsMap[p.id] = p; });
         }
-        setProfitRules(data.map(r => ({ ...r, product: productsMap[r.target_id] || null })));
+        setProfitRules(data.map(r => ({
+          ...r,
+          employee: employeesMap[r.employee_id] || null,
+          product: productsMap[r.target_id] || null
+        })));
       }
     } catch (error) {
       console.error('❌ خطأ في حفظ قاعدة الربح:', error);
