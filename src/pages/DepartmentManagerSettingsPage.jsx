@@ -81,6 +81,27 @@ const DepartmentManagerSettingsPage = () => {
   const [allowedProducts, setAllowedProducts] = useState([]);
   const [permLoading, setPermLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
+  // ✅ تجميع قواعد الأرباح حسب الموظف - حالة طي/فتح كل بطاقة موظف
+  const [expandedEmployees, setExpandedEmployees] = useState({});
+
+  // ✅ تجميع القواعد حسب الموظف
+  const groupedProfitRules = useMemo(() => {
+    const groups = {};
+    profitRules.forEach(rule => {
+      const empId = rule.employee_id;
+      if (!groups[empId]) {
+        groups[empId] = {
+          employee: rule.employee,
+          employee_id: empId,
+          ownRules: [],
+          adminRules: [],
+        };
+      }
+      if (rule.is_own_rule) groups[empId].ownRules.push(rule);
+      else groups[empId].adminRules.push(rule);
+    });
+    return Object.values(groups);
+  }, [profitRules]);
 
   // جلب إحصائيات الموظفين
   useEffect(() => {
