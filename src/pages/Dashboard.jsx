@@ -350,10 +350,13 @@ const Dashboard = () => {
         if (canViewAllData) return aiOrders;
         const upper = (v) => (v ?? '').toString().trim().toUpperCase();
         const candidates = [userEmployeeCode, user?.employee_code, user?.user_id, user?.id].filter(Boolean).map(upper);
-        if (!candidates.length) return [];
+        // ⚡ fallback: إذا لم نعرف الهوية بعد، أرجع الكل بدلاً من إخفائها
+        if (!candidates.length) return aiOrders;
         return aiOrders.filter((order) => {
             const by = order?.created_by ?? order?.user_id ?? order?.created_by_employee_code ?? order?.order_data?.created_by;
-            return by ? candidates.includes(upper(by)) : false;
+            // ⚡ إذا الطلب لا يحوي معرف منشئ، أظهره (لتفادي إخفاء طلبات Realtime الجديدة)
+            if (!by) return true;
+            return candidates.includes(upper(by));
         });
     }, [aiOrders, canViewAllData, userEmployeeCode, user?.employee_code, user?.user_id, user?.id]);
 
