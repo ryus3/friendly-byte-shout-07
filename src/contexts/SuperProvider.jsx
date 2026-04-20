@@ -2995,7 +2995,33 @@ export const SuperProvider = ({ children }) => {
     },
     updateProduct: async (...args) => {
       const res = await dbUpdateProduct(...args);
-      // ⚡ Realtime على products/product_variants + dbRefetchProducts المُجدول يتولى التحديث الفوري
+      // ⚡ تحديث فوري لـ allData.products (المصدر المعروض) بدون انتظار realtime
+      try {
+        const productId = args?.[0];
+        if (productId && (res?.success !== false)) {
+          const { data: fresh } = await supabase
+            .from('products')
+            .select(`
+              *,
+              product_variants (
+                *,
+                colors (id, name, hex_code),
+                sizes (id, name, type),
+                inventory (quantity, min_stock, reserved_quantity, location)
+              )
+            `)
+            .eq('id', productId)
+            .maybeSingle();
+          if (fresh) {
+            setAllData(prev => ({
+              ...prev,
+              products: (prev.products || []).map(p => p.id === productId ? { ...p, ...fresh } : p)
+            }));
+          }
+        }
+      } catch (e) {
+        console.warn('⚠️ تحديث allData.products بعد updateProduct فشل (سيُعالج عبر realtime):', e?.message);
+      }
       return res;
     },
     deleteProducts: async (productIds) => {

@@ -40,7 +40,9 @@ import {
   Store,
   ExternalLink,
   LayoutGrid,
-  List
+  List,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 const DepartmentManagerSettingsPage = () => {
@@ -79,6 +81,27 @@ const DepartmentManagerSettingsPage = () => {
   const [allowedProducts, setAllowedProducts] = useState([]);
   const [permLoading, setPermLoading] = useState(false);
   const [departments, setDepartments] = useState([]);
+  // ✅ تجميع قواعد الأرباح حسب الموظف - حالة طي/فتح كل بطاقة موظف
+  const [expandedEmployees, setExpandedEmployees] = useState({});
+
+  // ✅ تجميع القواعد حسب الموظف
+  const groupedProfitRules = useMemo(() => {
+    const groups = {};
+    profitRules.forEach(rule => {
+      const empId = rule.employee_id;
+      if (!groups[empId]) {
+        groups[empId] = {
+          employee: rule.employee,
+          employee_id: empId,
+          ownRules: [],
+          adminRules: [],
+        };
+      }
+      if (rule.is_own_rule) groups[empId].ownRules.push(rule);
+      else groups[empId].adminRules.push(rule);
+    });
+    return Object.values(groups);
+  }, [profitRules]);
 
   // جلب إحصائيات الموظفين
   useEffect(() => {
@@ -890,55 +913,101 @@ const DepartmentManagerSettingsPage = () => {
                   </div>
                 </div>
 
-                {/* قائمة القواعد الحالية */}
+                {/* قائمة القواعد الحالية - مجمعة حسب الموظف */}
                 <div className="space-y-3">
-                  <h4 className="font-semibold">القواعد الحالية</h4>
-                  {profitRules.length === 0 ? (
+                  <h4 className="font-semibold flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    القواعد الحالية حسب الموظف
+                  </h4>
+                  {groupedProfitRules.length === 0 ? (
                     <p className="text-center text-muted-foreground py-4">لا توجد قواعد أرباح محددة</p>
                   ) : (
-                    profitRules.map((rule) => (
-                      <div 
-                        key={rule.id} 
-                        className={`flex items-center justify-between p-4 border rounded-lg ${rule.is_own_rule ? 'bg-card' : 'bg-muted/40 border-dashed'}`}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white ${rule.is_own_rule ? 'bg-gradient-to-br from-green-500 to-emerald-400' : 'bg-gradient-to-br from-slate-400 to-slate-500'}`}>
-                            <DollarSign className="w-5 h-5" />
-                          </div>
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <p className="font-semibold">{rule.employee?.full_name || 'موظف'}</p>
-                              {!rule.is_own_rule && (
-                                <Badge variant="secondary" className="text-[10px] gap-1">
-                                  <Shield className="w-3 h-3" />
-                                  من المدير العام
-                                </Badge>
-                              )}
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              {rule.product?.name || 'كل المنتجات'} - {rule.profit_percentage === 100 
-                                ? <Badge className="bg-emerald-500 text-white">كامل الربح</Badge>
-                                : `${rule.profit_amount?.toLocaleString()} د.ع`}
-                            </p>
-                          </div>
-                        </div>
-                        {rule.is_own_rule ? (
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleDeleteRule(rule.id)}
-                            title="حذف القاعدة"
+                    groupedProfitRules.map((group) => {
+                      const isExpanded = expandedEmployees[group.employee_id] ?? false;
+                      const totalCount = group.ownRules.length + group.adminRules.length;
+                      return (
+                        <div key={group.employee_id} className="border rounded-lg overflow-hidden bg-card">
+                          {/* رأس بطاقة الموظف - قابل للضغط */}
+                          <button
+                            type="button"
+                            onClick={() => setExpandedEmployees(prev => ({ ...prev, [group.employee_id]: !isExpanded }))}
+                            className="w-full flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
                           >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        ) : (
-                          <Badge variant="outline" className="gap-1 text-xs">
-                            <Eye className="w-3 h-3" />
-                            للقراءة فقط
-                          </Badge>
-                        )}
-                      </div>
-                    ))
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-10 h-10 border-2 border-primary/20">
+                                <AvatarFallback className="bg-gradient-to-br from-primary/20 to-primary/10 text-primary font-bold">
+                                  {(group.employee?.full_name || 'م').charAt(0)}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="text-right">
+                                <p className="font-semibold">{group.employee?.full_name || 'موظف'}</p>
+                                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                  <Badge variant="default" className="text-[10px] gap-1 bg-emerald-500/15 text-emerald-600 hover:bg-emerald-500/20 border-emerald-500/30">
+                                    <User className="w-3 h-3" />
+                                    قواعدك: {group.ownRules.length}
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-[10px] gap-1">
+                                    <Shield className="w-3 h-3" />
+                                    من المدير: {group.adminRules.length}
+                                  </Badge>
+                                  <span className="text-xs text-muted-foreground">• الإجمالي {totalCount}</span>
+                                </div>
+                              </div>
+                            </div>
+                            {isExpanded ? <ChevronUp className="w-5 h-5 text-muted-foreground" /> : <ChevronDown className="w-5 h-5 text-muted-foreground" />}
+                          </button>
+
+                          {/* تفاصيل القواعد - تظهر عند الفتح */}
+                          {isExpanded && (
+                            <div className="border-t bg-muted/20 p-3 space-y-2">
+                              {[...group.ownRules, ...group.adminRules].map((rule) => (
+                                <div
+                                  key={rule.id}
+                                  className={`flex items-center justify-between p-3 rounded-md border ${rule.is_own_rule ? 'bg-card' : 'bg-muted/40 border-dashed'}`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white ${rule.is_own_rule ? 'bg-gradient-to-br from-green-500 to-emerald-400' : 'bg-gradient-to-br from-slate-400 to-slate-500'}`}>
+                                      <DollarSign className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                      <p className="font-medium text-sm">{rule.product?.name || 'كل المنتجات'}</p>
+                                      <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                        {rule.profit_percentage === 100 ? (
+                                          <Badge className="bg-emerald-500 text-white text-[10px]">كامل الربح</Badge>
+                                        ) : (
+                                          <span className="text-xs text-muted-foreground">{rule.profit_amount?.toLocaleString()} د.ع</span>
+                                        )}
+                                        {!rule.is_own_rule && (
+                                          <Badge variant="secondary" className="text-[10px] gap-1">
+                                            <Shield className="w-3 h-3" />
+                                            من المدير العام
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                  {rule.is_own_rule ? (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDeleteRule(rule.id)}
+                                      title="حذف القاعدة"
+                                    >
+                                      <Trash2 className="w-4 h-4 text-destructive" />
+                                    </Button>
+                                  ) : (
+                                    <Badge variant="outline" className="gap-1 text-[10px]">
+                                      <Eye className="w-3 h-3" />
+                                      للقراءة فقط
+                                    </Badge>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })
                   )}
                 </div>
               </CardContent>
