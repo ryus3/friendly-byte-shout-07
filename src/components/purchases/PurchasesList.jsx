@@ -90,7 +90,8 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete, getCreat
                  </div>
                </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </Card>
