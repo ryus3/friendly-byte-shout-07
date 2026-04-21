@@ -1,159 +1,112 @@
 
 
-# الخطة النهائية - 3 إصلاحات دقيقة
+# خطة شاملة - 4 ميزات + إعداد AWS
 
-## التشخيص المؤكد بالأدلة
+## 1. أرباح الفاتورة (ميزة جديدة) 💰
 
-### 1. قواعد الأرباح لا تظهر لمدير القسم 🎯 (السبب الحقيقي مكتشف)
+### المنطق
+عند فتح فاتورة مستلمة، يرى كل مستخدم **ما يخصه فقط**:
 
-**رسالة الخطأ من console**:
+| المستخدم | ما يراه |
+|----------|---------|
+| **الموظف** | أرباحه فقط من طلبات الفاتورة (حسب قواعد الأرباح) + إجمالي مبلغ منتجاته |
+| **مدير القسم** | أرباحه (كصاحب منتجات) + مستحقات موظفيه التي خرجت من الفاتورة + التكلفة الإجمالية |
+| **المدير العام** | كل شيء: إجمالي الإيراد، التكاليف، الأرباح موزعة على المالكين، المستحقات |
+
+### المكان الأمثل
+**داخل نافذة تفاصيل الفاتورة** (`InvoiceDetailsDialog`) - تبويب جديد "الأرباح والمستحقات" بجانب التبويب الحالي.
+- لا حاجة لصفحة جديدة
+- البيانات حاضرة (طلبات الفاتورة + قواعد الأرباح + ownership)
+- منطقي لأنه يفتح الفاتورة → يعرف ربحها فوراً
+
+### الحساب
+لكل طلب في الفاتورة:
 ```
-PGRST200: Could not find a relationship between 'employee_profit_rules' 
-and 'profiles' in the schema cache
+ربح الموظف = من جدول profits (مرتبط بـ order_id)
+ربح صاحب المنتج = (سعر البيع - التكلفة - ربح الموظف - أجور التوصيل)
+إجمالي إيراد المنتجات = SUM(items.unit_price × quantity)
 ```
 
-الكود في `DepartmentManagerSettingsPage.jsx` (سطر 209) يستخدم:
-```js
-employee:profiles!employee_id(full_name, employee_code)
-```
-
-لكن **لا يوجد foreign key** بين `employee_profit_rules.employee_id` و `profiles.user_id` (لأن `user_id` ليس primary key على `profiles`، بل `id` هو الـ PK).
-
-النتيجة: الاستعلام يفشل بالكامل ⇒ `data = null` ⇒ `profitRules = []` ⇒ "لا توجد قواعد".
-
-**البيانات الفعلية**: أحمد (الموظف الوحيد تحت إشراف سارة) لديه **7 قواعد نشطة** + RLS صحيحة + سارة لديها `manage_profit_settlement`.
+### الصعوبة: **سهل** (3-4 ساعات تطوير)
+- البيانات موجودة كلها (`profits`, `delivery_invoice_orders`, `order_items`, `products.owner_user_id`)
+- فقط hook جديد + UI tab
 
 ---
 
-### 2. تأخير تحديث المنتجات
+## 2. عداد طلبات الذكاء الاصطناعي - تحديث فوري 🔄
 
-في `SuperProvider.jsx` سطر 2996-2999:
-```js
-updateProduct: async (...args) => {
-  const res = await dbUpdateProduct(...args);
-  await fetchAllData();   // ❌ يسبب تأخير 2-3 ثوانٍ
-  return res;
-}
-```
+### المشكلة الحالية
+- النافذة الداخلية (`AiOrdersManager`) تجلب من DB مباشرة → يظهر الطلب فوراً
+- العداد الخارجي (`Dashboard`) يعتمد على `aiOrders` من `SuperProvider` → متأخر
 
-`updateVariantStock` تم إصلاحها سابقاً، لكن `updateProduct` لا تزال تنتظر `fetchAllData()` كاملاً.
+### الإصلاحات
+1. **عداد فوري عند INSERT**: تحديث `aiOrders` في `SuperProvider` فوراً عند Realtime INSERT بدون انتظار
+2. **عداد ديناميكي للتحديد**: عند تحديد طلبات، يتغير الرقم في زر "موافقة (3)" و "حذف (3)" حسب عدد المحدد فعلياً (مفلتراً بالحالة - لا يحذف المعتمد، لا يوافق على المحذوف)
 
----
+### الملفات
+- `src/contexts/SuperProvider.jsx` - تحسين Realtime handler لـ ai_orders
+- `src/components/ai-orders/AiOrdersManager.jsx` - عداد ديناميكي للأزرار
 
-### 3. كرت طلبات الذكاء الاصطناعي يحتاج تحديث يدوي
-
-من فحص `Dashboard.jsx`:
-- `aiOrdersCount` يعتمد على `aiOrders` (من SuperProvider)
-- Realtime على `ai_orders` يعمل (`SuperProvider` سطر 731-747)
-- لكن: `permanentlyDeletedAiOrders` Set في localStorage قد يحوي ID الطلب الجديد المعاد إنشاؤه (إذا كان مكرراً لطلب محذوف سابقاً) ⇒ يُحجب فوراً
-
-كذلك، الـ counter يستخدم `userAiOrders` للموظف العادي، الذي يعتمد على `userEmployeeCode`. عند التحديث الفوري عبر Realtime، الطلب الجديد قد يُضاف لـ `aiOrders` لكن **لا يطابق** `userEmployeeCode` لأن الفلترة صارمة.
-
-لكن **سارة في الصور هي مدير قسم** ⇒ `canViewAllData = false` ⇒ تستخدم `userAiOrders` ⇒ الطلبات الذكية للتلغرام `created_by` يكون رمز الموظف (مثل `RYUS-...`) وليس UUID.
-
-**السبب الأرجح**: عند INSERT realtime، الطلب يُضاف إلى `allData.aiOrders` (raw)، ثم يُمرر عبر فلتر `userAiOrders` الذي يحتاج تطابق employee_code، فإذا لم يطابق ⇒ count = 0 رغم أن الطلب موجود.
-
-لكن **السبب الأكبر** الذي يفسر "يبقى 0 بالخارج لكن يوجد طلبات بالداخل":  
-نافذة `AiOrdersManager` تجلب من DB مباشرة (سطر 84) بدون فلترة employee_code ⇒ تظهر كل شيء. أما العداد على Dashboard يستخدم `userAiOrders` المفلترة.
+### الصعوبة: **سهل جداً** (30 دقيقة)
 
 ---
 
-## الإصلاحات
+## 3. تمييز مشتريات الموظفين في صفحة المشتريات 🏷️
 
-### إصلاح 1: قواعد الأرباح لمدير القسم (الأهم)
+### المنطق الحالي vs المطلوب
+- ✅ المدير يرى كل المشتريات (صحيح - حتى يراقب)
+- ❌ بدون تمييز من اشترى ومن أي قاصة
 
-**ملف**: `src/pages/DepartmentManagerSettingsPage.jsx`
+### الحل
+في كل بطاقة مشتريات:
+1. **Badge الموظف** (أعلى البطاقة بجانب رقم الفاتورة):
+   - لون مميز للمدير العام (أزرق "المدير العام")
+   - لون مميز لمدير القسم (وردي/برتقالي حسب اسم القسم - مثل "سارة - نسائي")
+   - لون عادي للموظفين
 
-استبدال JOIN الفاشل بجلب منفصل:
-```js
-// بدلاً من employee:profiles!employee_id(...)
-const { data } = await supabase
-  .from('employee_profit_rules')
-  .select('*')
-  .in('employee_id', supervisedEmployeeIds)
-  .eq('is_active', true);
+2. **Badge القاصة** (تحت رقم الفاتورة):
+   - "القاصة الرئيسية" / "قاصة سارة" / إلخ
+   - أيقونة 💰
 
-// جلب الموظفين منفصلاً
-const { data: employees } = await supabase
-  .from('profiles')
-  .select('user_id, full_name, employee_code')
-  .in('user_id', supervisedEmployeeIds);
+3. **فلتر إضافي** في أعلى الصفحة:
+   - "كل المشتريات" / "مشتريات النظام فقط" / "مشتريات الموظفين فقط" / "موظف محدد"
 
-const employeesMap = {};
-employees?.forEach(e => { employeesMap[e.user_id] = e; });
+### الملف
+- `src/pages/PurchasesPage.jsx` - عرض البطاقات + الفلتر
+- استعلام يجلب `created_by` + `cash_source_id` + name
 
-// إثراء البيانات
-const enriched = data.map(r => ({
-  ...r,
-  employee: employeesMap[r.employee_id] || null,
-  product: productsMap[r.target_id] || null
-}));
-```
-
-تطبيق نفس الإصلاح على `handleAddProfitRule` (الذي يستخدم نفس الاستعلام بعد insert).
+### الصعوبة: **سهل** (1-2 ساعة)
 
 ---
 
-### إصلاح 2: تحديث فوري للمنتجات
+## 4. إعداد AWS بعد التسجيل 🚀
 
-**ملف**: `src/contexts/SuperProvider.jsx` سطر 2996-2999
+سأشرح خطوة بخطوة في رسالة منفصلة بعد تنفيذ الميزات أعلاه (يحتاج توجيه طويل - EC2/Lightsail + Nginx + النشر). الخلاصة:
 
-إزالة `await fetchAllData()` - الـ Realtime على `products` و `product_variants` سيحدّث تلقائياً عبر `dbRefetchProducts` المُجدول بـ 100ms (سطر 869-875):
+1. **اختر Lightsail** (أسهل وأرخص من EC2 - 5$/شهر)
+2. **اختر منطقة Frankfurt** (أقرب للعراق)
+3. **Ubuntu 22.04** + **2GB RAM**
+4. **Static IP مجاني** (هذا هو المفتاح لتجاوز Cloudflare WAF)
+5. **Nginx Reverse Proxy** يستقبل من Edge Functions → يرسل لـ AlWaseet/MODON بـ IP ثابت
 
-```js
-updateProduct: async (...args) => {
-  const res = await dbUpdateProduct(...args);
-  // ⚡ Realtime + dbRefetchProducts المجدول يتولى التحديث
-  return res;
-}
-```
+سأعطيك دليلاً كاملاً بالأوامر بعد إنهاء الميزات أعلاه.
 
 ---
 
-### إصلاح 3: عداد طلبات الذكاء الاصطناعي
+## ترتيب التنفيذ (هذه الجولة)
 
-**ملف**: `src/pages/Dashboard.jsx` سطر 348-358
-
-تحسين فلترة `userAiOrders` لتشمل المطابقة بـ UUID و employee_code معاً + إضافة fallback للمدير العام والقسم:
-
-```js
-const userAiOrders = useMemo(() => {
-  if (!Array.isArray(aiOrders)) return [];
-  if (canViewAllData) return aiOrders;
-  
-  const upper = (v) => (v ?? '').toString().trim().toUpperCase();
-  const candidates = [
-    userEmployeeCode, 
-    user?.employee_code, 
-    user?.user_id, 
-    user?.id
-  ].filter(Boolean).map(upper);
-  
-  if (!candidates.length) return aiOrders; // ⚡ fallback: أرجع الكل بدلاً من []
-  
-  return aiOrders.filter((order) => {
-    const by = order?.created_by ?? order?.user_id 
-      ?? order?.created_by_employee_code 
-      ?? order?.order_data?.created_by;
-    if (!by) return true; // ⚡ إذا لم نعرف، أظهره
-    return candidates.includes(upper(by));
-  });
-}, [aiOrders, canViewAllData, userEmployeeCode, user]);
-```
-
----
-
-## ترتيب التنفيذ
-
-| # | المهمة | الملف | الخطر |
+| # | المهمة | الوقت | الخطر |
 |---|--------|------|------|
-| 1 | إصلاح JOIN قواعد الأرباح | `DepartmentManagerSettingsPage.jsx` | منخفض جداً |
-| 2 | إزالة `fetchAllData` من `updateProduct` | `SuperProvider.jsx` | منخفض |
-| 3 | تحسين فلترة `userAiOrders` | `Dashboard.jsx` | منخفض |
+| 1 | عداد طلبات الذكاء الفوري + عداد التحديد الديناميكي | 30د | منخفض |
+| 2 | تمييز مشتريات الموظفين (Badge + فلتر) | 1ساعة | منخفض |
+| 3 | تبويب "الأرباح" داخل تفاصيل الفاتورة | 2ساعة | متوسط |
 
-## ضمانات السلامة
-- لا migrations، لا تغيير في DB
-- لا حذف لأي بيانات
-- 3 ملفات فقط، تعديلات معزولة
-- الإصلاح الأول يعتمد على رسالة خطأ واضحة من console (دليل قاطع)
+## ما يُؤجل للجولة القادمة
+- **دليل AWS التفصيلي** (بعد إنهاء الميزات أعلاه - رسالة مخصصة)
+- **Static Proxy Server setup** (يحتاج وصولك للـ Lightsail)
+
+## ضمانات
+- لا migrations جديدة (البيانات كلها موجودة)
+- لا حذف، لا تعديل DB
+- 4 ملفات معدلة فقط
 
