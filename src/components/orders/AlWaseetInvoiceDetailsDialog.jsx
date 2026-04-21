@@ -29,6 +29,9 @@ import {
 import { formatDistanceToNow, format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { TrendingUp } from 'lucide-react';
+import InvoiceProfitsTab from './InvoiceProfitsTab';
 
 const AlWaseetInvoiceDetailsDialog = ({ 
   isOpen, 
