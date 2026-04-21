@@ -152,31 +152,35 @@ const Dashboard = () => {
         aiOrders: false,
     });
 
-    // إضافة listener للتحديثات اللحظية للطلبات الذكية
+    // tick لإجبار إعادة حساب عداد الطلبات الذكية فور وصول حدث Realtime
+    const [aiTick, setAiTick] = useState(0);
     useEffect(() => {
+        const bump = () => setAiTick(t => t + 1);
         const handleAiOrderCreated = (event) => {
             devLog.log('🔥 AI Order Created Event:', event.detail);
-            // تحديث فوري للإحصائيات
+            bump();
         };
-
         const handleAiOrderUpdated = (event) => {
             devLog.log('🔥 AI Order Updated Event:', event.detail);
-            // تحديث فوري للإحصائيات
+            bump();
         };
-
         const handleAiOrderDeleted = (event) => {
             devLog.log('🔥 AI Order Deleted Event:', event.detail);
-            // تحديث فوري للإحصائيات
+            bump();
         };
 
         window.addEventListener('aiOrderCreated', handleAiOrderCreated);
         window.addEventListener('aiOrderUpdated', handleAiOrderUpdated);
         window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+        window.addEventListener('aiOrderApproved', handleAiOrderDeleted);
+        window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderDeleted);
 
         return () => {
             window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
             window.removeEventListener('aiOrderUpdated', handleAiOrderUpdated);
             window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+            window.removeEventListener('aiOrderApproved', handleAiOrderDeleted);
+            window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderDeleted);
         };
     }, []);
     
