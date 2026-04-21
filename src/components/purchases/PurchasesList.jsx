@@ -10,7 +10,7 @@ import Loader from '@/components/ui/loader';
 import PurchasePrintButton from './PurchasePrintButton';
 
 
-const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
+const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete, getCreatorInfo, getCashSourceInfo }) => {
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader /></div>;
   }
