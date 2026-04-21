@@ -29,6 +29,9 @@ import {
 import { formatDistanceToNow, format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { TrendingUp } from 'lucide-react';
+import InvoiceProfitsTab from './InvoiceProfitsTab';
 
 const AlWaseetInvoiceDetailsDialog = ({ 
   isOpen, 
@@ -116,128 +119,148 @@ const AlWaseetInvoiceDetailsDialog = ({
           </DialogTitle>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[calc(90vh-120px)]">
-          <div className="space-y-6">
-            {/* Invoice Summary */}
-            <Card>
-              <CardHeader dir="rtl">
-                <CardTitle className="flex flex-col items-end gap-2">
-                  <div className="flex items-center justify-between w-full">
-                    <Badge variant={isReceived ? 'success' : 'secondary'}>
-                      {isReceived ? 'مُستلمة' : 'معلقة'}
-                    </Badge>
-                    <span className="text-right">معلومات الفاتورة</span>
-                  </div>
-                  {/* ✅ المرحلة 3: عرض اسم الحساب */}
-                  {(invoice.account_username || invoice.partner_name_ar) && (
-                    <div className="flex items-center gap-2 w-full justify-end">
-                      <span className="text-sm font-medium text-primary">
-                        {invoice.partner_name_ar || 'الوسيط'} - {invoice.account_username || 'حساب رئيسي'}
-                      </span>
-                      <Building className="h-4 w-4 text-primary" />
+        <Tabs defaultValue="details" dir="rtl" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="details" className="gap-2">
+              <Package className="w-4 h-4" />
+              تفاصيل الفاتورة
+            </TabsTrigger>
+            <TabsTrigger value="profits" className="gap-2">
+              <TrendingUp className="w-4 h-4" />
+              الأرباح والمستحقات
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="details">
+            <ScrollArea className="max-h-[calc(90vh-180px)]">
+              <div className="space-y-6">
+                {/* Invoice Summary */}
+                <Card>
+                  <CardHeader dir="rtl">
+                    <CardTitle className="flex flex-col items-end gap-2">
+                      <div className="flex items-center justify-between w-full">
+                        <Badge variant={isReceived ? 'success' : 'secondary'}>
+                          {isReceived ? 'مُستلمة' : 'معلقة'}
+                        </Badge>
+                        <span className="text-right">معلومات الفاتورة</span>
+                      </div>
+                      {(invoice.account_username || invoice.partner_name_ar) && (
+                        <div className="flex items-center gap-2 w-full justify-end">
+                          <span className="text-sm font-medium text-primary">
+                            {invoice.partner_name_ar || 'الوسيط'} - {invoice.account_username || 'حساب رئيسي'}
+                          </span>
+                          <Building className="h-4 w-4 text-primary" />
+                        </div>
+                      )}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent dir="rtl">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                       <div className="flex items-center justify-end gap-2">
+                         <div className="text-right">
+                           <p className="text-sm text-muted-foreground">إجمالي المبلغ</p>
+                           <p className="font-semibold">{amount.toLocaleString()} د.ع</p>
+                         </div>
+                         <DollarSign className="h-4 w-4 text-muted-foreground" />
+                       </div>
+                       
+                       <div className="flex items-center justify-end gap-2">
+                         <div className="text-right">
+                           <p className="text-sm text-muted-foreground">عدد الطلبات</p>
+                           <p className="font-semibold">{invoiceOrders.length || ordersCount}</p>
+                         </div>
+                         <Package className="h-4 w-4 text-muted-foreground" />
+                       </div>
+                       
+                       <div className="flex items-center justify-end gap-2">
+                         <div className="text-right">
+                           <p className="text-sm text-muted-foreground">مصدر البيانات</p>
+                           <Badge variant={dataSource === 'api' ? 'default' : 'secondary'} className="text-xs">
+                             {dataSource === 'api' ? 'مباشر' : 'محفوظ'}
+                           </Badge>
+                         </div>
+                         <Database className="h-4 w-4 text-muted-foreground" />
+                       </div>
                     </div>
-                  )}
-                </CardTitle>
-              </CardHeader>
-              <CardContent dir="rtl">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                   <div className="flex items-center justify-end gap-2">
-                     <div className="text-right">
-                       <p className="text-sm text-muted-foreground">إجمالي المبلغ</p>
-                       <p className="font-semibold">{amount.toLocaleString()} د.ع</p>
-                     </div>
-                     <DollarSign className="h-4 w-4 text-muted-foreground" />
-                   </div>
-                   
-                   <div className="flex items-center justify-end gap-2">
-                     <div className="text-right">
-                       <p className="text-sm text-muted-foreground">عدد الطلبات</p>
-                       <p className="font-semibold">{invoiceOrders.length || ordersCount}</p>
-                     </div>
-                     <Package className="h-4 w-4 text-muted-foreground" />
-                   </div>
-                   
-                   <div className="flex items-center justify-end gap-2">
-                     <div className="text-right">
-                       <p className="text-sm text-muted-foreground">مصدر البيانات</p>
-                       <Badge variant={dataSource === 'api' ? 'default' : 'secondary'} className="text-xs">
-                         {dataSource === 'api' ? 'مباشر' : 'محفوظ'}
-                       </Badge>
-                     </div>
-                     <Database className="h-4 w-4 text-muted-foreground" />
-                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                  </CardContent>
+                </Card>
 
-            {/* Linked Local Orders - Show First */}
-            <Card dir="rtl">
-              <CardHeader>
-                <CardTitle className="text-right">الطلبات المحلية المرتبطة</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loadingLinked ? (
-                  <div className="space-y-2">
-                    {[...Array(2)].map((_, i) => (
-                      <div key={i} className="h-16 bg-muted rounded animate-pulse"></div>
-                    ))}
-                  </div>
-                ) : linkedOrders.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">
-                    لا توجد طلبات محلية مرتبطة بهذه الفاتورة
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {linkedOrders.map((order) => (
-                      <LocalOrderCard key={order.id} order={order} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Al-Waseet Orders */}
-            <Card dir="rtl">
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between text-right">
-                  <Badge variant={dataSource === 'api' ? 'default' : 'secondary'} className="gap-1">
-                    {dataSource === 'api' ? (
-                      <>
-                        <Wifi className="h-3 w-3" />
-                        مباشر من الوسيط
-                      </>
+                {/* Linked Local Orders */}
+                <Card dir="rtl">
+                  <CardHeader>
+                    <CardTitle className="text-right">الطلبات المحلية المرتبطة</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loadingLinked ? (
+                      <div className="space-y-2">
+                        {[...Array(2)].map((_, i) => (
+                          <div key={i} className="h-16 bg-muted rounded animate-pulse"></div>
+                        ))}
+                      </div>
+                    ) : linkedOrders.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-4">
+                        لا توجد طلبات محلية مرتبطة بهذه الفاتورة
+                      </p>
                     ) : (
-                      <>
-                        <Database className="h-3 w-3" />
-                        من قاعدة البيانات
-                      </>
+                      <div className="space-y-3">
+                        {linkedOrders.map((order) => (
+                          <LocalOrderCard key={order.id} order={order} />
+                        ))}
+                      </div>
                     )}
-                  </Badge>
-                  <span>طلبات شركة التوصيل في هذه الفاتورة</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {loading ? (
-                  <div className="space-y-2">
-                    {[...Array(3)].map((_, i) => (
-                      <div key={i} className="h-16 bg-muted rounded animate-pulse"></div>
-                    ))}
-                  </div>
-                ) : invoiceOrders.length === 0 ? (
-                  <p className="text-muted-foreground text-center py-4">
-                    لا توجد طلبات في هذه الفاتورة
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {invoiceOrders.map((order) => (
-                      <WaseetOrderCard key={order.id} order={order} />
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </ScrollArea>
+                  </CardContent>
+                </Card>
+
+                {/* Al-Waseet Orders */}
+                <Card dir="rtl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center justify-between text-right">
+                      <Badge variant={dataSource === 'api' ? 'default' : 'secondary'} className="gap-1">
+                        {dataSource === 'api' ? (
+                          <>
+                            <Wifi className="h-3 w-3" />
+                            مباشر من الوسيط
+                          </>
+                        ) : (
+                          <>
+                            <Database className="h-3 w-3" />
+                            من قاعدة البيانات
+                          </>
+                        )}
+                      </Badge>
+                      <span>طلبات شركة التوصيل في هذه الفاتورة</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {loading ? (
+                      <div className="space-y-2">
+                        {[...Array(3)].map((_, i) => (
+                          <div key={i} className="h-16 bg-muted rounded animate-pulse"></div>
+                        ))}
+                      </div>
+                    ) : invoiceOrders.length === 0 ? (
+                      <p className="text-muted-foreground text-center py-4">
+                        لا توجد طلبات في هذه الفاتورة
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {invoiceOrders.map((order) => (
+                          <WaseetOrderCard key={order.id} order={order} />
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          <TabsContent value="profits">
+            <ScrollArea className="max-h-[calc(90vh-180px)]">
+              <InvoiceProfitsTab invoice={invoice} linkedOrders={linkedOrders} />
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
