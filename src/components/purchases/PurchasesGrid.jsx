@@ -3,7 +3,7 @@ import Loader from '@/components/ui/loader';
 import PurchaseCard from './PurchaseCard';
 import { motion } from 'framer-motion';
 
-const PurchasesGrid = ({ purchases, isLoading, onViewDetails, onDelete }) => {
+const PurchasesGrid = ({ purchases, isLoading, onViewDetails, onDelete, getCreatorInfo, getCashSourceInfo }) => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -46,6 +46,8 @@ const PurchasesGrid = ({ purchases, isLoading, onViewDetails, onDelete }) => {
           onViewDetails={onViewDetails}
           onDelete={onDelete}
           index={index}
+          creatorInfo={getCreatorInfo?.(purchase.created_by)}
+          cashSourceInfo={getCashSourceInfo?.(purchase.cash_source_id)}
         />
       ))}
     </motion.div>

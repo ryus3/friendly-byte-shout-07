@@ -1,14 +1,14 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Trash2, Download, Calendar, Package, DollarSign, CreditCard } from 'lucide-react';
+import { Eye, Trash2, Calendar, Package, DollarSign, User, Wallet } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import PurchasePrintButton from './PurchasePrintButton';
 
-const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) => {
+const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index, creatorInfo, cashSourceInfo }) => {
   const totalCost = (purchase.total_amount || 0); // المبلغ الأساسي فقط
   const hasShipping = (purchase.shipping_cost || 0) > 0;
   const hasTransfer = (purchase.transfer_cost || 0) > 0;
@@ -39,6 +39,13 @@ const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) =
     }
   };
 
+  // تصنيف لوني حسب نوع المنشئ
+  const creatorBadgeClass = creatorInfo?.role === 'admin'
+    ? 'bg-blue-500/15 text-blue-700 border-blue-300 dark:text-blue-300'
+    : creatorInfo?.role === 'department_manager'
+      ? 'bg-pink-500/15 text-pink-700 border-pink-300 dark:text-pink-300'
+      : 'bg-slate-500/15 text-slate-700 border-slate-300 dark:text-slate-300';
+
   return (
     <motion.div
       layout
@@ -54,15 +61,13 @@ const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) =
                  dark:bg-card dark:shadow-white/5 dark:hover:shadow-primary/10
                  w-full max-w-full"
     >
-      {/* خلفية متدرجة */}
       <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       
-      {/* محتوى الكارت */}
       <div className="relative p-6 space-y-4">
         {/* الهيدر */}
         <div className="flex items-start justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge 
                 variant="outline" 
                 className="font-mono text-xs bg-primary/10 text-primary border-primary/20"
@@ -74,13 +79,25 @@ const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) =
               >
                 {getStatusText(purchase.status)}
               </Badge>
+              {creatorInfo && (
+                <Badge variant="outline" className={cn("text-xs flex items-center gap-1", creatorBadgeClass)}>
+                  <User className="h-3 w-3" />
+                  {creatorInfo.name}
+                </Badge>
+              )}
             </div>
             <h3 className="font-semibold text-lg text-card-foreground group-hover:text-primary transition-colors">
               {purchase.supplier_name || purchase.supplier || 'مورد غير محدد'}
             </h3>
+            {cashSourceInfo && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Wallet className="h-3 w-3 text-emerald-600" />
+                <span>القاصة:</span>
+                <span className="font-medium text-foreground">{cashSourceInfo.name}</span>
+              </div>
+            )}
           </div>
           
-          {/* تاريخ الشراء */}
           <div className="flex items-center gap-2 text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span className="text-sm">
@@ -89,9 +106,7 @@ const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) =
           </div>
         </div>
 
-        {/* الإحصائيات */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-          {/* عدد الأصناف */}
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 group-hover:bg-primary/5 transition-colors">
             <div className="p-2 rounded-lg bg-blue-500/10 text-blue-600 flex-shrink-0">
               <Package className="h-4 w-4" />
@@ -102,7 +117,6 @@ const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) =
             </div>
           </div>
 
-          {/* الإجمالي */}
           <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50 group-hover:bg-primary/5 transition-colors">
             <div className="p-2 rounded-lg bg-green-500/10 text-green-600 flex-shrink-0">
               <DollarSign className="h-4 w-4" />
@@ -114,7 +128,6 @@ const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) =
           </div>
         </div>
 
-        {/* التكاليف الإضافية */}
         {(hasShipping || hasTransfer) && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {hasShipping && (
@@ -136,7 +149,6 @@ const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) =
           </div>
         )}
 
-        {/* الأزرار */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pt-2 border-t border-border/50 gap-3 sm:gap-2">
           <div className="flex gap-1 sm:gap-2 flex-wrap">
             <Button 
@@ -151,7 +163,6 @@ const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) =
             
             <PurchasePrintButton purchase={purchase} />
             
-            
             <Button 
               variant="ghost" 
               size="sm" 
@@ -163,7 +174,6 @@ const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) =
             </Button>
           </div>
           
-          {/* مبلغ المنتجات */}
           <div className="text-right w-full sm:w-auto">
             <p className="text-xs text-muted-foreground">قيمة المنتجات</p>
             <p className="text-sm font-medium">{(purchase.total_amount || 0).toLocaleString()} د.ع</p>
@@ -171,7 +181,6 @@ const PurchaseCard = React.memo(({ purchase, onViewDetails, onDelete, index }) =
         </div>
       </div>
 
-      {/* تأثير الضوء */}
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out pointer-events-none" />
     </motion.div>
   );

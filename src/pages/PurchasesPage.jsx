@@ -2,8 +2,11 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useImprovedPurchases } from '@/hooks/useImprovedPurchases';
+import { useSuper } from '@/contexts/SuperProvider';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, ArrowRight } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import { PlusCircle, ArrowRight, Filter } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -22,14 +25,14 @@ const PurchasesPage = () => {
   const { purchases: inventoryPurchases, loading: inventoryLoading } = useInventory();
   const { purchases: hookPurchases, loading: hookLoading, fetchPurchases, deletePurchase } = useImprovedPurchases();
   const { hasPermission } = usePermissions();
+  const { allUsers = [] } = useAuth();
+  const { cashSources = [] } = useSuper();
 
-  // استخدام البيانات من الهوك إذا كانت متوفرة، وإلا استخدام بيانات الإنفنتوري
   const purchases = hookPurchases.length > 0 ? hookPurchases : inventoryPurchases;
   const loading = hookLoading || inventoryLoading;
   const navigate = useNavigate();
   
-  const [filters, setFilters] = useState({ searchTerm: '', dateFilter: 'all' });
-  // حفظ إعدادات العرض في localStorage
+  const [filters, setFilters] = useState({ searchTerm: '', dateFilter: 'all', creatorFilter: 'all' });
   const [viewMode, setViewMode] = useState(() => {
     return localStorage.getItem('purchases-view-mode') || 'grid';
   });
@@ -42,17 +45,59 @@ const PurchasesPage = () => {
   const ITEMS_PER_PAGE = 15;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // حفظ إعدادات العرض عند تغييرها
   React.useEffect(() => {
     localStorage.setItem('purchases-view-mode', viewMode);
   }, [viewMode]);
 
-  // جلب المشتريات عند تحميل الصفحة
   React.useEffect(() => {
     if (hookPurchases.length === 0) {
       fetchPurchases();
     }
   }, [fetchPurchases, hookPurchases.length]);
+
+  // فهرسة المستخدمين والقاصات للوصول السريع
+  const usersById = useMemo(() => {
+    const map = new Map();
+    for (const u of allUsers) {
+      const id = u.user_id || u.id;
+      if (id) map.set(id, u);
+    }
+    return map;
+  }, [allUsers]);
+
+  const cashSourcesById = useMemo(() => {
+    const map = new Map();
+    for (const c of cashSources) {
+      if (c?.id) map.set(c.id, c);
+    }
+    return map;
+  }, [cashSources]);
+
+  const getCreatorInfo = (createdBy) => {
+    if (!createdBy) return { name: 'غير محدد', role: 'unknown' };
+    const u = usersById.get(createdBy);
+    if (!u) return { name: 'مستخدم محذوف', role: 'unknown' };
+    const roles = Array.isArray(u.roles) ? u.roles : [];
+    let role = 'employee';
+    if (roles.includes('super_admin') || roles.includes('admin')) role = 'admin';
+    else if (roles.includes('department_manager')) role = 'department_manager';
+    return { name: u.full_name || u.username || 'موظف', role };
+  };
+
+  const getCashSourceInfo = (cashSourceId) => {
+    if (!cashSourceId) return null;
+    const cs = cashSourcesById.get(cashSourceId);
+    return cs ? { name: cs.name } : null;
+  };
+
+  // قائمة المستخدمين الذين لديهم مشتريات (للفلتر)
+  const purchaseCreators = useMemo(() => {
+    const ids = new Set((purchases || []).map(p => p.created_by).filter(Boolean));
+    return Array.from(ids).map(id => {
+      const info = getCreatorInfo(id);
+      return { id, name: info.name, role: info.role };
+    }).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+  }, [purchases, usersById]);
 
   const filteredPurchases = useMemo(() => {
     if (!purchases) return [];
@@ -60,7 +105,6 @@ const PurchasesPage = () => {
       new Date(b.purchase_date || b.created_at) - new Date(a.purchase_date || a.created_at)
     );
 
-    // فلترة البحث
     if (filters.searchTerm) {
       const term = filters.searchTerm.toLowerCase();
       filtered = filtered.filter(p => 
@@ -70,7 +114,6 @@ const PurchasesPage = () => {
       );
     }
 
-    // فلترة التاريخ
     if (filters.dateFilter !== 'all') {
       const now = new Date();
       let startDate;
@@ -89,15 +132,28 @@ const PurchasesPage = () => {
       }
     }
 
-    return filtered;
-  }, [purchases, filters]);
+    // فلتر المنشئ (موظف / مدير عام / مدير قسم)
+    if (filters.creatorFilter && filters.creatorFilter !== 'all') {
+      if (filters.creatorFilter === 'admin_only') {
+        filtered = filtered.filter(p => getCreatorInfo(p.created_by).role === 'admin');
+      } else if (filters.creatorFilter === 'employees_only') {
+        filtered = filtered.filter(p => {
+          const r = getCreatorInfo(p.created_by).role;
+          return r === 'department_manager' || r === 'employee';
+        });
+      } else if (filters.creatorFilter.startsWith('user:')) {
+        const id = filters.creatorFilter.slice(5);
+        filtered = filtered.filter(p => p.created_by === id);
+      }
+    }
 
-  // إعادة تعيين الصفحة عند تغيير الفلاتر
+    return filtered;
+  }, [purchases, filters, usersById]);
+
   useEffect(() => {
     setCurrentPage(1);
   }, [filters]);
 
-  // حساب الصفحات
   const totalPages = Math.ceil(filteredPurchases.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const paginatedPurchases = filteredPurchases.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -111,7 +167,6 @@ const PurchasesPage = () => {
     if (hasPermission('add_purchase')) {
       setIsAddOpen(true);
     }
-    // Remove the unauthorized toast message
   };
 
   const handleStatCardClick = (filter) => {
@@ -140,7 +195,7 @@ const PurchasesPage = () => {
 
   const handlePurchaseAdded = () => {
     setIsAddOpen(false);
-    fetchPurchases(); // إعادة تحميل المشتريات
+    fetchPurchases();
   };
 
   return (
@@ -168,19 +223,15 @@ const PurchasesPage = () => {
             </Button>
         </div>
         
-        {/* الإحصائيات */}
         <UnifiedPurchasesStats 
           onCardClick={handleStatCardClick}
-          onFilterChange={(filters) => {
-            if (filters.dateRange) {
-              const { from, to } = filters.dateRange;
+          onFilterChange={(f) => {
+            if (f.dateRange) {
+              const { from, to } = f.dateRange;
               const now = new Date();
-              
               if (from && to) {
-                // تحديد نوع الفلتر بناءً على التواريخ
                 const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
                 const startOfYear = new Date(now.getFullYear(), 0, 1);
-                
                 if (from.getTime() === startOfMonth.getTime()) {
                   setFilters(prev => ({ ...prev, dateFilter: 'this_month' }));
                 } else if (from.getTime() === startOfYear.getTime()) {
@@ -199,6 +250,32 @@ const PurchasesPage = () => {
           viewMode={viewMode}
           onViewModeChange={setViewMode}
         />
+
+        {/* فلتر المنشئ */}
+        {purchaseCreators.length > 1 && (
+          <div className="flex items-center gap-3 p-3 bg-card border rounded-lg">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <Label className="text-sm whitespace-nowrap">عرض المشتريات لـ:</Label>
+            <Select
+              value={filters.creatorFilter || 'all'}
+              onValueChange={(v) => setFilters(prev => ({ ...prev, creatorFilter: v }))}
+            >
+              <SelectTrigger className="w-full sm:w-[260px]">
+                <SelectValue placeholder="الكل" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل المشتريات</SelectItem>
+                <SelectItem value="admin_only">مشتريات النظام (المدير العام)</SelectItem>
+                <SelectItem value="employees_only">مشتريات الموظفين فقط</SelectItem>
+                {purchaseCreators.map(c => (
+                  <SelectItem key={c.id} value={`user:${c.id}`}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         
         {viewMode === 'table' ? (
           <PurchasesList 
@@ -206,6 +283,8 @@ const PurchasesPage = () => {
             isLoading={loading}
             onViewDetails={handleViewDetails}
             onDelete={handleDeletePurchase}
+            getCreatorInfo={getCreatorInfo}
+            getCashSourceInfo={getCashSourceInfo}
           />
         ) : (
           <PurchasesGrid 
@@ -213,6 +292,8 @@ const PurchasesPage = () => {
             isLoading={loading}
             onViewDetails={handleViewDetails}
             onDelete={handleDeletePurchase}
+            getCreatorInfo={getCreatorInfo}
+            getCashSourceInfo={getCashSourceInfo}
           />
         )}
         

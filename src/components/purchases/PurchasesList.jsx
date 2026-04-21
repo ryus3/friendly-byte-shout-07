@@ -10,7 +10,7 @@ import Loader from '@/components/ui/loader';
 import PurchasePrintButton from './PurchasePrintButton';
 
 
-const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
+const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete, getCreatorInfo, getCashSourceInfo }) => {
   if (isLoading) {
     return <div className="flex justify-center items-center h-64"><Loader /></div>;
   }
@@ -32,19 +32,33 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
           <TableRow>
             <TableHead>رقم الفاتورة</TableHead>
             <TableHead>المورد</TableHead>
+            <TableHead>المنشئ</TableHead>
+            <TableHead>القاصة</TableHead>
             <TableHead>تاريخ الشراء</TableHead>
-            <TableHead>عدد الأصناف</TableHead>
-            <TableHead>تكلفة الشحن</TableHead>
-            <TableHead>تكلفة التحويل</TableHead>
-            <TableHead>العملة / الإجمالي</TableHead>
+            <TableHead>الأصناف</TableHead>
+            <TableHead>الشحن</TableHead>
+            <TableHead>التحويل</TableHead>
+            <TableHead>الإجمالي</TableHead>
             <TableHead>إجراءات</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {purchases.map((purchase) => (
+          {purchases.map((purchase) => {
+            const creator = getCreatorInfo?.(purchase.created_by);
+            const cashSrc = getCashSourceInfo?.(purchase.cash_source_id);
+            const creatorBadge = creator?.role === 'admin'
+              ? 'bg-blue-500/15 text-blue-700 border-blue-300'
+              : creator?.role === 'department_manager'
+                ? 'bg-pink-500/15 text-pink-700 border-pink-300'
+                : 'bg-slate-500/15 text-slate-700 border-slate-300';
+            return (
             <TableRow key={purchase.id}>
               <TableCell className="font-mono text-xs">{purchase.purchase_number || purchase.id}</TableCell>
               <TableCell className="font-semibold">{purchase.supplier_name || purchase.supplier || 'غير محدد'}</TableCell>
+              <TableCell>
+                {creator ? <Badge variant="outline" className={creatorBadge}>{creator.name}</Badge> : <span className="text-xs text-muted-foreground">-</span>}
+              </TableCell>
+              <TableCell className="text-xs">{cashSrc?.name || '-'}</TableCell>
               <TableCell>{format(new Date(purchase.purchase_date || purchase.created_at), 'd MMM yyyy', { locale: ar })}</TableCell>
               <TableCell>
                 <Badge variant="secondary">{purchase.items?.length || 0}</Badge>
@@ -76,7 +90,8 @@ const PurchasesList = ({ purchases, isLoading, onViewDetails, onDelete }) => {
                  </div>
                </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </Card>
