@@ -2964,6 +2964,8 @@ export const SuperProvider = ({ children }) => {
     allSizes: allData.sizes || [],
     // المستخدمون/الملفات للتطابق مع created_by
     users: allData.users || [],
+    // مصادر النقد للوحات والشارات
+    cashSources: allData.cashSources || [],
     
     // حالة التحميل
     loading: loading || false,
