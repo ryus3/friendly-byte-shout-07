@@ -410,7 +410,7 @@ export const useAlWaseetInvoices = () => {
               .eq('invoice_id', finalInvoiceId)
               .limit(1);
             
-            if (!checkError && (!existingOrders || existingOrders.length === 0)) {
+            if (!checkError && (!existingOrders || existingOrders.length === 0) && !cacheOnly) {
               console.warn('⚠️ الفاتورة موجودة لكن الطلبات فارغة - إجبار المزامنة');
               
               // محاولة جلب من API مرة أخرى مع retry
