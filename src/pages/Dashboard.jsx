@@ -417,6 +417,12 @@ const Dashboard = () => {
         return keys.size;
     }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode, aiTick]);
 
+    // ⚡ نختار العداد الحي من DB إذا متوفر (أسرع وأدق) للمدير العام، وإلا نعتمد على القائمة المفلترة
+    const aiOrdersCount = useMemo(() => {
+        if (canViewAllData && typeof liveAiCount === 'number') return liveAiCount;
+        return aiOrdersCountFromList;
+    }, [canViewAllData, liveAiCount, aiOrdersCountFromList]);
+
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
     const financialSummary = useMemo(() => {
