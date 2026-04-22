@@ -374,7 +374,7 @@ const Dashboard = () => {
         });
     }, [aiOrders, canViewAllData, userEmployeeCode, user?.employee_code, user?.user_id, user?.id]);
 
-    const aiOrdersCount = useMemo(() => {
+    const aiOrdersCountFromList = useMemo(() => {
         const list = (canViewAllData ? (Array.isArray(aiOrders) ? aiOrders : []) : (Array.isArray(userAiOrders) ? userAiOrders : []));
         const lower = (v) => (v ?? '').toString().trim().toLowerCase();
         const normalizeSize = (s) => {
