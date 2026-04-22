@@ -370,10 +370,9 @@ export const useAlWaseetInvoices = () => {
         }
       }
 
-      // محاولة API أولاً إذا كان التوكن متاحاً - أولوية للبيانات الحية
-      if (selectedToken && isLoggedIn) {
+      // محاولة API أولاً إذا كان التوكن متاحاً - يتم تخطيها للفواتير المستلمة
+      if (selectedToken && isLoggedIn && !cacheOnly) {
         try {
-          // استدعاء API المناسب حسب partner الفاتورة
           if (invoiceRecord?.partner === 'modon') {
             const ModonAPI = await import('@/lib/modon-api');
             invoiceData = await ModonAPI.getInvoiceOrders(selectedToken, invoiceId);
