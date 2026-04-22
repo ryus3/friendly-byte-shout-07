@@ -152,35 +152,45 @@ const Dashboard = () => {
         aiOrders: false,
     });
 
-    // tick لإجبار إعادة حساب عداد الطلبات الذكية فور وصول حدث Realtime
+    // ⚡ عداد حي للطلبات الذكية: realtime + أحداث فورية + جلب مباشر من DB
+    const [liveAiCount, setLiveAiCount] = useState(null);
     const [aiTick, setAiTick] = useState(0);
-    useEffect(() => {
-        const bump = () => setAiTick(t => t + 1);
-        const handleAiOrderCreated = (event) => {
-            devLog.log('🔥 AI Order Created Event:', event.detail);
-            bump();
-        };
-        const handleAiOrderUpdated = (event) => {
-            devLog.log('🔥 AI Order Updated Event:', event.detail);
-            bump();
-        };
-        const handleAiOrderDeleted = (event) => {
-            devLog.log('🔥 AI Order Deleted Event:', event.detail);
-            bump();
-        };
 
-        window.addEventListener('aiOrderCreated', handleAiOrderCreated);
-        window.addEventListener('aiOrderUpdated', handleAiOrderUpdated);
-        window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
-        window.addEventListener('aiOrderApproved', handleAiOrderDeleted);
-        window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderDeleted);
+    useEffect(() => {
+        let cancelled = false;
+        const fetchLiveCount = async () => {
+            try {
+                const { count, error } = await supabase
+                    .from('ai_orders')
+                    .select('id', { count: 'exact', head: true })
+                    .not('status', 'in', '(approved,processed)');
+                if (!cancelled && !error && count !== null) {
+                    setLiveAiCount(count);
+                }
+            } catch {}
+        };
+        fetchLiveCount();
+        const bump = () => { setAiTick(t => t + 1); fetchLiveCount(); };
+
+        window.addEventListener('aiOrderCreated', bump);
+        window.addEventListener('aiOrderUpdated', bump);
+        window.addEventListener('aiOrderDeleted', bump);
+        window.addEventListener('aiOrderApproved', bump);
+        window.addEventListener('aiOrderDeletedConfirmed', bump);
+
+        const channel = supabase
+            .channel('dashboard_ai_orders_count')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_orders' }, () => fetchLiveCount())
+            .subscribe();
 
         return () => {
-            window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
-            window.removeEventListener('aiOrderUpdated', handleAiOrderUpdated);
-            window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
-            window.removeEventListener('aiOrderApproved', handleAiOrderDeleted);
-            window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderDeleted);
+            cancelled = true;
+            window.removeEventListener('aiOrderCreated', bump);
+            window.removeEventListener('aiOrderUpdated', bump);
+            window.removeEventListener('aiOrderDeleted', bump);
+            window.removeEventListener('aiOrderApproved', bump);
+            window.removeEventListener('aiOrderDeletedConfirmed', bump);
+            supabase.removeChannel(channel);
         };
     }, []);
     

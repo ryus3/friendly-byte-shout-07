@@ -1,17 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Loader2, TrendingUp, Wallet, Users, Package, Crown, ShieldCheck } from 'lucide-react';
+import { Loader2, TrendingUp, Wallet, Users, Package, Crown, ShieldCheck, Info } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 
 /**
- * تبويب يعرض الأرباح والمستحقات الخاصة بالفاتورة بحسب دور المستخدم:
- * - الموظف: أرباحه فقط من طلبات هذه الفاتورة + إجمالي مبيعات منتجاته
- * - مدير القسم: أرباحه (كصاحب منتجات) + مستحقات موظفيه + التكلفة
- * - المدير العام: تفصيل كامل (إيراد، تكلفة، مستحقات الموظفين، أرباح المالكين، صافي)
+ * تبويب أرباح الفاتورة - يعتمد على جدول profits كمصدر مالي رئيسي
+ *  - الموظف: ربحه فقط من الطلبات الموجودة في هذه الفاتورة
+ *  - مدير القسم: أرباحه (كصاحب منتجات) + مستحقات موظفيه التابعين له فقط
+ *  - المدير العام: الإيراد، التكلفة، المستحقات، والصافي للمالكين
+ *
+ *  المنطق:
+ *  1) نعتمد أولاً على جدول profits لكل order_id مرتبط بالفاتورة
+ *     (أرقام محاسبية صحيحة بغض النظر عن اكتمال delivery_invoice_orders).
+ *  2) order_items يستخدم لتفصيل توزيع المالكين فقط، عند توفره.
  */
 const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   const { user } = useAuth();
@@ -20,94 +24,107 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   const [loading, setLoading] = useState(true);
   const [profits, setProfits] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
-  const [productsMap, setProductsMap] = useState({}); // product_id -> { owner_user_id, cost_price }
-  const [variantsMap, setVariantsMap] = useState({}); // variant_id -> cost_price
-  const [ownersMap, setOwnersMap] = useState({}); // user_id -> full_name
+  const [namesMap, setNamesMap] = useState({});
   const [supervisedIds, setSupervisedIds] = useState([]);
+  const [resolvedOrderIds, setResolvedOrderIds] = useState([]);
 
-  const orderIds = useMemo(
-    () => (linkedOrders || []).map(o => o.id).filter(Boolean),
+  const userId = user?.user_id || user?.id;
+
+  const orderIdsFromProps = useMemo(
+    () => Array.from(new Set((linkedOrders || []).map(o => o.id).filter(Boolean))),
     [linkedOrders]
   );
 
-  const userId = user?.user_id || user?.id;
+  // جلب order_id من delivery_invoice_orders إذا لم تكن الروابط ممررة
+  useEffect(() => {
+    let cancelled = false;
+    const resolve = async () => {
+      if (orderIdsFromProps.length > 0) {
+        setResolvedOrderIds(orderIdsFromProps);
+        return;
+      }
+      const externalId = invoice?.external_id || invoice?.id;
+      if (!externalId) {
+        setResolvedOrderIds([]);
+        return;
+      }
+      try {
+        const { data: invRow } = await supabase
+          .from('delivery_invoices')
+          .select('id')
+          .eq('external_id', String(externalId))
+          .maybeSingle();
+        if (!invRow?.id) {
+          if (!cancelled) setResolvedOrderIds([]);
+          return;
+        }
+        const { data: dio } = await supabase
+          .from('delivery_invoice_orders')
+          .select('order_id')
+          .eq('invoice_id', invRow.id)
+          .not('order_id', 'is', null);
+        const ids = Array.from(new Set((dio || []).map(r => r.order_id).filter(Boolean)));
+        if (!cancelled) setResolvedOrderIds(ids);
+      } catch {
+        if (!cancelled) setResolvedOrderIds([]);
+      }
+    };
+    resolve();
+    return () => { cancelled = true; };
+  }, [orderIdsFromProps, invoice?.external_id, invoice?.id]);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      if (!orderIds.length) {
+      const ids = resolvedOrderIds;
+      if (!ids || ids.length === 0) {
         setLoading(false);
         setProfits([]);
         setOrderItems([]);
         return;
       }
       setLoading(true);
-
       try {
-        // 1) Profits for these orders
-        const { data: pData } = await supabase
-          .from('profits')
-          .select('order_id, employee_id, employee_profit, profit_amount, total_revenue, total_cost')
-          .in('order_id', orderIds);
+        const [{ data: pData }, { data: itemsData }] = await Promise.all([
+          supabase
+            .from('profits')
+            .select('order_id, employee_id, employee_profit, profit_amount, total_revenue, total_cost, status')
+            .in('order_id', ids),
+          supabase
+            .from('order_items')
+            .select('order_id, product_id, variant_id, quantity, unit_price, total_price, cost_price, products:product_id(id, name, owner_user_id, cost_price)')
+            .in('order_id', ids),
+        ]);
 
-        // 2) Order items + product/variant info
-        const { data: itemsData } = await supabase
-          .from('order_items')
-          .select('order_id, product_id, variant_id, quantity, unit_price, total_price, cost_price, products:product_id(id, name, owner_user_id, cost_price)')
-          .in('order_id', orderIds);
-
-        // 3) Variants cost price (for accuracy)
-        const variantIds = [...new Set((itemsData || []).map(i => i.variant_id).filter(Boolean))];
-        let vData = [];
-        if (variantIds.length) {
-          const { data } = await supabase
-            .from('product_variants')
-            .select('id, cost_price')
-            .in('id', variantIds);
-          vData = data || [];
-        }
-
-        // 4) Owners (profiles for owner names)
-        const ownerIds = [...new Set((itemsData || [])
+        const employeeIds = (pData || []).map(p => p.employee_id).filter(Boolean);
+        const ownerIds = (itemsData || [])
           .map(i => i.products?.owner_user_id)
-          .filter(Boolean))];
-        const employeeIds = [...new Set((pData || []).map(p => p.employee_id).filter(Boolean))];
-        const allUserIds = [...new Set([...ownerIds, ...employeeIds])];
-        let ownersData = [];
+          .filter(Boolean);
+        const allUserIds = Array.from(new Set([...employeeIds, ...ownerIds]));
+
+        let names = {};
         if (allUserIds.length) {
-          const { data } = await supabase
+          const { data: profs } = await supabase
             .from('profiles')
             .select('user_id, full_name')
             .in('user_id', allUserIds);
-          ownersData = data || [];
+          (profs || []).forEach(p => { names[p.user_id] = p.full_name; });
         }
 
-        // 5) For department manager: supervised employees
         let supIds = [];
         if (isDepartmentManager && !isAdmin && userId) {
-          const { data } = await supabase
+          const { data: sup } = await supabase
             .from('employee_supervisors')
             .select('employee_id')
-            .eq('supervisor_id', userId);
-          supIds = (data || []).map(r => r.employee_id);
+            .eq('supervisor_id', userId)
+            .eq('is_active', true);
+          supIds = (sup || []).map(r => r.employee_id);
         }
 
         if (cancelled) return;
-
-        const pMap = {};
-        (itemsData || []).forEach(i => {
-          if (i.products) pMap[i.products.id] = i.products;
-        });
-        const vMap = {};
-        vData.forEach(v => { vMap[v.id] = v.cost_price; });
-        const oMap = {};
-        ownersData.forEach(o => { oMap[o.user_id] = o.full_name; });
-
         setProfits(pData || []);
         setOrderItems(itemsData || []);
-        setProductsMap(pMap);
-        setVariantsMap(vMap);
-        setOwnersMap(oMap);
+        setNamesMap(names);
         setSupervisedIds(supIds);
       } catch (e) {
         console.error('InvoiceProfitsTab load error', e);
@@ -117,56 +134,40 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     };
     load();
     return () => { cancelled = true; };
-  }, [orderIds.join(','), userId, isAdmin, isDepartmentManager]);
+  }, [resolvedOrderIds.join(','), userId, isAdmin, isDepartmentManager]);
 
-  // ===== Derived calculations =====
   const calc = useMemo(() => {
-    // Per item: revenue, cost, item-level profit (without employee cut yet)
-    const enrichedItems = orderItems.map(it => {
-      const cost = it.cost_price ?? variantsMap[it.variant_id] ?? it.products?.cost_price ?? 0;
-      const revenue = (it.unit_price || 0) * (it.quantity || 0);
-      const totalCost = cost * (it.quantity || 0);
-      return {
-        ...it,
-        _revenue: revenue,
-        _cost: totalCost,
-        _ownerId: it.products?.owner_user_id || null,
-      };
-    });
-
-    // Sum profits by employee
+    const totalRevenue = profits.reduce((s, p) => s + (Number(p.total_revenue) || 0), 0);
+    const totalCost = profits.reduce((s, p) => s + (Number(p.total_cost) || 0), 0);
+    const totalProfit = profits.reduce((s, p) => s + (Number(p.profit_amount) || 0), 0);
     const employeeProfitTotal = profits.reduce((s, p) => s + (Number(p.employee_profit) || 0), 0);
+    const netForOwners = totalProfit - employeeProfitTotal;
+
     const employeeProfitByEmp = {};
     profits.forEach(p => {
-      employeeProfitByEmp[p.employee_id] = (employeeProfitByEmp[p.employee_id] || 0) + (Number(p.employee_profit) || 0);
+      const k = p.employee_id || '__unknown__';
+      employeeProfitByEmp[k] = (employeeProfitByEmp[k] || 0) + (Number(p.employee_profit) || 0);
     });
 
-    // Sum revenue / cost per owner
-    const byOwner = {}; // owner_user_id -> { revenue, cost, items }
-    enrichedItems.forEach(i => {
-      const key = i._ownerId || '__system__';
-      if (!byOwner[key]) byOwner[key] = { revenue: 0, cost: 0, items: 0 };
-      byOwner[key].revenue += i._revenue;
-      byOwner[key].cost += i._cost;
-      byOwner[key].items += i.quantity || 0;
+    const byOwner = {};
+    let itemsAvailable = false;
+    (orderItems || []).forEach(it => {
+      itemsAvailable = true;
+      const ownerId = it.products?.owner_user_id || '__system__';
+      const revenue = (Number(it.unit_price) || 0) * (Number(it.quantity) || 0);
+      const cost = (Number(it.cost_price) || Number(it.products?.cost_price) || 0) * (Number(it.quantity) || 0);
+      if (!byOwner[ownerId]) byOwner[ownerId] = { revenue: 0, cost: 0, items: 0 };
+      byOwner[ownerId].revenue += revenue;
+      byOwner[ownerId].cost += cost;
+      byOwner[ownerId].items += Number(it.quantity) || 0;
     });
-
-    const totalRevenue = enrichedItems.reduce((s, i) => s + i._revenue, 0);
-    const totalCost = enrichedItems.reduce((s, i) => s + i._cost, 0);
-    const grossProfit = totalRevenue - totalCost;
-    const netForOwners = grossProfit - employeeProfitTotal;
 
     return {
-      enrichedItems,
-      employeeProfitTotal,
-      employeeProfitByEmp,
-      byOwner,
-      totalRevenue,
-      totalCost,
-      grossProfit,
-      netForOwners,
+      totalRevenue, totalCost, totalProfit,
+      employeeProfitTotal, netForOwners,
+      employeeProfitByEmp, byOwner, itemsAvailable,
     };
-  }, [orderItems, profits, variantsMap]);
+  }, [profits, orderItems]);
 
   if (loading) {
     return (
@@ -176,24 +177,31 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     );
   }
 
-  if (!orderIds.length) {
+  if (!resolvedOrderIds.length) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
+      <div className="text-center py-8 text-muted-foreground" dir="rtl">
         لا توجد طلبات محلية مرتبطة لحساب الأرباح
       </div>
     );
   }
 
-  // ===== Role-specific views =====
+  if (profits.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground space-y-2" dir="rtl">
+        <Info className="w-6 h-6 mx-auto text-muted-foreground" />
+        <div>لم يتم تسجيل أرباح لهذه الفاتورة بعد</div>
+      </div>
+    );
+  }
+
   const fmt = (n) => `${Math.round(Number(n) || 0).toLocaleString()} د.ع`;
 
-  // EMPLOYEE VIEW
+  // === الموظف ===
   if (!isAdmin && !isDepartmentManager) {
     const myProfit = calc.employeeProfitByEmp[userId] || 0;
-    // إجمالي مبيعات منتجاته (إن كان يملك أي): عادة الموظف لا يملك منتجات، نعرض إجمالي طلباته
     const myOrdersCount = profits.filter(p => p.employee_id === userId).length;
     return (
-      <div className="space-y-4" dir="rtl">
+      <div className="space-y-4 p-1" dir="rtl">
         <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-right">
@@ -212,27 +220,23 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     );
   }
 
-  // DEPARTMENT MANAGER VIEW
+  // === مدير القسم ===
   if (isDepartmentManager && !isAdmin) {
-    // أرباح المدير كصاحب منتجات
     const myOwnerStats = calc.byOwner[userId] || { revenue: 0, cost: 0, items: 0 };
-    // أرباح موظفيه فقط
     const myEmployeesProfits = Object.entries(calc.employeeProfitByEmp)
       .filter(([empId]) => supervisedIds.includes(empId))
       .map(([empId, amount]) => ({
-        empId,
-        name: ownersMap[empId] || 'موظف',
-        amount,
+        empId, name: namesMap[empId] || 'موظف', amount,
       }));
     const myEmployeesTotal = myEmployeesProfits.reduce((s, e) => s + e.amount, 0);
-    const myNetProfit = (myOwnerStats.revenue - myOwnerStats.cost) - myEmployeesTotal;
+    const myNet = (myOwnerStats.revenue - myOwnerStats.cost) - myEmployeesTotal;
 
     return (
-      <div className="space-y-4" dir="rtl">
+      <div className="space-y-4 p-1" dir="rtl">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <StatCard icon={TrendingUp} label="إيراد منتجاتك" value={fmt(myOwnerStats.revenue)} color="blue" />
           <StatCard icon={Package} label="تكلفة منتجاتك" value={fmt(myOwnerStats.cost)} color="orange" />
-          <StatCard icon={Wallet} label="صافي ربحك" value={fmt(myNetProfit)} color="emerald" highlight />
+          <StatCard icon={Wallet} label="صافي ربحك" value={fmt(myNet)} color="emerald" highlight />
         </div>
 
         <Card>
@@ -257,26 +261,32 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
             )}
           </CardContent>
         </Card>
+
+        {!calc.itemsAvailable && (
+          <p className="text-xs text-muted-foreground text-center">
+            تفاصيل توزيع منتجاتك غير مكتملة، الأرقام مأخوذة من سجلات الأرباح للموظفين التابعين لك.
+          </p>
+        )}
       </div>
     );
   }
 
-  // ADMIN VIEW (full breakdown)
+  // === المدير العام ===
   const ownerEntries = Object.entries(calc.byOwner).map(([ownerId, stats]) => ({
     ownerId,
-    name: ownerId === '__system__' ? 'النظام (المدير العام)' : (ownersMap[ownerId] || 'مالك غير معروف'),
+    name: ownerId === '__system__' ? 'النظام (المدير العام)' : (namesMap[ownerId] || 'مالك غير معروف'),
     ...stats,
     netProfit: stats.revenue - stats.cost,
   }));
 
-  const employeeEntries = Object.entries(calc.employeeProfitByEmp).map(([empId, amount]) => ({
-    empId,
-    name: ownersMap[empId] || 'موظف',
-    amount,
-  }));
+  const employeeEntries = Object.entries(calc.employeeProfitByEmp)
+    .filter(([, amount]) => Number(amount) !== 0)
+    .map(([empId, amount]) => ({
+      empId, name: namesMap[empId] || 'موظف', amount,
+    }));
 
   return (
-    <div className="space-y-4" dir="rtl">
+    <div className="space-y-4 p-1" dir="rtl">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard icon={TrendingUp} label="إجمالي الإيراد" value={fmt(calc.totalRevenue)} color="blue" />
         <StatCard icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
@@ -293,7 +303,9 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         </CardHeader>
         <CardContent>
           {ownerEntries.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">لا توجد بيانات</p>
+            <p className="text-center text-muted-foreground py-4">
+              {calc.itemsAvailable ? 'لا توجد بيانات' : 'تفاصيل المنتجات غير متاحة لهذه الفاتورة'}
+            </p>
           ) : (
             <div className="space-y-2">
               {ownerEntries.map(o => (
