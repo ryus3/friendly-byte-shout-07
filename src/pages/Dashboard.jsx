@@ -374,7 +374,7 @@ const Dashboard = () => {
         });
     }, [aiOrders, canViewAllData, userEmployeeCode, user?.employee_code, user?.user_id, user?.id]);
 
-    const aiOrdersCount = useMemo(() => {
+    const aiOrdersCountFromList = useMemo(() => {
         const list = (canViewAllData ? (Array.isArray(aiOrders) ? aiOrders : []) : (Array.isArray(userAiOrders) ? userAiOrders : []));
         const lower = (v) => (v ?? '').toString().trim().toLowerCase();
         const normalizeSize = (s) => {
@@ -416,6 +416,12 @@ const Dashboard = () => {
         }
         return keys.size;
     }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode, aiTick]);
+
+    // ⚡ نختار العداد الحي من DB إذا متوفر (أسرع وأدق) للمدير العام، وإلا نعتمد على القائمة المفلترة
+    const aiOrdersCount = useMemo(() => {
+        if (canViewAllData && typeof liveAiCount === 'number') return liveAiCount;
+        return aiOrdersCountFromList;
+    }, [canViewAllData, liveAiCount, aiOrdersCountFromList]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
