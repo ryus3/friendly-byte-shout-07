@@ -326,9 +326,10 @@ export const useAlWaseetInvoices = () => {
     };
   }, [isLoggedIn, activePartner, fetchInvoices, user?.id]);
 
-  // إصلاح fetchInvoiceOrders جذرياً لعرض البيانات من raw أو API
-  const fetchInvoiceOrders = useCallback(async (invoiceId) => {
+  // إصلاح fetchInvoiceOrders: للفواتير المستلمة نعتمد على القاعدة فقط (preferCache)
+  const fetchInvoiceOrders = useCallback(async (invoiceId, options = {}) => {
     if (!invoiceId) return null;
+    const { preferCache = false } = options;
 
     setLoading(true);
     try {
@@ -336,14 +337,23 @@ export const useAlWaseetInvoices = () => {
       let dataSource = 'database';
       let selectedToken = token;
 
-      // ✅ CRITICAL FIX: استخدام التوكن الصحيح للفاتورة بدلاً من التوكن العام
+      // ✅ جلب معلومات الفاتورة + حالة الاستلام من القاعدة
       const { data: invoiceRecord } = await supabase
         .from('delivery_invoices')
-        .select('owner_user_id, partner, account_username, external_id, orders_count, orders_last_synced_at')
+        .select('owner_user_id, partner, account_username, external_id, orders_count, orders_last_synced_at, received, received_flag, status, status_normalized')
         .eq('external_id', invoiceId)
         .single();
 
-      if (invoiceRecord?.owner_user_id && invoiceRecord?.partner) {
+      // ✅ تحديد ما إذا كانت الفاتورة مستلمة (لا تحتاج جلب مباشر)
+      const isReceivedInvoice = !!invoiceRecord && (
+        invoiceRecord.received === true ||
+        invoiceRecord.received_flag === true ||
+        invoiceRecord.status === 'تم الاستلام من قبل التاجر' ||
+        (invoiceRecord.status_normalized || '').toLowerCase() === 'received'
+      );
+      const cacheOnly = preferCache || isReceivedInvoice;
+
+      if (invoiceRecord?.owner_user_id && invoiceRecord?.partner && !cacheOnly) {
         // جلب التوكن الصحيح للمستخدم والشركة المحددة
         const { data: tokenData } = await supabase
           .from('delivery_partner_tokens')
