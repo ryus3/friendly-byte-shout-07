@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Helmet } from 'react-helmet-async';
@@ -152,47 +152,86 @@ const Dashboard = () => {
         aiOrders: false,
     });
 
-    // ⚡ عداد حي للطلبات الذكية: realtime + أحداث فورية + جلب مباشر من DB
+    // ⚡ عداد حي موحد: تحديث فوري للأحداث + تحقق سريع من DB مع احترام RLS لكل الأدوار
     const [liveAiCount, setLiveAiCount] = useState(null);
-    const [aiTick, setAiTick] = useState(0);
+    const aiCountRevalidateTimeoutRef = useRef(null);
+
+    const fetchLiveAiCount = useCallback(async () => {
+        try {
+            const { count, error } = await supabase
+                .from('ai_orders')
+                .select('id', { count: 'exact', head: true })
+                .or('status.is.null,status.not.in.(approved,processed)');
+
+            if (!error && count !== null) {
+                setLiveAiCount(count);
+            }
+        } catch {
+            // silent fallback to local list count
+        }
+    }, []);
+
+    const scheduleAiCountRevalidate = useCallback((delay = 120) => {
+        if (aiCountRevalidateTimeoutRef.current) {
+            clearTimeout(aiCountRevalidateTimeoutRef.current);
+        }
+
+        aiCountRevalidateTimeoutRef.current = setTimeout(() => {
+            fetchLiveAiCount();
+        }, delay);
+    }, [fetchLiveAiCount]);
+
+    const applyAiCountDelta = useCallback((delta) => {
+        setLiveAiCount((prev) => {
+            if (typeof prev !== 'number') return prev;
+            return Math.max(0, prev + delta);
+        });
+        scheduleAiCountRevalidate();
+    }, [scheduleAiCountRevalidate]);
 
     useEffect(() => {
-        let cancelled = false;
-        const fetchLiveCount = async () => {
-            try {
-                const { count, error } = await supabase
-                    .from('ai_orders')
-                    .select('id', { count: 'exact', head: true })
-                    .not('status', 'in', '(approved,processed)');
-                if (!cancelled && !error && count !== null) {
-                    setLiveAiCount(count);
-                }
-            } catch {}
-        };
-        fetchLiveCount();
-        const bump = () => { setAiTick(t => t + 1); fetchLiveCount(); };
+        fetchLiveAiCount();
 
-        window.addEventListener('aiOrderCreated', bump);
-        window.addEventListener('aiOrderUpdated', bump);
-        window.addEventListener('aiOrderDeleted', bump);
-        window.addEventListener('aiOrderApproved', bump);
-        window.addEventListener('aiOrderDeletedConfirmed', bump);
+        const handleAiOrderCreated = () => applyAiCountDelta(1);
+        const handleAiOrderApproved = () => applyAiCountDelta(-1);
+        const handleAiOrderDeleted = () => applyAiCountDelta(-1);
+        const handleAiOrderUpdated = () => scheduleAiCountRevalidate(80);
+        const handleAiNotification = (event) => {
+            if (event?.detail?.type === 'new_ai_order') {
+                scheduleAiCountRevalidate(60);
+            }
+        };
+        const handleReliableAiNotification = () => scheduleAiCountRevalidate(60);
+
+        window.addEventListener('aiOrderCreated', handleAiOrderCreated);
+        window.addEventListener('aiOrderUpdated', handleAiOrderUpdated);
+        window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
+        window.addEventListener('aiOrderApproved', handleAiOrderApproved);
+        window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderDeleted);
+        window.addEventListener('notificationCreated', handleAiNotification);
+        window.addEventListener('reliableAiOrderNotification', handleReliableAiNotification);
 
         const channel = supabase
-            .channel('dashboard_ai_orders_count')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_orders' }, () => fetchLiveCount())
+            .channel(`dashboard_ai_orders_count_${user?.user_id || user?.id || 'anon'}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'ai_orders' }, () => {
+                scheduleAiCountRevalidate(80);
+            })
             .subscribe();
 
         return () => {
-            cancelled = true;
-            window.removeEventListener('aiOrderCreated', bump);
-            window.removeEventListener('aiOrderUpdated', bump);
-            window.removeEventListener('aiOrderDeleted', bump);
-            window.removeEventListener('aiOrderApproved', bump);
-            window.removeEventListener('aiOrderDeletedConfirmed', bump);
+            if (aiCountRevalidateTimeoutRef.current) {
+                clearTimeout(aiCountRevalidateTimeoutRef.current);
+            }
+            window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
+            window.removeEventListener('aiOrderUpdated', handleAiOrderUpdated);
+            window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
+            window.removeEventListener('aiOrderApproved', handleAiOrderApproved);
+            window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderDeleted);
+            window.removeEventListener('notificationCreated', handleAiNotification);
+            window.removeEventListener('reliableAiOrderNotification', handleReliableAiNotification);
             supabase.removeChannel(channel);
         };
-    }, []);
+    }, [applyAiCountDelta, fetchLiveAiCount, scheduleAiCountRevalidate, user?.id, user?.user_id]);
     
     const [topProvincesOpen, setTopProvincesOpen] = useState(false);
     const [topProductsOpen, setTopProductsOpen] = useState(false);
@@ -415,13 +454,13 @@ const Dashboard = () => {
             keys.add(key);
         }
         return keys.size;
-    }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode, aiTick]);
+    }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode]);
 
-    // ⚡ نختار العداد الحي من DB إذا متوفر (أسرع وأدق) للمدير العام، وإلا نعتمد على القائمة المفلترة
+    // ⚡ مصدر موحد: إذا وصل العداد الحي نستخدمه لكل الأدوار، وإلا fallback مؤقت من القائمة
     const aiOrdersCount = useMemo(() => {
-        if (canViewAllData && typeof liveAiCount === 'number') return liveAiCount;
+        if (typeof liveAiCount === 'number') return liveAiCount;
         return aiOrdersCountFromList;
-    }, [canViewAllData, liveAiCount, aiOrdersCountFromList]);
+    }, [liveAiCount, aiOrdersCountFromList]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
