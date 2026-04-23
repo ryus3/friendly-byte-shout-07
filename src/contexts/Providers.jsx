@@ -1,6 +1,6 @@
 import React, { useEffect, memo, useCallback } from 'react';
 import { ThemeProvider } from '@/contexts/ThemeContext.jsx';
-import { UnifiedAuthProvider, useAuth } from '@/contexts/UnifiedAuthContext.jsx';
+import { UnifiedAuthProvider } from '@/contexts/UnifiedAuthContext.jsx';
 import { AiChatProvider } from '@/contexts/AiChatContext.jsx';
 import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
 import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
@@ -16,42 +16,22 @@ import { useAppStartSync } from '@/hooks/useAppStartSync';
 const AppStartSync = memo(() => {
   const { performComprehensiveSync } = useAppStartSync();
   const { syncVisibleOrdersBatch } = useAlWaseet();
-
+  
+  // 🚀 تحسين: useCallback للدالة
   const handleVisibleOrdersSync = useCallback((event) => {
     const { visibleOrders, autoSync = false } = event.detail || {};
     if (visibleOrders && visibleOrders.length > 0) {
       performComprehensiveSync(visibleOrders, syncVisibleOrdersBatch, autoSync);
     }
   }, [performComprehensiveSync, syncVisibleOrdersBatch]);
-
+  
   useEffect(() => {
     window.addEventListener('requestAppStartSyncWithVisibleOrders', handleVisibleOrdersSync);
     return () => window.removeEventListener('requestAppStartSyncWithVisibleOrders', handleVisibleOrdersSync);
   }, [handleVisibleOrdersSync]);
-
+  
   return <GlobalSyncProgress hideAutoSync={true} />;
 });
-
-// 🚀 تحسين الأداء: AlWaseetProvider + SuperProvider (المعتمد عليه) يُحمَّلان فقط بعد المصادقة
-// قبل المصادقة: نعرض children مباشرة (صفحة الدخول لا تحتاج هذه)
-const AuthGatedHeavyProviders = ({ children }) => {
-  const { user, loading } = useAuth();
-
-  if (loading || !user) {
-    return <>{children}</>;
-  }
-
-  return (
-    <AlWaseetProvider>
-      <SuperProvider>
-        <VariantsProvider>
-          <AppStartSync />
-          {children}
-        </VariantsProvider>
-      </SuperProvider>
-    </AlWaseetProvider>
-  );
-};
 
 export const AppProviders = ({ children }) => {
   return (
@@ -59,15 +39,20 @@ export const AppProviders = ({ children }) => {
       <ThemeProvider>
         <UnifiedAuthProvider>
           <NotificationsSystemProvider>
-            <NotificationsProvider>
-              <AiChatProvider>
-                <ProfitsProvider>
-                  <AuthGatedHeavyProviders>
-                    {children}
-                  </AuthGatedHeavyProviders>
-                </ProfitsProvider>
-              </AiChatProvider>
-            </NotificationsProvider>
+            <AlWaseetProvider>
+              <NotificationsProvider>
+                <AiChatProvider>
+                  <ProfitsProvider>
+                    <SuperProvider>
+                      <VariantsProvider>
+                        <AppStartSync />
+                        {children}
+                      </VariantsProvider>
+                    </SuperProvider>
+                  </ProfitsProvider>
+                </AiChatProvider>
+              </NotificationsProvider>
+            </AlWaseetProvider>
           </NotificationsSystemProvider>
         </UnifiedAuthProvider>
       </ThemeProvider>

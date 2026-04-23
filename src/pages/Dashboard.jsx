@@ -152,8 +152,7 @@ const Dashboard = () => {
         aiOrders: false,
     });
 
-    // ⚡ عداد حي للطلبات الذكية: realtime + أحداث فورية + جلب مباشر من DB + Optimistic update
-    // يعمل لكل المستخدمين (RLS تفلتر تلقائياً)
+    // ⚡ عداد حي للطلبات الذكية: realtime + أحداث فورية + جلب مباشر من DB
     const [liveAiCount, setLiveAiCount] = useState(null);
     const [aiTick, setAiTick] = useState(0);
 
@@ -171,28 +170,13 @@ const Dashboard = () => {
             } catch {}
         };
         fetchLiveCount();
+        const bump = () => { setAiTick(t => t + 1); fetchLiveCount(); };
 
-        // ⚡ Optimistic updates: تغيير الرقم فوراً قبل وصول رد DB
-        const handleCreated = () => {
-            setAiTick(t => t + 1);
-            setLiveAiCount(c => (typeof c === 'number' ? c + 1 : c));
-            fetchLiveCount();
-        };
-        const handleRemoved = () => {
-            setAiTick(t => t + 1);
-            setLiveAiCount(c => (typeof c === 'number' && c > 0 ? c - 1 : c));
-            fetchLiveCount();
-        };
-        const handleGeneric = () => {
-            setAiTick(t => t + 1);
-            fetchLiveCount();
-        };
-
-        window.addEventListener('aiOrderCreated', handleCreated);
-        window.addEventListener('aiOrderUpdated', handleGeneric);
-        window.addEventListener('aiOrderDeleted', handleRemoved);
-        window.addEventListener('aiOrderApproved', handleRemoved);
-        window.addEventListener('aiOrderDeletedConfirmed', handleRemoved);
+        window.addEventListener('aiOrderCreated', bump);
+        window.addEventListener('aiOrderUpdated', bump);
+        window.addEventListener('aiOrderDeleted', bump);
+        window.addEventListener('aiOrderApproved', bump);
+        window.addEventListener('aiOrderDeletedConfirmed', bump);
 
         const channel = supabase
             .channel('dashboard_ai_orders_count')
@@ -201,11 +185,11 @@ const Dashboard = () => {
 
         return () => {
             cancelled = true;
-            window.removeEventListener('aiOrderCreated', handleCreated);
-            window.removeEventListener('aiOrderUpdated', handleGeneric);
-            window.removeEventListener('aiOrderDeleted', handleRemoved);
-            window.removeEventListener('aiOrderApproved', handleRemoved);
-            window.removeEventListener('aiOrderDeletedConfirmed', handleRemoved);
+            window.removeEventListener('aiOrderCreated', bump);
+            window.removeEventListener('aiOrderUpdated', bump);
+            window.removeEventListener('aiOrderDeleted', bump);
+            window.removeEventListener('aiOrderApproved', bump);
+            window.removeEventListener('aiOrderDeletedConfirmed', bump);
             supabase.removeChannel(channel);
         };
     }, []);
@@ -433,11 +417,11 @@ const Dashboard = () => {
         return keys.size;
     }, [aiOrders, userAiOrders, canViewAllData, userEmployeeCode, aiTick]);
 
-    // ⚡ نختار العداد الحي من DB لكل المستخدمين (RLS تفلتر تلقائياً)، وإلا نعتمد على القائمة كـ fallback
+    // ⚡ نختار العداد الحي من DB إذا متوفر (أسرع وأدق) للمدير العام، وإلا نعتمد على القائمة المفلترة
     const aiOrdersCount = useMemo(() => {
-        if (typeof liveAiCount === 'number') return liveAiCount;
+        if (canViewAllData && typeof liveAiCount === 'number') return liveAiCount;
         return aiOrdersCountFromList;
-    }, [liveAiCount, aiOrdersCountFromList]);
+    }, [canViewAllData, liveAiCount, aiOrdersCountFromList]);
 
     const pendingRegistrationsCount = useMemo(() => pendingRegistrations?.length || 0, [pendingRegistrations]);
 
