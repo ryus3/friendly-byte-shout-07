@@ -32,10 +32,9 @@ const AppStartSync = memo(() => {
   return <GlobalSyncProgress hideAutoSync={true} />;
 });
 
-// 🚀 تحسين الأداء: AlWaseetProvider يُحمَّل فقط بعد المصادقة لتسريع صفحة الدخول
-// قبل المصادقة: نعرض children مباشرة بدون AlWaseet (صفحة الدخول لا تحتاجه)
-// بعد المصادقة: نلف children بـ AlWaseetProvider + AppStartSync
-const AuthGatedAlWaseet = ({ children }) => {
+// 🚀 تحسين الأداء: AlWaseetProvider + SuperProvider (المعتمد عليه) يُحمَّلان فقط بعد المصادقة
+// قبل المصادقة: نعرض children مباشرة (صفحة الدخول لا تحتاج هذه)
+const AuthGatedHeavyProviders = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading || !user) {
@@ -44,8 +43,12 @@ const AuthGatedAlWaseet = ({ children }) => {
 
   return (
     <AlWaseetProvider>
-      <AppStartSync />
-      {children}
+      <SuperProvider>
+        <VariantsProvider>
+          <AppStartSync />
+          {children}
+        </VariantsProvider>
+      </SuperProvider>
     </AlWaseetProvider>
   );
 };
@@ -59,13 +62,9 @@ export const AppProviders = ({ children }) => {
             <NotificationsProvider>
               <AiChatProvider>
                 <ProfitsProvider>
-                  <SuperProvider>
-                    <VariantsProvider>
-                      <AuthGatedAlWaseet>
-                        {children}
-                      </AuthGatedAlWaseet>
-                    </VariantsProvider>
-                  </SuperProvider>
+                  <AuthGatedHeavyProviders>
+                    {children}
+                  </AuthGatedHeavyProviders>
                 </ProfitsProvider>
               </AiChatProvider>
             </NotificationsProvider>
