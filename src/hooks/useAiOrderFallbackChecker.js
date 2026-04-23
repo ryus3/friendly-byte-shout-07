@@ -55,7 +55,8 @@ export const useAiOrderFallbackChecker = (user) => {
           const orderTime = new Date(latestOrder.created_at);
           const tenMinutesAgo = new Date(Date.now() - (10 * 60 * 1000));
           
-          if (orderTime > tenMinutesAgo) {
+          const fiveMinutesAgo = new Date(Date.now() - (5 * 60 * 1000));
+          if (orderTime > fiveMinutesAgo) {
             devLog.log('⏰ FALLBACK: Order is recent, showing notification');
             
             const isAdmin = user?.roles?.includes('super_admin');
@@ -120,7 +121,7 @@ export const useAiOrderFallbackChecker = (user) => {
       }
     };
 
-    const timeoutId = setTimeout(checkForNewAiOrders, 5000);
+    const timeoutId = setTimeout(checkForNewAiOrders, 10000);
 
     return () => {
       clearTimeout(timeoutId);
