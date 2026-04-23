@@ -16,47 +16,36 @@ import { useAppStartSync } from '@/hooks/useAppStartSync';
 const AppStartSync = memo(() => {
   const { performComprehensiveSync } = useAppStartSync();
   const { syncVisibleOrdersBatch } = useAlWaseet();
-  
-  // 🚀 تحسين: useCallback للدالة
+
   const handleVisibleOrdersSync = useCallback((event) => {
     const { visibleOrders, autoSync = false } = event.detail || {};
     if (visibleOrders && visibleOrders.length > 0) {
       performComprehensiveSync(visibleOrders, syncVisibleOrdersBatch, autoSync);
     }
   }, [performComprehensiveSync, syncVisibleOrdersBatch]);
-  
+
   useEffect(() => {
     window.addEventListener('requestAppStartSyncWithVisibleOrders', handleVisibleOrdersSync);
     return () => window.removeEventListener('requestAppStartSyncWithVisibleOrders', handleVisibleOrdersSync);
   }, [handleVisibleOrdersSync]);
-  
+
   return <GlobalSyncProgress hideAutoSync={true} />;
 });
 
 // 🚀 تحسين الأداء: AlWaseetProvider يُحمَّل فقط بعد المصادقة لتسريع صفحة الدخول
+// قبل المصادقة: نعرض children مباشرة بدون AlWaseet (صفحة الدخول لا تحتاجه)
+// بعد المصادقة: نلف children بـ AlWaseetProvider + AppStartSync
 const AuthGatedAlWaseet = ({ children }) => {
   const { user, loading } = useAuth();
-  
-  // قبل المصادقة: لا نحمّل AlWaseetProvider الضخم (251KB)
-  // بعد المصادقة: نحمّله بشكل طبيعي
+
   if (loading || !user) {
     return <>{children}</>;
   }
-  
+
   return (
     <AlWaseetProvider>
-      <NotificationsProvider>
-        <AiChatProvider>
-          <ProfitsProvider>
-            <SuperProvider>
-              <VariantsProvider>
-                <AppStartSync />
-                {children}
-              </VariantsProvider>
-            </SuperProvider>
-          </ProfitsProvider>
-        </AiChatProvider>
-      </NotificationsProvider>
+      <AppStartSync />
+      {children}
     </AlWaseetProvider>
   );
 };
@@ -67,9 +56,19 @@ export const AppProviders = ({ children }) => {
       <ThemeProvider>
         <UnifiedAuthProvider>
           <NotificationsSystemProvider>
-            <AuthGatedAlWaseet>
-              {children}
-            </AuthGatedAlWaseet>
+            <NotificationsProvider>
+              <AiChatProvider>
+                <ProfitsProvider>
+                  <SuperProvider>
+                    <VariantsProvider>
+                      <AuthGatedAlWaseet>
+                        {children}
+                      </AuthGatedAlWaseet>
+                    </VariantsProvider>
+                  </SuperProvider>
+                </ProfitsProvider>
+              </AiChatProvider>
+            </NotificationsProvider>
           </NotificationsSystemProvider>
         </UnifiedAuthProvider>
       </ThemeProvider>
