@@ -1,6 +1,6 @@
 import React, { useEffect, memo, useCallback } from 'react';
 import { ThemeProvider } from '@/contexts/ThemeContext.jsx';
-import { UnifiedAuthProvider } from '@/contexts/UnifiedAuthContext.jsx';
+import { UnifiedAuthProvider, useAuth } from '@/contexts/UnifiedAuthContext.jsx';
 import { AiChatProvider } from '@/contexts/AiChatContext.jsx';
 import { NotificationsProvider } from '@/contexts/NotificationsContext.jsx';
 import { NotificationsSystemProvider } from '@/contexts/NotificationsSystemContext.jsx';
@@ -33,26 +33,43 @@ const AppStartSync = memo(() => {
   return <GlobalSyncProgress hideAutoSync={true} />;
 });
 
+// 🚀 تحسين الأداء: AlWaseetProvider يُحمَّل فقط بعد المصادقة لتسريع صفحة الدخول
+const AuthGatedAlWaseet = ({ children }) => {
+  const { user, loading } = useAuth();
+  
+  // قبل المصادقة: لا نحمّل AlWaseetProvider الضخم (251KB)
+  // بعد المصادقة: نحمّله بشكل طبيعي
+  if (loading || !user) {
+    return <>{children}</>;
+  }
+  
+  return (
+    <AlWaseetProvider>
+      <NotificationsProvider>
+        <AiChatProvider>
+          <ProfitsProvider>
+            <SuperProvider>
+              <VariantsProvider>
+                <AppStartSync />
+                {children}
+              </VariantsProvider>
+            </SuperProvider>
+          </ProfitsProvider>
+        </AiChatProvider>
+      </NotificationsProvider>
+    </AlWaseetProvider>
+  );
+};
+
 export const AppProviders = ({ children }) => {
   return (
     <SupabaseProvider>
       <ThemeProvider>
         <UnifiedAuthProvider>
           <NotificationsSystemProvider>
-            <AlWaseetProvider>
-              <NotificationsProvider>
-                <AiChatProvider>
-                  <ProfitsProvider>
-                    <SuperProvider>
-                      <VariantsProvider>
-                        <AppStartSync />
-                        {children}
-                      </VariantsProvider>
-                    </SuperProvider>
-                  </ProfitsProvider>
-                </AiChatProvider>
-              </NotificationsProvider>
-            </AlWaseetProvider>
+            <AuthGatedAlWaseet>
+              {children}
+            </AuthGatedAlWaseet>
           </NotificationsSystemProvider>
         </UnifiedAuthProvider>
       </ThemeProvider>
