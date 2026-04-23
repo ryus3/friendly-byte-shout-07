@@ -201,6 +201,7 @@ const Dashboard = () => {
                 scheduleAiCountRevalidate(60);
             }
         };
+        const handleReliableAiNotification = () => scheduleAiCountRevalidate(60);
 
         window.addEventListener('aiOrderCreated', handleAiOrderCreated);
         window.addEventListener('aiOrderUpdated', handleAiOrderUpdated);
@@ -208,7 +209,7 @@ const Dashboard = () => {
         window.addEventListener('aiOrderApproved', handleAiOrderApproved);
         window.addEventListener('aiOrderDeletedConfirmed', handleAiOrderDeleted);
         window.addEventListener('notificationCreated', handleAiNotification);
-        window.addEventListener('reliableAiOrderNotification', () => scheduleAiCountRevalidate(60));
+        window.addEventListener('reliableAiOrderNotification', handleReliableAiNotification);
 
         const channel = supabase
             .channel(`dashboard_ai_orders_count_${user?.user_id || user?.id || 'anon'}`)
@@ -227,7 +228,7 @@ const Dashboard = () => {
             window.removeEventListener('aiOrderApproved', handleAiOrderApproved);
             window.removeEventListener('aiOrderDeletedConfirmed', handleAiOrderDeleted);
             window.removeEventListener('notificationCreated', handleAiNotification);
-            window.removeEventListener('reliableAiOrderNotification', () => scheduleAiCountRevalidate(60));
+            window.removeEventListener('reliableAiOrderNotification', handleReliableAiNotification);
             supabase.removeChannel(channel);
         };
     }, [applyAiCountDelta, fetchLiveAiCount, scheduleAiCountRevalidate, user?.id, user?.user_id]);
