@@ -53,9 +53,8 @@ export const useAiOrderFallbackChecker = (user) => {
           devLog.log('🔥 FALLBACK: New AI order detected!', latestOrder.id);
           
           const orderTime = new Date(latestOrder.created_at);
-          const tenMinutesAgo = new Date(Date.now() - (10 * 60 * 1000));
-          
           const fiveMinutesAgo = new Date(Date.now() - (5 * 60 * 1000));
+          
           if (orderTime > fiveMinutesAgo) {
             devLog.log('⏰ FALLBACK: Order is recent, showing notification');
             
