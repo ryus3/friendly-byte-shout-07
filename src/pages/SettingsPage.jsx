@@ -556,10 +556,7 @@ const SettingsPage = () => {
         onOpenChange={setIsSyncNotificationOpen} 
       />
 
-      <ComprehensiveDeliveryManagementDialog 
-        open={isDeliveryManagementOpen} 
-        onOpenChange={setIsDeliveryManagementOpen} 
-      />
+      {/* ComprehensiveDeliveryManagementDialog removed — replaced by Unified Sync Dashboard */}
 
       <InvoiceSyncSettingsDialog 
         open={isInvoiceSyncOpen} 
