@@ -826,46 +826,45 @@ ${regionsBlock}
     let finalAiResponse = aiResponse;
 
     // ===== Helpers: تطبيع السعر العربي + توسيع المنتجات المركبة =====
-    // 1) "24 الف"/"24 ألف"/"24k" → "24000"
+    // 1) تطبيع شامل: "24 الف" / "24الف" / "24 ألف" / "24k" → "24000"
     const normalizePriceTokens = (txt: string): string => {
       if (!txt) return txt;
       let out = txt;
       // أرقام عربية → إنجليزية
       const arDigits: Record<string, string> = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
       out = out.replace(/[٠-٩]/g, (d) => arDigits[d] || d);
-      // (الف|ألف|آلاف|الاف|k|K) بعد رقم → *1000
-      out = out.replace(/(\d{1,4})\s*(الف|ألف|آلاف|الاف|k|K)\b/g, (_m, n) => String(parseInt(n, 10) * 1000));
+      // (الف|ألف|آلاف|الاف|k|K) ملاصقة أو بمسافات/سطر جديد بعد رقم → *1000
+      // ملاحظة: لا نستخدم \b لأنه لا يعمل مع العربية
+      out = out.replace(/(\d{1,4})[\s\u00A0\u200f]*(الف|ألف|آلاف|الاف|kK]|k|K)/g, (_m, n) => String(parseInt(n, 10) * 1000));
+      out = out.replace(/(\d{1,4})[\s\u00A0\u200f]*(الف|ألف|آلاف|الاف)/g, (_m, n) => String(parseInt(n, 10) * 1000));
+      out = out.replace(/(\d{1,4})\s*[kK](?![a-zA-Z])/g, (_m, n) => String(parseInt(n, 10) * 1000));
       // "د.ع" / "دينار" → احذفها (يبقى الرقم فقط) لتجنّب أن تُفسّر كوحدة
       out = out.replace(/\s*(د\.?\s*ع|دينار)\s*/g, ' ');
       return out;
     };
 
-    // 2) توسيع "نايك نيلي سمول + ميديم" إلى منتجين: "نايك نيلي سمول" + "نايك نيلي ميديم"
-    //    يطبق على آخر سطر يحتوي '+' فقط، ويحافظ على باقي السطور كما هي.
+    // 2) توسيع "X سمول + ميديم" → "X سمول\nX ميديم"
     const SIZE_TOKENS = [
       'سمول','ميديم','لارج','اكس','اكسات','اكسين','xs','s','m','l','xl','xxl','xxxl','2xl','3xl','4xl','5xl',
       'صغير','وسط','متوسط','كبير'
     ];
-    const isSizeToken = (w: string) => {
-      const t = w.trim().toLowerCase();
-      return SIZE_TOKENS.includes(t);
-    };
+    const isSizeToken = (w: string) => SIZE_TOKENS.includes((w || '').trim().toLowerCase());
+
     const expandCompoundProducts = (txt: string): string => {
       if (!txt || !txt.includes('+')) return txt;
       const lines = txt.split(/\r?\n/);
       const out: string[] = [];
       for (const rawLine of lines) {
-        const line = rawLine;
-        // تجاهل أرقام الهواتف أو الأسعار
-        if (/07[3-9]\d{8}/.test(line) || /\b\d{4,}\b/.test(line.replace(/\+/g,''))) {
-          out.push(line);
-          continue;
-        }
-        if (!line.includes('+')) { out.push(line); continue; }
-        const parts = line.split('+').map(p => p.trim()).filter(Boolean);
-        if (parts.length < 2) { out.push(line); continue; }
+        if (!rawLine.includes('+')) { out.push(rawLine); continue; }
+        // أزل أرقام الهواتف والأسعار من الفحص قبل تقسيم +
+        const sanitized = rawLine
+          .replace(/(\+?964|00964)?0?7[0-9]{9}/g, ' ')
+          .replace(/\b\d{4,}\b/g, ' ');
+        if (!sanitized.includes('+')) { out.push(rawLine); continue; }
+        const parts = sanitized.split('+').map(p => p.trim()).filter(Boolean);
+        if (parts.length < 2) { out.push(rawLine); continue; }
 
-        // استخرج "الجذر" (اسم المنتج بدون آخر كلمة قياس) من الجزء الأول
+        // الجذر = اسم المنتج بدون آخر كلمة قياس
         const firstTokens = parts[0].split(/\s+/);
         const lastIsSize = isSizeToken(firstTokens[firstTokens.length - 1] || '');
         const baseTokens = lastIsSize ? firstTokens.slice(0, -1) : firstTokens;
@@ -874,14 +873,10 @@ ${regionsBlock}
         const expanded: string[] = [];
         for (const part of parts) {
           const toks = part.split(/\s+/).filter(Boolean);
-          // إذا الجزء عبارة عن قياس فقط → اضف الجذر
           if (toks.length === 1 && isSizeToken(toks[0]) && base) {
             expanded.push(`${base} ${toks[0]}`.trim());
-          } else if (base && !part.toLowerCase().includes(base.toLowerCase())) {
-            // الجزء قصير ولا يحوي اسم المنتج → ورّث الجذر
-            const onlySizes = toks.every(isSizeToken);
-            if (onlySizes) expanded.push(`${base} ${toks.join(' ')}`.trim());
-            else expanded.push(part);
+          } else if (base && toks.every(isSizeToken)) {
+            expanded.push(`${base} ${toks.join(' ')}`.trim());
           } else {
             expanded.push(part);
           }
