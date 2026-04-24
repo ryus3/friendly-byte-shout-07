@@ -230,17 +230,9 @@ serve(async (req) => {
               .maybeSingle();
 
             // ✅ إذا موجودة ومستلمة في DB ولم نطلب force = تخطي
-            // لكن لا نقفز إذا كانت تحتاج طلباتها (dio_count = 0)
+            // (الفواتير المستلمة لا تحتاج إعادة جلب طلباتها — تعمل عبر receipt_received)
             if (existingInvoice?.received === true && !force_refresh) {
-              if (sync_orders) {
-                const { count: dioCount } = await supabase
-                  .from('delivery_invoice_orders')
-                  .select('id', { count: 'exact', head: true })
-                  .eq('invoice_id', existingInvoice.id);
-                if ((dioCount ?? 0) > 0) continue;
-              } else {
-                continue;
-              }
+              continue;
             }
 
             // ✅ تحقق من تغيير الحالة
@@ -470,15 +462,16 @@ serve(async (req) => {
             statusChangedCount++;
           }
 
-          // Skip if no changes at all — لكن لا نقفز إذا الفاتورة تحتاج طلباتها بعد (dio_count = 0)
+          // Skip if no changes at all — لكن لا نقفز إذا الفاتورة pending وتحتاج طلباتها بعد (dio_count = 0)
+          // الفواتير المستلمة لا نعيد جلب طلباتها (تعمل عبر receipt_received) لتفادي rate-limit
           if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
-            if (sync_orders) {
+            if (sync_orders && !isReceived) {
               const { count: dioCount } = await supabase
                 .from('delivery_invoice_orders')
                 .select('id', { count: 'exact', head: true })
                 .eq('invoice_id', existing.id);
               if ((dioCount ?? 0) > 0) continue;
-              // وإلا: نتابع لجلب الطلبات وربطها
+              // فاتورة pending بدون طلبات → نتابع لجلبها وربطها
             } else {
               continue;
             }
