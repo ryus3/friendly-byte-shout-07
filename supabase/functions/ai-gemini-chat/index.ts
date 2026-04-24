@@ -1002,8 +1002,16 @@ ${regionsBlock}
         const isPhoneLike = (w: string) => /^\+?\d{4,}$/.test(w) || /^00?9?64\d+/.test(w) || /^0?7\d{9}$/.test(w);
         const isLongNumber = (w: string) => /^\d{3,}$/.test(w);
         const isSeparator = (w: string) => /^[،,\.;:]+$/.test(w);
-        const isProductLike = (w: string) =>
-          !isPhoneLike(w) && !isLongNumber(w) && !isSeparator(w);
+        // ✅ كلمة "منتج" حقيقية: قياس أو لون أو كلمة قصيرة بدون أرقام طويلة
+        // (لا نعتبر كل الكلمات منتجاً لتفادي ابتلاع المدينة/المنطقة/الهاتف)
+        const isProductLike = (w: string) => {
+          if (!w) return false;
+          if (isPhoneLike(w) || isLongNumber(w) || isSeparator(w)) return false;
+          if (isSizeToken(w) || isColorToken(w)) return true;
+          // كلمة قصيرة (1-2 كلمات لاتينية/عربية) قد تكون اسم منتج بسيط
+          // نسمح بكلمة من 1 إلى 12 حرف بدون أرقام
+          return /^[\p{L}_-]{1,15}$/u.test(w);
+        };
 
         // 3) نبحث عن "نطاق المنتج المركّب": أطول مقطع متتالي يحتوي على
         //    كلمات منتج/قياس مع علامات + بينها.
