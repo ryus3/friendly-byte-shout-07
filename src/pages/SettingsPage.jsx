@@ -350,32 +350,7 @@ const SettingsPage = () => {
               </ModernCard>
             )}
 
-            {/* إدارة التوصيل المتقدمة - للمدير فقط */}
-            {isAdmin && (
-              <ModernCard
-                icon={Settings}
-                title="إدارة التوصيل المتقدمة"
-                description="مزامنة شاملة للطلبات والفواتير وإدارة إعدادات التوصيل المتقدمة"
-                iconColor="from-indigo-500 to-indigo-600"
-                onClick={() => setIsDeliveryManagementOpen(true)}
-                badge={
-                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
-                    مدير فقط
-                  </Badge>
-                }
-              >
-                <div className="space-y-3 mt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">مزامنة تلقائية</span>
-                    <span className="font-bold text-green-600">مفعلة</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">آخر مزامنة شاملة</span>
-                    <span className="font-bold text-blue-600">منذ ساعة</span>
-                  </div>
-                </div>
-            </ModernCard>
-            )}
+            {/* تم إزالة "إدارة التوصيل المتقدمة" — تم دمج كل ميزاتها داخل "جدولة مزامنة الفواتير" (لوحة المزامنة الموحّدة) أدناه */}
 
             {/* جدولة مزامنة الفواتير - للمدراء فقط */}
             {isAdmin && (
