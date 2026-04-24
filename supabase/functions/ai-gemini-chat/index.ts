@@ -300,20 +300,21 @@ async function getStoreData(userInfo: any, authToken?: string) {
     console.log(`✅ تم جلب ${cities?.length || 0} مدينة و ${regions?.length || 0} منطقة من النظام الحقيقي`);
     
     // Get comprehensive product data with all related information
+    // ⚠️ نستخدم LEFT JOIN (بدون !inner) لضمان عدم استبعاد أي منتج
     const { data: products, error: productsError } = await supabase
       .from('products')
       .select(`
         id, name, base_price, cost_price, description, is_active,
-        product_departments!inner (
+        product_departments (
           departments (id, name, description, color, icon)
         ),
-        product_categories!inner (
+        product_categories (
           categories (id, name, description, type)
         ),
-        product_product_types!inner (
+        product_product_types (
           product_types (id, name, description)
         ),
-        product_seasons_occasions!inner (
+        product_seasons_occasions (
           seasons_occasions (id, name, type, description)
         ),
         product_variants (
