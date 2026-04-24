@@ -6,8 +6,6 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { useUnifiedAutoSync } from '@/hooks/useUnifiedAutoSync';
-import { UnifiedSyncSettings } from '@/components/delivery/UnifiedSyncSettings';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
 import SmartPagination from '@/components/ui/SmartPagination';
 import { useProfits } from '@/contexts/ProfitsContext';
@@ -41,7 +39,6 @@ const EmployeeFollowUpPage = () => {
   const { hasPermission, isAdmin, isDepartmentManager } = usePermissions();
   
   const { syncVisibleOrdersBatch } = useAlWaseet();
-  const { autoSyncVisibleOrders } = useUnifiedAutoSync();
   
   const [syncing, setSyncing] = useState(false);
   const [syncingEmployee, setSyncingEmployee] = useState(null);
@@ -265,7 +262,7 @@ const EmployeeFollowUpPage = () => {
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDuesDialogOpen, setIsDuesDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
-  const [isUnifiedSyncSettingsOpen, setIsUnifiedSyncSettingsOpen] = useState(false);
+  
   const [isSettlementRequestsDialogOpen, setIsSettlementRequestsDialogOpen] = useState(false);
   
   // دالة معالجة التسوية من Dialog
@@ -704,8 +701,8 @@ useEffect(() => {
       try {
         console.log(`🔄 مزامنة ذكية تلقائية: ${syncableOrders.length} طلب نشط من ${filteredOrders?.length || 0} ظاهر...`);
         
-        // استخدام autoSyncVisibleOrders من useUnifiedAutoSync
-        const result = await autoSyncVisibleOrders(syncableOrders);
+        // المزامنة المباشرة عبر AlWaseetContext (مسار موحد)
+        const result = await syncVisibleOrdersBatch(syncableOrders);
         
         if (result?.success) {
           console.log(`✅ مزامنة ذكية: ${result.updatedCount || 0} طلب محدث`);
@@ -1238,7 +1235,6 @@ useEffect(() => {
                   isAdmin={isAdmin}
                   hideDeliveryManagement={true}
                   employees={employees}
-                  onOpenSyncSettings={() => setIsUnifiedSyncSettingsOpen(true)}
                 />
 
         {/* الفلاتر */}
@@ -1538,12 +1534,6 @@ useEffect(() => {
           timePeriod={filters.timePeriod}
           supervisedEmployeeIds={supervisedEmployeeIds}
           isDepartmentManager={isDepartmentManager && !isAdmin}
-        />
-
-        {/* إعدادات المزامنة التلقائية الموحدة */}
-        <UnifiedSyncSettings
-          open={isUnifiedSyncSettingsOpen}
-          onOpenChange={setIsUnifiedSyncSettingsOpen}
         />
 
         {/* Dialog طلبات التحاسب */}
