@@ -1096,9 +1096,41 @@ ${regionsBlock}
     };
 
     // 3) رسالة معالَجة لتمريرها للدوال (تطبيع سعر + توسيع المركّب)
-    const processedMessage = expandCompoundProducts(normalizePriceTokens(message));
+    let processedMessage = expandCompoundProducts(normalizePriceTokens(message));
     if (processedMessage !== message) {
       console.log('🧪 تم تطبيع الرسالة قبل المعالجة:', { before: message, after: processedMessage });
+    }
+
+    // 🛡️ تحصين: استخراج الهاتف من الرسالة الأصلية (دفاع متعدد الطبقات)
+    const extractPhonesFromText = (txt: string): string[] => {
+      if (!txt) return [];
+      const digits = arabicToEnglishDigits(txt).replace(/[^0-9]/g, '');
+      const phones = new Set<string>();
+      const reList = [
+        /00964(7\d{9})/g,
+        /0964(7\d{9})/g,
+        /964(7\d{9})/g,
+        /(07\d{9})/g,
+      ];
+      for (const re of reList) {
+        let mm: RegExpExecArray | null;
+        while ((mm = re.exec(digits)) !== null) {
+          const local = mm[1].startsWith('0') ? mm[1] : '0' + mm[1];
+          if (/^07\d{9}$/.test(local)) phones.add(local);
+        }
+      }
+      return Array.from(phones);
+    };
+
+    const originalPhones = extractPhonesFromText(message);
+    const processedPhones = extractPhonesFromText(processedMessage);
+    if (originalPhones.length > 0 && processedPhones.length < originalPhones.length) {
+      const missing = originalPhones.filter(p => !processedPhones.includes(p));
+      console.error('🚨 [PHONE_LOST] فُقد الهاتف أثناء المعالجة! استرجاع تلقائي:', {
+        original: message, processed: processedMessage, missing,
+      });
+      // حماية احتياطية: نُلحق الهاتف المفقود في نهاية الرسالة المعالَجة
+      processedMessage = `${processedMessage}\n${missing.join(' ')}`;
     }
 
     if (hasOrderIntent) {
