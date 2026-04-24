@@ -5,7 +5,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const MODON_BASE_URL = 'https://mcht.modon-express.net/v1/merchant';
+const MODON_PROXY_URL = 'https://api.ryusbrand.com/modon/v1/merchant';
+const MODON_DIRECT_URL = 'https://mcht.modon-express.net/v1/merchant';
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -17,12 +18,13 @@ serve(async (req) => {
     
     console.log('📦 MODON Proxy Request:', { endpoint, method, isFormData });
 
-    let url = `${MODON_BASE_URL}/${endpoint}`;
-    
+    let suffix = `/${endpoint}`;
     if (queryParams) {
       const params = new URLSearchParams(queryParams);
-      url += `?${params.toString()}`;
+      suffix += `?${params.toString()}`;
     }
+    let url = `${MODON_PROXY_URL}${suffix}`;
+    let usedSource: 'proxy' | 'direct' = 'proxy';
 
     const headers: Record<string, string> = {};
 
@@ -66,16 +68,41 @@ serve(async (req) => {
     console.log('📍 Method:', method);
     console.log('🔑 Has Token:', !!token);
     console.log('🌐 Full URL:', url);
-    console.log('🔄 Calling MODON API...');
+    console.log('🔄 Calling MODON API via static proxy (AWS Lightsail)...');
     
-    const response = await fetch(url, options);
+    let response: Response;
+    let responseText: string;
+    try {
+      response = await fetch(url, options);
+      // Fall back on 5xx
+      if (response.status >= 500 && response.status < 600) {
+        throw new Error(`Proxy returned ${response.status}`);
+      }
+      responseText = await response.text();
+    } catch (proxyError) {
+      console.warn('⚠️ MODON static proxy failed, falling back to direct:', proxyError instanceof Error ? proxyError.message : proxyError);
+      usedSource = 'direct';
+      const directUrl = `${MODON_DIRECT_URL}${suffix}`;
+      console.log('🔁 Direct fallback URL:', directUrl);
+      // Rebuild body for FormData (a stream may have been consumed); re-create options
+      const fallbackOptions: RequestInit = { method, headers: { ...headers } };
+      if (payload && (method === 'POST' || method === 'PUT')) {
+        if (isFormData) {
+          const fd = new FormData();
+          Object.keys(payload).forEach(key => fd.append(key, payload[key]));
+          fallbackOptions.body = fd;
+        } else {
+          fallbackOptions.body = JSON.stringify(payload);
+        }
+      }
+      response = await fetch(directUrl, fallbackOptions);
+      responseText = await response.text();
+    }
     
     console.log('📡 ===== MODON HTTP Response =====');
+    console.log(`✅ Source: ${usedSource}`);
     console.log('✅ Status:', response.status, response.statusText);
     console.log('✅ OK:', response.ok);
-    
-    // قراءة الـ response كـ text أولاً لتجنب أخطاء JSON parsing
-    const responseText = await response.text();
     console.log('📄 Raw Response (first 500 chars):', responseText.substring(0, 500));
     
     // محاولة parse كـ JSON

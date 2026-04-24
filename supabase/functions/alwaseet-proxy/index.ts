@@ -3,7 +3,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-const ALWASEET_BASE_URL = 'https://api.alwaseet-iq.net/v1/merchant';
+const ALWASEET_PROXY_URL = 'https://api.ryusbrand.com/alwaseet/v1/merchant';
+const ALWASEET_DIRECT_URL = 'https://api.alwaseet-iq.net/v1/merchant';
 
 const getErrorMessage = (error: unknown) => {
   if (error instanceof Error) return error.message;
@@ -58,10 +59,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Build URL
-    let url = `${ALWASEET_BASE_URL}/${endpoint}`;
-    
-    // Add query params
+    // Build query string
     const params = new URLSearchParams();
     if (token) params.set('token', token);
     if (queryParams) {
@@ -70,16 +68,39 @@ Deno.serve(async (req) => {
       }
     }
     const qs = params.toString();
-    if (qs) url += `?${qs}`;
-
-    console.log(`[AlWaseet Proxy] ${method} ${url}`);
+    const suffix = `/${endpoint}${qs ? `?${qs}` : ''}`;
 
     const fetchOptions = buildFetchOptions(method, payload);
 
-    const response = await fetch(url, fetchOptions);
-    
-    const contentType = response.headers.get('content-type') || '';
-    const responseText = await response.text();
+    // ✅ Try the static proxy first (AWS Lightsail Frankfurt) to bypass Cloudflare WAF
+    const proxyUrl = `${ALWASEET_PROXY_URL}${suffix}`;
+    let usedSource: 'proxy' | 'direct' = 'proxy';
+    let response: Response;
+    let responseText: string;
+    let contentType: string;
+
+    console.log(`[AlWaseet Proxy] ${method} ${proxyUrl} (via static proxy)`);
+
+    try {
+      response = await fetch(proxyUrl, fetchOptions);
+      contentType = response.headers.get('content-type') || '';
+      responseText = await response.text();
+
+      // If proxy returned 5xx, fall back to direct
+      if (response.status >= 500 && response.status < 600) {
+        throw new Error(`Proxy returned ${response.status}`);
+      }
+    } catch (proxyError) {
+      console.warn(`[AlWaseet Proxy] Static proxy failed: ${getErrorMessage(proxyError)} — falling back to direct`);
+      usedSource = 'direct';
+      const directUrl = `${ALWASEET_DIRECT_URL}${suffix}`;
+      console.log(`[AlWaseet Proxy] ${method} ${directUrl} (direct fallback)`);
+      response = await fetch(directUrl, buildFetchOptions(method, payload));
+      contentType = response.headers.get('content-type') || '';
+      responseText = await response.text();
+    }
+
+    console.log(`[AlWaseet Proxy] Response source=${usedSource} status=${response.status}`);
 
     // ✅ Detect Cloudflare block and return structured JSON instead of raw HTML
     if (isCloudflareBlock(response.status, responseText)) {
