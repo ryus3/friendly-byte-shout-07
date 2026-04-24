@@ -502,16 +502,19 @@ serve(async (req) => {
             statusChangedCount++;
           }
 
-          // Skip if no changes at all — لكن لا نقفز إذا الفاتورة pending وتحتاج طلباتها بعد (dio_count = 0)
+          // Skip if no changes — لكن لا نقفز إذا الفاتورة pending وطلباتها ناقصة (dio_count < expected)
           // الفواتير المستلمة لا نعيد جلب طلباتها (تعمل عبر receipt_received) لتفادي rate-limit
           if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
             if (sync_orders && !isReceived) {
+              const expectedCount = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
               const { count: dioCount } = await supabase
                 .from('delivery_invoice_orders')
                 .select('id', { count: 'exact', head: true })
                 .eq('invoice_id', existing.id);
-              if ((dioCount ?? 0) > 0) continue;
-              // فاتورة pending بدون طلبات → نتابع لجلبها وربطها
+              const have = dioCount ?? 0;
+              if (expectedCount > 0 && have >= expectedCount) continue;
+              // pending بطلبات ناقصة → نتابع لإكمالها وربطها
+              console.log(`  ⚙️ Pending invoice ${externalId} needs completion: have=${have}, expected=${expectedCount}`);
             } else {
               continue;
             }
