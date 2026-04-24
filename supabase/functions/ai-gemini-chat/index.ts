@@ -470,14 +470,20 @@ async function getStoreData(userInfo: any, authToken?: string) {
 
     // Process products with analytics
     const processedProducts = products?.map(product => {
-      const totalStock = product.product_variants?.reduce((sum: number, variant: any) => 
+      const totalStock = product.product_variants?.reduce((sum: number, variant: any) =>
         sum + (variant.inventory?.[0]?.quantity || 0), 0) || 0;
-      
-      const totalSold = product.product_variants?.reduce((sum: number, variant: any) => 
+
+      const totalSold = product.product_variants?.reduce((sum: number, variant: any) =>
         sum + (variant.inventory?.[0]?.sold_quantity || 0), 0) || 0;
+
+      // 🏷️ استخراج اسم القسم من العلاقة (لربطه بالمنتج في الـ prompt)
+      const departmentName = product.product_departments?.[0]?.departments?.name || 'غير مصنف';
+      const categoryName = product.product_categories?.[0]?.categories?.name || '';
 
       return {
         ...product,
+        department_name: departmentName,
+        category_name: categoryName,
         inventory_count: totalStock,
         sold_quantity: totalSold,
         variants: product.product_variants?.map((variant: any) => ({
@@ -485,6 +491,7 @@ async function getStoreData(userInfo: any, authToken?: string) {
           color: variant.colors?.name || 'افتراضي',
           size: variant.sizes?.name || 'افتراضي',
           stock: variant.inventory?.[0]?.quantity || 0,
+          reserved: variant.inventory?.[0]?.reserved_quantity || 0,
           sold: variant.inventory?.[0]?.sold_quantity || 0
         })) || []
       };
