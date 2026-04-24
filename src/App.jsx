@@ -13,7 +13,7 @@ import { useAiChat } from './contexts/AiChatContext';
 import SuperAiChatDialog from './components/ai/SuperAiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
-import { useAppStartSync } from '@/hooks/useAppStartSync';
+// ملاحظة: useAppStartSync يعمل داخل AppProviders (AppStartSync) — لا تكرّره هنا
 import AppSplashScreen from '@/components/AppSplashScreen.jsx';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
