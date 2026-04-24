@@ -3,7 +3,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import devLog from '@/lib/devLogger';
 import { 
   Bot, 
   MessageSquare, 
@@ -30,6 +29,7 @@ import { useSuper } from '@/contexts/SuperProvider';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import devLog from '@/lib/devLogger';
 const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
   const { deleteAiOrderSafely } = useAiOrdersCleanup();
   const { settings } = useSuper(); // إضافة settings للحصول على رسوم التوصيل

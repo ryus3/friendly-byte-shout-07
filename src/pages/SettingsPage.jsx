@@ -38,6 +38,7 @@ import BackupSystemDialog from '@/components/settings/BackupSystemDialog';
 import SyncNotificationSettings from '@/components/settings/SyncNotificationSettings';
 import InvoiceSyncSettingsDialog from '@/components/settings/InvoiceSyncSettingsDialog';
 import { Badge } from '@/components/ui/badge';
+import devLog from '@/lib/devLogger';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
   const Icon = icon;
@@ -162,7 +163,7 @@ const SettingsPage = () => {
       if (!canViewAllData) return;
       
       // استخدام النظام الموحد بدلاً من استدعاء supabase مباشر
-      console.log('📊 جلب عدد رموز الموظفين من النظام الموحد');
+      devLog.log('📊 جلب عدد رموز الموظفين من النظام الموحد');
       
       // TODO: إضافة هذه البيانات لـ SuperAPI لاحقاً
       // مؤقتاً: عرض رقم ثابت

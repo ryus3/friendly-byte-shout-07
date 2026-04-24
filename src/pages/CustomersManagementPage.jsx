@@ -43,6 +43,7 @@ import {
   UserPlus,
   BarChart3
 } from "lucide-react";
+import devLog from '@/lib/devLogger';
 
 const CustomersManagementPage = () => {
   const { customers, orders, products, loading } = useInventory();
@@ -367,7 +368,7 @@ const [showExportDialog, setShowExportDialog] = useState(false);
                           customer.gender_type ||
                           customer.customer_gender_segments?.gender_type;
         
-        console.log('Customer gender filter:', {
+        devLog.log('Customer gender filter:', {
           name: customer.name,
           phone: customer.phone,
           genderType,
@@ -539,7 +540,7 @@ const [showExportDialog, setShowExportDialog] = useState(false);
         const month = new Date().getMonth() + 1;
         const year = new Date().getFullYear();
 
-        console.log('تحميل بيانات خصومات المدن:', { month, year });
+        devLog.log('تحميل بيانات خصومات المدن:', { month, year });
 
         const { data: discounts, error: discountsError } = await supabase
           .from('city_random_discounts')
@@ -561,7 +562,7 @@ const [showExportDialog, setShowExportDialog] = useState(false);
           .order('total_amount', { ascending: false })
           .limit(5);
 
-        console.log('نتائج بيانات خصومات المدن:', {
+        devLog.log('نتائج بيانات خصومات المدن:', {
           discounts,
           discountsError,
           benefits,
@@ -587,7 +588,7 @@ const [showExportDialog, setShowExportDialog] = useState(false);
       try {
         await supabase.rpc('update_customer_gender_classification');
       } catch (error) {
-        console.log('خطأ في تحديث تصنيف الجنس:', error);
+        devLog.log('خطأ في تحديث تصنيف الجنس:', error);
       }
     };
     

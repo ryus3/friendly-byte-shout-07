@@ -1,3 +1,4 @@
+import devLog from '@/lib/devLogger';
 /**
  * نظام إجبار استخدام employee_code في كل مكان
  * يمنع استخدام UUID ويوجه لاستخدام employee_code
@@ -79,7 +80,7 @@ export const createEmployeeCodeFilter = (user, isAdmin = false, fieldName = 'cre
     return { [fieldName]: 'INVALID_USER' }; // فلتر لن يجد أي نتائج
   }
   
-  console.log('🔧 إنشاء فلتر مؤقت باستخدام UUID:', userUUID);
+  devLog.log('🔧 إنشاء فلتر مؤقت باستخدام UUID:', userUUID);
   
   return { [fieldName]: userUUID };
 };
@@ -133,7 +134,7 @@ export const enforceEmployeeCodeSystem = () => {
     }
   });
   
-  console.log('✅ Employee Code Enforcer: تم تفعيل نظام إجبار employee_code');
+  devLog.log('✅ Employee Code Enforcer: تم تفعيل نظام إجبار employee_code');
 };
 
 export default {

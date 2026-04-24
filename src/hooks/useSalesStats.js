@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
+import devLog from '@/lib/devLogger';
 
 /**
  * Hook مركزي للحصول على إحصائيات المبيعات
@@ -62,7 +63,7 @@ export const useSalesStats = (options = {}) => {
         error: null
       });
 
-      console.log('📊 تم جلب إحصائيات المبيعات بنجاح:', {
+      devLog.log('📊 تم جلب إحصائيات المبيعات بنجاح:', {
         productsCount: productsSoldMap.size,
         totalProductsSold: summaryStats.total_products_sold
       });

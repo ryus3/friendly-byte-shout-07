@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { ArrowLeft, Star, TrendingUp, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import devLog from '@/lib/devLogger';
 
 const StorefrontHome = () => {
   const { settings, trackPageView } = useStorefront();
@@ -31,7 +32,7 @@ const StorefrontHome = () => {
     const fetchData = async () => {
       try {
         setIsLoading(true);
-        console.log('🏪 Fetching storefront data for employee:', settings.employee_id);
+        devLog.log('🏪 Fetching storefront data for employee:', settings.employee_id);
 
         // جلب البانرات
         const { data: bannersData } = await supabase
@@ -42,7 +43,7 @@ const StorefrontHome = () => {
           .order('display_order');
 
         setBanners(bannersData || []);
-        console.log('🎨 Banners:', bannersData?.length || 0);
+        devLog.log('🎨 Banners:', bannersData?.length || 0);
 
         // === النظام الهجين: جلب المنتجات المسموحة التي هي في المتجر ===
         
@@ -53,11 +54,11 @@ const StorefrontHome = () => {
           .eq('employee_id', settings.employee_id)
           .eq('is_active', true);
 
-        console.log('📋 Allowed products:', allowedProductsData?.length || 0, 'Error:', allowedError);
+        devLog.log('📋 Allowed products:', allowedProductsData?.length || 0, 'Error:', allowedError);
         const allowedProductIds = allowedProductsData?.map(ap => ap.product_id) || [];
 
         if (allowedProductIds.length === 0) {
-          console.log('⚠️ No allowed products for this employee');
+          devLog.log('⚠️ No allowed products for this employee');
           setProducts([]);
           setIsLoading(false);
           return;
@@ -70,14 +71,14 @@ const StorefrontHome = () => {
           .eq('employee_id', settings.employee_id)
           .eq('is_in_storefront', true);
 
-        console.log('🏪 Storefront descriptions:', storefrontDescriptions?.length || 0, 'Error:', descError);
+        devLog.log('🏪 Storefront descriptions:', storefrontDescriptions?.length || 0, 'Error:', descError);
 
         // المنتجات التي يجب عرضها = المسموحة و في المتجر
         const storefrontProductIds = storefrontDescriptions
           ?.filter(d => allowedProductIds.includes(d.product_id))
           .map(d => d.product_id) || [];
 
-        console.log('📦 Storefront product IDs:', storefrontProductIds.length);
+        devLog.log('📦 Storefront product IDs:', storefrontProductIds.length);
 
         // المنتجات المميزة (للصفحة الرئيسية)
         const featuredProductIds = storefrontDescriptions
@@ -89,10 +90,10 @@ const StorefrontHome = () => {
           ? featuredProductIds 
           : storefrontProductIds.slice(0, 12);
 
-        console.log('🎯 Product IDs to fetch:', productIdsToFetch.length);
+        devLog.log('🎯 Product IDs to fetch:', productIdsToFetch.length);
 
         if (productIdsToFetch.length === 0) {
-          console.log('⚠️ No products to display in storefront');
+          devLog.log('⚠️ No products to display in storefront');
           setProducts([]);
           setIsLoading(false);
           return;
@@ -115,7 +116,7 @@ const StorefrontHome = () => {
           .in('id', productIdsToFetch)
           .eq('is_active', true);
 
-        console.log('📦 Products fetched:', productsData?.length || 0, 'Error:', prodError);
+        devLog.log('📦 Products fetched:', productsData?.length || 0, 'Error:', prodError);
 
         if (!productsData || productsData.length === 0) {
           setProducts([]);
@@ -130,7 +131,7 @@ const StorefrontHome = () => {
           .select('variant_id, quantity, reserved_quantity')
           .in('variant_id', variantIds);
 
-        console.log('📊 Inventory:', inventoryData?.length || 0, 'items');
+        devLog.log('📊 Inventory:', inventoryData?.length || 0, 'items');
 
         // إنشاء خريطة المخزون
         const inventoryMap = {};
@@ -156,7 +157,7 @@ const StorefrontHome = () => {
           })
         );
 
-        console.log('✅ Available products:', availableProducts.length);
+        devLog.log('✅ Available products:', availableProducts.length);
         setProducts(availableProducts);
       } catch (err) {
         console.error('❌ Error fetching storefront data:', err);

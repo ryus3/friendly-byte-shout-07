@@ -14,6 +14,7 @@ import {
   Paintbrush, Grid, Layout, Download, Upload
 } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import devLog from '@/lib/devLogger';
 
 const AppearanceDialog = ({ open, onOpenChange }) => {
   const { theme, setTheme } = useTheme();
@@ -267,7 +268,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
         duration: 1500
       });
     } catch (error) {
-      console.log('تعذر تشغيل الصوت:', error);
+      devLog.log('تعذر تشغيل الصوت:', error);
     }
   };
 

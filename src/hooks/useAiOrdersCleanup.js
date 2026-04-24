@@ -4,6 +4,7 @@
  */
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import devLog from '@/lib/devLogger';
 
 export const useAiOrdersCleanup = () => {
   
@@ -35,7 +36,7 @@ export const useAiOrdersCleanup = () => {
         .eq('id', aiOrderId);
       
       if (error) {
-        console.warn('⚠️ فشل ربط الطلب الذكي بالطلب الحقيقي:', error);
+        devLog.warn('⚠️ فشل ربط الطلب الذكي بالطلب الحقيقي:', error);
         return { success: false, error: error.message };
       }
       

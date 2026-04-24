@@ -8,6 +8,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
+import devLog from '@/lib/devLogger';
 
 export const useMasterFinancialSystem = (options = {}) => {
   const { orders, accounting, loading: inventoryLoading } = useInventory();
@@ -29,7 +30,7 @@ export const useMasterFinancialSystem = (options = {}) => {
       setError(null);
 
       if (enableDebugLogs) {
-        console.log('🏦 النظام المالي الموحد الشامل: بدء العمليات...');
+        devLog.log('🏦 النظام المالي الموحد الشامل: بدء العمليات...');
       }
 
       // 1. جلب الطلبات المكتملة والمستلمة مع جميع التفاصيل
@@ -251,7 +252,7 @@ export const useMasterFinancialSystem = (options = {}) => {
       };
 
       if (enableDebugLogs) {
-        console.log('🏦 النظام المالي الموحد الشامل - النتائج:', masterFinancialData);
+        devLog.log('🏦 النظام المالي الموحد الشامل - النتائج:', masterFinancialData);
       }
 
       setMasterData(masterFinancialData);

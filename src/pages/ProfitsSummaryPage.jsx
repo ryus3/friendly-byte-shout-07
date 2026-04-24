@@ -45,6 +45,7 @@ import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EmployeeReceivedProfitsDialog from '@/components/shared/EmployeeReceivedProfitsDialog';
 import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
 import { Button } from '@/components/ui/button';
+import devLog from '@/lib/devLogger';
 
 const ProfitsSummaryPage = () => {
   const { orders, calculateProfit, accounting, requestProfitSettlement, settlementInvoices, addExpense, deleteExpense, calculateManagerProfit, updateOrder, deleteOrders } = useInventory();
@@ -141,7 +142,7 @@ const ProfitsSummaryPage = () => {
     }
   }, [canViewAll]);
   
-  console.log('🔧 صلاحيات المستخدم:', { 
+  devLog.log('🔧 صلاحيات المستخدم:', { 
     canViewAll, 
     canRequestSettlement, 
     userRole: user?.role,
@@ -172,10 +173,10 @@ const ProfitsSummaryPage = () => {
 
     const profitData = useMemo(() => {
         const { from, to } = dateRange;
-        console.log('🔍 حساب بيانات الأرباح:', { from, to, ordersCount: orders?.length, usersCount: allUsers?.length, profitsCount: profits?.length });
+        devLog.log('🔍 حساب بيانات الأرباح:', { from, to, ordersCount: orders?.length, usersCount: allUsers?.length, profitsCount: profits?.length });
         
         if (!orders || !allUsers || !from || !to || !profits) {
-            console.log('❌ بيانات ناقصة للحساب:', { 
+            devLog.log('❌ بيانات ناقصة للحساب:', { 
                 hasOrders: !!orders, 
                 hasUsers: !!allUsers, 
                 hasDateRange: !!from && !!to, 
@@ -318,7 +319,7 @@ const ProfitsSummaryPage = () => {
             return expenseDate && isValid(expenseDate) && expenseDate >= from && expenseDate <= to;
         }) : [];
 
-        console.log('🔍 [DEBUG] فحص المصاريف في ملخص الأرباح:', {
+        devLog.log('🔍 [DEBUG] فحص المصاريف في ملخص الأرباح:', {
             totalExpenses: expensesInPeriod.length,
             expensesInPeriod: expensesInPeriod.map(e => ({
                 id: e.id,
@@ -332,7 +333,7 @@ const ProfitsSummaryPage = () => {
         const generalExpenses = expensesInPeriod.filter(e => {
             // استبعاد جميع المصاريف النظامية
             if (e.expense_type === 'system') {
-                console.log('🚫 [DEBUG] استبعاد مصروف نظامي:', e.category, e.amount);
+                devLog.log('🚫 [DEBUG] استبعاد مصروف نظامي:', e.category, e.amount);
                 return false;
             }
             // استبعاد مستحقات الموظفين من أي حقل
@@ -341,7 +342,7 @@ const ProfitsSummaryPage = () => {
                 e.related_data?.category === 'مستحقات الموظفين' ||
                 e.metadata?.category === 'مستحقات الموظفين'
             ) {
-                console.log('🚫 [DEBUG] استبعاد مستحقات موظفين:', e.amount);
+                devLog.log('🚫 [DEBUG] استبعاد مستحقات موظفين:', e.amount);
                 return false;
             }
             // استبعاد مصاريف الشراء المرتبطة بالمشتريات من أي حقل
@@ -349,13 +350,13 @@ const ProfitsSummaryPage = () => {
                 e.related_data?.category === 'شراء بضاعة' ||
                 e.metadata?.category === 'شراء بضاعة'
             ) {
-                console.log('🚫 [DEBUG] استبعاد مصاريف شراء:', e.amount);
+                devLog.log('🚫 [DEBUG] استبعاد مصاريف شراء:', e.amount);
                 return false;
             }
             return true;
         }).reduce((sum, e) => sum + e.amount, 0);
 
-        console.log('📊 [DEBUG] النتائج في ملخص الأرباح:', { generalExpenses });
+        devLog.log('📊 [DEBUG] النتائج في ملخص الأرباح:', { generalExpenses });
 
         // ✅ فلترة المستحقات حسب الإشراف: مدير القسم يرى مستحقات موظفيه فقط
         const employeeSettledDues = expensesInPeriod.filter(e => {
@@ -410,7 +411,7 @@ const ProfitsSummaryPage = () => {
             return true;
         }).reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
         
-        console.log('📊 نتائج الحساب:', {
+        devLog.log('📊 نتائج الحساب:', {
             deliveredOrdersCount: deliveredOrders.length,
             pendingOrdersCount: pendingDeliveredOrders.length,
             detailedProfitsCount: detailedProfits.length,
@@ -517,7 +518,7 @@ const ProfitsSummaryPage = () => {
     setCurrentPage(1);
   }, [filters, periodFilter]);
 
-  console.log('📋 بيانات مفلترة:', {
+  devLog.log('📋 بيانات مفلترة:', {
     canViewAll,
     canRequestSettlement,
     filteredCount: filteredDetailedProfits.length,
@@ -560,7 +561,7 @@ const ProfitsSummaryPage = () => {
     setIsRequesting(true);
     
     try {
-      console.log('🔄 بدء عملية طلب التحاسب...');
+      devLog.log('🔄 بدء عملية طلب التحاسب...');
       
       // التحقق من حالة المصادقة أولاً
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -570,14 +571,14 @@ const ProfitsSummaryPage = () => {
         throw new Error('انتهت صلاحية الجلسة، يرجى تسجيل الدخول مرة أخرى');
       }
 
-      console.log('✅ الجلسة صالحة، تحديث البيانات...');
+      devLog.log('✅ الجلسة صالحة، تحديث البيانات...');
       
       // تحديث البيانات أولاً مع retry - التحقق من وجود الدالة
       if (typeof refreshProfits === 'function') {
         await refreshProfits();
       }
       
-      console.log('✅ تم تحديث البيانات، إرسال طلب التحاسب...');
+      devLog.log('✅ تم تحديث البيانات، إرسال طلب التحاسب...');
       
       // استخراج معرفات الطلبات من الأرباح المحددة - تصحيح المقارنة
       const selectedProfits = filteredDetailedProfits.filter(p => selectedOrders.includes(p.id));
@@ -585,7 +586,7 @@ const ProfitsSummaryPage = () => {
       
       const amountToSettle = selectedProfits.reduce((sum, p) => sum + p.profit, 0);
 
-      console.log('🏦 طلب التحاسب:', {
+      devLog.log('🏦 طلب التحاسب:', {
         selectedOrdersCount: selectedOrders.length,
         selectedProfitsCount: selectedProfits.length,
         orderIds,
@@ -610,7 +611,7 @@ const ProfitsSummaryPage = () => {
           });
         } else if (result === null) {
           // خطأ عام - التوست يُرسل من createSettlementRequest
-          console.log('⚠️ createSettlementRequest returned null');
+          devLog.log('⚠️ createSettlementRequest returned null');
         }
       } else {
         throw new Error('لا توجد طلبات صالحة للتحاسب');

@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/SuperProvider';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
@@ -17,7 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import InventoryStats from '@/components/inventory/InventoryStats';
 import InventoryFilters from '@/components/inventory/InventoryFilters';
 import EditStockDialog from '@/components/inventory/EditStockDialog';
-import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
+// 🚀 Lazy: html5-qrcode (~150KB) يُحمَّل فقط عند فتح الماسح
+const BarcodeScannerDialog = lazy(() => import('@/components/products/BarcodeScannerDialog'));
 import ReservedStockDialog from '@/components/inventory/ReservedStockDialog';
 
 import UnifiedInventoryStats from '@/components/inventory/UnifiedInventoryStats';
@@ -33,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { useSalesStats } from '@/hooks/useSalesStats';
 import InventoryAuditDialog from '@/components/inventory/InventoryAuditDialog';
 import InventoryOperationsLog from '@/components/inventory/InventoryOperationsLog';
+import devLog from '@/lib/devLogger';
 
 const InventoryList = ({ items, onEditStock, canEdit, stockFilter, isLoading, onSelectionChange, selectedItems, isMobile, getVariantSoldData: getSoldDataProp }) => {
   if (isLoading) {
@@ -319,7 +321,7 @@ const InventoryPage = () => {
   const { products: allProducts, orders, loading, settings, updateVariantStock } = useInventory();
   
   // لوق للتشخيص
-  console.log('🔍 InventoryPage: البيانات الواردة:', {
+  devLog.log('🔍 InventoryPage: البيانات الواردة:', {
     productsCount: allProducts?.length || 0,
     loading,
     hasProducts: !!allProducts,
@@ -602,7 +604,7 @@ const InventoryPage = () => {
     if (filters.department && filters.department !== 'all') {
       const before = items.length;
       items = items.filter(p => hasDept(p, filters.department));
-      console.log('⚙️ فلترة القسم:', { dept: filters.department, before, after: items.length });
+      devLog.log('⚙️ فلترة القسم:', { dept: filters.department, before, after: items.length });
     }
 
     if (filters.searchTerm) {
@@ -617,19 +619,19 @@ const InventoryPage = () => {
     if (filters.category && filters.category !== 'all') {
       const before = items.length;
       items = items.filter(p => hasCategory(p, filters.category));
-      console.log('⚙️ فلترة التصنيف:', { cat: filters.category, before, after: items.length });
+      devLog.log('⚙️ فلترة التصنيف:', { cat: filters.category, before, after: items.length });
     }
 
     if (filters.productType && filters.productType !== 'all') {
       const before = items.length;
       items = items.filter(p => hasProductType(p, filters.productType));
-      console.log('⚙️ فلترة النوع:', { type: filters.productType, before, after: items.length });
+      devLog.log('⚙️ فلترة النوع:', { type: filters.productType, before, after: items.length });
     }
 
     if (filters.seasonOccasion && filters.seasonOccasion !== 'all') {
       const before = items.length;
       items = items.filter(p => hasSeason(p, filters.seasonOccasion));
-      console.log('⚙️ فلترة الموسم/المناسبة:', { season: filters.seasonOccasion, before, after: items.length });
+      devLog.log('⚙️ فلترة الموسم/المناسبة:', { season: filters.seasonOccasion, before, after: items.length });
     }
 
     if (filters.color && filters.color !== 'all') {
@@ -683,16 +685,16 @@ const InventoryPage = () => {
   };
 
   const handleFilterChange = useCallback((key, value) => {
-    console.log('handleFilterChange called with:', key, value);
+    devLog.log('handleFilterChange called with:', key, value);
     
     // التعامل مع الاستدعاءات من InventoryStats (معامل واحد)
     if (typeof key === 'string' && value === undefined) {
       if (key === 'reserved') {
-        console.log('Opening reserved stock dialog from stats...');
+        devLog.log('Opening reserved stock dialog from stats...');
         setIsReservedStockDialogOpen(true);
         return;
       } else {
-        console.log('Setting stockFilter from stats:', key);
+        devLog.log('Setting stockFilter from stats:', key);
         setFilters(currentFilters => ({ ...currentFilters, stockFilter: key }));
         return;
       }
@@ -700,11 +702,11 @@ const InventoryPage = () => {
     
     // التعامل مع الاستدعاءات العادية (معاملين)
     if (key === 'stockFilter' && value === 'reserved') {
-      console.log('Opening reserved stock dialog from filters...');
+      devLog.log('Opening reserved stock dialog from filters...');
       setIsReservedStockDialogOpen(true);
       return;
     } else {
-      console.log('Setting filter:', key, value);
+      devLog.log('Setting filter:', key, value);
       setFilters(currentFilters => ({ ...currentFilters, [key]: value }));
     }
   }, []);
@@ -848,16 +850,20 @@ const InventoryPage = () => {
         />
       )}
 
-      <BarcodeScannerDialog
-        open={isBarcodeScannerOpen}
-        onOpenChange={setIsBarcodeScannerOpen}
-        onScanSuccess={handleBarcodeScan}
-      />
+      {isBarcodeScannerOpen && (
+        <Suspense fallback={null}>
+          <BarcodeScannerDialog
+            open={isBarcodeScannerOpen}
+            onOpenChange={setIsBarcodeScannerOpen}
+            onScanSuccess={handleBarcodeScan}
+          />
+        </Suspense>
+      )}
       
       <ReservedStockDialog 
         open={isReservedStockDialogOpen} 
         onOpenChange={(open) => {
-          console.log('🔍 INVENTORY PAGE - ReservedStockDialog Debug:', { 
+          devLog.log('🔍 INVENTORY PAGE - ReservedStockDialog Debug:', { 
             opening: open, 
             reservedOrdersCount: reservedOrders?.length,
             reservedOrdersSample: reservedOrders?.slice(0, 3).map(o => ({

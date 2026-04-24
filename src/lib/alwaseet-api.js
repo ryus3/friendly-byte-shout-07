@@ -2,6 +2,7 @@
 // This file contains functions to interact with the Al-Waseet delivery company API.
 
 import { supabase } from './customSupabaseClient';
+import devLog from '@/lib/devLogger';
 
 const REQUEST_GAP_MS = 450;
 const SHORT_CACHE_TTL_MS = 60 * 1000;
@@ -127,7 +128,7 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
       } catch (error) {
         // ✅ Cloudflare block: NO retries - fail fast
         if (error.isCloudflareBlock) {
-          console.warn(`⛔ Cloudflare حظر ${endpoint} - rayId: ${error.rayId || 'N/A'}`);
+          devLog.warn(`⛔ Cloudflare حظر ${endpoint} - rayId: ${error.rayId || 'N/A'}`);
           throw error;
         }
 
@@ -147,16 +148,16 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         
         if ((isRateLimitError || isCloudflareBlock) && attempt < retries) {
           const waitTime = error.retryAfter || Math.min(2000 * attempt, 5000);
-          console.warn(`⚠️ تأخير لـ ${endpoint} - محاولة ${attempt}/${retries} بعد ${waitTime/1000}s`);
+          devLog.warn(`⚠️ تأخير لـ ${endpoint} - محاولة ${attempt}/${retries} بعد ${waitTime/1000}s`);
           await wait(waitTime);
           continue;
         }
         
         if (attempt === retries) {
           if (isNetworkError) {
-            console.warn(`⚠️ خطأ شبكة لـ ${endpoint}`);
+            devLog.warn(`⚠️ خطأ شبكة لـ ${endpoint}`);
           } else if (isRateLimitError || isCloudflareBlock) {
-            console.warn(`⚠️ حظر/تقييد ${endpoint} مؤقتاً`);
+            devLog.warn(`⚠️ حظر/تقييد ${endpoint} مؤقتاً`);
           }
         }
         
@@ -180,7 +181,7 @@ export const getCities = async (token) => {
   } catch (error) {
     // ✅ Fallback to local DB cache when API is blocked
     if (error.isCloudflareBlock || error.message?.includes('حظر')) {
-      console.warn('⚠️ getCities: استخدام الكاش المحلي بسبب حظر Cloudflare');
+      devLog.warn('⚠️ getCities: استخدام الكاش المحلي بسبب حظر Cloudflare');
       try {
         const { data } = await supabase
           .from('cities_cache')
@@ -191,7 +192,7 @@ export const getCities = async (token) => {
           return data.map(c => ({ id: c.alwaseet_id, name: c.name_ar || c.name, name_en: c.name_en }));
         }
       } catch (dbErr) {
-        console.warn('⚠️ getCities DB fallback failed:', dbErr.message);
+        devLog.warn('⚠️ getCities DB fallback failed:', dbErr.message);
       }
     }
     throw error;
@@ -226,10 +227,10 @@ export const createAlWaseetOrder = async (orderData, token) => {
   if (formattedData.client_mobile2) {
     formattedData.client_mobile2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
     if (!isValidAlWaseetPhone(formattedData.client_mobile2)) {
-      console.warn('⚠️ الرقم الثانوي غير صالح، سيتم حذفه:', formattedData.client_mobile2);
+      devLog.warn('⚠️ الرقم الثانوي غير صالح، سيتم حذفه:', formattedData.client_mobile2);
       delete formattedData.client_mobile2;
     } else {
-      console.log('✅ تم تنسيق الرقم الثانوي بنجاح:', formattedData.client_mobile2);
+      devLog.log('✅ تم تنسيق الرقم الثانوي بنجاح:', formattedData.client_mobile2);
     }
   }
 
@@ -267,7 +268,7 @@ export const createAlWaseetOrder = async (orderData, token) => {
         normalized = { ...exact, id, qr_id: qrId };
       }
     } catch (fbErr) {
-      console.warn('Fallback lookup for qr_id failed:', fbErr);
+      devLog.warn('Fallback lookup for qr_id failed:', fbErr);
     }
   }
 
@@ -276,12 +277,12 @@ export const createAlWaseetOrder = async (orderData, token) => {
 
 // Helper function to map local field names to Al-Waseet API field names
 const mapToAlWaseetFields = (orderData) => {
-  console.log('🔍 mapToAlWaseetFields - Input data:', orderData);
+  devLog.log('🔍 mapToAlWaseetFields - Input data:', orderData);
   
   // ✅ استخدام customer_address مباشرة - يحتوي فقط على أقرب نقطة دالة
   const cleanedLocation = orderData.customer_address || orderData.address || orderData.client_address || orderData.location || '';
   
-  console.log('🧹 استخدام العنوان:', {
+  devLog.log('🧹 استخدام العنوان:', {
     customer_address: orderData.customer_address,
     final_location: cleanedLocation
   });
@@ -312,30 +313,30 @@ const mapToAlWaseetFields = (orderData) => {
     replacement: (orderData.order_type === 'return' || orderData.order_type === 'replacement' || parseInt(orderData.replacement || 0) === 1) ? 1 : 0
   }
   
-  console.log('🔍 [mapToAlWaseetFields] client_mobile2 بعد mapping:', {
+  devLog.log('🔍 [mapToAlWaseetFields] client_mobile2 بعد mapping:', {
     orderData_customer_phone2: orderData.customer_phone2,
     orderData_phone2: orderData.phone2,
     orderData_client_mobile2: orderData.client_mobile2,
     final_client_mobile2: mapped.client_mobile2
   });
   
-  console.log('📋 mapToAlWaseetFields - Mapped result:', mapped);
+  devLog.log('📋 mapToAlWaseetFields - Mapped result:', mapped);
   
   // التحقق من البيانات المطلوبة
   if (!mapped.qr_id) {
     console.error('❌ Missing qr_id/tracking_number in order data');
   }
   if (!mapped.client_name) {
-    console.warn('⚠️ Missing customer name in order data');
+    devLog.warn('⚠️ Missing customer name in order data');
   }
   if (!mapped.client_mobile) {
-    console.warn('⚠️ Missing customer phone in order data');
+    devLog.warn('⚠️ Missing customer phone in order data');
   }
   if (mapped.city_id === 0) {
-    console.warn('⚠️ Missing or invalid city_id in order data');
+    devLog.warn('⚠️ Missing or invalid city_id in order data');
   }
   if (mapped.region_id === 0) {
-    console.warn('⚠️ Missing or invalid region_id in order data');
+    devLog.warn('⚠️ Missing or invalid region_id in order data');
   }
   
   return mapped;
@@ -354,7 +355,7 @@ export const editAlWaseetOrder = async (orderData, token) => {
     throw new Error('رقم الطلب مطلوب للتعديل.');
   }
   
-  console.log('📋 Mapped data for Al-Waseet edit:', formattedData);
+  devLog.log('📋 Mapped data for Al-Waseet edit:', formattedData);
   
   // Format primary phone (required)
   if (formattedData.client_mobile) {
@@ -368,10 +369,10 @@ export const editAlWaseetOrder = async (orderData, token) => {
   if (formattedData.client_mobile2) {
     formattedData.client_mobile2 = formatPhoneForAlWaseet(formattedData.client_mobile2);
     if (!isValidAlWaseetPhone(formattedData.client_mobile2)) {
-      console.warn('⚠️ الرقم الثانوي غير صالح، سيتم حذفه:', formattedData.client_mobile2);
+      devLog.warn('⚠️ الرقم الثانوي غير صالح، سيتم حذفه:', formattedData.client_mobile2);
       delete formattedData.client_mobile2;
     } else {
-      console.log('✅ تم تنسيق الرقم الثانوي بنجاح للتعديل:', formattedData.client_mobile2);
+      devLog.log('✅ تم تنسيق الرقم الثانوي بنجاح للتعديل:', formattedData.client_mobile2);
     }
   }
   
@@ -383,11 +384,11 @@ export const editAlWaseetOrder = async (orderData, token) => {
   formattedData.package_size = parseInt(formattedData.package_size) || 0;
   formattedData.replacement = parseInt(formattedData.replacement) || 0;
   
-  console.log('📤 إرسال طلب التحديث إلى Al Waseet:', formattedData);
+  devLog.log('📤 إرسال طلب التحديث إلى Al Waseet:', formattedData);
   
   const response = await handleApiCall('edit-order', 'POST', token, formattedData, { token });
   
-  console.log('📥 استجابة تحديث Al Waseet:', response);
+  devLog.log('📥 استجابة تحديث Al Waseet:', response);
   
   // نجاح الوصول إلى هنا يعني أن handleApiCall تحقق من النجاح ولم يرمِ خطأ
   return {
@@ -475,13 +476,13 @@ export const getOrderByQR = async (token, qrId) => {
     const isCfBlocked = error.isCloudflareBlock || error.message?.includes('CF_BLOCKED');
     
     if (isNetworkError) {
-      console.warn(`⚠️ getOrderByQR: API خارجي غير متاح (${qrId})`);
+      devLog.warn(`⚠️ getOrderByQR: API خارجي غير متاح (${qrId})`);
       error.isNetworkError = true;
     } else if (isCfBlocked) {
-      console.warn(`🛑 getOrderByQR: Cloudflare حظر الطلب (${qrId})`);
+      devLog.warn(`🛑 getOrderByQR: Cloudflare حظر الطلب (${qrId})`);
       error.isCloudflareBlock = true;
     } else {
-      console.warn(`⚠️ getOrderByQR failed for ${qrId}:`, error.message);
+      devLog.warn(`⚠️ getOrderByQR failed for ${qrId}:`, error.message);
     }
     
     // 🛡️ قاعدة ذهبية: الخطأ != غير موجود — أعد رفع الخطأ

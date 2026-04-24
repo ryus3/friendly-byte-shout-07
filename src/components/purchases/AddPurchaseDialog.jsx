@@ -20,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import devLog from '@/lib/devLogger';
 
 const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded, filterByOwnerUserId }) => {
     const { addPurchase } = useImprovedPurchases();
@@ -135,7 +136,7 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded, filterByOwnerU
                 totalInUSD: currency === 'USD' ? totalCost : null
             };
             
-            console.log('Purchase data with shipping:', purchaseData);
+            devLog.log('Purchase data with shipping:', purchaseData);
             const result = await addPurchase(purchaseData);
             
             if (result.success) {

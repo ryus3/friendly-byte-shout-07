@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/customSupabaseClient';
+import devLog from '@/lib/devLogger';
 
 /**
  * معالجة المخزون والماليات التلقائية لطلبات الإرجاع عند تغيير الحالة
@@ -8,7 +9,7 @@ import { supabase } from '@/lib/customSupabaseClient';
  */
 export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
   try {
-    console.log('🔄 بدء معالجة حالة الإرجاع:', { orderId, newDeliveryStatus });
+    devLog.log('🔄 بدء معالجة حالة الإرجاع:', { orderId, newDeliveryStatus });
 
     // جلب الطلب
     const { data: order, error } = await supabase
@@ -27,13 +28,13 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
     const isReturnOrder = order.order_type === 'return';
     
     if (!isPartialDelivery && !isReturnOrder) {
-      console.log('⏭️ ليس طلب إرجاع أو تسليم جزئي، تخطي المعالجة');
+      devLog.log('⏭️ ليس طلب إرجاع أو تسليم جزئي، تخطي المعالجة');
       return { success: true, skipped: true };
     }
 
     // ✅ الحالة 21: تم دفع المبلغ للزبون واستلام المنتج من قبل المندوب
     if (newDeliveryStatus === '21' || newDeliveryStatus === 21) {
-      console.log('💰 الحالة 21: تم دفع المبلغ للزبون واستلام المنتج من المندوب');
+      devLog.log('💰 الحالة 21: تم دفع المبلغ للزبون واستلام المنتج من المندوب');
       
       // تحديث حالة الطلب إلى "return_pending" (بانتظار استلام المنتج من المندوب)
       await supabase
@@ -44,17 +45,17 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
         })
         .eq('id', orderId);
       
-      console.log('✅ تم تحديث حالة الطلب إلى return_pending - بانتظار استلام المنتج من المندوب');
+      devLog.log('✅ تم تحديث حالة الطلب إلى return_pending - بانتظار استلام المنتج من المندوب');
       return { success: true, statusUpdated: 'return_pending' };
     }
 
     // ✅ الحالة 17: استلام المنتج من المندوب (إضافة للمخزون + معالجة مالية)
     if (newDeliveryStatus === '17' || newDeliveryStatus === 17) {
-      console.log('📦 الحالة 17: استلام المنتج المُرجع من المندوب');
+      devLog.log('📦 الحالة 17: استلام المنتج المُرجع من المندوب');
       
       // ✅ حماية partial_delivery: معالجة خاصة - لا نغير status للطلب أبداً
       if (isPartialDelivery) {
-        console.log('🔒 partial_delivery: معالجة المنتجات pending_return فقط');
+        devLog.log('🔒 partial_delivery: معالجة المنتجات pending_return فقط');
         
         // جلب فقط المنتجات pending_return
         const { data: items, error: itemsError } = await supabase
@@ -64,7 +65,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
           .eq('item_status', 'pending_return');
       
         if (itemsError || !items || items.length === 0) {
-          console.log('⏭️ لا توجد منتجات pending_return للإرجاع في هذا التسليم الجزئي');
+          devLog.log('⏭️ لا توجد منتجات pending_return للإرجاع في هذا التسليم الجزئي');
           return { success: true, skipped: true };
         }
 
@@ -89,7 +90,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
               .update({ item_status: 'returned_in_stock' })
               .eq('id', item.id);
 
-            console.log(`✅ تم إرجاع ${item.quantity} من variant ${item.variant_id} للمخزون`);
+            devLog.log(`✅ تم إرجاع ${item.quantity} من variant ${item.variant_id} للمخزون`);
             
             // ✅ إشعار بنجاح الإرجاع للمخزون
             await supabase.from('notifications').insert({
@@ -105,7 +106,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
           }
         }
 
-        console.log('✅ تمت معالجة جميع المنتجات pending_return - لا تغيير لـ status الطلب');
+        devLog.log('✅ تمت معالجة جميع المنتجات pending_return - لا تغيير لـ status الطلب');
         return { success: true, processed: items.length, partialDelivery: true };
       }
       
@@ -124,7 +125,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
       const pendingReturnItems = items;
       
       // معالجة الإرجاع الكامل (return orders)
-      console.log(`📦 إرجاع ${pendingReturnItems.length} منتج كاملاً إلى المخزون`);
+      devLog.log(`📦 إرجاع ${pendingReturnItems.length} منتج كاملاً إلى المخزون`);
 
       for (const item of pendingReturnItems) {
         // استخدام RPC لإرجاع المنتج للمخزون
@@ -158,7 +159,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
       
       // ✅ معالجة طلبات الإرجاع الكاملة (التحقق من المرور بالحالة 21)
       if (order.order_type === 'return' && order.order_status !== 'return_pending') {
-        console.log('⚠️ لم يتم المرور بالحالة 21 أولاً - إلغاء طلب الإرجاع');
+        devLog.log('⚠️ لم يتم المرور بالحالة 21 أولاً - إلغاء طلب الإرجاع');
         
         // إلغاء الطلب
         await supabase
@@ -170,12 +171,12 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
           })
           .eq('id', orderId);
         
-        console.log('❌ تم إلغاء طلب الإرجاع - لم يمر بالحالة 21');
+        devLog.log('❌ تم إلغاء طلب الإرجاع - لم يمر بالحالة 21');
         return { success: true, cancelled: true, reason: 'لم يتم المرور بالحالة 21' };
       }
 
       // ✅ معالجة طلبات الإرجاع الكاملة - إرجاع المخزون
-      console.log(`📦 جلب ${items.length} منتج للإرجاع الكامل`);
+      devLog.log(`📦 جلب ${items.length} منتج للإرجاع الكامل`);
 
       // ✅ إرجاع المنتجات للمخزون الفعلي
       let stockUpdatedCount = 0;
@@ -191,7 +192,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
             console.error(`❌ فشل إرجاع ${item.variant_id}:`, stockError);
           } else {
             stockUpdatedCount++;
-            console.log(`✅ تم إرجاع ${item.quantity} من المنتج ${item.variant_id} للمخزون`);
+            devLog.log(`✅ تم إرجاع ${item.quantity} من المنتج ${item.variant_id} للمخزون`);
           }
         } catch (err) {
           console.error(`❌ خطأ في إرجاع ${item.variant_id}:`, err);
@@ -203,7 +204,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
         return { success: false, error: 'فشل إرجاع المنتجات للمخزون' };
       }
 
-      console.log(`✅ تم إرجاع ${stockUpdatedCount} من ${items.length} منتج للمخزون`);
+      devLog.log(`✅ تم إرجاع ${stockUpdatedCount} من ${items.length} منتج للمخزون`);
 
       // ✅ تسجيل حركة نقد (سحب من القاصة الرئيسية)
       try {
@@ -240,7 +241,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
               .update({ current_balance: newBalance })
               .eq('id', mainCashSource.id);
             
-            console.log('✅ تم تسجيل حركة نقد للإرجاع:', refundAmount);
+            devLog.log('✅ تم تسجيل حركة نقد للإرجاع:', refundAmount);
           } else {
             console.error('❌ خطأ في تسجيل حركة النقد:', cashError);
           }
@@ -270,8 +271,8 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
         if (refundAmount > originalAmount) {
           isLoss = true;
           lossAmount = refundAmount - originalAmount;
-          console.log(`⚠️ خسارة: مبلغ الإرجاع (${refundAmount}) > الطلب الأصلي (${originalAmount})`);
-          console.log(`💸 مبلغ الخسارة: ${lossAmount}`);
+          devLog.log(`⚠️ خسارة: مبلغ الإرجاع (${refundAmount}) > الطلب الأصلي (${originalAmount})`);
+          devLog.log(`💸 مبلغ الخسارة: ${lossAmount}`);
         }
 
         try {
@@ -286,7 +287,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
             console.error('❌ خطأ في معالجة الأرباح:', profitError);
           } else {
             financialResult = profitResult;
-            console.log('✅ تمت معالجة الأرباح:', profitResult);
+            devLog.log('✅ تمت معالجة الأرباح:', profitResult);
           }
         } catch (err) {
           console.error('❌ خطأ في adjust_profit_for_return_v2:', err);
@@ -310,14 +311,14 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
             if (accountingError) {
               console.error('❌ خطأ في تسجيل الخسارة:', accountingError);
             } else {
-              console.log(`✅ تم تسجيل خسارة بمبلغ ${lossAmount} في المحاسبة`);
+              devLog.log(`✅ تم تسجيل خسارة بمبلغ ${lossAmount} في المحاسبة`);
             }
           } catch (err) {
             console.error('❌ خطأ في تسجيل الخسارة:', err);
           }
         }
       } else {
-        console.log('⚠️ لا يوجد original_order_id - تخطي المعالجة المالية');
+        devLog.log('⚠️ لا يوجد original_order_id - تخطي المعالجة المالية');
       }
 
       // ✅ تحديث ملاحظات الطلب فقط - لا نغير status إلى completed إلا بعد استلام الفاتورة
@@ -334,7 +335,7 @@ export const handleReturnStatusChange = async (orderId, newDeliveryStatus) => {
         })
         .eq('id', orderId);
 
-      console.log('✅ اكتملت معالجة طلب الإرجاع بنجاح');
+      devLog.log('✅ اكتملت معالجة طلب الإرجاع بنجاح');
       
       return { 
         success: true, 

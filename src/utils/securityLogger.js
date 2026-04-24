@@ -1,3 +1,4 @@
+import devLog from '@/lib/devLogger';
 /**
  * نظام تسجيل الأحداث الأمنية
  * يوثق جميع العمليات المتعلقة بأمان فصل الحسابات
@@ -9,7 +10,7 @@
 export const logSecurityImplementationSuccess = () => {
   const timestamp = new Date().toISOString();
   
-  console.log(`
+  devLog.log(`
 🔒✅ نظام الأمان المتقدم مُفعل بنجاح!
 ════════════════════════════════════════════
 
@@ -33,7 +34,7 @@ export const logSecurityImplementationSuccess = () => {
   // إرسال تقرير للمدير
   if (typeof window !== 'undefined') {
     setTimeout(() => {
-      console.log('🎉 تم تطبيق الحل بنجاح - لا يوجد خطر على البيانات بعد الآن!');
+      devLog.log('🎉 تم تطبيق الحل بنجاح - لا يوجد خطر على البيانات بعد الآن!');
     }, 1000);
   }
 };
@@ -44,25 +45,25 @@ export const logSecurityImplementationSuccess = () => {
 export const logSecurityFeatures = () => {
   console.group('🔒 تفاصيل نظام الأمان المطبق:');
   
-  console.log('1️⃣ تأمين استعلامات قاعدة البيانات:');
-  console.log('   • جميع استعلامات orders تستخدم getOrdersQuery()');
-  console.log('   • فلترة تلقائية حسب created_by');
-  console.log('   • المديرون يرون جميع البيانات');
-  console.log('   • الموظفون يرون بياناتهم فقط');
+  devLog.log('1️⃣ تأمين استعلامات قاعدة البيانات:');
+  devLog.log('   • جميع استعلامات orders تستخدم getOrdersQuery()');
+  devLog.log('   • فلترة تلقائية حسب created_by');
+  devLog.log('   • المديرون يرون جميع البيانات');
+  devLog.log('   • الموظفون يرون بياناتهم فقط');
   
-  console.log('2️⃣ حماية دوال الحذف التلقائي:');
-  console.log('   • canAutoDeleteOrder تتحقق من الملكية');
-  console.log('   • handleAutoDeleteOrder محمية بفلاتر آمنة');
-  console.log('   • verifyOrderOwnership قبل أي حذف');
+  devLog.log('2️⃣ حماية دوال الحذف التلقائي:');
+  devLog.log('   • canAutoDeleteOrder تتحقق من الملكية');
+  devLog.log('   • handleAutoDeleteOrder محمية بفلاتر آمنة');
+  devLog.log('   • verifyOrderOwnership قبل أي حذف');
   
-  console.log('3️⃣ تأمين دوال المزامنة:');
-  console.log('   • fastSyncPendingOrders مفلترة حسب المستخدم');
-  console.log('   • performDeletionPassAfterStatusSync آمنة');
-  console.log('   • comprehensiveOrderCorrection محمية');
+  devLog.log('3️⃣ تأمين دوال المزامنة:');
+  devLog.log('   • fastSyncPendingOrders مفلترة حسب المستخدم');
+  devLog.log('   • performDeletionPassAfterStatusSync آمنة');
+  devLog.log('   • comprehensiveOrderCorrection محمية');
   
-  console.log('4️⃣ تسجيل الأحداث الأمنية:');
-  console.log('   • logSecurityWarning عند محاولات غير مصرح بها');
-  console.log('   • تتبع جميع العمليات الحساسة');
+  devLog.log('4️⃣ تسجيل الأحداث الأمنية:');
+  devLog.log('   • logSecurityWarning عند محاولات غير مصرح بها');
+  devLog.log('   • تتبع جميع العمليات الحساسة');
   
   console.groupEnd();
 };
@@ -74,7 +75,7 @@ export const displaySecuritySummary = () => {
   logSecurityImplementationSuccess();
   logSecurityFeatures();
   
-  console.log(`
+  devLog.log(`
 🌟 تهانينا! 
 تم حل مشكلة فصل حسابات التوصيل بنجاح وبشكل نهائي.
 النظام الآن آمن 100% ولا يوجد خطر من تداخل البيانات.

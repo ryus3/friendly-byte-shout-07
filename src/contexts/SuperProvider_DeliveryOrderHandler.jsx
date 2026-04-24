@@ -1,6 +1,7 @@
 import { useUnifiedOrderCreator } from '@/contexts/AlWaseetUnifiedOrderCreator';
 import { supabase } from '@/integrations/supabase/client';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
+import devLog from '@/lib/devLogger';
 
 // دالة التعامل مع طلبات شركات التوصيل
 export const useDeliveryOrderHandler = () => {
@@ -9,7 +10,7 @@ export const useDeliveryOrderHandler = () => {
 
   const handleDeliveryPartnerOrder = async (aiOrder, itemsInput, destination, selectedAccount, accountData = null) => {
     try {
-      console.log('📦 معالجة طلب شركة التوصيل:', { destination, selectedAccount });
+      devLog.log('📦 معالجة طلب شركة التوصيل:', { destination, selectedAccount });
 
       // ✅ جلب التوكن الفعلي من قاعدة البيانات
       const { data: tokenData, error: tokenError } = await supabase
@@ -25,14 +26,14 @@ export const useDeliveryOrderHandler = () => {
         throw new Error(`لم يتم العثور على توكن صالح للحساب ${selectedAccount}`);
       }
 
-      console.log('✅ تم جلب التوكن بنجاح:', {
+      devLog.log('✅ تم جلب التوكن بنجاح:', {
         account: selectedAccount,
         partner: destination,
         hasToken: !!tokenData.token
       });
 
       // ✅ ai_orders يحتوي بالفعل على external IDs من البوت - لا حاجة للتحويل
-      console.log('🔍 [DeliveryOrderHandler] المعرفات من ai_orders:', {
+      devLog.log('🔍 [DeliveryOrderHandler] المعرفات من ai_orders:', {
         city_id: aiOrder.city_id,           // external ID مباشرة
         region_id: aiOrder.region_id,       // external ID مباشرة
         city_name: aiOrder.resolved_city_name,
@@ -56,7 +57,7 @@ export const useDeliveryOrderHandler = () => {
         delivery_type: 'توصيل'
       };
 
-      console.log('🔍 [DeliveryOrderHandler] customerInfo بعد البناء:', {
+      devLog.log('🔍 [DeliveryOrderHandler] customerInfo بعد البناء:', {
         customer_phone: customerInfo.customer_phone,
         customer_phone2: customerInfo.customer_phone2,
         hasPhone2: !!customerInfo.customer_phone2,
@@ -112,7 +113,7 @@ export const useDeliveryOrderHandler = () => {
             .eq('id', result.orderId);
         }
 
-        console.log('✅ تم تحويل الطلب الذكي بنجاح - شركة توصيل:', {
+        devLog.log('✅ تم تحويل الطلب الذكي بنجاح - شركة توصيل:', {
           orderId: result.orderId,
           trackingNumber: result.trackingNumber,
           partner: destination,

@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import devLog from '@/lib/devLogger';
 
 export const useCart = (isEditMode = false) => {
   const [cart, setCart] = useState([]);
@@ -159,13 +160,13 @@ export const useCart = (isEditMode = false) => {
 
   const clearCart = useCallback(() => {
     if (!isMountedRef.current) {
-      console.warn('⚠️ clearCart: تم الاستدعاء بعد unmount - تم التجاهل');
+      devLog.warn('⚠️ clearCart: تم الاستدعاء بعد unmount - تم التجاهل');
       return;
     }
     
     // ✅ منع تعدد الاستدعاءات المتزامنة
     if (clearingRef.current) {
-      console.warn('⚠️ clearCart: عملية مسح جارية بالفعل - تم التجاهل');
+      devLog.warn('⚠️ clearCart: عملية مسح جارية بالفعل - تم التجاهل');
       return;
     }
     

@@ -32,6 +32,7 @@ import { useNotifications } from '@/contexts/NotificationsContext';
 import { toast } from '@/components/ui/use-toast.js';
 import { motion } from 'framer-motion';
 import { useEffect } from 'react';
+import devLog from '@/lib/devLogger';
 
 const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   const { user, updateProfile } = useAuth();
@@ -60,7 +61,7 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   // تحديث البيانات عند فتح النافذة أو تغيير المستخدم
   useEffect(() => {
     if (user && open) {
-      console.log('🔄 تحديث بيانات المستخدم في النافذة:', user);
+      devLog.log('🔄 تحديث بيانات المستخدم في النافذة:', user);
       const newProfileData = {
         username: user?.username || '',
         full_name: user?.full_name || '',
@@ -94,14 +95,14 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   });
 
   const handleProfileSave = async () => {
-    console.log('🔄 بدء حفظ الملف الشخصي:', profileData);
+    devLog.log('🔄 بدء حفظ الملف الشخصي:', profileData);
     
     try {
       // Check if username or email changed - require admin approval
       const usernameChanged = profileData.username !== originalData.username;
       const emailChanged = profileData.email !== originalData.email;
       
-      console.log('📊 تحليل التغييرات:', {
+      devLog.log('📊 تحليل التغييرات:', {
         usernameChanged,
         emailChanged,
         originalData,
@@ -109,7 +110,7 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
       });
       
       if (usernameChanged || emailChanged) {
-        console.log('⚠️ تغيير بيانات حساسة - إرسال للمدير');
+        devLog.log('⚠️ تغيير بيانات حساسة - إرسال للمدير');
         
         // Send notification to admin for approval
         addNotification({
@@ -142,7 +143,7 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
           bio: profileData.bio
         };
         
-        console.log('💾 حفظ البيانات الآمنة:', safeUpdates);
+        devLog.log('💾 حفظ البيانات الآمنة:', safeUpdates);
         await updateProfile(safeUpdates);
         
         toast({
@@ -151,7 +152,7 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
           variant: "default"
         });
       } else {
-        console.log('✅ تحديث عادي للبيانات');
+        devLog.log('✅ تحديث عادي للبيانات');
         // Normal update for non-sensitive data
         await updateProfile(profileData);
         toast({
@@ -160,7 +161,7 @@ const ProfileSecurityDialog = ({ open, onOpenChange }) => {
         });
       }
       
-      console.log('✅ تم حفظ الملف الشخصي بنجاح');
+      devLog.log('✅ تم حفظ الملف الشخصي بنجاح');
       setIsEditing(false);
     } catch (error) {
       console.error('❌ خطأ في حفظ الملف الشخصي:', error);

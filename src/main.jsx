@@ -10,8 +10,9 @@ import { disableReactDevTools } from '@fvilers/disable-react-devtools';
 import { setupRealtime } from '@/utils/realtime-setup.js';
 import { enforceEmployeeCodeSystem } from '@/utils/employeeCodeEnforcer.js';
 import { setupOfflineSync } from '@/utils/offlineSync.js';
-// 🚀 تعطيل console.log في Production لتحسين الأداء
+// 🚀 تعطيل devLog.log في Production لتحسين الأداء
 import '@/utils/cleanConsole.js';
+import devLog from '@/lib/devLogger';
 
 if (import.meta.env.PROD) {
   disableReactDevTools();

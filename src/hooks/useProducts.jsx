@@ -3,6 +3,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { generateUniqueBarcode } from '@/lib/barcode-utils';
+import devLog from '@/lib/devLogger';
 
 export const useProducts = (initialProducts = [], settings = null, addNotification = null, user = null, departments = [], allColors = [], sizes = []) => {
   const [products, setProducts] = useState(initialProducts || []);
@@ -21,7 +22,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
 
   const addProduct = useCallback(async (productData, imageFiles = { general: [], colorImages: {} }, setUploadProgress = () => {}) => {
     try {
-      console.log('🏗️ بدء إضافة المنتج:', productData.name);
+      devLog.log('🏗️ بدء إضافة المنتج:', productData.name);
       
       // فحص تكرار اسم المنتج وإضافة رقم تسلسلي إذا لزم الأمر
       let finalProductName = productData.name.trim();
@@ -45,13 +46,13 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         
         if (maxNumber > 0) {
           finalProductName = `${finalProductName} (${maxNumber + 1})`;
-          console.log('⚠️ تم اكتشاف منتج مكرر. الاسم الجديد:', finalProductName);
+          devLog.log('⚠️ تم اكتشاف منتج مكرر. الاسم الجديد:', finalProductName);
         }
       }
       
       // توليد باركود رئيسي للمنتج
       const mainBarcode = generateUniqueBarcode(finalProductName, 'PRODUCT', 'MAIN', Date.now().toString());
-      console.log('📋 باركود المنتج الرئيسي:', mainBarcode);
+      devLog.log('📋 باركود المنتج الرئيسي:', mainBarcode);
 
       // 1. Insert the main product data
       const { data: newProduct, error: productError } = await supabase
@@ -75,7 +76,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         throw productError;
       }
       
-      console.log('✅ تم إنشاء المنتج بنجاح:', newProduct);
+      devLog.log('✅ تم إنشاء المنتج بنجاح:', newProduct);
 
       let uploadedImageUrls = [];
       const generalImageFiles = imageFiles.general.filter(img => img && !(typeof img === 'string'));
@@ -173,7 +174,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
       }
       
       const finalVariants = [];
-      console.log("productData.variants:", productData.variants);
+      devLog.log("productData.variants:", productData.variants);
       for (const variant of productData.variants) {
           let imageUrl = uploadedColorUrls[variant.colorId] || null;
           if (!imageUrl && imageFiles.colorImages[variant.colorId] && typeof imageFiles.colorImages[variant.colorId] === 'string') {
@@ -195,7 +196,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
             departmentName
           );
           
-          console.log('🏷️ توليد باركود ذكي للمتغير:', {
+          devLog.log('🏷️ توليد باركود ذكي للمتغير:', {
             productName: productData.name,
             department: departmentName,
             color: colorName,
@@ -218,7 +219,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
           });
       }
 
-      console.log("🔢 المتغيرات النهائية قبل الإدراج:", finalVariants);
+      devLog.log("🔢 المتغيرات النهائية قبل الإدراج:", finalVariants);
 
       if (finalVariants.length > 0) {
         const { data: insertedVariants, error: variantsError } = await supabase
@@ -230,12 +231,12 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
           throw variantsError;
         }
         
-        console.log('✅ تم إدراج المتغيرات بنجاح:', insertedVariants);
+        devLog.log('✅ تم إدراج المتغيرات بنجاح:', insertedVariants);
 
         // إنشاء سجلات inventory للمتغيرات الجديدة
         const inventoryRecords = insertedVariants.map((variant, index) => {
           const variantData = productData.variants[index];
-          console.log(`📦 إنشاء مخزون للمتغير ${variant.id}: الكمية=${variantData.quantity}`);
+          devLog.log(`📦 إنشاء مخزون للمتغير ${variant.id}: الكمية=${variantData.quantity}`);
           return {
             product_id: newProduct.id,
             variant_id: variant.id,
@@ -245,7 +246,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
           };
         });
 
-        console.log('📊 سجلات المخزون التي سيتم إدراجها:', inventoryRecords);
+        devLog.log('📊 سجلات المخزون التي سيتم إدراجها:', inventoryRecords);
 
         const { data: inventoryData, error: inventoryError } = await supabase
           .from('inventory')
@@ -257,7 +258,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
           throw inventoryError;
         }
         
-        console.log('✅ تم إدراج المخزون بنجاح:', inventoryData);
+        devLog.log('✅ تم إدراج المخزون بنجاح:', inventoryData);
       }
       
       if(totalImagesToUpload === 0) setUploadProgress(100);
@@ -296,7 +297,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
 
       // تحديث قائمة المنتجات المحلية فوراً بالمنتج الكامل مع كافة البيانات
       setProducts(prev => [completeProduct, ...prev]);
-      console.log('✅ تم تحديث القائمة المحلية بالمنتج الكامل:', completeProduct);
+      devLog.log('✅ تم تحديث القائمة المحلية بالمنتج الكامل:', completeProduct);
       
       // إضافة إشعار النجاح
       if (addNotification) {
@@ -307,15 +308,15 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         });
       }
       
-      console.log('✅ تم إضافة المنتج وتحديث القائمة بنجاح:', finalProduct.name, 'المتغيرات:', finalProduct.variants?.length);
+      devLog.log('✅ تم إضافة المنتج وتحديث القائمة بنجاح:', finalProduct.name, 'المتغيرات:', finalProduct.variants?.length);
       
       // تحديث فوري للكاش بعد إضافة المنتج
       try {
-        console.log('🔄 تحديث كاش المنتجات...');
+        devLog.log('🔄 تحديث كاش المنتجات...');
         await supabase.functions.invoke('refresh-product-cache');
-        console.log('✅ تم تحديث الكاش بنجاح');
+        devLog.log('✅ تم تحديث الكاش بنجاح');
       } catch (cacheError) {
-        console.warn('⚠️ فشل تحديث الكاش (لن يؤثر على عملية الإضافة):', cacheError);
+        devLog.warn('⚠️ فشل تحديث الكاش (لن يؤثر على عملية الإضافة):', cacheError);
       }
       
       return { success: true, data: finalProduct };
@@ -329,7 +330,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
     try {
         const currentUserId = user?.user_id || user?.id || '91484496-b887-44f7-9e5d-be9db5567604';
         
-        console.log('🔄 بدء تحديث المنتج:', productId, productData);
+        devLog.log('🔄 بدء تحديث المنتج:', productId, productData);
         
         // Upload new images first
         let uploadedImagePaths = [];
@@ -375,7 +376,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
             throw productUpdateError;
         }
         
-        console.log('✅ تم تحديث المنتج الأساسي بنجاح');
+        devLog.log('✅ تم تحديث المنتج الأساسي بنجاح');
 
         // 2. Update categorization relationships (متوازي)
         // نتحقق من أن هذا تعديل فعلي وليس مجرد تحميل بيانات فارغة
@@ -384,7 +385,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         const shouldUpdateSeasonsOccasions = productData.categoriesChanged === true && Array.isArray(productData.selectedSeasonsOccasions);
         const shouldUpdateDepartments = productData.categoriesChanged === true && Array.isArray(productData.selectedDepartments);
 
-        console.log('🏷️ تحديث التصنيفات:', {
+        devLog.log('🏷️ تحديث التصنيفات:', {
           shouldUpdateCategories,
           shouldUpdateProductTypes,
           shouldUpdateSeasonsOccasions,
@@ -459,7 +460,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         // تنفيذ جميع تحديثات التصنيفات بشكل متوازي
         if (categorizationPromises.length > 0) {
           await Promise.all(categorizationPromises);
-          console.log('✅ تم تحديث جميع التصنيفات بنجاح');
+          devLog.log('✅ تم تحديث جميع التصنيفات بنجاح');
         }
 
         // 3. Handle images upload (متوازي)
@@ -527,7 +528,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         }
         
         // 4. Handle variants - إصلاح شامل لحفظ المتغيرات والكميات
-        console.log('🎨 بدء تحديث المتغيرات:', productData.variants?.length || 0);
+        devLog.log('🎨 بدء تحديث المتغيرات:', productData.variants?.length || 0);
         
         if (productData.variants && productData.variants.length > 0) {
             const { data: existingVariants } = await supabase
@@ -535,7 +536,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
               .select('id, barcode, color_id, size_id, images')
               .eq('product_id', productId);
             
-            console.log('🔍 المتغيرات الموجودة:', existingVariants?.length || 0);
+            devLog.log('🔍 المتغيرات الموجودة:', existingVariants?.length || 0);
             
             const existingVariantsMap = new Map();
             existingVariants?.forEach(v => {
@@ -554,7 +555,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
               const key = `${colorId}-${sizeId}`;
               const existing = existingVariantsMap.get(key);
               
-              console.log(`🔧 معالجة متغير: ${key}, الكمية: ${v.quantity}, موجود: ${!!existing}`);
+              devLog.log(`🔧 معالجة متغير: ${key}, الكمية: ${v.quantity}, موجود: ${!!existing}`);
               
               let imageUrl = uploadedColorUrls[colorId] || 
                            existingColorImageUrls[colorId] || 
@@ -603,7 +604,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
               }
             }
             
-            console.log(`📊 التحديثات: ${variantsToUpdate.length}, الإدراجات: ${variantsToInsert.length}`);
+            devLog.log(`📊 التحديثات: ${variantsToUpdate.length}, الإدراجات: ${variantsToInsert.length}`);
             
             // تحديث المتغيرات الموجودة مع المخزون - تحسين الأداء بالمعالجة المتوازية
             const variantUpdatePromises = variantsToUpdate.map(async (variant) => {
@@ -664,7 +665,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
                   }
                 }
                 
-                console.log(`✅ تم تحديث المتغير ${variant.id} بكمية ${variant.quantity}`);
+                devLog.log(`✅ تم تحديث المتغير ${variant.id} بكمية ${variant.quantity}`);
                 return { success: true, id: variant.id };
               } catch (error) {
                 console.error(`❌ فشل في تحديث المتغير ${variant.id}:`, error);
@@ -677,7 +678,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
             const failedUpdates = variantUpdateResults.filter(r => !r.success);
             
             if (failedUpdates.length > 0) {
-              console.warn(`⚠️ فشل في تحديث ${failedUpdates.length} متغير(ات)`);
+              devLog.warn(`⚠️ فشل في تحديث ${failedUpdates.length} متغير(ات)`);
             }
             
             // إدراج المتغيرات الجديدة مع المخزون
@@ -721,7 +722,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
                   throw inventoryInsertError;
                 }
                 
-                console.log(`✅ تم إدراج ${newVariants.length} متغير جديد مع المخزون`);
+                devLog.log(`✅ تم إدراج ${newVariants.length} متغير جديد مع المخزون`);
               }
             }
             
@@ -751,11 +752,11 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
                   .delete()
                   .in('id', safeToDelete.map(v => v.id));
                   
-                console.log(`🗑️ تم حذف ${safeToDelete.length} متغير مع مخزونه`);
+                devLog.log(`🗑️ تم حذف ${safeToDelete.length} متغير مع مخزونه`);
               }
             }
             
-            console.log('✅ تم تحديث جميع المتغيرات والمخزون بنجاح');
+            devLog.log('✅ تم تحديث جميع المتغيرات والمخزون بنجاح');
         }
 
         // تحديث قائمة المنتجات المحلية فوراً مع بيانات شاملة
@@ -788,7 +789,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         if (updatedProduct) {
           // تحديث قائمة المنتجات المحلية
           setProducts(prev => prev.map(p => p.id === productId ? updatedProduct : p));
-          console.log('✅ تم تحديث القائمة المحلية بنجاح');
+          devLog.log('✅ تم تحديث القائمة المحلية بنجاح');
         }
 
         // إضافة توست النجاح الفوري
@@ -809,16 +810,16 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         
         // تحديث فوري للكاش بعد تعديل المنتج
         try {
-          console.log('🔄 تحديث كاش المنتجات...');
+          devLog.log('🔄 تحديث كاش المنتجات...');
           await supabase.functions.invoke('refresh-product-cache');
-          console.log('✅ تم تحديث الكاش بنجاح');
+          devLog.log('✅ تم تحديث الكاش بنجاح');
         } catch (cacheError) {
-          console.warn('⚠️ فشل تحديث الكاش (لن يؤثر على عملية التحديث):', cacheError);
+          devLog.warn('⚠️ فشل تحديث الكاش (لن يؤثر على عملية التحديث):', cacheError);
         }
         
         if(totalImagesToUpload === 0) setUploadProgress(100);
 
-        console.log('🎉 تم تحديث المنتج بالكامل بنجاح!');
+        devLog.log('🎉 تم تحديث المنتج بالكامل بنجاح!');
         return { success: true };
     } catch (error) {
         console.error("❌ خطأ في تحديث المنتج:", error);
@@ -841,7 +842,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
   const deleteProducts = useCallback(async (productIds) => {
     if (!productIds?.length) return { success: false, error: 'لا توجد منتجات لحذفها' };
     
-    console.log("🗑️ بدء حذف المنتجات:", productIds);
+    devLog.log("🗑️ بدء حذف المنتجات:", productIds);
     
     try {
         const failedDeletions = [];
@@ -849,7 +850,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
 
         for (const productId of productIds) {
             try {
-                console.log(`🗑️ حذف المنتج: ${productId}`);
+                devLog.log(`🗑️ حذف المنتج: ${productId}`);
                 
                 // جلب بيانات المنتج والعلاقات المرتبطة به
                 const { data: productData, error: productError } = await supabase
@@ -859,12 +860,12 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
                     .single();
 
                 if (productError && productError.code !== 'PGRST116') {
-                    console.warn(`لا يمكن جلب المنتج ${productId}:`, productError);
+                    devLog.warn(`لا يمكن جلب المنتج ${productId}:`, productError);
                 }
 
                 // حذف جميع البيانات المرتبطة أولاً
                 if (productData) {
-                    console.log(`🧹 تنظيف البيانات المرتبطة للمنتج ${productId}`);
+                    devLog.log(`🧹 تنظيف البيانات المرتبطة للمنتج ${productId}`);
                     
                     // حذف المخزون
                     await supabase.from('inventory').delete().eq('product_id', productId);
@@ -893,9 +894,9 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
                                     .from('product-images')
                                     .remove([bucketPath]);
                                     
-                                console.log(`🖼️ تم حذف الصورة: ${bucketPath}`);
+                                devLog.log(`🖼️ تم حذف الصورة: ${bucketPath}`);
                             } catch (imgError) {
-                                console.warn(`خطأ في حذف الصورة ${imageUrl}:`, imgError);
+                                devLog.warn(`خطأ في حذف الصورة ${imageUrl}:`, imgError);
                             }
                         }
                     }
@@ -911,7 +912,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
                     console.error(`فشل حذف المنتج ${productId}:`, deleteError);
                     failedDeletions.push(productId);
                 } else {
-                    console.log(`✅ تم حذف المنتج بالكامل: ${productId}`);
+                    devLog.log(`✅ تم حذف المنتج بالكامل: ${productId}`);
                     successfulDeletions.push(productId);
                 }
             } catch (error) {
@@ -925,7 +926,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
             // إزالة فورية من الحالة المحلية
             setProducts(prev => {
                 const newProducts = prev.filter(p => !successfulDeletions.includes(p.id));
-                console.log(`🔄 تم تحديث الحالة المحلية: حذف ${successfulDeletions.length} منتج(ات)`);
+                devLog.log(`🔄 تم تحديث الحالة المحلية: حذف ${successfulDeletions.length} منتج(ات)`);
                 return newProducts;
             });
             
@@ -1037,7 +1038,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
   }, [products, settings]);
   const refreshProducts = useCallback(async () => {
     try {
-      console.log('🔄 إعادة تحديث قائمة المنتجات...');
+      devLog.log('🔄 إعادة تحديث قائمة المنتجات...');
       const { data, error } = await supabase
         .from('products')
         .select(`
@@ -1056,7 +1057,7 @@ export const useProducts = (initialProducts = [], settings = null, addNotificati
         return;
       }
 
-      console.log('✅ تم تحديث المنتجات بنجاح:', data?.length || 0);
+      devLog.log('✅ تم تحديث المنتجات بنجاح:', data?.length || 0);
       setProducts(data || []);
     } catch (error) {
       console.error('❌ خطأ في refreshProducts:', error);

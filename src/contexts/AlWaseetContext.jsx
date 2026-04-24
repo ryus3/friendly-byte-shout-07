@@ -500,7 +500,7 @@ export const AlWaseetProvider = ({ children }) => {
   const syncVisibleOrdersBatch = useCallback(async (visibleOrders, onProgress) => {
     // ✅ فحص الـ lock العالمي - منع المزامنات المتزامنة
     if (globalSyncLock) {
-      console.log('⏸️ مزامنة قيد التقدم - انتظار...');
+      devLog.log('⏸️ مزامنة قيد التقدم - انتظار...');
       if (globalSyncPromise) {
         await globalSyncPromise;
       }
@@ -663,23 +663,23 @@ export const AlWaseetProvider = ({ children }) => {
           // استدعاء API المناسب حسب partner_name
           let merchantOrders;
           try {
-            console.log(`🚀 [${partnerName}] سيتم الآن استدعاء getMerchantOrders...`);
-            console.log(`🔑 Token preview: ${employeeTokenData.token.substring(0, 20)}...`);
+            devLog.log(`🚀 [${partnerName}] سيتم الآن استدعاء getMerchantOrders...`);
+            devLog.log(`🔑 Token preview: ${employeeTokenData.token.substring(0, 20)}...`);
             
           if (employeeTokenData.partner_name === 'modon') {
-              console.log('📞 ===== [MODON] استدعاء getMerchantOrders =====');
-              console.log('🔑 Token preview:', employeeTokenData.token.substring(0, 20) + '...');
-              console.log('🔑 Token length:', employeeTokenData.token.length);
+              devLog.log('📞 ===== [MODON] استدعاء getMerchantOrders =====');
+              devLog.log('🔑 Token preview:', employeeTokenData.token.substring(0, 20) + '...');
+              devLog.log('🔑 Token length:', employeeTokenData.token.length);
               
               try {
                 merchantOrders = await ModonAPI.getMerchantOrders(employeeTokenData.token);
                 
-                console.log('✅ ===== [MODON] تم استلام الرد =====');
-                console.log('📊 عدد الطلبات:', merchantOrders?.length || 0);
-                console.log('📦 نوع البيانات:', Array.isArray(merchantOrders) ? 'Array' : typeof merchantOrders);
+                devLog.log('✅ ===== [MODON] تم استلام الرد =====');
+                devLog.log('📊 عدد الطلبات:', merchantOrders?.length || 0);
+                devLog.log('📦 نوع البيانات:', Array.isArray(merchantOrders) ? 'Array' : typeof merchantOrders);
                 
                 if (merchantOrders && merchantOrders.length > 0) {
-                  console.log('📝 عينة من الطلب الأول:', {
+                  devLog.log('📝 عينة من الطلب الأول:', {
                     id: merchantOrders[0].id,
                     qr_id: merchantOrders[0].qr_id,
                     status_id: merchantOrders[0].status_id,
@@ -703,7 +703,7 @@ export const AlWaseetProvider = ({ children }) => {
               }
             } else {
               // ✅ جلب الطلبات الظاهرة فقط باستخدام getOrdersByIdsBulk (أسرع وأدق)
-              console.log('📞 استدعاء AlWaseetAPI.getOrdersByIdsBulk للطلبات الظاهرة...');
+              devLog.log('📞 استدعاء AlWaseetAPI.getOrdersByIdsBulk للطلبات الظاهرة...');
               
               // جمع IDs الطلبات الظاهرة للمجموعة الحالية
               const orderIds = groupOrders
@@ -722,7 +722,7 @@ export const AlWaseetProvider = ({ children }) => {
                 }
                 
                 merchantOrders = [];
-                console.log(`📦 سيتم جلب ${orderIds.length} طلب في ${chunks.length} دفعة(s) بالتوازي (حد=${PARALLEL_LIMIT})`);
+                devLog.log(`📦 سيتم جلب ${orderIds.length} طلب في ${chunks.length} دفعة(s) بالتوازي (حد=${PARALLEL_LIMIT})`);
                 
                 // معالجة بالتوازي مع حد = 1 طلب متزامن فقط
                 for (let i = 0; i < chunks.length; i += PARALLEL_LIMIT) {
@@ -735,7 +735,7 @@ export const AlWaseetProvider = ({ children }) => {
                         employeeTokenData.token,
                         chunk
                       );
-                      console.log(`✅ [Bulk] جلب ${batchOrders?.length || 0} طلب من ${chunk.length} مطلوب`);
+                      devLog.log(`✅ [Bulk] جلب ${batchOrders?.length || 0} طلب من ${chunk.length} مطلوب`);
                       return batchOrders || [];
                     } catch (err) {
                       console.error(`❌ خطأ في جلب دفعة:`, err);
@@ -756,7 +756,7 @@ export const AlWaseetProvider = ({ children }) => {
                   }
                 }
                 
-                console.log('✅ تم استلام رد من AlWaseet (Bulk):', {
+                devLog.log('✅ تم استلام رد من AlWaseet (Bulk):', {
                   ordersCount: merchantOrders?.length || 0,
                   requestedCount: orderIds.length,
                   isArray: Array.isArray(merchantOrders),
@@ -768,7 +768,7 @@ export const AlWaseetProvider = ({ children }) => {
                 });
               } else {
                 merchantOrders = [];
-                console.log('⚠️ لا توجد طلبات ظاهرة للمزامنة');
+                devLog.log('⚠️ لا توجد طلبات ظاهرة للمزامنة');
               }
             }
             
@@ -831,7 +831,7 @@ export const AlWaseetProvider = ({ children }) => {
                 // إعادة تعيين بعد 5 دقائق
                 setTimeout(() => {
                   consecutiveRateLimitErrors = 0;
-                  console.log('✅ تم إعادة تعيين Circuit Breaker');
+                  devLog.log('✅ تم إعادة تعيين Circuit Breaker');
                 }, 5 * 60 * 1000);
                 
                 break; // الخروج من المزامنة
@@ -936,7 +936,7 @@ export const AlWaseetProvider = ({ children }) => {
                 }
                 
                 // 🔍 Logging مفصّل للتشخيص
-                console.log(`🔍 [SYNC-DETAIL] الطلب ${localOrder.tracking_number}:`, {
+                devLog.log(`🔍 [SYNC-DETAIL] الطلب ${localOrder.tracking_number}:`, {
                   from_api: {
                     id: remoteOrder.id,
                     status_id: remoteOrder.status_id,
@@ -970,12 +970,12 @@ export const AlWaseetProvider = ({ children }) => {
               // 🔒 الأولوية 0: حماية الطلبات المستلمة فواتيرها (محمية 100%)
               if (localOrder.receipt_received === true || localOrder.delivery_partner_invoice_id) {
                 newStatus = localOrder.status; // لا تغيير أبداً
-                console.log(`🔒 [INVOICE-PROTECTED] ${localOrder.tracking_number} محمي (فاتورة مستلمة)`);
+                devLog.log(`🔒 [INVOICE-PROTECTED] ${localOrder.tracking_number} محمي (فاتورة مستلمة)`);
               }
               // 🔒 الأولوية 1: حماية delivered و completed
               else if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
                 newStatus = localOrder.status;
-                console.log(`🔒 [FINAL-PROTECTED] ${localOrder.tracking_number} محمي (${localOrder.status})`);
+                devLog.log(`🔒 [FINAL-PROTECTED] ${localOrder.tracking_number} محمي (${localOrder.status})`);
               }
               // 📦 الأولوية 2: معالجة خاصة لطلبات partial_delivery
               else if (isPartialDelivery) {
@@ -1021,7 +1021,7 @@ export const AlWaseetProvider = ({ children }) => {
                   const returnResult = await handleReturnStatusChange(localOrder.id, '17');
                   
                   if (returnResult.success) {
-                    console.log('✅ [RETURN-17] تم معالجة الحالة 17 بنجاح:', {
+                    devLog.log('✅ [RETURN-17] تم معالجة الحالة 17 بنجاح:', {
                       order: localOrder.tracking_number,
                       processedItems: returnResult.processedItems,
                       financialResult: returnResult.financialResult
@@ -1041,7 +1041,7 @@ export const AlWaseetProvider = ({ children }) => {
                           order_type: localOrder.order_type || 'regular'
                         }
                       });
-                      console.log('✅ [RETURN-17] تم إرسال إشعار للطلب العادي المُرجع');
+                      devLog.log('✅ [RETURN-17] تم إرسال إشعار للطلب العادي المُرجع');
                     }
                   } else {
                     console.error('❌ [RETURN-17] خطأ في معالجة الحالة 17:', returnResult.error);
@@ -1059,7 +1059,7 @@ export const AlWaseetProvider = ({ children }) => {
               }
               
               // 🔍 Logging للحالة المحسوبة
-              console.log(`📊 [SYNC-STATUS] الطلب ${localOrder.tracking_number}:`, {
+              devLog.log(`📊 [SYNC-STATUS] الطلب ${localOrder.tracking_number}:`, {
                 statusConfig: {
                   internalStatus: statusConfig.internalStatus,
                   localStatus: statusConfig.localStatus,
@@ -1083,7 +1083,7 @@ export const AlWaseetProvider = ({ children }) => {
               );
 
               if (isProtected) {
-                console.log(`🔒 [PROTECTED] ${localOrder.tracking_number} محمي - لا تحديث`);
+                devLog.log(`🔒 [PROTECTED] ${localOrder.tracking_number} محمي - لا تحديث`);
                 continue; // تخطي التحديث تماماً
               }
 
@@ -1099,7 +1099,7 @@ export const AlWaseetProvider = ({ children }) => {
               );
               
               // 🔍 Logging لسبب التحديث أو عدمه
-              console.log(`🔄 [SYNC-UPDATE] الطلب ${localOrder.tracking_number}:`, {
+              devLog.log(`🔄 [SYNC-UPDATE] الطلب ${localOrder.tracking_number}:`, {
                 needsUpdate,
                 reasons: {
                   delivery_status_changed: localOrder.delivery_status !== newDeliveryStatus,
@@ -1129,7 +1129,7 @@ export const AlWaseetProvider = ({ children }) => {
                 // ✅ تحويل order_type فوراً عند الحالة 21 لأول مرة
                 if (newDeliveryStatus === '21' && localOrder.order_type !== 'partial_delivery') {
                   updates.order_type = 'partial_delivery';
-                  console.log(`🔄 [PARTIAL-DELIVERY] تحويل نوع الطلب ${localOrder.tracking_number} إلى partial_delivery`);
+                  devLog.log(`🔄 [PARTIAL-DELIVERY] تحويل نوع الطلب ${localOrder.tracking_number} إلى partial_delivery`);
                 }
 
                 // ✅ مزامنة المدينة/المنطقة من شركة التوصيل (بدون استهلاك API إضافي)
@@ -1149,7 +1149,7 @@ export const AlWaseetProvider = ({ children }) => {
                 if (!error) {
                   groupUpdated++;
                   totalUpdated++;
-                  console.log(`✅ [SYNC-SUCCESS] تم تحديث ${localOrder.tracking_number} بنجاح`);
+                  devLog.log(`✅ [SYNC-SUCCESS] تم تحديث ${localOrder.tracking_number} بنجاح`);
                   
                   // ✅ إرسال إشعار تغيير الحالة
                   if (localOrder.delivery_status !== newDeliveryStatus) {
@@ -1192,7 +1192,7 @@ export const AlWaseetProvider = ({ children }) => {
                   .update({ updated_at: new Date().toISOString() })
                   .eq('id', localOrder.id);
                 
-                console.log(`⏰ [SYNC-TIMESTAMP] تم تحديث وقت ${localOrder.tracking_number} فقط (لا تغيير في البيانات)`);
+                devLog.log(`⏰ [SYNC-TIMESTAMP] تم تحديث وقت ${localOrder.tracking_number} فقط (لا تغيير في البيانات)`);
               }
             } else {
               // ⚠️ الطلب غير موجود في getMerchantOrders
@@ -1257,7 +1257,7 @@ export const AlWaseetProvider = ({ children }) => {
                     const currentFinalAmount = parseFloat(localOrder.final_amount) || 0;
                     
                     if (Math.abs(correctFinalAmount - currentFinalAmount) > 1) {
-                      console.log(`🔧 [AUTO-FIX-FALLBACK] تصحيح final_amount للطلب ${localOrder.tracking_number}: ${currentFinalAmount} → ${correctFinalAmount}`);
+                      devLog.log(`🔧 [AUTO-FIX-FALLBACK] تصحيح final_amount للطلب ${localOrder.tracking_number}: ${currentFinalAmount} → ${correctFinalAmount}`);
                       
                       await supabase
                         .from('orders')
@@ -1277,17 +1277,17 @@ export const AlWaseetProvider = ({ children }) => {
                   // 🔒 الأولوية 1: حماية التسليم الجزئي (ما عدا الحالة 17)
                   if (isPartialDeliveryFlagged && newDeliveryStatus !== '17') {
                     newStatus = 'partial_delivery';
-                    console.log(`🔒 [PARTIAL-PROTECTED-FALLBACK] ${localOrder.tracking_number} محمي كتسليم جزئي (delivery_status: ${newDeliveryStatus})`);
+                    devLog.log(`🔒 [PARTIAL-PROTECTED-FALLBACK] ${localOrder.tracking_number} محمي كتسليم جزئي (delivery_status: ${newDeliveryStatus})`);
                   }
                   // ✅ الأولوية 2: الحالة 17 - مرتجع في المخزون
                   else if (newDeliveryStatus === '17') {
                     newStatus = 'returned_in_stock';
-                    console.log(`🔄 [STATUS-17-FALLBACK] ${localOrder.tracking_number} → returned_in_stock`);
+                    devLog.log(`🔄 [STATUS-17-FALLBACK] ${localOrder.tracking_number} → returned_in_stock`);
                   }
                   // ✅ الأولوية 3: حماية completed
                   else if (localOrder.status === 'completed') {
                     newStatus = 'completed';
-                    console.log(`🔒 [COMPLETED-PROTECTED-FALLBACK] ${localOrder.tracking_number} محمي كمكتمل`);
+                    devLog.log(`🔒 [COMPLETED-PROTECTED-FALLBACK] ${localOrder.tracking_number} محمي كمكتمل`);
                   }
                   // ✅ الأولوية 4: استخدام statusConfig مباشرة
                   else {
@@ -1468,7 +1468,7 @@ export const AlWaseetProvider = ({ children }) => {
         
         // ⏱️ عرض إحصائيات المزامنة الدقيقة
         const syncDuration = ((performance.now() - syncStartTime) / 1000).toFixed(2);
-        console.log(`
+        devLog.log(`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📊 [SYNC-STATS] إحصائيات المزامنة النهائية
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -2852,9 +2852,9 @@ export const AlWaseetProvider = ({ children }) => {
 
         // ✅ Logging مفصّل للتشخيص
         if (!waseetOrder) {
-          console.log(`❌ [${localOrder.tracking_number}] غير موجود في AlWaseet API`);
+          devLog.log(`❌ [${localOrder.tracking_number}] غير موجود في AlWaseet API`);
         } else {
-          console.log(`✅ [${localOrder.tracking_number}] موجود في AlWaseet:`, {
+          devLog.log(`✅ [${localOrder.tracking_number}] موجود في AlWaseet:`, {
             id: waseetOrder.id,
             qr_id: waseetOrder.qr_id,
             status_id: waseetOrder.status_id,
@@ -2973,7 +2973,7 @@ export const AlWaseetProvider = ({ children }) => {
         const waseetStatusText = waseetOrder.status || waseetOrder.status_text || waseetOrder.status_name || '';
         
         // 🔍 LOGGING مفصّل لفهم ماذا يُرسل API
-        console.log(`🔍 [SYNC DEBUG] الطلب ${localOrder.tracking_number}:`, {
+        devLog.log(`🔍 [SYNC DEBUG] الطلب ${localOrder.tracking_number}:`, {
           // من API الوسيط
           waseetStatusId,
           waseetStatusText,
@@ -3550,7 +3550,7 @@ export const AlWaseetProvider = ({ children }) => {
             // 3. إذا كان طلب موظف: employee_debt_paid = true
             if (finConfirmed && receiptReceived && employeeDebtPaid && (localStatus === 'delivered' || existingOrder.status === 'delivered')) {
               updates.status = 'completed';
-              console.log(`🎯 [Auto Complete] تحويل الطلب إلى completed - شروط مستوفاة:`, {
+              devLog.log(`🎯 [Auto Complete] تحويل الطلب إلى completed - شروط مستوفاة:`, {
                 finConfirmed,
                 receiptReceived,
                 employeeDebtPaid,
@@ -3558,7 +3558,7 @@ export const AlWaseetProvider = ({ children }) => {
               });
             } else if (finConfirmed && (localStatus === 'delivered' || existingOrder.status === 'delivered')) {
               // إذا كان deliver_confirmed_fin = 1 لكن بدون فاتورة، لا تحول إلى completed
-              console.log(`⚠️ [Pending Receipt] الطلب ${existingOrder?.order_number} - delivered لكن بانتظار الفاتورة:`, {
+              devLog.log(`⚠️ [Pending Receipt] الطلب ${existingOrder?.order_number} - delivered لكن بانتظار الفاتورة:`, {
                 finConfirmed,
                 receiptReceived,
                 employeeDebtPaid
@@ -4033,7 +4033,7 @@ export const AlWaseetProvider = ({ children }) => {
   // وكانت تعتبر فشل الـ fetch دليلاً على عدم وجود الطلب → حذف خاطئ
   // الحذف التلقائي يتم الآن فقط عبر performDeletionPassAfterStatusSync (مع double-check + circuit breaker)
   const performAutoCleanup = async () => {
-    console.warn('⚠️ performAutoCleanup معطّلة لأسباب أمنية — استخدم performDeletionPassAfterStatusSync بدلاً منها');
+    devLog.warn('⚠️ performAutoCleanup معطّلة لأسباب أمنية — استخدم performDeletionPassAfterStatusSync بدلاً منها');
     return;
     // eslint-disable-next-line no-unreachable
     try {
@@ -4118,7 +4118,7 @@ export const AlWaseetProvider = ({ children }) => {
         return { success: false, error: deleteErr };
       }
 
-      console.log(`✅ تم حذف الطلب ${order.id} تلقائياً - الـ trigger تولى تحرير المخزون والإشعار`);
+      devLog.log(`✅ تم حذف الطلب ${order.id} تلقائياً - الـ trigger تولى تحرير المخزون والإشعار`);
       
       // إرسال حدث لتحديث الواجهة فوراً
       window.dispatchEvent(new CustomEvent('orderDeleted', { 
@@ -4144,12 +4144,12 @@ export const AlWaseetProvider = ({ children }) => {
   // مزامنة طلب واحد بـ tracking number
   const syncOrderByTracking = async (trackingNumber) => {
     if (activePartner === 'local' || !isLoggedIn || !token) {
-      console.log('❌ مزامنة غير متاحة - وضع محلي أو غير مسجل دخول');
+      devLog.log('❌ مزامنة غير متاحة - وضع محلي أو غير مسجل دخول');
       return null;
     }
     
     try {
-      console.log(`🔍 مزامنة الطلب: ${trackingNumber}`);
+      devLog.log(`🔍 مزامنة الطلب: ${trackingNumber}`);
       
       // تحميل حالات الطلبات إذا لم تكن محملة
       let statusMap = orderStatusesMap;
@@ -4179,7 +4179,7 @@ export const AlWaseetProvider = ({ children }) => {
       }
       
       if (!waseetOrder) {
-        console.log(`❌ لم يتم العثور على الطلب ${trackingNumber} في الوسيط`);
+        devLog.log(`❌ لم يتم العثور على الطلب ${trackingNumber} في الوسيط`);
         
         // التحقق من إمكانية الحذف التلقائي مع تأمين فصل الحسابات
         const { data: localOrder, error: localErr } = await scopeOrdersQuery(
@@ -4191,7 +4191,7 @@ export const AlWaseetProvider = ({ children }) => {
 
         if (!localErr && localOrder && canAutoDeleteOrder(localOrder, user)) {
           // ⚠️ تم تعطيل الحذف الفوري — فحص واحد غير كافٍ للتأكد من عدم وجود الطلب
-          console.warn(`⚠️ الطلب ${trackingNumber} لم يُعثر عليه في API لكن لن يُحذف (فحص واحد غير كافٍ)`);
+          devLog.warn(`⚠️ الطلب ${trackingNumber} لم يُعثر عليه في API لكن لن يُحذف (فحص واحد غير كافٍ)`);
           // return await performAutoDelete(localOrder);
         }
         
@@ -4247,14 +4247,14 @@ export const AlWaseetProvider = ({ children }) => {
       
       if (finConfirmed && receiptReceived && employeeDebtPaid && (localStatus === 'delivered' || existingOrder?.status === 'delivered')) {
         updates.status = 'completed';
-        console.log(`🎯 [Single Complete] تحويل الطلب إلى completed:`, {
+        devLog.log(`🎯 [Single Complete] تحويل الطلب إلى completed:`, {
           finConfirmed,
           receiptReceived,
           employeeDebtPaid,
           orderNumber: existingOrder?.order_number
         });
       } else if (finConfirmed && (localStatus === 'delivered' || existingOrder?.status === 'delivered')) {
-        console.log(`⚠️ [Single Pending] الطلب ${existingOrder?.order_number} - delivered لكن بانتظار الفاتورة:`, {
+        devLog.log(`⚠️ [Single Pending] الطلب ${existingOrder?.order_number} - delivered لكن بانتظار الفاتورة:`, {
           finConfirmed,
           receiptReceived,
           employeeDebtPaid
@@ -4335,12 +4335,12 @@ export const AlWaseetProvider = ({ children }) => {
       if (!cacheErr && cachedCities && cachedCities.length > 0) {
         const mapped = cachedCities.map(c => ({ id: c.id, name: c.name_ar || c.name }));
         setCities(mapped);
-        console.log(`✅ تم جلب ${mapped.length} مدينة من الكاش المحلي (${cacheTable})`);
+        devLog.log(`✅ تم جلب ${mapped.length} مدينة من الكاش المحلي (${cacheTable})`);
         return;
       }
       
       // fallback: جلب من API الخارجي فقط إذا الكاش فارغ
-      console.log('⚠️ الكاش فارغ، جلب المدن من API الخارجي...');
+      devLog.log('⚠️ الكاش فارغ، جلب المدن من API الخارجي...');
       let data;
       if (activePartner === 'modon') {
         data = await ModonAPI.getCities(token);
@@ -4378,13 +4378,13 @@ export const AlWaseetProvider = ({ children }) => {
       if (!cacheErr && cachedRegions && cachedRegions.length > 0) {
         const mapped = cachedRegions.map(r => ({ id: r.alwaseet_id || r.id, name: r.name }));
         setRegions(mapped);
-        console.log(`✅ تم جلب ${mapped.length} منطقة من الكاش المحلي للمدينة ${cityId}`);
+        devLog.log(`✅ تم جلب ${mapped.length} منطقة من الكاش المحلي للمدينة ${cityId}`);
         return;
       }
       
       // fallback: جلب من API الخارجي فقط إذا الكاش فارغ
       if (!token) { setRegions([]); return; }
-      console.log('⚠️ كاش المناطق فارغ، جلب من API الخارجي...');
+      devLog.log('⚠️ كاش المناطق فارغ، جلب من API الخارجي...');
       let data;
       if (activePartner === 'modon') {
         data = await ModonAPI.getRegionsByCity(token, cityId);
@@ -4421,13 +4421,13 @@ export const AlWaseetProvider = ({ children }) => {
       if (!cacheErr && cachedSizes && cachedSizes.length > 0) {
         const mapped = cachedSizes.map(s => ({ id: s.external_id, size: s.size_name }));
         setPackageSizes(mapped);
-        console.log(`✅ تم جلب ${mapped.length} حجم طرد من الكاش المحلي (${partnerName})`);
+        devLog.log(`✅ تم جلب ${mapped.length} حجم طرد من الكاش المحلي (${partnerName})`);
         return;
       }
       
       // fallback: جلب من API الخارجي فقط إذا الكاش فارغ
       if (!token) { setPackageSizes([]); return; }
-      console.log('⚠️ كاش الأحجام فارغ، جلب من API الخارجي...');
+      devLog.log('⚠️ كاش الأحجام فارغ، جلب من API الخارجي...');
       let data;
       if (activePartner === 'modon') {
         data = await ModonAPI.getPackageSizes(token);
@@ -4473,9 +4473,9 @@ export const AlWaseetProvider = ({ children }) => {
           );
           
           if (upErr) {
-            console.warn('⚠️ فشل حفظ معرف الطلب من الوسيط في الطلب المحلي:', upErr);
+            devLog.warn('⚠️ فشل حفظ معرف الطلب من الوسيط في الطلب المحلي:', upErr);
           } else {
-            console.log('🔗 تم حفظ معرف طلب الوسيط في الطلب المحلي:', result.id);
+            devLog.log('🔗 تم حفظ معرف طلب الوسيط في الطلب المحلي:', result.id);
           }
         }
 
@@ -4520,17 +4520,17 @@ export const AlWaseetProvider = ({ children }) => {
   // ✅ المرحلة 1: دالة ربط الفواتير بالطلبات (استدعاء الدالة الجديدة)
   const linkInvoiceOrdersToOrders = useCallback(async () => {
     try {
-      console.log('🔗 ربط طلبات الفواتير بالطلبات...');
+      devLog.log('🔗 ربط طلبات الفواتير بالطلبات...');
       const { data, error } = await supabase.rpc('link_invoice_orders_to_orders');
       
       if (error) {
-        console.warn('⚠️ فشل في ربط الفواتير:', error.message);
+        devLog.warn('⚠️ فشل في ربط الفواتير:', error.message);
         return { success: false, error: error.message };
       }
       
       if (data && data.length > 0) {
         const result = data[0];
-        console.log(`✅ تم ربط ${result.linked_count} طلب فاتورة، تحديث ${result.updated_orders_count} طلب (${result.processing_time_ms}ms)`);
+        devLog.log(`✅ تم ربط ${result.linked_count} طلب فاتورة، تحديث ${result.updated_orders_count} طلب (${result.processing_time_ms}ms)`);
         return { 
           success: true, 
           linkedCount: result.linked_count,
@@ -4541,7 +4541,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       return { success: true, linkedCount: 0, updatedOrdersCount: 0 };
     } catch (error) {
-      console.warn('⚠️ خطأ في ربط الفواتير:', error.message || error);
+      devLog.warn('⚠️ خطأ في ربط الفواتير:', error.message || error);
       return { success: false, error: error.message };
     }
   }, []);
@@ -4567,7 +4567,7 @@ export const AlWaseetProvider = ({ children }) => {
         return { success: false, error: 'لا يوجد توكن نشط' };
       }
 
-      console.log(`🔄 إعادة مزامنة الفاتورة ${invoiceId} من ${partner}...`);
+      devLog.log(`🔄 إعادة مزامنة الفاتورة ${invoiceId} من ${partner}...`);
 
       // جلب تفاصيل الفاتورة من API
       let invoiceOrders = null;
@@ -4581,7 +4581,7 @@ export const AlWaseetProvider = ({ children }) => {
         return { success: false, error: 'لم يتم العثور على طلبات في الفاتورة' };
       }
 
-      console.log(`📦 تم جلب ${invoiceOrders.orders.length} طلب من الفاتورة ${invoiceId}`);
+      devLog.log(`📦 تم جلب ${invoiceOrders.orders.length} طلب من الفاتورة ${invoiceId}`);
 
       // حفظ الطلبات في قاعدة البيانات
       const { data: dbInvoice } = await supabase
@@ -4608,9 +4608,9 @@ export const AlWaseetProvider = ({ children }) => {
           });
 
         if (upsertError) {
-          console.warn('⚠️ خطأ في حفظ طلبات الفاتورة:', upsertError);
+          devLog.warn('⚠️ خطأ في حفظ طلبات الفاتورة:', upsertError);
         } else {
-          console.log(`✅ تم حفظ ${invoiceOrdersData.length} طلب للفاتورة ${invoiceId}`);
+          devLog.log(`✅ تم حفظ ${invoiceOrdersData.length} طلب للفاتورة ${invoiceId}`);
         }
       }
 
@@ -4630,10 +4630,10 @@ export const AlWaseetProvider = ({ children }) => {
   // ✅ المرحلة 3: مزامنة كل التوكنات المتاحة
   const syncAllAvailableTokens = useCallback(async (onProgress = null) => {
     try {
-      console.log('🔄 بدء مزامنة كل التوكنات المتاحة...');
+      devLog.log('🔄 بدء مزامنة كل التوكنات المتاحة...');
       
       if (!user?.id) {
-        console.warn('⚠️ لا يوجد مستخدم مسجل دخول');
+        devLog.warn('⚠️ لا يوجد مستخدم مسجل دخول');
         return { success: false, error: 'No user logged in' };
       }
 
@@ -4651,11 +4651,11 @@ export const AlWaseetProvider = ({ children }) => {
       }
 
       if (!userTokens || userTokens.length === 0) {
-        console.log('ℹ️ لا توجد توكنات نشطة للمزامنة');
+        devLog.log('ℹ️ لا توجد توكنات نشطة للمزامنة');
         return { success: true, tokensSynced: 0 };
       }
 
-      console.log(`📋 وُجد ${userTokens.length} توكن نشط للمزامنة`);
+      devLog.log(`📋 وُجد ${userTokens.length} توكن نشط للمزامنة`);
       
       let totalInvoicesSynced = 0;
       let totalOrdersUpdated = 0;
@@ -4667,7 +4667,7 @@ export const AlWaseetProvider = ({ children }) => {
           const partnerName = tokenData.partner_name || 'alwaseet';
           const tokenValue = tokenData.token;
           
-          console.log(`🔄 [${tokensProcessed + 1}/${userTokens.length}] مزامنة حساب: ${accountName} (${partnerName})`);
+          devLog.log(`🔄 [${tokensProcessed + 1}/${userTokens.length}] مزامنة حساب: ${accountName} (${partnerName})`);
           
           if (onProgress) {
             onProgress({
@@ -4706,7 +4706,7 @@ export const AlWaseetProvider = ({ children }) => {
               
               if (!upsertErr) {
                 totalInvoicesSynced += invoicesData.length;
-                console.log(`  ✅ حفظ ${invoicesData.length} فاتورة للحساب ${accountName} مع account_username`);
+                devLog.log(`  ✅ حفظ ${invoicesData.length} فاتورة للحساب ${accountName} مع account_username`);
                 
                 // ✅ جلب تفاصيل أول 10 فواتير حديثة وحفظ طلباتها
                 for (const invoice of invoicesData.slice(0, 10)) {
@@ -4746,11 +4746,11 @@ export const AlWaseetProvider = ({ children }) => {
                             ignoreDuplicates: false
                           });
                         
-                        console.log(`    📦 حفظ ${invoiceOrdersList.length} طلب للفاتورة ${invoice.id}`);
+                        devLog.log(`    📦 حفظ ${invoiceOrdersList.length} طلب للفاتورة ${invoice.id}`);
                       }
                     }
                   } catch (invoiceErr) {
-                    console.warn(`    ⚠️ فشل في جلب تفاصيل الفاتورة ${invoice.id}:`, invoiceErr.message);
+                    devLog.warn(`    ⚠️ فشل في جلب تفاصيل الفاتورة ${invoice.id}:`, invoiceErr.message);
                   }
                 }
               } else {
@@ -4758,13 +4758,13 @@ export const AlWaseetProvider = ({ children }) => {
               }
             }
           } catch (apiErr) {
-            console.warn(`  ⚠️ فشل في جلب فواتير من API للحساب ${accountName}:`, apiErr.message);
+            devLog.warn(`  ⚠️ فشل في جلب فواتير من API للحساب ${accountName}:`, apiErr.message);
           }
 
           // ربط الفواتير بالطلبات أولاً
           const linkResult = await linkInvoiceOrdersToOrders();
           if (linkResult.success && linkResult.linkedCount > 0) {
-            console.log(`  ✅ ربط ${linkResult.linkedCount} طلب فاتورة`);
+            devLog.log(`  ✅ ربط ${linkResult.linkedCount} طلب فاتورة`);
           }
 
           // مزامنة الفواتير المستلمة
@@ -4772,9 +4772,9 @@ export const AlWaseetProvider = ({ children }) => {
           
           if (!syncErr && syncRes) {
             totalOrdersUpdated += syncRes.updated_orders_count || 0;
-            console.log(`  ✅ حساب ${accountName}: ${syncRes.updated_orders_count || 0} طلب مُحدَّث`);
+            devLog.log(`  ✅ حساب ${accountName}: ${syncRes.updated_orders_count || 0} طلب مُحدَّث`);
           } else if (syncErr) {
-            console.warn(`  ⚠️ فشل في مزامنة ${accountName}:`, syncErr.message);
+            devLog.warn(`  ⚠️ فشل في مزامنة ${accountName}:`, syncErr.message);
           }
 
           tokensProcessed++;
@@ -4783,7 +4783,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
 
-      console.log(`✅ اكتملت مزامنة ${tokensProcessed} حساب، تحديث ${totalOrdersUpdated} طلب`);
+      devLog.log(`✅ اكتملت مزامنة ${tokensProcessed} حساب، تحديث ${totalOrdersUpdated} طلب`);
       
       return {
         success: true,
@@ -4823,7 +4823,7 @@ export const AlWaseetProvider = ({ children }) => {
     const startTime = Date.now();
     setTimeout(async () => {
       try {
-        console.log('[SYNC-TIMING] 🚀 بدء المزامنة:', new Date().toISOString());
+        devLog.log('[SYNC-TIMING] 🚀 بدء المزامنة:', new Date().toISOString());
         // NOW set syncing to true when actual sync starts
         setIsSyncing(true);
         setSyncMode('syncing');
@@ -4834,7 +4834,7 @@ export const AlWaseetProvider = ({ children }) => {
         if (!ordersToSync || ordersToSync.length === 0) {
           ordersToSync = window.__visibleOrdersForSync || null;
           if (ordersToSync && ordersToSync.length > 0) {
-            console.log(`✅ استخدام ${ordersToSync.length} طلب ظاهر من الصفحة الحالية`);
+            devLog.log(`✅ استخدام ${ordersToSync.length} طلب ظاهر من الصفحة الحالية`);
           }
         }
 
@@ -4857,51 +4857,51 @@ export const AlWaseetProvider = ({ children }) => {
         }
 
         if (ordersToSync && ordersToSync.length > 0) {
-          console.log(`🔄 مزامنة ${ordersToSync.length} طلب...`);
+          devLog.log(`🔄 مزامنة ${ordersToSync.length} طلب...`);
           // ✅ مزامنة باستخدام syncVisibleOrdersBatch مع تمرير onProgress
           await syncVisibleOrdersBatch(ordersToSync, onProgress);
           
           const syncEndTime = Date.now();
-          console.log('[SYNC-TIMING] ✅ انتهاء syncVisibleOrdersBatch:', new Date().toISOString(), `(${syncEndTime - startTime}ms)`);
+          devLog.log('[SYNC-TIMING] ✅ انتهاء syncVisibleOrdersBatch:', new Date().toISOString(), `(${syncEndTime - startTime}ms)`);
         }
 
         // ✅ الحذف التلقائي الآمن
-        console.log('🧹 تمرير الحذف التلقائي الآمن...');
+        devLog.log('🧹 تمرير الحذف التلقائي الآمن...');
         await performDeletionPassAfterStatusSync();
         
         // ✅ ربط الفواتير بالطلبات أولاً (المرحلة 1)
-        console.log('🔗 ربط الفواتير بالطلبات...');
+        devLog.log('🔗 ربط الفواتير بالطلبات...');
         await linkInvoiceOrdersToOrders();
         
         // ✅ مزامنة الفواتير المستلمة تلقائياً
-        console.log('📧 مزامنة الفواتير المستلمة تلقائياً...');
+        devLog.log('📧 مزامنة الفواتير المستلمة تلقائياً...');
         try {
           const { data: syncRes, error: syncErr } = await supabase.rpc('sync_recent_received_invoices');
           if (syncErr) {
-            console.warn('⚠️ فشل في مزامنة الفواتير المستلمة:', syncErr.message);
+            devLog.warn('⚠️ فشل في مزامنة الفواتير المستلمة:', syncErr.message);
           } else if (syncRes?.updated_orders_count > 0) {
-            console.log(`✅ تمت مزامنة ${syncRes.updated_orders_count} طلب من الفواتير المستلمة`);
+            devLog.log(`✅ تمت مزامنة ${syncRes.updated_orders_count} طلب من الفواتير المستلمة`);
           } else {
-            console.log('ℹ️ لا توجد فواتير جديدة للمزامنة');
+            devLog.log('ℹ️ لا توجد فواتير جديدة للمزامنة');
           }
         } catch (e) {
-          console.warn('⚠️ خطأ في مزامنة الفواتير المستلمة:', e?.message || e);
+          devLog.warn('⚠️ خطأ في مزامنة الفواتير المستلمة:', e?.message || e);
         }
         
         // ✅ إصلاح تعارضات الحالات التلقائي بعد كل مزامنة
-        console.log('🔧 فحص وإصلاح تعارضات الحالات...');
+        devLog.log('🔧 فحص وإصلاح تعارضات الحالات...');
         const fixResult = await fixStatusMismatches();
         if (fixResult?.fixed > 0) {
-          console.log(`✅ تم إصلاح ${fixResult.fixed} طلب تلقائياً`);
+          devLog.log(`✅ تم إصلاح ${fixResult.fixed} طلب تلقائياً`);
         }
         
         setLastSyncAt(new Date());
-        console.log('✅ تمت المزامنة بنجاح');
+        devLog.log('✅ تمت المزامنة بنجاح');
       } catch (error) {
         console.error('❌ خطأ في المزامنة:', error);
       } finally {
         const finalEndTime = Date.now();
-        console.log('[SYNC-TIMING] 🏁 تعيين isSyncing=false:', new Date().toISOString(), `(إجمالي: ${finalEndTime - startTime}ms)`);
+        devLog.log('[SYNC-TIMING] 🏁 تعيين isSyncing=false:', new Date().toISOString(), `(إجمالي: ${finalEndTime - startTime}ms)`);
         
         setIsSyncing(false);
         setSyncMode('standby');
@@ -4915,7 +4915,7 @@ export const AlWaseetProvider = ({ children }) => {
   // Initial sync on login - respects autoSyncEnabled setting  
   useEffect(() => {
     if (isLoggedIn && activePartner === 'alwaseet' && syncMode === 'standby' && !lastSyncAt && autoSyncEnabled) {
-      console.log('🚀 مزامنة أولية عند تسجيل الدخول...');
+      devLog.log('🚀 مزامنة أولية عند تسجيل الدخول...');
       performSyncWithCountdown();
     }
     // ✅ لا نضيف performSyncWithCountdown لأنها useCallback مستقرة
@@ -4931,7 +4931,7 @@ export const AlWaseetProvider = ({ children }) => {
         !isSyncing &&
         autoSyncEnabled) {
       intervalId = setInterval(() => {
-        console.log('⏰ مزامنة دورية تلقائية (كل 10 دقائق)...');
+        devLog.log('⏰ مزامنة دورية تلقائية (كل 10 دقائق)...');
         performSyncWithCountdown();
       }, 10 * 60 * 1000); // 10 دقائق
     }
@@ -4947,7 +4947,7 @@ export const AlWaseetProvider = ({ children }) => {
     if (!token || correctionComplete) return;
     
     try {
-      console.log('🔧 بدء الإصلاح الصامت للطلبات المشكوك فيها...');
+      devLog.log('🔧 بدء الإصلاح الصامت للطلبات المشكوك فيها...');
       
       // اجلب الطلبات المشكوك فيها مع تأمين فصل الحسابات
       const { data: problematicOrders, error } = await scopeOrdersQuery(
@@ -5012,14 +5012,14 @@ export const AlWaseetProvider = ({ children }) => {
         
         if (finConfirmed && receiptReceived && employeeDebtPaid && localOrder.status === 'delivered') {
           updates.status = 'completed';
-          console.log(`🎯 [Repair Complete] تحويل الطلب إلى completed:`, {
+          devLog.log(`🎯 [Repair Complete] تحويل الطلب إلى completed:`, {
             finConfirmed,
             receiptReceived,
             employeeDebtPaid,
             orderNumber: localOrder?.order_number
           });
         } else if (finConfirmed && localOrder.status === 'delivered') {
-          console.log(`⚠️ [Repair Pending] الطلب ${localOrder?.order_number} - delivered لكن بانتظار الفاتورة:`, {
+          devLog.log(`⚠️ [Repair Pending] الطلب ${localOrder?.order_number} - delivered لكن بانتظار الفاتورة:`, {
             finConfirmed,
             receiptReceived,
             employeeDebtPaid
@@ -5037,7 +5037,7 @@ export const AlWaseetProvider = ({ children }) => {
       }
       
       if (repaired > 0) {
-        console.log(`🔧 تم إصلاح ${repaired} طلب صامتاً`);
+        devLog.log(`🔧 تم إصلاح ${repaired} طلب صامتاً`);
       }
       
     } catch (error) {
@@ -5048,11 +5048,11 @@ export const AlWaseetProvider = ({ children }) => {
   // ✅ دالة للتحقق من تعارضات الحالات وإصلاحها تلقائياً
   const fixStatusMismatches = useCallback(async () => {
     if (!token) {
-      console.warn('⚠️ لا يوجد token - قم بتسجيل الدخول أولاً');
+      devLog.warn('⚠️ لا يوجد token - قم بتسجيل الدخول أولاً');
       return { fixed: 0, error: 'No token' };
     }
     
-    console.log('🔧 فحص تعارضات الحالات...');
+    devLog.log('🔧 فحص تعارضات الحالات...');
     
     try {
       const { data: conflictedOrders, error } = await scopeOrdersQuery(
@@ -5070,7 +5070,7 @@ export const AlWaseetProvider = ({ children }) => {
       }
       
       if (!conflictedOrders?.length) {
-        console.log('✅ لا توجد طلبات للفحص');
+        devLog.log('✅ لا توجد طلبات للفحص');
         return { fixed: 0 };
       }
       
@@ -5081,7 +5081,7 @@ export const AlWaseetProvider = ({ children }) => {
         const correctStatus = statusConfig.localStatus || statusConfig.internalStatus || 'pending';
         
         if (order.status !== correctStatus) {
-          console.log(`🔧 إصلاح تعارض للطلب ${order.tracking_number} (${order.order_number}): ${order.status} → ${correctStatus} (delivery_status=${order.delivery_status})`);
+          devLog.log(`🔧 إصلاح تعارض للطلب ${order.tracking_number} (${order.order_number}): ${order.status} → ${correctStatus} (delivery_status=${order.delivery_status})`);
           
           const { error: updateError } = await supabase
             .from('orders')
@@ -5100,7 +5100,7 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
       
-      console.log(`✅ تم إصلاح ${fixedCount} طلب من أصل ${conflictedOrders.length}`);
+      devLog.log(`✅ تم إصلاح ${fixedCount} طلب من أصل ${conflictedOrders.length}`);
       return { fixed: fixedCount, total: conflictedOrders.length };
       
     } catch (error) {
@@ -5113,7 +5113,7 @@ export const AlWaseetProvider = ({ children }) => {
   // إضافة مستمع لحدث تشغيل مرور الحذف
   useEffect(() => {
     const handleDeletionPassTrigger = (event) => {
-      console.log('🗑️ تشغيل مرور الحذف من الحدث:', event.detail?.reason);
+      devLog.log('🗑️ تشغيل مرور الحذف من الحدث:', event.detail?.reason);
       performDeletionPassAfterStatusSync();
     };
 
@@ -5129,7 +5129,7 @@ export const AlWaseetProvider = ({ children }) => {
     if (!token) return;
     
     try {
-      console.log('🔍 فحص الطلبات للحذف التلقائي - استخدام نفس منطق زر "تحقق الآن"...');
+      devLog.log('🔍 فحص الطلبات للحذف التلقائي - استخدام نفس منطق زر "تحقق الآن"...');
       
       // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات - فقط طلبات المستخدم الحالي
       // ✅ الحماية الأمنية: حتى المدير يحصل على طلباته فقط للحذف
@@ -5145,7 +5145,7 @@ export const AlWaseetProvider = ({ children }) => {
         true // restrictToOwnOrders = true لضمان حذف المستخدم لطلباته فقط
       ).limit(50);
       
-      console.log('🔍 طلبات الوسيط المرشحة للفحص:', localOrders?.map(o => ({
+      devLog.log('🔍 طلبات الوسيط المرشحة للفحص:', localOrders?.map(o => ({
         order_number: o.order_number,
         tracking_number: o.tracking_number,
         delivery_partner_order_id: o.delivery_partner_order_id,
@@ -5159,11 +5159,11 @@ export const AlWaseetProvider = ({ children }) => {
       }
       
       if (!localOrders?.length) {
-        console.log('✅ لا توجد طلبات مرشحة للفحص');
+        devLog.log('✅ لا توجد طلبات مرشحة للفحص');
         return;
       }
       
-      console.log(`🔍 سيتم فحص ${localOrders.length} طلب باستخدام syncOrderByQR...`);
+      devLog.log(`🔍 سيتم فحص ${localOrders.length} طلب باستخدام syncOrderByQR...`);
       
       let checkedCount = 0;
       let deletedCount = 0;
@@ -5179,7 +5179,7 @@ export const AlWaseetProvider = ({ children }) => {
       for (const localOrder of localOrders) {
         // 🛡️ Circuit Breaker: إيقاف عند تجاوز الحدود
         if (deletedCount >= MAX_DELETIONS_PER_RUN) {
-          console.warn(`🛑 [حماية] توقف الحذف: تم بلوغ الحد الأقصى (${MAX_DELETIONS_PER_RUN}) في هذا التشغيل`);
+          devLog.warn(`🛑 [حماية] توقف الحذف: تم بلوغ الحد الأقصى (${MAX_DELETIONS_PER_RUN}) في هذا التشغيل`);
           break;
         }
         if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
@@ -5187,19 +5187,19 @@ export const AlWaseetProvider = ({ children }) => {
           break;
         }
         if (consecutiveDeletions >= MAX_CONSECUTIVE_DELETIONS) {
-          console.warn(`🛑 [حماية] توقف الحذف: ${MAX_CONSECUTIVE_DELETIONS} حذف متتالي — مراجعة يدوية مطلوبة`);
+          devLog.warn(`🛑 [حماية] توقف الحذف: ${MAX_CONSECUTIVE_DELETIONS} حذف متتالي — مراجعة يدوية مطلوبة`);
           break;
         }
 
         // توسيع البحث عن المعرف ليشمل جميع المصادر المحتملة
         const trackingNumber = localOrder.delivery_partner_order_id || localOrder.tracking_number || localOrder.qr_id;
         if (!trackingNumber) {
-          console.warn(`⚠️ لا يوجد معرف صالح للطلب ${localOrder.order_number} (ID: ${localOrder.id})`);
+          devLog.warn(`⚠️ لا يوجد معرف صالح للطلب ${localOrder.order_number} (ID: ${localOrder.id})`);
           continue;
         }
         
         try {
-          console.log(`🔄 فحص الطلب ${trackingNumber} (رقم: ${localOrder.order_number})...`);
+          devLog.log(`🔄 فحص الطلب ${trackingNumber} (رقم: ${localOrder.order_number})...`);
           
           // استدعاء نفس الدالة المستخدمة في زر "تحقق الآن"
           const syncResult = await syncOrderByQR(trackingNumber);
@@ -5211,7 +5211,7 @@ export const AlWaseetProvider = ({ children }) => {
           if (syncResult?.autoDeleted === true && syncResult?.apiConfirmedNotFound === true) {
             deletedCount++;
             consecutiveDeletions++;
-            console.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً (مؤكد من API)`);
+            devLog.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً (مؤكد من API)`);
             
             // ✅ تسجيل الحذف في auto_delete_log
             const orderAge = Math.round(
@@ -5241,13 +5241,13 @@ export const AlWaseetProvider = ({ children }) => {
             }
           } else if (syncResult?.autoDeleted === true) {
             // 🛡️ تخطي الحذف إن لم يكن هناك تأكيد قاطع من API
-            console.warn(`⚠️ [حماية] تم تخطي حذف الطلب ${trackingNumber} - لا يوجد تأكيد قاطع من API`);
+            devLog.warn(`⚠️ [حماية] تم تخطي حذف الطلب ${trackingNumber} - لا يوجد تأكيد قاطع من API`);
             consecutiveDeletions = 0;
           } else if (syncResult) {
-            console.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح`);
+            devLog.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح`);
             consecutiveDeletions = 0; // إعادة عداد الحذف المتتالي
           } else {
-            console.log(`ℹ️ لا توجد تحديثات للطلب ${trackingNumber}`);
+            devLog.log(`ℹ️ لا توجد تحديثات للطلب ${trackingNumber}`);
             consecutiveDeletions = 0;
           }
           
@@ -5258,10 +5258,10 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
       
-      console.log(`✅ انتهاء الفحص التلقائي: تم فحص ${checkedCount} طلب، حذف ${deletedCount} طلب`);
+      devLog.log(`✅ انتهاء الفحص التلقائي: تم فحص ${checkedCount} طلب، حذف ${deletedCount} طلب`);
       
       if (deletedCount > 0) {
-        console.log(`🗑️ إجمالي الطلبات المحذوفة تلقائياً: ${deletedCount}`);
+        devLog.log(`🗑️ إجمالي الطلبات المحذوفة تلقائياً: ${deletedCount}`);
       }
       
     } catch (error) {
@@ -5288,16 +5288,16 @@ export const AlWaseetProvider = ({ children }) => {
         
         // ثم التصحيح الشامل إذا لم يكن مكتملاً
         if (!correctionComplete) {
-          console.log('🛠️ تنفيذ التصحيح الأولي للطلبات...');
+          devLog.log('🛠️ تنفيذ التصحيح الأولي للطلبات...');
           const correctionResult = await comprehensiveOrderCorrection();
-          console.log('✅ نتيجة التصحيح الأولي:', correctionResult);
+          devLog.log('✅ نتيجة التصحيح الأولي:', correctionResult);
         }
 
         // المزامنة الأولية ستحدث تلقائياً عبر useEffect المخصص لذلك
-        console.log('✅ تم الانتهاء من المهام الأولية');
+        devLog.log('✅ تم الانتهاء من المهام الأولية');
         
         // تشغيل مرور الحذف فوراً لمعالجة الطلبات المحذوفة من الوسيط
-        console.log('🧹 تشغيل مرور الحذف التلقائي للطلبات المحذوفة من الوسيط...');
+        devLog.log('🧹 تشغيل مرور الحذف التلقائي للطلبات المحذوفة من الوسيط...');
         await performDeletionPassAfterStatusSync();
       } catch (error) {
         console.error('❌ خطأ في المهام الأولية:', error);
@@ -5477,7 +5477,7 @@ export const AlWaseetProvider = ({ children }) => {
     // ✅ دالة مفيدة لفحص طلب معين
     window.checkOrderStatus = async (trackingNumber) => {
       try {
-        console.log(`🔍 فحص الطلب ${trackingNumber}...`);
+        devLog.log(`🔍 فحص الطلب ${trackingNumber}...`);
         
         const { data: order, error } = await supabase
           .from('orders')
@@ -5494,7 +5494,7 @@ export const AlWaseetProvider = ({ children }) => {
         const expectedStatus = statusConfig.localStatus || statusConfig.internalStatus || 'pending';
         const hasMatch = order.status === expectedStatus;
         
-        console.log(`📊 الطلب ${trackingNumber}:`, {
+        devLog.log(`📊 الطلب ${trackingNumber}:`, {
           order_number: order.order_number,
           current_status: order.status,
           delivery_status: order.delivery_status,
@@ -5506,7 +5506,7 @@ export const AlWaseetProvider = ({ children }) => {
         });
         
         if (!hasMatch) {
-          console.warn(`⚠️ تعارض في الحالة! استخدم: await window.fixStatusMismatches()`);
+          devLog.warn(`⚠️ تعارض في الحالة! استخدم: await window.fixStatusMismatches()`);
         }
         
         return order;

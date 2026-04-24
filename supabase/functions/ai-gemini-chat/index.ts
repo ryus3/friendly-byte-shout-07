@@ -965,29 +965,110 @@ ${regionsBlock}
       return out;
     };
 
-    // 2) توسيع "X سمول + ميديم" → "X سمول\nX ميديم"
+    // 2) توسيع "X سمول + ميديم" → "X سمول + X ميديم" مع الحفاظ على باقي السطر (هاتف/مدينة/سعر)
     const SIZE_TOKENS = [
       'سمول','ميديم','لارج','اكس','اكسات','اكسين','xs','s','m','l','xl','xxl','xxxl','2xl','3xl','4xl','5xl',
       'صغير','وسط','متوسط','كبير'
     ];
     const isSizeToken = (w: string) => SIZE_TOKENS.includes((w || '').trim().toLowerCase());
 
+    // ✅ الإصلاح الجذري: نُحدد فقط مقطع المنتج المركّب داخل السطر ونوسعه،
+    // مع الحفاظ على كل ما حوله (هاتف، مدينة، منطقة، سعر، ملاحظات).
     const expandCompoundProducts = (txt: string): string => {
       if (!txt || !txt.includes('+')) return txt;
       const lines = txt.split(/\r?\n/);
       const out: string[] = [];
+
       for (const rawLine of lines) {
         if (!rawLine.includes('+')) { out.push(rawLine); continue; }
-        // أزل أرقام الهواتف والأسعار من الفحص قبل تقسيم +
-        const sanitized = rawLine
-          .replace(/(\+?964|00964)?0?7[0-9]{9}/g, ' ')
-          .replace(/\b\d{4,}\b/g, ' ');
-        if (!sanitized.includes('+')) { out.push(rawLine); continue; }
-        const parts = sanitized.split('+').map(p => p.trim()).filter(Boolean);
+
+        // 1) نُقسّم السطر إلى رموز مع الحفاظ على المسافات الأصلية
+        // tokens مع نوعها: word | plus | space
+        type Tok = { type: 'word' | 'plus' | 'space'; value: string };
+        const tokens: Tok[] = [];
+        const regex = /(\s+)|(\+)|([^\s\+]+)/g;
+        let m: RegExpExecArray | null;
+        while ((m = regex.exec(rawLine)) !== null) {
+          if (m[1]) tokens.push({ type: 'space', value: m[1] });
+          else if (m[2]) tokens.push({ type: 'plus', value: '+' });
+          else if (m[3]) tokens.push({ type: 'word', value: m[3] });
+        }
+
+        // 2) نحدد ما هو "كلمة منتج/قياس" مقابل "بيانات أخرى" (أرقام طويلة، +964 ...)
+        const isPhoneLike = (w: string) => /^\+?\d{4,}$/.test(w) || /^00?9?64\d+/.test(w) || /^0?7\d{9}$/.test(w);
+        const isLongNumber = (w: string) => /^\d{3,}$/.test(w);
+        const isSeparator = (w: string) => /^[،,\.;:]+$/.test(w);
+        const isProductLike = (w: string) =>
+          !isPhoneLike(w) && !isLongNumber(w) && !isSeparator(w);
+
+        // 3) نبحث عن "نطاق المنتج المركّب": أطول مقطع متتالي يحتوي على
+        //    كلمات منتج/قياس مع علامات + بينها.
+        // نُجمع فهارس tokens، ونحدد أول وآخر فهرس للنطاق.
+        let bestStart = -1;
+        let bestEnd = -1;
+        let curStart = -1;
+        let curEnd = -1;
+        let curHasPlus = false;
+
+        const flushCur = () => {
+          if (curStart !== -1 && curHasPlus) {
+            // تحقق هل النطاق الحالي أطول/أكبر بفائدة
+            if (bestStart === -1 || (curEnd - curStart) > (bestEnd - bestStart)) {
+              bestStart = curStart;
+              bestEnd = curEnd;
+            }
+          }
+          curStart = -1;
+          curEnd = -1;
+          curHasPlus = false;
+        };
+
+        for (let i = 0; i < tokens.length; i++) {
+          const t = tokens[i];
+          if (t.type === 'space') {
+            if (curStart !== -1) curEnd = i;
+            continue;
+          }
+          if (t.type === 'plus') {
+            if (curStart === -1) { curStart = i; }
+            curEnd = i;
+            curHasPlus = true;
+            continue;
+          }
+          // word
+          if (isProductLike(t.value)) {
+            if (curStart === -1) curStart = i;
+            curEnd = i;
+          } else {
+            // كلمة ليست منتجاً (هاتف/رقم/فاصل) → نقطع النطاق
+            flushCur();
+          }
+        }
+        flushCur();
+
+        if (bestStart === -1) { out.push(rawLine); continue; }
+
+        // 4) استخراج كلمات المنتج المركب من النطاق
+        const rangeTokens = tokens.slice(bestStart, bestEnd + 1);
+        // نقسّم على + داخل النطاق فقط
+        const parts: string[] = [];
+        let buf: string[] = [];
+        for (const t of rangeTokens) {
+          if (t.type === 'plus') {
+            const piece = buf.join('').trim();
+            if (piece) parts.push(piece);
+            buf = [];
+          } else {
+            buf.push(t.value);
+          }
+        }
+        const tail = buf.join('').trim();
+        if (tail) parts.push(tail);
+
         if (parts.length < 2) { out.push(rawLine); continue; }
 
-        // الجذر = اسم المنتج بدون آخر كلمة قياس
-        const firstTokens = parts[0].split(/\s+/);
+        // 5) الجذر = أول مقطع، نزيل آخر كلمة إن كانت قياساً
+        const firstTokens = parts[0].split(/\s+/).filter(Boolean);
         const lastIsSize = isSizeToken(firstTokens[firstTokens.length - 1] || '');
         const baseTokens = lastIsSize ? firstTokens.slice(0, -1) : firstTokens;
         const base = baseTokens.join(' ').trim();
@@ -995,25 +1076,61 @@ ${regionsBlock}
         const expanded: string[] = [];
         for (const part of parts) {
           const toks = part.split(/\s+/).filter(Boolean);
-          if (toks.length === 1 && isSizeToken(toks[0]) && base) {
-            expanded.push(`${base} ${toks[0]}`.trim());
-          } else if (base && toks.every(isSizeToken)) {
+          if (toks.length === 0) continue;
+          if (toks.every(isSizeToken) && base) {
             expanded.push(`${base} ${toks.join(' ')}`.trim());
           } else {
             expanded.push(part);
           }
         }
-        // ⚠️ نستخدم " + " كفاصل لأن extract_product_items_from_text في DB
-        // تعتمد على علامة + لتقسيم العناصر المتعددة في نفس الطلب
-        out.push(expanded.join(' + '));
+
+        const expandedSegment = expanded.join(' + ');
+
+        // 6) إعادة بناء السطر: ما قبل النطاق + النطاق الموسع + ما بعده
+        const before = tokens.slice(0, bestStart).map(t => t.value).join('');
+        const after = tokens.slice(bestEnd + 1).map(t => t.value).join('');
+        out.push(`${before}${expandedSegment}${after}`);
       }
+
       return out.join('\n');
     };
 
     // 3) رسالة معالَجة لتمريرها للدوال (تطبيع سعر + توسيع المركّب)
-    const processedMessage = expandCompoundProducts(normalizePriceTokens(message));
+    let processedMessage = expandCompoundProducts(normalizePriceTokens(message));
     if (processedMessage !== message) {
       console.log('🧪 تم تطبيع الرسالة قبل المعالجة:', { before: message, after: processedMessage });
+    }
+
+    // 🛡️ تحصين: استخراج الهاتف من الرسالة الأصلية (دفاع متعدد الطبقات)
+    const extractPhonesFromText = (txt: string): string[] => {
+      if (!txt) return [];
+      const digits = arabicToEnglishDigits(txt).replace(/[^0-9]/g, '');
+      const phones = new Set<string>();
+      const reList = [
+        /00964(7\d{9})/g,
+        /0964(7\d{9})/g,
+        /964(7\d{9})/g,
+        /(07\d{9})/g,
+      ];
+      for (const re of reList) {
+        let mm: RegExpExecArray | null;
+        while ((mm = re.exec(digits)) !== null) {
+          const local = mm[1].startsWith('0') ? mm[1] : '0' + mm[1];
+          if (/^07\d{9}$/.test(local)) phones.add(local);
+        }
+      }
+      return Array.from(phones);
+    };
+
+    const originalPhones = extractPhonesFromText(message);
+    const processedPhones = extractPhonesFromText(processedMessage);
+    if (originalPhones.length > 0 && processedPhones.length < originalPhones.length) {
+      const missing = originalPhones.filter(p => !processedPhones.includes(p));
+      console.error('🚨 [PHONE_LOST] فُقد الهاتف أثناء المعالجة! استرجاع تلقائي:', {
+        original: message, processed: processedMessage, missing,
+      });
+      // حماية احتياطية: نُلحق الهاتف المفقود في نهاية الرسالة المعالَجة
+      processedMessage = `${processedMessage}\n${missing.join(' ')}`;
     }
 
     if (hasOrderIntent) {

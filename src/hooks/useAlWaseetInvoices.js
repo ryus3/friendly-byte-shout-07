@@ -5,6 +5,7 @@ import * as AlWaseetAPI from '@/lib/alwaseet-api';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import devLog from '@/lib/devLogger';
 
 const LAST_SYNC_COOLDOWN_KEY = 'alwaseet_last_sync_timestamp';
 const SYNC_COOLDOWN_MINUTES = 10;
@@ -61,7 +62,7 @@ export const useAlWaseetInvoices = () => {
               invoicesFromThisToken = await AlWaseetAPI.getMerchantInvoices(tokenData.token);
             }
           } catch (apiErr) {
-            console.warn(`⚠️ فشل جلب فواتير ${partnerName}:`, apiErr.message);
+            devLog.warn(`⚠️ فشل جلب فواتير ${partnerName}:`, apiErr.message);
             continue;
           }
           
@@ -104,14 +105,14 @@ export const useAlWaseetInvoices = () => {
               variant: 'destructive'
             });
           } else {
-            console.log(`✅ تم حفظ/تحديث ${invoicesData.length} فاتورة بنجاح`);
+            devLog.log(`✅ تم حفظ/تحديث ${invoicesData.length} فاتورة بنجاح`);
             // Log status breakdown for debugging
             const receivedCount = invoicesData.filter(inv => 
               inv.status?.includes('التاجر') || 
               (inv.status?.includes('مستلم') && !inv.status?.includes('المندوب'))
             ).length;
             const pendingCount = invoicesData.length - receivedCount;
-            console.log(`   📊 مستلمة: ${receivedCount} | معلقة/مُرسلة: ${pendingCount}`);
+            devLog.log(`   📊 مستلمة: ${receivedCount} | معلقة/مُرسلة: ${pendingCount}`);
           }
         } catch (e) {
           console.error('❌ استثناء أثناء حفظ الفواتير:', e);
@@ -413,7 +414,7 @@ export const useAlWaseetInvoices = () => {
               .limit(1);
             
             if (!checkError && (!existingOrders || existingOrders.length === 0) && !cacheOnly) {
-              console.warn('⚠️ الفاتورة موجودة لكن الطلبات فارغة - إجبار المزامنة');
+              devLog.warn('⚠️ الفاتورة موجودة لكن الطلبات فارغة - إجبار المزامنة');
               
               // محاولة جلب من API مرة أخرى مع retry
               if (selectedToken && isLoggedIn) {
@@ -449,12 +450,12 @@ export const useAlWaseetInvoices = () => {
                         .update({ orders_last_synced_at: new Date().toISOString() })
                         .eq('id', finalInvoiceId);
 
-                      console.log(`✅ تم حفظ ${ordersToInsert.length} طلب للفاتورة ${invoiceId}`);
+                      devLog.log(`✅ تم حفظ ${ordersToInsert.length} طلب للفاتورة ${invoiceId}`);
                       invoiceData = apiOrders;
                       dataSource = 'api_retry';
                     }
                   } else {
-                    console.warn(`⚠️ الفاتورة ${invoiceId}: شركة التوصيل لم تُرجع طلبات. قد تكون قديمة أو محذوفة.`);
+                    devLog.warn(`⚠️ الفاتورة ${invoiceId}: شركة التوصيل لم تُرجع طلبات. قد تكون قديمة أو محذوفة.`);
                   }
                 } catch (retryError) {
                   console.error('❌ فشل retry للمزامنة:', retryError.message);
@@ -486,7 +487,7 @@ export const useAlWaseetInvoices = () => {
             .eq('invoice_id', finalInvoiceId);
 
           if (dbError) {
-            console.warn('خطأ في جلب الطلبات من قاعدة البيانات:', dbError);
+            devLog.warn('خطأ في جلب الطلبات من قاعدة البيانات:', dbError);
           }
 
           // إنشاء الطلبات من raw data بشكل محسن
@@ -512,7 +513,7 @@ export const useAlWaseetInvoices = () => {
               };
             }));
             
-            console.log('📋 طلبات الفاتورة من قاعدة البيانات:', {
+            devLog.log('📋 طلبات الفاتورة من قاعدة البيانات:', {
               total: orders.length,
               linked: orders.filter(o => o.local_order).length,
               fromRaw: orders.filter(o => !o.local_order).length
@@ -542,12 +543,12 @@ export const useAlWaseetInvoices = () => {
               ...order
             })));
             
-            console.log('📄 طلبات من raw data للفاتورة:', orders.length);
+            devLog.log('📄 طلبات من raw data للفاتورة:', orders.length);
           }
 
           invoiceData = { orders };
           dataSource = 'database';
-          console.log('📊 جلب طلبات الفاتورة من قاعدة البيانات:', orders.length);
+          devLog.log('📊 جلب طلبات الفاتورة من قاعدة البيانات:', orders.length);
         } catch (dbError) {
           console.error('❌ فشل البديل من قاعدة البيانات:', dbError);
           // عرض فاتورة فارغة بدلاً من خطأ
@@ -581,7 +582,7 @@ export const useAlWaseetInvoices = () => {
 
     setLoading(true);
     try {
-      console.log(`🔄 استلام الفاتورة ${invoiceId}...`);
+      devLog.log(`🔄 استلام الفاتورة ${invoiceId}...`);
       
       // 1) تأكيد الاستلام على API المناسب
       if (activePartner === 'modon') {
@@ -624,7 +625,7 @@ export const useAlWaseetInvoices = () => {
       if (linkedOrders && linkedOrders.length > 0) {
         const orderIds = linkedOrders.map(lo => lo.order_id);
 
-        console.log(`📦 تحديث ${orderIds.length} طلب مرتبط...`);
+        devLog.log(`📦 تحديث ${orderIds.length} طلب مرتبط...`);
 
         // ✅ CRITICAL FIX: لا نُحدد receipt_received_at يدوياً
         // الـ trigger في قاعدة البيانات سيأخذ التاريخ من الفاتورة تلقائياً
@@ -644,7 +645,7 @@ export const useAlWaseetInvoices = () => {
           console.error('خطأ في تحديث الطلبات:', updateError);
         } else {
           updatedOrdersCount = updated?.length || 0;
-          console.log(`✅ تم تحديث ${updatedOrdersCount} طلب:`, updated?.map(o => o.order_number));
+          devLog.log(`✅ تم تحديث ${updatedOrdersCount} طلب:`, updated?.map(o => o.order_number));
         }
 
         // تحديث جدول الأرباح
@@ -660,7 +661,7 @@ export const useAlWaseetInvoices = () => {
 
         if (!profitsError) {
           profitsUpdatedCount = updatedProfits?.length || 0;
-          console.log(`💰 تم تحديث ${profitsUpdatedCount} سجل أرباح`);
+          devLog.log(`💰 تم تحديث ${profitsUpdatedCount} سجل أرباح`);
         }
       }
 
@@ -721,7 +722,7 @@ export const useAlWaseetInvoices = () => {
     if (!invoiceId) return [];
 
     try {
-      console.log(`🔗 جلب الطلبات المرتبطة بالفاتورة ${invoiceId} من قاعدة البيانات مباشرة`);
+      devLog.log(`🔗 جلب الطلبات المرتبطة بالفاتورة ${invoiceId} من قاعدة البيانات مباشرة`);
       
       // أولاً: جلب internal ID للفاتورة من external_id
       const { data: invoiceRecord, error: invoiceError } = await supabase
@@ -731,7 +732,7 @@ export const useAlWaseetInvoices = () => {
         .single();
 
       if (invoiceError || !invoiceRecord) {
-        console.warn(`⚠️ الفاتورة ${invoiceId} غير موجودة في قاعدة البيانات`);
+        devLog.warn(`⚠️ الفاتورة ${invoiceId} غير موجودة في قاعدة البيانات`);
         return [];
       }
 
@@ -778,13 +779,13 @@ export const useAlWaseetInvoices = () => {
       const linkedWithOrders = (linkedOrders || []).filter(item => item.orders);
       
       if (linkedWithOrders.length === 0 && (invoiceRecord.orders_count > 0 || (linkedOrders || []).length === 0)) {
-        console.warn('⚠️ Self-healing: محاولة إنشاء روابط الفاتورة من الطلبات المحلية...');
+        devLog.warn('⚠️ Self-healing: محاولة إنشاء روابط الفاتورة من الطلبات المحلية...');
         try {
           const { data: healCount, error: healError } = await supabase
             .rpc('create_invoice_orders_from_local_orders', { p_invoice_id: invoiceRecord.id });
           
           if (!healError && healCount > 0) {
-            console.log(`✅ Self-healing: تم إنشاء ${healCount} رابط جديد`);
+            devLog.log(`✅ Self-healing: تم إنشاء ${healCount} رابط جديد`);
             
             // إعادة الاستدعاء بعد self-healing
             await supabase.rpc('link_invoice_orders_to_orders');
@@ -812,7 +813,7 @@ export const useAlWaseetInvoices = () => {
                 invoice_status: item.status
               }));
             
-            console.log(`✅ بعد Self-healing: ${refreshedFormatted.length} طلب مرتبط`);
+            devLog.log(`✅ بعد Self-healing: ${refreshedFormatted.length} طلب مرتبط`);
             return refreshedFormatted;
           }
         } catch (healErr) {
@@ -828,7 +829,7 @@ export const useAlWaseetInvoices = () => {
         invoice_status: item.status
       }));
 
-      console.log(`✅ تم جلب ${formattedOrders.length} طلب مرتبط من قاعدة البيانات`);
+      devLog.log(`✅ تم جلب ${formattedOrders.length} طلب مرتبط من قاعدة البيانات`);
       return formattedOrders;
       
     } catch (error) {
@@ -890,19 +891,19 @@ export const useAlWaseetInvoices = () => {
   // Sync a specific invoice by ID
   const syncInvoiceById = useCallback(async (externalId) => {
     if (!isLoggedIn || !token) {
-      console.warn('Cannot sync invoice: authentication or access required');
+      devLog.warn('Cannot sync invoice: authentication or access required');
       return { success: false, error: 'Authentication required' };
     }
 
     try {
-      console.log(`Starting sync for invoice ${externalId}...`);
+      devLog.log(`Starting sync for invoice ${externalId}...`);
       
       // Fetch the specific invoice from Al-Waseet
       const allInvoices = await AlWaseetAPI.getMerchantInvoices(token);
       const targetInvoice = allInvoices.find(inv => inv.id === externalId);
       
       if (!targetInvoice) {
-        console.warn(`Invoice ${externalId} not found in Al-Waseet`);
+        devLog.warn(`Invoice ${externalId} not found in Al-Waseet`);
         return { success: false, error: 'Invoice not found' };
       }
 
@@ -912,7 +913,7 @@ export const useAlWaseetInvoices = () => {
       
       // Sync to database
       const result = await syncAlwaseetInvoiceData(targetInvoice, invoiceOrders);
-      console.log(`Synced invoice ${externalId}:`, result);
+      devLog.log(`Synced invoice ${externalId}:`, result);
       
       return { success: true, data: result };
       
@@ -933,7 +934,7 @@ export const useAlWaseetInvoices = () => {
         const diffMinutes = (now - lastSync) / (1000 * 60);
         
         if (diffMinutes < SYNC_COOLDOWN_MINUTES) {
-          console.log(`Sync cooldown active. ${SYNC_COOLDOWN_MINUTES - Math.floor(diffMinutes)} minutes remaining`);
+          devLog.log(`Sync cooldown active. ${SYNC_COOLDOWN_MINUTES - Math.floor(diffMinutes)} minutes remaining`);
           return;
         }
       }
@@ -995,7 +996,7 @@ export const useAlWaseetInvoices = () => {
     if (!isLoggedIn || activePartner !== 'alwaseet' || !token) return { success: false, error: 'Not logged in' };
     
     try {
-      console.log('Starting bulk sync of all recent invoices...');
+      devLog.log('Starting bulk sync of all recent invoices...');
       const invoicesData = await AlWaseetAPI.getMerchantInvoices(token);
       
       // Save all invoices to database
@@ -1021,7 +1022,7 @@ export const useAlWaseetInvoices = () => {
             syncedCount++;
           }
         } catch (error) {
-          console.warn(`Failed to sync invoice ${invoice.id}:`, error);
+          devLog.warn(`Failed to sync invoice ${invoice.id}:`, error);
         }
       }
       
@@ -1044,7 +1045,7 @@ export const useAlWaseetInvoices = () => {
     if (!token || !isLoggedIn) return { success: false };
     
     try {
-      console.log('🔄 مزامنة سريعة - آخر فاتورتين...');
+      devLog.log('🔄 مزامنة سريعة - آخر فاتورتين...');
       
       // Use smart sync for quick updates
       const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
@@ -1059,12 +1060,12 @@ export const useAlWaseetInvoices = () => {
       });
       
       if (error) {
-        console.warn('تعذر المزامنة السريعة:', error.message);
+        devLog.warn('تعذر المزامنة السريعة:', error.message);
         return { success: false, error: error.message };
       }
       
       const synced = data?.invoices_synced || 0;
-      console.log('✅ مزامنة سريعة مكتملة:', synced, 'فاتورة');
+      devLog.log('✅ مزامنة سريعة مكتملة:', synced, 'فاتورة');
       
       // Refresh state if we got new invoices
       if (synced > 0) {
@@ -1073,7 +1074,7 @@ export const useAlWaseetInvoices = () => {
       
       return { success: true, processed: synced };
     } catch (error) {
-      console.warn('خطأ في المزامنة السريعة:', error);
+      devLog.warn('خطأ في المزامنة السريعة:', error);
       return { success: false, error: error.message };
     }
   }, [token, isLoggedIn, user?.id, fetchInvoices]);
@@ -1083,7 +1084,7 @@ export const useAlWaseetInvoices = () => {
    */
   const reprocessReceivedInvoice = useCallback(async (invoiceExternalId) => {
     try {
-      console.log(`🔄 بدء إعادة معالجة الفاتورة: ${invoiceExternalId}`);
+      devLog.log(`🔄 بدء إعادة معالجة الفاتورة: ${invoiceExternalId}`);
       
       // 1. جلب الفاتورة من قاعدة البيانات
       const { data: invoice, error: invoiceError } = await supabase
@@ -1112,12 +1113,12 @@ export const useAlWaseetInvoices = () => {
       }
 
       if (!invoiceOrders || invoiceOrders.length === 0) {
-        console.warn('⚠️ لا توجد طلبات مرتبطة بالفاتورة');
+        devLog.warn('⚠️ لا توجد طلبات مرتبطة بالفاتورة');
         toast.error('لا توجد طلبات مرتبطة بالفاتورة');
         return;
       }
 
-      console.log(`📦 تم العثور على ${invoiceOrders.length} طلب مرتبط بالفاتورة`);
+      devLog.log(`📦 تم العثور على ${invoiceOrders.length} طلب مرتبط بالفاتورة`);
 
       // 3. تحديث كل طلب مرتبط
       let updatedCount = 0;
@@ -1157,7 +1158,7 @@ export const useAlWaseetInvoices = () => {
         }
 
         updatedCount++;
-        console.log(`✅ تم تحديث الطلب ${invoiceOrder.order_id} بنجاح`);
+        devLog.log(`✅ تم تحديث الطلب ${invoiceOrder.order_id} بنجاح`);
       }
 
       // 4. تحديث حالة الفاتورة إذا لم تكن مستلمة
@@ -1176,7 +1177,7 @@ export const useAlWaseetInvoices = () => {
         }
       }
 
-      console.log(`✅ تمت إعادة معالجة الفاتورة بنجاح - تم تحديث ${updatedCount} طلب`);
+      devLog.log(`✅ تمت إعادة معالجة الفاتورة بنجاح - تم تحديث ${updatedCount} طلب`);
       toast.success(`تمت إعادة معالجة الفاتورة - تم تحديث ${updatedCount} طلب`);
 
       // 5. تحديث القائمة

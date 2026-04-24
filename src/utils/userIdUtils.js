@@ -1,3 +1,4 @@
+import devLog from '@/lib/devLogger';
 /**
  * مساعد موحد لمعالجة معرفات المستخدمين
  * يحل مشكلة التناقض بين user.id و user.user_id
@@ -121,7 +122,7 @@ export const logUserIdInconsistency = (user) => {
   const areEqual = user.user_id === user.id;
   
   if (hasUserId && hasId && !areEqual) {
-    console.warn('⚠️ تناقض في معرفات المستخدم:', {
+    devLog.warn('⚠️ تناقض في معرفات المستخدم:', {
       user_id: user.user_id,
       id: user.id,
       full_name: user.full_name,

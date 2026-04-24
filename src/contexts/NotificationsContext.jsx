@@ -4,6 +4,7 @@ import { useAuth } from './UnifiedAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast.js';
 import { Bell, UserPlus, AlertTriangle, ShoppingCart, Bot, CheckCircle } from 'lucide-react';
+import devLog from '@/lib/devLogger';
 
 const NotificationsContext = createContext(null);
 
@@ -111,11 +112,11 @@ export const NotificationsProvider = ({ children }) => {
     useEffect(() => {
         if (!user || !supabase) return () => {};
 
-        console.log('🔄 NotificationsContext: Setting up real-time listener for user:', user.id);
+        devLog.log('🔄 NotificationsContext: Setting up real-time listener for user:', user.id);
 
         const handleNewNotification = (payload) => {
             const newNotification = payload.new;
-            console.log('📬 NotificationsContext: New notification received:', {
+            devLog.log('📬 NotificationsContext: New notification received:', {
                 id: newNotification.id,
                 type: newNotification.type,
                 title: newNotification.title,
@@ -130,19 +131,19 @@ export const NotificationsProvider = ({ children }) => {
 
             if (isForThisUser) {
                 shouldShow = true;
-                console.log('✅ NotificationsContext: Notification is for current user');
+                devLog.log('✅ NotificationsContext: Notification is for current user');
             } else if (isGlobalAdminNotification) {
                 const isAdmin = user?.roles?.includes('super_admin') || user?.roles?.includes('admin');
                 if (isAdmin) {
                     shouldShow = true;
-                    console.log('✅ NotificationsContext: Admin notification accepted');
+                    devLog.log('✅ NotificationsContext: Admin notification accepted');
                 } else {
                     // التحقق من نوع الإشعار للموظفين
                     // غير المدير لا يرى أي إشعار عام (user_id = null)
-                    console.log('❌ NotificationsContext: Global notification blocked for non-admin');
+                    devLog.log('❌ NotificationsContext: Global notification blocked for non-admin');
                 }
             } else {
-                console.log('❌ NotificationsContext: Notification not for this user');
+                devLog.log('❌ NotificationsContext: Notification not for this user');
             }
 
             if (shouldShow) {
@@ -167,7 +168,7 @@ export const NotificationsProvider = ({ children }) => {
                         audio.volume = volume;
                         audio.play().catch(() => {});
                     } catch (error) {
-                        console.log('تعذر تشغيل صوت الإشعار');
+                        devLog.log('تعذر تشغيل صوت الإشعار');
                     }
                     
                     // Enhanced toast with proper variant mapping
@@ -223,10 +224,10 @@ export const NotificationsProvider = ({ children }) => {
             })
             .subscribe((status, err) => {
                 if (status === 'SUBSCRIBED') {
-                    console.log('Successfully subscribed to notifications realtime!');
+                    devLog.log('Successfully subscribed to notifications realtime!');
                 }
                 if (err) {
-                    console.log('Realtime notification subscription error:', err);
+                    devLog.log('Realtime notification subscription error:', err);
                 }
             });
 
@@ -277,7 +278,7 @@ export const NotificationsProvider = ({ children }) => {
                     audio.volume = volume;
                     audio.play().catch(() => {});
                 } catch (error) {
-                    console.log('تعذر تشغيل صوت الإشعار');
+                    devLog.log('تعذر تشغيل صوت الإشعار');
                 }
                 
                 // عرض الإشعار بالتصميم المحسن
@@ -361,7 +362,7 @@ export const NotificationsProvider = ({ children }) => {
             return;
         }
         
-        console.log("Deleting notification:", id);
+        devLog.log("Deleting notification:", id);
         
         try {
             // حذف من قاعدة البيانات أولاً
@@ -375,7 +376,7 @@ export const NotificationsProvider = ({ children }) => {
                 return;
             }
             
-            console.log("Successfully deleted notification:", id);
+            devLog.log("Successfully deleted notification:", id);
             
             // حذف من الحالة المحلية فقط عند النجاح
             setNotifications(prev => prev.filter(n => n.id !== id));

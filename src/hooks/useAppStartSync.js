@@ -3,6 +3,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
+import devLog from '@/lib/devLogger';
 
 /**
  * Hook for handling comprehensive app start synchronization
@@ -30,22 +31,22 @@ export const useAppStartSync = () => {
     setSyncProgress({ current: 0, total: 4, status: 'بدء المزامنة الشاملة...' });
     
     try {
-      console.log('🚀 بدء المزامنة الشاملة الذكية عند تشغيل التطبيق');
+      devLog.log('🚀 بدء المزامنة الشاملة الذكية عند تشغيل التطبيق');
 
       // المرحلة 1: مزامنة الطلبات المرئية بالأولوية القصوى
       setSyncProgress({ current: 1, total: 3, status: 'مزامنة الطلبات المرئية...' });
       let ordersUpdated = 0;
       
       if (visibleOrders && Array.isArray(visibleOrders) && visibleOrders.length > 0 && syncVisibleOrdersBatch) {
-        console.log(`📋 مزامنة الطلبات المرئية: ${visibleOrders.length} طلب`);
+        devLog.log(`📋 مزامنة الطلبات المرئية: ${visibleOrders.length} طلب`);
         
         const ordersResult = await syncVisibleOrdersBatch(visibleOrders, (progress) => {
-          console.log(`📊 تقدم المزامنة: ${progress.processed}/${progress.total} موظفين، ${progress.updated} طلب محدث`);
+          devLog.log(`📊 تقدم المزامنة: ${progress.processed}/${progress.total} موظفين، ${progress.updated} طلب محدث`);
         });
         
         if (ordersResult.success) {
           ordersUpdated = ordersResult.updatedCount || 0;
-          console.log(`✅ مزامنة الطلبات المرئية: ${ordersUpdated} طلب محدث`);
+          devLog.log(`✅ مزامنة الطلبات المرئية: ${ordersUpdated} طلب محدث`);
         }
       }
 
@@ -58,7 +59,7 @@ export const useAppStartSync = () => {
       
       const totalInvoices = 0; // لا يتم جلب الفواتير في المزامنة الشاملة
       
-      console.log(`✅ مزامنة شاملة ذكية مكتملة: ${totalInvoices} فاتورة، ${ordersUpdated} طلب`);
+      devLog.log(`✅ مزامنة شاملة ذكية مكتملة: ${totalInvoices} فاتورة، ${ordersUpdated} طلب`);
       
       // إرسال إشعار النجاح محسن فقط للمزامنة اليدوية
       if (!autoSync) {
@@ -101,7 +102,7 @@ export const useAppStartSync = () => {
 
   useEffect(() => {
     // ⛔ تعطيل المزامنة الشاملة - AlWaseetContext يتولى المزامنة الأولية
-    console.log('ℹ️ مزامنة AppStartSync معطلة - AlWaseetContext يتولى المزامنة');
+    devLog.log('ℹ️ مزامنة AppStartSync معطلة - AlWaseetContext يتولى المزامنة');
     return;
   }, []);
 

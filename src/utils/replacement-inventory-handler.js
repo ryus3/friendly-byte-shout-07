@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/customSupabaseClient';
+import devLog from '@/lib/devLogger';
 
 /**
  * معالجة المخزون للطلبات الاستبدالية باستخدام exchange_metadata
@@ -20,11 +21,11 @@ export const processReplacementInventory = async (orderId, exchangeMetadata, pro
       : exchangeMetadata.incoming_items;
 
     if (!items || items.length === 0) {
-      console.log(`✅ لا توجد منتجات ${processType} للمعالجة`);
+      devLog.log(`✅ لا توجد منتجات ${processType} للمعالجة`);
       return { success: true, processed: 0 };
     }
 
-    console.log(`🔄 معالجة ${items.length} منتج ${processType} للطلب ${orderId}`);
+    devLog.log(`🔄 معالجة ${items.length} منتج ${processType} للطلب ${orderId}`);
 
     for (const item of items) {
       const quantityChange = processType === 'outgoing' 
@@ -44,7 +45,7 @@ export const processReplacementInventory = async (orderId, exchangeMetadata, pro
         console.error(`❌ خطأ في تحديث المخزون للمنتج ${item.product_name}:`, updateError);
       } else {
         processed++;
-        console.log(`✅ تم ${processType === 'outgoing' ? 'خصم' : 'إضافة'} ${item.quantity} من ${item.product_name}`);
+        devLog.log(`✅ تم ${processType === 'outgoing' ? 'خصم' : 'إضافة'} ${item.quantity} من ${item.product_name}`);
       }
     }
 

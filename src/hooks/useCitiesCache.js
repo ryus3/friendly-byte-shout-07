@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
+import devLog from '@/lib/devLogger';
 
 export const useCitiesCache = () => {
   const [cities, setCities] = useState([]);
@@ -47,7 +48,7 @@ export const useCitiesCache = () => {
       let page = 0;
       const pageSize = 1000;
 
-      console.log('🔄 بدء جلب المناطق مع pagination...');
+      devLog.log('🔄 بدء جلب المناطق مع pagination...');
 
       while (hasMore) {
         const { data, error } = await supabase
@@ -61,7 +62,7 @@ export const useCitiesCache = () => {
 
         if (data && data.length > 0) {
           allRegions = [...allRegions, ...data];
-          console.log(`✅ جلب ${data.length} منطقة (الصفحة ${page + 1})، الإجمالي: ${allRegions.length}`);
+          devLog.log(`✅ جلب ${data.length} منطقة (الصفحة ${page + 1})، الإجمالي: ${allRegions.length}`);
         }
 
         hasMore = data && data.length === pageSize;
@@ -73,7 +74,7 @@ export const useCitiesCache = () => {
         }
       }
 
-      console.log(`✅ اكتمل جلب جميع المناطق: ${allRegions.length} منطقة`);
+      devLog.log(`✅ اكتمل جلب جميع المناطق: ${allRegions.length} منطقة`);
       setAllRegions(allRegions); // ✅ حفظ في allRegions state
       return allRegions;
     } catch (error) {
@@ -125,13 +126,13 @@ export const useCitiesCache = () => {
         });
         if (error) throw error;
         syncData = Array.isArray(data) ? data[0] : data;
-        console.log(`🔍 fetchSyncInfo (${partnerName}) نتيجة:`, syncData);
+        devLog.log(`🔍 fetchSyncInfo (${partnerName}) نتيجة:`, syncData);
       } else {
         // fallback للـ RPC العام
         const { data, error } = await supabase.rpc('get_last_successful_cities_regions_sync');
         if (error) throw error;
         syncData = Array.isArray(data) ? data[0] : data;
-        console.log('🔍 fetchSyncInfo (all) نتيجة:', syncData);
+        devLog.log('🔍 fetchSyncInfo (all) نتيجة:', syncData);
       }
       
       setSyncInfo(syncData);
@@ -262,14 +263,14 @@ export const useCitiesCache = () => {
   useEffect(() => {
     const loadCacheData = async () => {
       setIsLoading(true);
-      console.log('🔄 بدء تحميل الـ Cache...');
+      devLog.log('🔄 بدء تحميل الـ Cache...');
       await fetchCities();
       const loadedRegions = await fetchAllRegions();
       setAllRegions(loadedRegions); // ✅ حفظ جميع المناطق
       await fetchSyncInfo();
       setIsLoaded(true);
       setIsLoading(false);
-      console.log('✅ اكتمل تحميل الـ Cache');
+      devLog.log('✅ اكتمل تحميل الـ Cache');
     };
     loadCacheData();
   }, []);

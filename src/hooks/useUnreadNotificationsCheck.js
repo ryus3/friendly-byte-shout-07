@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/utils/NotificationService';
+import devLog from '@/lib/devLogger';
 
 // Hook للتحقق من الإشعارات غير المقروءة عند فتح الموقع
 export const useUnreadNotificationsCheck = (user) => {
@@ -14,7 +15,7 @@ export const useUnreadNotificationsCheck = (user) => {
 
     const checkUnreadNotifications = async () => {
       try {
-        console.log('🔍 Checking for unread notifications for user:', user.id);
+        devLog.log('🔍 Checking for unread notifications for user:', user.id);
         
         // جلب الإشعارات غير المقروءة منذ آخر 24 ساعة
         const now = Date.now();
@@ -43,12 +44,12 @@ export const useUnreadNotificationsCheck = (user) => {
           return;
         }
 
-        console.log('📬 Found unread notifications:', unreadNotifications?.length || 0);
+        devLog.log('📬 Found unread notifications:', unreadNotifications?.length || 0);
 
         if (unreadNotifications && unreadNotifications.length > 0) {
           // إظهار إشعارات المتصفح للإشعارات غير المقروءة
           for (const notification of unreadNotifications) {
-            console.log('🔔 Showing browser notification for unread:', notification.title);
+            devLog.log('🔔 Showing browser notification for unread:', notification.title);
             
             // تأخير قصير بين الإشعارات لتجنب الإزعاج
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -71,7 +72,7 @@ export const useUnreadNotificationsCheck = (user) => {
             });
           }
         } else {
-          console.log('✅ No unread notifications found');
+          devLog.log('✅ No unread notifications found');
         }
 
         hasCheckedRef.current = true;

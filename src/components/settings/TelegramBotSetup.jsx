@@ -12,6 +12,7 @@ import {
   Settings, Zap, Shield, Smartphone
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
+import devLog from '@/lib/devLogger';
 
 const TelegramBotSetup = ({ open, onOpenChange }) => {
   const [botToken, setBotToken] = useState('');
@@ -190,7 +191,7 @@ const TelegramBotSetup = ({ open, onOpenChange }) => {
 
 🚀 البوت جاهز للعمل!`;
 
-      console.log('Bot setup completed:', testMessage);
+      devLog.log('Bot setup completed:', testMessage);
       
     } catch (error) {
       console.error('Error sending test message:', error);

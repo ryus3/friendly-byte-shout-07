@@ -32,6 +32,7 @@ import SettlementRequestsDialog from '@/components/dialogs/SettlementRequestsDia
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
+import devLog from '@/lib/devLogger';
 
 const EmployeeFollowUpPage = () => {
   const navigate = useNavigate();
@@ -117,7 +118,7 @@ const EmployeeFollowUpPage = () => {
   
   const [selectedOrders, setSelectedOrders] = useState(() => {
     const initialSelectedOrders = ordersFromUrl && highlightFromUrl === 'settlement' ? ordersFromUrl.split(',') : [];
-    console.log('🎯 تهيئة selectedOrders:', {
+    devLog.log('🎯 تهيئة selectedOrders:', {
       ordersFromUrl,
       highlightFromUrl,
       initialSelectedOrders,
@@ -177,7 +178,7 @@ const EmployeeFollowUpPage = () => {
         if (invoiceError) {
           console.error('❌ خطأ في مزامنة الفواتير:', invoiceError);
         } else {
-          console.log('✅ نتيجة مزامنة الفواتير:', invoiceSyncResult);
+          devLog.log('✅ نتيجة مزامنة الفواتير:', invoiceSyncResult);
         }
       }
       
@@ -228,7 +229,7 @@ const EmployeeFollowUpPage = () => {
 
     try {
       const result = await syncVisibleOrdersBatch(currentFilteredOrders, (progress) => {
-        console.log(`📊 تقدم المزامنة: ${progress.processed}/${progress.total} موظفين، ${progress.updated} طلب محدث`);
+        devLog.log(`📊 تقدم المزامنة: ${progress.processed}/${progress.total} موظفين، ${progress.updated} طلب محدث`);
       });
 
       if (result.success) {
@@ -354,7 +355,7 @@ const EmployeeFollowUpPage = () => {
     const performInitialSync = async () => {
       // انتظار تحميل الطلبات أولاً
       if (loading || !filteredOrders || filteredOrders.length === 0) {
-        console.log('⏳ [EmployeeFollowUp] انتظار تحميل الطلبات المفلترة...');
+        devLog.log('⏳ [EmployeeFollowUp] انتظار تحميل الطلبات المفلترة...');
         return;
       }
       
@@ -366,14 +367,14 @@ const EmployeeFollowUpPage = () => {
       });
       
       if (activeOrders.length === 0) {
-        console.log('⏭️ [EmployeeFollowUp] لا توجد طلبات نشطة ظاهرة للمزامنة');
+        devLog.log('⏭️ [EmployeeFollowUp] لا توجد طلبات نشطة ظاهرة للمزامنة');
         return;
       }
       
-      console.log(`🔄 [EmployeeFollowUp] مزامنة أولية: ${activeOrders.length} طلب ظاهر نشط`);
+      devLog.log(`🔄 [EmployeeFollowUp] مزامنة أولية: ${activeOrders.length} طلب ظاهر نشط`);
       try {
         await comprehensiveSync(activeOrders, syncVisibleOrdersBatch);
-        console.log('✅ [EmployeeFollowUp] تمت المزامنة الأولية للطلبات الظاهرة النشطة');
+        devLog.log('✅ [EmployeeFollowUp] تمت المزامنة الأولية للطلبات الظاهرة النشطة');
       } catch (error) {
         console.error('❌ [EmployeeFollowUp] خطأ في المزامنة:', error);
       }
@@ -383,7 +384,7 @@ const EmployeeFollowUpPage = () => {
   }, []); // ✅ dependencies فارغة = مرة واحدة فقط عند الدخول للصفحة
   
   
-  console.log('🔍 بيانات الصفحة DEEP DEBUG:', {
+  devLog.log('🔍 بيانات الصفحة DEEP DEBUG:', {
     ordersCount: orders?.length || 0,
     ordersData: orders,
     usersCount: allUsers?.length || 0,
@@ -402,7 +403,7 @@ const EmployeeFollowUpPage = () => {
     // تشغيل المعالجة فقط مرة واحدة عند توفر البيانات
     if (loading || !orders || !allUsers || orders.length === 0) return;
     
-    console.log('🔄 URL Parameters:', { 
+    devLog.log('🔄 URL Parameters:', { 
       highlightFromUrl, 
       employeeFromUrl, 
       ordersFromUrl,
@@ -412,11 +413,11 @@ const EmployeeFollowUpPage = () => {
     
     if (highlightFromUrl === 'settlement' && employeeFromUrl && ordersFromUrl) {
       // طلب تحاسب محدد من الإشعار
-      console.log('⚡ معالجة طلب التحاسب من الإشعار');
+      devLog.log('⚡ معالجة طلب التحاسب من الإشعار');
       processSettlementRequest();
     } else if (highlightFromUrl === 'settlement') {
       // إشعار عام للتحاسب
-      console.log('🔔 إشعار تحاسب عام');
+      devLog.log('🔔 إشعار تحاسب عام');
       setTimeout(() => {
         toast({
           title: "طلبات تحاسب متاحة",
@@ -441,7 +442,7 @@ const EmployeeFollowUpPage = () => {
       const orderList = ordersFromUrl.split(',');
       setSelectedOrders(orderList);
       
-      console.log('✅ تم تعيين:', {
+      devLog.log('✅ تم تعيين:', {
         employeeId: employeeFromUrl,
         orders: orderList,
         ordersCount: orderList.length
@@ -524,7 +525,7 @@ const EmployeeFollowUpPage = () => {
 const filteredOrders = useMemo(() => {
   const effectiveEmployeeId = employeeFromUrl || filters.employeeId;
   
-  console.log('🔄 تفلتر الطلبات DETAILED:', { 
+  devLog.log('🔄 تفلتر الطلبات DETAILED:', { 
     ordersLength: orders?.length, 
     filters,
     showSettlementArchive,
@@ -534,7 +535,7 @@ const filteredOrders = useMemo(() => {
   });
   
   if (!orders || !Array.isArray(orders)) {
-    console.log('❌ لا توجد طلبات في البيانات');
+    devLog.log('❌ لا توجد طلبات في البيانات');
     return [];
   }
 
@@ -657,7 +658,7 @@ const filteredOrders = useMemo(() => {
     created_by_name: usersMap.get(order.created_by) || 'غير معروف'
   }));
 
-  console.log('✅ الطلبات المفلترة النهائية:', {
+  devLog.log('✅ الطلبات المفلترة النهائية:', {
     count: filtered.length,
     showSettlementArchive,
     orders: filtered.map(o => ({ id: o.id, number: o.order_number, status: o.status }))
@@ -699,16 +700,16 @@ useEffect(() => {
   if (syncableOrders && syncableOrders.length > 0 && !hasSyncedOnLoad.current) {
     const performSmartSync = async () => {
       try {
-        console.log(`🔄 مزامنة ذكية تلقائية: ${syncableOrders.length} طلب نشط من ${filteredOrders?.length || 0} ظاهر...`);
+        devLog.log(`🔄 مزامنة ذكية تلقائية: ${syncableOrders.length} طلب نشط من ${filteredOrders?.length || 0} ظاهر...`);
         
         // المزامنة المباشرة عبر AlWaseetContext (مسار موحد)
         const result = await syncVisibleOrdersBatch(syncableOrders);
         
         if (result?.success) {
-          console.log(`✅ مزامنة ذكية: ${result.updatedCount || 0} طلب محدث`);
+          devLog.log(`✅ مزامنة ذكية: ${result.updatedCount || 0} طلب محدث`);
         }
       } catch (err) {
-        console.warn('⚠️ تعذرت المزامنة الذكية:', err);
+        devLog.warn('⚠️ تعذرت المزامنة الذكية:', err);
       }
     };
     
@@ -808,7 +809,7 @@ useEffect(() => {
       return employeeMatch && statusMatch;
     });
     
-    console.log('📊 الطلبات للإحصائيات:', {
+    devLog.log('📊 الطلبات للإحصائيات:', {
       filteredOrdersCount: filteredOrders.length,
       statsOrdersCount: statsOrders.length,
       statusBreakdown: statsOrders.reduce((acc, o) => {
@@ -924,7 +925,7 @@ useEffect(() => {
         return sum + employeeProfit;
       }, 0);
 
-    console.log('📊 الإحصائيات:', {
+    devLog.log('📊 الإحصائيات:', {
       totalOrders: filteredOrders.length,
       deliveredOrders: statsOrders.length,
       totalSales,
@@ -1003,7 +1004,7 @@ useEffect(() => {
 
   // معالج تغيير الفلاتر
   const handleFilterChange = (name, value) => {
-    console.log('🔧 تغيير الفلتر:', { name, value });
+    devLog.log('🔧 تغيير الفلتر:', { name, value });
     setFilters(prev => ({ ...prev, [name]: value }));
   };
   
@@ -1096,7 +1097,7 @@ useEffect(() => {
   const employeesWithSelectedOrders = useMemo(() => {
     const employeeGroups = {};
     
-    console.log('🧮 بناء employeesWithSelectedOrders:', {
+    devLog.log('🧮 بناء employeesWithSelectedOrders:', {
       selectedOrdersDataLength: selectedOrdersData.length,
       employeesLength: employees.length,
       selectedOrdersDataSample: selectedOrdersData.slice(0, 2).map(o => ({ id: o.id, created_by: o.created_by })),
@@ -1106,7 +1107,7 @@ useEffect(() => {
     selectedOrdersData.forEach(order => {
       if (!employeeGroups[order.created_by]) {
         const employee = employees.find(emp => emp.user_id === order.created_by);
-        console.log('🔍 البحث عن الموظف:', { 
+        devLog.log('🔍 البحث عن الموظف:', { 
           orderCreatedBy: order.created_by, 
           employeeFound: !!employee, 
           employeeName: employee?.full_name 
@@ -1124,7 +1125,7 @@ useEffect(() => {
     });
     
     const result = Object.values(employeeGroups);
-    console.log('✅ النتيجة النهائية employeesWithSelectedOrders:', {
+    devLog.log('✅ النتيجة النهائية employeesWithSelectedOrders:', {
       count: result.length,
       details: result.map(g => ({ 
         employeeName: g.employee.full_name, 
@@ -1142,10 +1143,10 @@ useEffect(() => {
 
   // معالج الانتقال لتحاسب من الإشعار
   const handleNavigateToSettlement = (employeeId, orderIds) => {
-    console.log('🔄 handleNavigateToSettlement called:', { employeeId, orderIds });
+    devLog.log('🔄 handleNavigateToSettlement called:', { employeeId, orderIds });
     
     if (!employeeId || !orderIds || orderIds.length === 0) {
-      console.warn('⚠️ بيانات غير مكتملة للتحاسب');
+      devLog.warn('⚠️ بيانات غير مكتملة للتحاسب');
       toast({
         title: "تنبيه",
         description: "بيانات طلب التحاسب غير مكتملة",
@@ -1165,7 +1166,7 @@ useEffect(() => {
     // تحديد الطلبات المطلوب تسويتها
     setSelectedOrders(orderIds);
     
-    console.log('✅ تم تعيين الفلاتر والطلبات:', { employeeId, orderIds });
+    devLog.log('✅ تم تعيين الفلاتر والطلبات:', { employeeId, orderIds });
     
     // toast لتوضيح الإجراء
     toast({

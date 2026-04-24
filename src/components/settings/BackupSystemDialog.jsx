@@ -25,6 +25,7 @@ import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import devLog from '@/lib/devLogger';
 
 const BackupSystemDialog = ({ open, onOpenChange }) => {
   // نستخدم toast مباشرة
@@ -318,8 +319,8 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
             
             <button
               onClick={() => {
-                console.log('زر استعادة البيانات تم النقر عليه');
-                console.log('selectedBackup:', selectedBackup);
+                devLog.log('زر استعادة البيانات تم النقر عليه');
+                devLog.log('selectedBackup:', selectedBackup);
                 setActiveTab('restore');
               }}
               className={`flex-shrink-0 text-sm py-3 px-4 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap font-medium ${
@@ -380,7 +381,7 @@ const BackupSystemDialog = ({ open, onOpenChange }) => {
                                 : 'border-border hover:border-primary/50 bg-background hover:bg-muted/30'
                             }`}
                             onClick={() => {
-                              console.log('تم اختيار النسخة:', backup);
+                              devLog.log('تم اختيار النسخة:', backup);
                               setSelectedBackup(backup);
                             }}
                           >

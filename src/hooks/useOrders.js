@@ -1,14 +1,15 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
+import devLog from '@/lib/devLogger';
 
 export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdate, addNotification, hasPermission, user) => {
   const [orders, setOrders] = useState(initialOrders || []);
   const [aiOrders, setAiOrders] = useState(initialAiOrders || []);
 
   const createOrder = useCallback(async (customerInfo, cartItems, trackingNumber, discount, status, qrLink = null, deliveryPartnerData = null) => {
-    console.log('🚀 ============ بدء createOrder ============');
-    console.log('📥 المعاملات المستلمة:', {
+    devLog.log('🚀 ============ بدء createOrder ============');
+    devLog.log('📥 المعاملات المستلمة:', {
       customerInfo,
       cartItems,
       trackingNumber,
@@ -23,7 +24,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       const isPayloadMode = customerInfo && typeof customerInfo === 'object' && 
                            (customerInfo.tracking_number || customerInfo.exchange_metadata || customerInfo.order_type);
       
-      console.log('🔍 نمط الاستدعاء:', {
+      devLog.log('🔍 نمط الاستدعاء:', {
         mode: isPayloadMode ? 'Payload Mode (استبدال/إرجاع)' : 'Separate Parameters (عادي)',
         hasTrackingNumber: !!customerInfo?.tracking_number,
         hasExchangeMetadata: !!customerInfo?.exchange_metadata,
@@ -35,7 +36,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       let actualCustomerInfo, actualCartItems, actualTrackingNumber, actualDiscount, actualStatus, actualQrLink, actualDeliveryPartnerData;
       
       if (isPayloadMode) {
-        console.log('📦 Payload Mode: استخراج البيانات من الكائن الواحد');
+        devLog.log('📦 Payload Mode: استخراج البيانات من الكائن الواحد');
         // ✅ استخراج البيانات من الكائن الواحد (لطلبات الاستبدال/الإرجاع)
         actualCustomerInfo = customerInfo;
         actualCartItems = customerInfo.items || [];
@@ -44,7 +45,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         if (actualCartItems.length === 0 && 
             (customerInfo.order_type === 'replacement' || customerInfo.order_type === 'exchange') &&
             customerInfo.exchange_metadata) {
-          console.log('⚠️ items فارغة - استخراج من exchange_metadata');
+          devLog.log('⚠️ items فارغة - استخراج من exchange_metadata');
           const { outgoing_items = [], incoming_items = [] } = customerInfo.exchange_metadata;
           
           actualCartItems = [
@@ -64,10 +65,10 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
             }))
           ];
           
-          console.log('✅ تم استخراج cart items من exchange_metadata:', actualCartItems);
+          devLog.log('✅ تم استخراج cart items من exchange_metadata:', actualCartItems);
         }
         
-        console.log('📋 actualCartItems النهائية:', {
+        devLog.log('📋 actualCartItems النهائية:', {
           count: actualCartItems.length,
           items: actualCartItems
         });
@@ -82,14 +83,14 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           ...deliveryPartnerData
         } : deliveryPartnerData;
         
-        console.log('📋 البيانات المستخرجة:', {
+        devLog.log('📋 البيانات المستخرجة:', {
           trackingNumber: actualTrackingNumber,
           cartItems: actualCartItems,
           discount: actualDiscount,
           status: actualStatus
         });
       } else {
-        console.log('📦 Separate Parameters: استخدام المعاملات المنفصلة');
+        devLog.log('📦 Separate Parameters: استخدام المعاملات المنفصلة');
         // ✅ استخدام المعاملات المنفصلة (للطلبات العادية)
         actualCustomerInfo = customerInfo;
         actualCartItems = cartItems;
@@ -105,7 +106,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       const originalOrderId = actualCustomerInfo.originalOrderId || actualCustomerInfo.original_order_id || null;
       const deliveryFee = actualCustomerInfo.deliveryFee || actualCustomerInfo.delivery_fee || 0;
       
-      console.log('📊 بيانات الطلب المستخرجة:', {
+      devLog.log('📊 بيانات الطلب المستخرجة:', {
         orderType,
         refundAmount,
         originalOrderId,
@@ -150,7 +151,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         // ✅ المبلغ النهائي = فرق السعر + رسوم التوصيل
         finalAmount = totalAmount + deliveryFee;
         
-        console.log('💰 حساب مبالغ الاستبدال:', {
+        devLog.log('💰 حساب مبالغ الاستبدال:', {
           outgoingTotal,
           incomingTotal,
           priceDifference,
@@ -167,7 +168,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       }
 
       // إنشاء سجل الطلب
-      console.log('📝 إنشاء سجل الطلب:', {
+      devLog.log('📝 إنشاء سجل الطلب:', {
         order_number: actualTrackingNumber,
         tracking_number: actualTrackingNumber,
         orderType,
@@ -217,7 +218,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         throw new Error(`فشل في إنشاء الطلب: ${orderError.message}`);
       }
       
-      console.log('✅ تم إنشاء الطلب بنجاح:', {
+      devLog.log('✅ تم إنشاء الطلب بنجاح:', {
         orderId: newOrder.id,
         orderNumber: newOrder.order_number,
         trackingNumber: newOrder.tracking_number,
@@ -225,8 +226,8 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       });
 
       // ✅ إنشاء order_items للاستبدال (للحجز والتتبع فقط)
-      console.log('🔍 ============ فحص شرط الاستبدال ============');
-      console.log('🔍 معلومات الشرط:', {
+      devLog.log('🔍 ============ فحص شرط الاستبدال ============');
+      devLog.log('🔍 معلومات الشرط:', {
         orderType: orderType,
         orderTypeCheck1: orderType === 'replacement',
         orderTypeCheck2: orderType === 'exchange',
@@ -237,12 +238,12 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
       });
       
       if ((orderType === 'replacement' || orderType === 'exchange') && actualCustomerInfo.exchange_metadata) {
-        console.log('✅ دخول كتلة معالجة الاستبدال - الشرط تحقق!');
+        devLog.log('✅ دخول كتلة معالجة الاستبدال - الشرط تحقق!');
         
         const exchangeMetadata = actualCustomerInfo.exchange_metadata;
         const orderItemsToInsert = [];
         
-        console.log('🔍 بدء معالجة order_items للاستبدال:', {
+        devLog.log('🔍 بدء معالجة order_items للاستبدال:', {
           orderType,
           hasExchangeMetadata: !!exchangeMetadata,
           outgoingCount: exchangeMetadata.outgoing_items?.length || 0,
@@ -252,10 +253,10 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         
         // ✅ إضافة المنتجات الصادرة (outgoing)
         if (exchangeMetadata.outgoing_items && Array.isArray(exchangeMetadata.outgoing_items)) {
-          console.log(`📦 معالجة ${exchangeMetadata.outgoing_items.length} منتج صادر...`);
+          devLog.log(`📦 معالجة ${exchangeMetadata.outgoing_items.length} منتج صادر...`);
           
           for (const item of exchangeMetadata.outgoing_items) {
-            console.log('  ➕ إضافة منتج صادر:', {
+            devLog.log('  ➕ إضافة منتج صادر:', {
               product_id: item.product_id,
               variant_id: item.variant_id,
               quantity: item.quantity,
@@ -276,15 +277,15 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
             });
           }
         } else {
-          console.warn('⚠️ لا توجد منتجات صادرة أو البيانات غير صحيحة!', exchangeMetadata.outgoing_items);
+          devLog.warn('⚠️ لا توجد منتجات صادرة أو البيانات غير صحيحة!', exchangeMetadata.outgoing_items);
         }
         
         // ✅ إضافة المنتجات الواردة (incoming) - للتتبع فقط
         if (exchangeMetadata.incoming_items && Array.isArray(exchangeMetadata.incoming_items)) {
-          console.log(`📦 معالجة ${exchangeMetadata.incoming_items.length} منتج وارد...`);
+          devLog.log(`📦 معالجة ${exchangeMetadata.incoming_items.length} منتج وارد...`);
           
           for (const item of exchangeMetadata.incoming_items) {
-            console.log('  ➕ إضافة منتج وارد:', {
+            devLog.log('  ➕ إضافة منتج وارد:', {
               product_id: item.product_id,
               variant_id: item.variant_id,
               quantity: item.quantity,
@@ -305,11 +306,11 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
             });
           }
         } else {
-          console.warn('⚠️ لا توجد منتجات واردة أو البيانات غير صحيحة!', exchangeMetadata.incoming_items);
+          devLog.warn('⚠️ لا توجد منتجات واردة أو البيانات غير صحيحة!', exchangeMetadata.incoming_items);
         }
         
-        console.log(`📊 إجمالي order_items للإدراج: ${orderItemsToInsert.length}`);
-        console.log('📋 البيانات الكاملة للإدراج:', JSON.stringify(orderItemsToInsert, null, 2));
+        devLog.log(`📊 إجمالي order_items للإدراج: ${orderItemsToInsert.length}`);
+        devLog.log('📋 البيانات الكاملة للإدراج:', JSON.stringify(orderItemsToInsert, null, 2));
         
         // ✅ VALIDATION صارم: منع إنشاء طلب استبدال بدون order_items
         if (orderItemsToInsert.length === 0) {
@@ -328,22 +329,22 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           });
           
           // ✅ حذف الطلب المُنشأ لأنه غير مكتمل
-          console.log('🗑️ حذف الطلب غير المكتمل:', newOrder.id);
+          devLog.log('🗑️ حذف الطلب غير المكتمل:', newOrder.id);
           await supabase.from('orders').delete().eq('id', newOrder.id);
           
           throw new Error('فشل في معالجة منتجات الاستبدال - البيانات غير كاملة');
         }
         
         // ✅ حفظ order_items مع معالجة شاملة
-        console.log(`📝 ============ محاولة إنشاء ${orderItemsToInsert.length} order_items ============`);
-        console.log('📋 البيانات المرسلة إلى قاعدة البيانات:', orderItemsToInsert);
+        devLog.log(`📝 ============ محاولة إنشاء ${orderItemsToInsert.length} order_items ============`);
+        devLog.log('📋 البيانات المرسلة إلى قاعدة البيانات:', orderItemsToInsert);
         
         const { data: insertedItems, error: itemsError } = await supabase
           .from('order_items')
           .insert(orderItemsToInsert)
           .select();  // ✅ إرجاع البيانات المدرجة للتحقق
         
-        console.log('📊 نتيجة عملية الإدراج:', {
+        devLog.log('📊 نتيجة عملية الإدراج:', {
           success: !itemsError,
           insertedCount: insertedItems?.length || 0,
           error: itemsError,
@@ -362,15 +363,15 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           });
           
           // ✅ حذف الطلب المُنشأ لأن order_items فشلت
-          console.log('🗑️ حذف الطلب بسبب فشل order_items:', newOrder.id);
+          devLog.log('🗑️ حذف الطلب بسبب فشل order_items:', newOrder.id);
           await supabase.from('orders').delete().eq('id', newOrder.id);
           
           throw new Error(`فشل في إضافة منتجات الطلب: ${itemsError.message}`);
         }
         
-        console.log(`✅ ============ تم إنشاء ${insertedItems?.length || 0} order_items بنجاح ============`);
-        console.log('✅ البيانات المُدرجة:', insertedItems);
-        console.log('🔒 سيتم حجز المنتجات الصادرة تلقائياً عبر التريجر auto_stock_management_trigger');
+        devLog.log(`✅ ============ تم إنشاء ${insertedItems?.length || 0} order_items بنجاح ============`);
+        devLog.log('✅ البيانات المُدرجة:', insertedItems);
+        devLog.log('🔒 سيتم حجز المنتجات الصادرة تلقائياً عبر التريجر auto_stock_management_trigger');
         
         // ✅ VALIDATION نهائي: التأكد من أن عدد الـ items المُدرجة يطابق المتوقع
         if (insertedItems.length !== orderItemsToInsert.length) {
@@ -380,11 +381,11 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           });
         }
       } else {
-        console.log('⏭️ تخطي كتلة معالجة الاستبدال - الشرط لم يتحقق');
+        devLog.log('⏭️ تخطي كتلة معالجة الاستبدال - الشرط لم يتحقق');
       }
       // ✅ للطلبات العادية فقط (ليس الإرجاع)
       else if (actualCartItems && actualCartItems.length > 0 && orderType !== 'return') {
-        console.log(`📦 إنشاء order_items للطلب العادي: ${actualCartItems.length} منتجات`);
+        devLog.log(`📦 إنشاء order_items للطلب العادي: ${actualCartItems.length} منتجات`);
         
         const orderItemsToInsert = actualCartItems.map(item => ({
           order_id: newOrder.id,
@@ -405,7 +406,7 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
           throw new Error(`فشل في إضافة منتجات الطلب: ${itemsError.message}`);
         }
         
-        console.log(`✅ تم إنشاء ${orderItemsToInsert.length} order_items للطلب العادي`);
+        devLog.log(`✅ تم إنشاء ${orderItemsToInsert.length} order_items للطلب العادي`);
 
         // تحديث المخزون - فقط للطلبات العادية (ليس للإرجاع)
         if (orderType !== 'return' && onStockUpdate) {
@@ -427,14 +428,14 @@ export const useOrders = (initialOrders, initialAiOrders, settings, onStockUpdat
         );
       }
 
-      console.log('✅ اكتمل إنشاء الطلب بنجاح:', {
+      devLog.log('✅ اكتمل إنشاء الطلب بنجاح:', {
         success: true,
         trackingNumber: actualTrackingNumber,
         orderId: newOrder.id,
         orderType
       });
 
-      console.log('✅ ============ اكتمل createOrder بنجاح ============');
+      devLog.log('✅ ============ اكتمل createOrder بنجاح ============');
       return { success: true, trackingNumber: actualTrackingNumber, orderId: newOrder.id };
     } catch (error) {
       console.error('❌ ============ خطأ في createOrder ============');

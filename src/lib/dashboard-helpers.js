@@ -1,5 +1,6 @@
 import { startOfToday, startOfWeek, startOfMonth, startOfYear, subDays, parseISO, endOfMonth, endOfWeek, endOfYear } from 'date-fns';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
+import devLog from '@/lib/devLogger';
 
 export const filterOrdersByPeriod = (orders, period, returnDateRange = false) => {
   const now = new Date();
@@ -140,12 +141,12 @@ const normalizePhoneNumber = (phone) => {
 
 export const getTopCustomers = (orders) => {
   if (!orders || orders.length === 0) {
-    console.log('⚠️ لا توجد طلبات للزبائن');
+    devLog.log('⚠️ لا توجد طلبات للزبائن');
     return [];
   }
   
-  console.log('📊 تحليل الزبائن - إجمالي الطلبات:', orders.length);
-  console.log('📊 أول طلب في المصفوفة:', orders[0]);
+  devLog.log('📊 تحليل الزبائن - إجمالي الطلبات:', orders.length);
+  devLog.log('📊 أول طلب في المصفوفة:', orders[0]);
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
@@ -157,11 +158,11 @@ export const getTopCustomers = (orders) => {
     return hasReceipt && !isReturnedOrCancelled;
   });
   
-  console.log('✅ الطلبات المكتملة:', deliveredOrders.length);
-  console.log('📊 عينة من الطلبات المكتملة:', deliveredOrders.slice(0, 3));
+  devLog.log('✅ الطلبات المكتملة:', deliveredOrders.length);
+  devLog.log('📊 عينة من الطلبات المكتملة:', deliveredOrders.slice(0, 3));
   
   if (deliveredOrders.length === 0) {
-    console.log('⚠️ لا توجد طلبات مكتملة للزبائن!');
+    devLog.log('⚠️ لا توجد طلبات مكتملة للزبائن!');
     return [];
   }
   
@@ -177,10 +178,10 @@ export const getTopCustomers = (orders) => {
     // حساب الإيرادات من الطلب
     const orderRevenue = order.final_amount || order.total_amount || order.total || 0;
     
-    console.log(`📞 الطلب ${order.id}: الهاتف الخام = "${rawPhone}", المطبع = "${phone}", الاسم = "${name}", الإيرادات = ${orderRevenue}`);
+    devLog.log(`📞 الطلب ${order.id}: الهاتف الخام = "${rawPhone}", المطبع = "${phone}", الاسم = "${name}", الإيرادات = ${orderRevenue}`);
     
     if (!phone) {
-      console.log('⚠️ رقم هاتف غير صالح، تجاهل الطلب');
+      devLog.log('⚠️ رقم هاتف غير صالح، تجاهل الطلب');
       return acc;
     }
     
@@ -204,17 +205,17 @@ export const getTopCustomers = (orders) => {
     .sort((a, b) => b.orderCount - a.orderCount)
     .slice(0, 10); // زيادة العدد لعرض المزيد في النافذة
     
-  console.log('📈 أفضل 3 زبائن:', result);
+  devLog.log('📈 أفضل 3 زبائن:', result);
   return result;
 };
 
 export const getTopProvinces = (orders) => {
   if (!orders) {
-    console.log('⚠️ لا توجد طلبات للمحافظات');
+    devLog.log('⚠️ لا توجد طلبات للمحافظات');
     return [];
   }
   
-  console.log('🏙️ تحليل المحافظات - إجمالي الطلبات:', orders.length);
+  devLog.log('🏙️ تحليل المحافظات - إجمالي الطلبات:', orders.length);
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
@@ -226,11 +227,11 @@ export const getTopProvinces = (orders) => {
     return hasReceipt && !isReturnedOrCancelled;
   });
   
-  console.log('🏙️ الطلبات المكتملة للمحافظات:', deliveredOrders.length);
-  console.log('🏙️ عينة من الطلبات المكتملة:', deliveredOrders.slice(0, 3));
+  devLog.log('🏙️ الطلبات المكتملة للمحافظات:', deliveredOrders.length);
+  devLog.log('🏙️ عينة من الطلبات المكتملة:', deliveredOrders.slice(0, 3));
   
   if (deliveredOrders.length === 0) {
-    console.log('⚠️ لا توجد طلبات مكتملة للمحافظات!');
+    devLog.log('⚠️ لا توجد طلبات مكتملة للمحافظات!');
     return [];
   }
   
@@ -238,7 +239,7 @@ export const getTopProvinces = (orders) => {
     const city = order.customer_city || order.customer_province || 'غير محدد';
     const orderRevenue = order.final_amount || order.total_amount || order.total || 0;
     
-    console.log(`🏙️ الطلب ${order.id}: المدينة = "${city}", الإيرادات = ${orderRevenue}`);
+    devLog.log(`🏙️ الطلب ${order.id}: المدينة = "${city}", الإيرادات = ${orderRevenue}`);
     
     if (!acc[city]) {
       acc[city] = { count: 0, totalRevenue: 0 };
@@ -248,7 +249,7 @@ export const getTopProvinces = (orders) => {
     return acc;
   }, {});
   
-  console.log('🏙️ إحصائيات المحافظات:', provinceCounts);
+  devLog.log('🏙️ إحصائيات المحافظات:', provinceCounts);
 
   return Object.entries(provinceCounts)
     .map(([city, data]) => ({ 
@@ -263,11 +264,11 @@ export const getTopProvinces = (orders) => {
 
 export const getTopProducts = (orders) => {
   if (!orders) {
-    console.log('⚠️ لا توجد طلبات للمنتجات');
+    devLog.log('⚠️ لا توجد طلبات للمنتجات');
     return [];
   }
   
-  console.log('📦 تحليل المنتجات - إجمالي الطلبات:', orders.length);
+  devLog.log('📦 تحليل المنتجات - إجمالي الطلبات:', orders.length);
   
   // فلترة الطلبات الموصلة أو المكتملة واستبعاد المرجعة والملغية
   const deliveredOrders = orders.filter(order => {
@@ -279,11 +280,11 @@ export const getTopProducts = (orders) => {
     return hasReceipt && !isReturnedOrCancelled;
   });
   
-  console.log('📦 الطلبات المكتملة للمنتجات:', deliveredOrders.length);
-  console.log('📦 عينة من الطلبات المكتملة:', deliveredOrders.slice(0, 3));
+  devLog.log('📦 الطلبات المكتملة للمنتجات:', deliveredOrders.length);
+  devLog.log('📦 عينة من الطلبات المكتملة:', deliveredOrders.slice(0, 3));
   
   if (deliveredOrders.length === 0) {
-    console.log('⚠️ لا توجد طلبات مكتملة للمنتجات!');
+    devLog.log('⚠️ لا توجد طلبات مكتملة للمنتجات!');
     return [];
   }
   
@@ -293,11 +294,11 @@ export const getTopProducts = (orders) => {
     const orderTotal = order.final_amount || order.total_amount || order.total || 0;
     
     if (!Array.isArray(items) || items.length === 0) {
-      console.log(`📦 الطلب ${order.id}: لا يحتوي على عناصر`);
+      devLog.log(`📦 الطلب ${order.id}: لا يحتوي على عناصر`);
       return acc;
     }
     
-    console.log(`📦 الطلب ${order.id}: يحتوي على ${items.length} عنصر، إجمالي = ${orderTotal}`);
+    devLog.log(`📦 الطلب ${order.id}: يحتوي على ${items.length} عنصر، إجمالي = ${orderTotal}`);
     items.forEach(item => {
       // دعم أسماء مختلفة للمنتج
       const productName = item.products?.name || item.product_name || item.name || 'منتج غير محدد';
@@ -305,7 +306,7 @@ export const getTopProducts = (orders) => {
       const itemPrice = item.unit_price || item.price || 0;
       const itemRevenue = itemPrice * quantity;
       
-      console.log(`📦 المنتج: ${productName}, الكمية: ${quantity}, الإيرادات: ${itemRevenue}`);
+      devLog.log(`📦 المنتج: ${productName}, الكمية: ${quantity}, الإيرادات: ${itemRevenue}`);
       
       if (!acc[productName]) {
         acc[productName] = { quantity: 0, revenue: 0, orders: 0 };
@@ -317,7 +318,7 @@ export const getTopProducts = (orders) => {
     return acc;
   }, {});
   
-  console.log('📦 إحصائيات المنتجات:', productCounts);
+  devLog.log('📦 إحصائيات المنتجات:', productCounts);
 
   return Object.entries(productCounts)
     .map(([name, data]) => ({ 

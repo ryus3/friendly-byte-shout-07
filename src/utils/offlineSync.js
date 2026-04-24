@@ -1,5 +1,6 @@
 // ✅ نظام إدارة المزامنة Offline - RYUS System
 import { toast } from '@/hooks/use-toast';
+import devLog from '@/lib/devLogger';
 
 const DB_NAME = 'ryus-offline-db';
 const DB_VERSION = 1;
@@ -46,7 +47,7 @@ export async function savePendingOperation(operation) {
 
     await store.add(data);
     
-    console.log('💾 Operation saved to offline queue:', operation.type);
+    devLog.log('💾 Operation saved to offline queue:', operation.type);
     
     // ✅ محاولة المزامنة إذا كان متصل
     if (navigator.onLine) {
@@ -133,7 +134,7 @@ async function deleteOperation(id) {
 // ✅ مزامنة جميع العمليات المعلقة
 export async function syncPendingOperations() {
   if (!navigator.onLine) {
-    console.log('📡 Offline - sync postponed');
+    devLog.log('📡 Offline - sync postponed');
     return { success: false, reason: 'offline' };
   }
 
@@ -141,11 +142,11 @@ export async function syncPendingOperations() {
     const pendingOps = await getPendingOperations();
     
     if (pendingOps.length === 0) {
-      console.log('✅ No pending operations');
+      devLog.log('✅ No pending operations');
       return { success: true, synced: 0 };
     }
 
-    console.log(`🔄 Syncing ${pendingOps.length} pending operations...`);
+    devLog.log(`🔄 Syncing ${pendingOps.length} pending operations...`);
     
     let syncedCount = 0;
     let failedCount = 0;
@@ -169,7 +170,7 @@ export async function syncPendingOperations() {
       }
     }
 
-    console.log(`✅ Sync complete: ${syncedCount} synced, ${failedCount} failed`);
+    devLog.log(`✅ Sync complete: ${syncedCount} synced, ${failedCount} failed`);
     
     // ✅ إشعار المستخدم
     if (syncedCount > 0) {
@@ -197,7 +198,7 @@ export async function syncPendingOperations() {
 // ✅ تنفيذ عملية معينة
 async function executeOperation(operation) {
   try {
-    console.log('🔄 Executing operation:', operation.type);
+    devLog.log('🔄 Executing operation:', operation.type);
     
     // ✅ هنا يمكن إضافة منطق تنفيذ العمليات المختلفة
     // مثلاً: إنشاء طلب، تحديث مخزون، إلخ
@@ -216,7 +217,7 @@ async function executeOperation(operation) {
         return { success: true };
         
       default:
-        console.warn('⚠️ Unknown operation type:', operation.type);
+        devLog.warn('⚠️ Unknown operation type:', operation.type);
         return { success: false, error: 'Unknown operation type' };
     }
   } catch (error) {
@@ -227,11 +228,11 @@ async function executeOperation(operation) {
 
 // ✅ مراقبة حالة الاتصال
 export function setupOfflineSync() {
-  console.log('🔌 Setting up offline sync...');
+  devLog.log('🔌 Setting up offline sync...');
   
   // ✅ عند عودة الاتصال
   window.addEventListener('online', () => {
-    console.log('🌐 Connection restored');
+    devLog.log('🌐 Connection restored');
     toast({
       title: "🌐 عاد الاتصال",
       description: "جاري المزامنة..."
@@ -241,7 +242,7 @@ export function setupOfflineSync() {
 
   // ✅ عند فقدان الاتصال
   window.addEventListener('offline', () => {
-    console.log('📡 Connection lost');
+    devLog.log('📡 Connection lost');
     toast({
       title: "📡 لا يوجد اتصال",
       description: "سيتم حفظ التغييرات محلياً",

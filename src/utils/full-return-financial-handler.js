@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/customSupabaseClient';
+import devLog from '@/lib/devLogger';
 
 /**
  * معالجة مالية للإرجاع الكامل - مُحدّث لحالة 17
@@ -134,7 +135,7 @@ export const handleFullReturnFinancials = async (
       });
     
     if (historyError) {
-      console.warn('⚠️ فشل تسجيل في return_history:', historyError);
+      devLog.warn('⚠️ فشل تسجيل في return_history:', historyError);
     }
 
     // 6️⃣ تحديث ملاحظات الطلب

@@ -729,21 +729,21 @@ export const SuperProvider = ({ children }) => {
         const rowOld = payload.old || {};
         
         if (type === 'INSERT') {
-          console.log('🔔 [SuperProvider] ai_orders INSERT:', rowNew.id, rowNew.customer_name);
+          devLog.log('🔔 [SuperProvider] ai_orders INSERT:', rowNew.id, rowNew.customer_name);
           try { pendingAiDeletesRef.current.delete(rowNew.id); } catch {}
           setAllData(prev => {
             // تجنب التكرار
             if (prev.aiOrders?.some(o => o.id === rowNew.id)) {
-              console.log('⚠️ [SuperProvider] الطلب موجود مسبقاً:', rowNew.id);
+              devLog.log('⚠️ [SuperProvider] الطلب موجود مسبقاً:', rowNew.id);
               return prev;
             }
-            console.log('✅ [SuperProvider] إضافة طلب جديد للسياق:', rowNew.id);
+            devLog.log('✅ [SuperProvider] إضافة طلب جديد للسياق:', rowNew.id);
             return { ...prev, aiOrders: [rowNew, ...(prev.aiOrders || [])] };
           });
           // ⚡ إطلاق حدث فوري للمكونات المستمعة
           try { 
             window.dispatchEvent(new CustomEvent('aiOrderCreated', { detail: rowNew })); 
-            console.log('📢 [SuperProvider] تم إطلاق حدث aiOrderCreated:', rowNew.id);
+            devLog.log('📢 [SuperProvider] تم إطلاق حدث aiOrderCreated:', rowNew.id);
           } catch {}
         } else if (type === 'UPDATE') {
           setAllData(prev => ({
@@ -1201,7 +1201,7 @@ export const SuperProvider = ({ children }) => {
           return { success: false, error: itemsErr.message };
         }
       } else {
-        console.log('⏭️ تخطي إنشاء order_items - طلب إرجاع');
+        devLog.log('⏭️ تخطي إنشاء order_items - طلب إرجاع');
       }
 
       // عرض الطلب فوراً مع البيانات المحلية (نهج جديد لسرعة فائقة)
@@ -1227,7 +1227,7 @@ export const SuperProvider = ({ children }) => {
       }));
       
       const instantTime = performance.now() - startTime;
-      console.log(`⚡ طلب فوري في ${instantTime.toFixed(1)}ms:`, instantOrder.order_number);
+      devLog.log(`⚡ طلب فوري في ${instantTime.toFixed(1)}ms:`, instantOrder.order_number);
       
       // جلب التفاصيل الكاملة في الخلفية مع تأخير أطول لمنع التجمد
       setTimeout(async () => {
@@ -1241,10 +1241,10 @@ export const SuperProvider = ({ children }) => {
                 o.id === createdOrder.id ? { ...normalized, _fullySynced: true } : o
               )
             }));
-            console.log(`🔄 تزامن كامل للطلب:`, normalized.order_number);
+            devLog.log(`🔄 تزامن كامل للطلب:`, normalized.order_number);
           }
         } catch (error) {
-          console.warn('⚠️ فشل التزامن الخلفي، الطلب المعروض فورياً يبقى صالحاً:', error);
+          devLog.warn('⚠️ فشل التزامن الخلفي، الطلب المعروض فورياً يبقى صالحاً:', error);
         }
       }, 1500); // تأخير أطول لمنع التداخل مع العمليات الأخرى
 
@@ -1254,7 +1254,7 @@ export const SuperProvider = ({ children }) => {
 
       // ✅ معاينة للتأكد من حفظ معرفات الوسيط بشكل صحيح
       if (orderRow.delivery_partner === 'alwaseet') {
-        console.log('🔍 معاينة معرفات الوسيط المحفوظة:', {
+        devLog.log('🔍 معاينة معرفات الوسيط المحفوظة:', {
           delivery_partner_order_id: orderRow.delivery_partner_order_id,
           qr_id: orderRow.qr_id,
           tracking_number: orderRow.tracking_number,
@@ -1264,10 +1264,10 @@ export const SuperProvider = ({ children }) => {
         
         // التحقق من وجود المعرفات الأساسية
         if (!orderRow.delivery_partner_order_id) {
-          console.warn('⚠️ تحذير: لم يتم حفظ delivery_partner_order_id للطلب الجديد');
+          devLog.warn('⚠️ تحذير: لم يتم حفظ delivery_partner_order_id للطلب الجديد');
         }
         if (!orderRow.qr_id) {
-          console.warn('⚠️ تحذير: لم يتم حفظ qr_id للطلب الجديد');
+          devLog.warn('⚠️ تحذير: لم يتم حفظ qr_id للطلب الجديد');
         }
       }
 
@@ -1286,7 +1286,7 @@ export const SuperProvider = ({ children }) => {
   // تحديث طلب - مع تحديث شامل وفوري للبيانات المحدثة
   const updateOrder = useCallback(async (orderId, updates, newItems = null, originalItems = null) => {
     try {
-      console.log('🔄 SuperProvider updateOrder:', { orderId, updates, newItems });
+      devLog.log('🔄 SuperProvider updateOrder:', { orderId, updates, newItems });
       
       // ✅ معالجة المخزون التلقائية عند تغيير delivery_status
       if (updates.delivery_status) {
@@ -1358,7 +1358,7 @@ export const SuperProvider = ({ children }) => {
         } : o),
       }));
 
-      console.log('✅ SuperProvider updateOrder نجح:', { orderId, success: true, result });
+      devLog.log('✅ SuperProvider updateOrder نجح:', { orderId, success: true, result });
       return { success: true, order: result, data: result };
     } catch (error) {
       console.error('Error in SuperProvider updateOrder:', error);
@@ -1464,7 +1464,7 @@ export const SuperProvider = ({ children }) => {
           setTimeout(async () => {
             try {
               await supabase.from('orders').delete().in('id', orderIds);
-              console.log('✅ إعادة محاولة حذف orders نجحت');
+              devLog.log('✅ إعادة محاولة حذف orders نجحت');
             } catch (retryErr) {
               console.error('❌ فشل إعادة المحاولة:', retryErr);
             }
@@ -1486,7 +1486,7 @@ export const SuperProvider = ({ children }) => {
         variant: "success"
       });
       
-      console.log('✅ حذف مكتمل فورياً مع تحرير المخزون وحماية دائمة');
+      devLog.log('✅ حذف مكتمل فورياً مع تحرير المخزون وحماية دائمة');
       return { success: true };
       
     } catch (deleteError) {
@@ -1498,7 +1498,7 @@ export const SuperProvider = ({ children }) => {
   // إضافة مصروف - حفظ فعلي في قاعدة البيانات
   const addExpense = useCallback(async (expense) => {
     try {
-      console.log('💰 SuperProvider: إضافة مصروف:', expense.description);
+      devLog.log('💰 SuperProvider: إضافة مصروف:', expense.description);
       
       const userId = user?.id || user?.user_id;
       if (!userId) throw new Error('يجب تسجيل الدخول أولاً');
@@ -1551,7 +1551,7 @@ export const SuperProvider = ({ children }) => {
         throw new Error('لا توجد طلبات لتسويتها');
       }
 
-      console.debug('🔧 بدء تسوية مستحقات الموظف:', { employeeId, totalSettlement, employeeName, orderIds });
+      devLog.debug('🔧 بدء تسوية مستحقات الموظف:', { employeeId, totalSettlement, employeeName, orderIds });
 
       const now = new Date().toISOString();
       const ordersMap = new Map((allData.orders || []).map(o => [o.id, o]));
@@ -1564,7 +1564,7 @@ export const SuperProvider = ({ children }) => {
         .eq('is_active', true);
       
       if (rulesErr) throw rulesErr;
-      console.debug('📋 قواعد الربح المتوفرة:', profitRules?.length || 0);
+      devLog.debug('📋 قواعد الربح المتوفرة:', profitRules?.length || 0);
 
       // جلب الخصومات المعلقة للموظف
       const { data: pendingDeductionsData, error: deductionsErr } = await supabase
@@ -1576,7 +1576,7 @@ export const SuperProvider = ({ children }) => {
       
       const pendingDeductions = pendingDeductionsData?.[0]?.total_pending_deductions || 0;
       const deductionsCount = pendingDeductionsData?.[0]?.deductions_count || 0;
-      console.debug('💳 الخصومات المعلقة:', { pendingDeductions, deductionsCount });
+      devLog.debug('💳 الخصومات المعلقة:', { pendingDeductions, deductionsCount });
 
       // جلب عناصر الطلبات
       const { data: orderItems, error: itemsErr } = await supabase
@@ -1622,13 +1622,13 @@ export const SuperProvider = ({ children }) => {
               const costPrice = item.cost_price || item.product_variants?.cost_price || 0;
               const fullProfit = (sellingPrice - costPrice) * (item.quantity || 1);
               totalProfit += Math.max(0, fullProfit);
-              console.debug(`✅ كامل الربح للمنتج ${productId}: (${sellingPrice} - ${costPrice}) × ${item.quantity} = ${fullProfit}`);
+              devLog.debug(`✅ كامل الربح للمنتج ${productId}: (${sellingPrice} - ${costPrice}) × ${item.quantity} = ${fullProfit}`);
             } else {
               totalProfit += (rule.profit_amount || 0) * (item.quantity || 1);
-              console.debug(`✅ قاعدة ربح للمنتج ${productId}: ${rule.profit_amount} × ${item.quantity}`);
+              devLog.debug(`✅ قاعدة ربح للمنتج ${productId}: ${rule.profit_amount} × ${item.quantity}`);
             }
           } else {
-            console.debug(`⚠️ لا توجد قاعدة ربح سارية للمنتج ${productId} وقت الطلب ${orderDate.toISOString()}`);
+            devLog.debug(`⚠️ لا توجد قاعدة ربح سارية للمنتج ${productId} وقت الطلب ${orderDate.toISOString()}`);
           }
         });
         
@@ -1639,9 +1639,9 @@ export const SuperProvider = ({ children }) => {
         // إذا لا يوجد قاعدة ربح → الخصم يكون من ربح النظام
         if (hasAnyRule && discount > 0) {
           totalProfit = totalProfit - discount;
-          console.debug(`📊 ربح الموظف للطلب ${order?.tracking_number}: ${totalProfit} (قبل الخصم: ${totalProfit + discount}, خصم: ${discount})`);
+          devLog.debug(`📊 ربح الموظف للطلب ${order?.tracking_number}: ${totalProfit} (قبل الخصم: ${totalProfit + discount}, خصم: ${discount})`);
         } else if (!hasAnyRule && discount > 0) {
-          console.debug(`📊 الخصم ${discount} للطلب ${order?.tracking_number} سيكون من ربح النظام (الموظف بدون قاعدة ربح)`);
+          devLog.debug(`📊 الخصم ${discount} للطلب ${order?.tracking_number} سيكون من ربح النظام (الموظف بدون قاعدة ربح)`);
         }
         
         return { profit: Math.max(0, totalProfit), hasRule: hasAnyRule, discountFromSystem: !hasAnyRule && discount > 0 };
@@ -1688,7 +1688,7 @@ export const SuperProvider = ({ children }) => {
           price_increase: order?.price_increase || 0
         });
 
-        console.debug('🔧 حساب ربح الطلب:', { 
+        devLog.debug('🔧 حساب ربح الطلب:', { 
           orderId: order?.order_number,
           trackingNumber: order?.tracking_number,
           employee_profit: profitInfo.profit,
@@ -1712,11 +1712,11 @@ export const SuperProvider = ({ children }) => {
       const deductionToApply = Math.min(pendingDeductions, actualTotalSettlement);
       const finalSettlementAmount = actualTotalSettlement - deductionToApply;
       
-      console.debug(`💰 إجمالي المستحقات: ${actualTotalSettlement}, الخصومات المطبقة: ${deductionToApply}, المبلغ النهائي: ${finalSettlementAmount}`);
+      devLog.debug(`💰 إجمالي المستحقات: ${actualTotalSettlement}, الخصومات المطبقة: ${deductionToApply}, المبلغ النهائي: ${finalSettlementAmount}`);
 
       const { error: upsertErr } = await supabase.from('profits').upsert(upserts);
       if (upsertErr) throw upsertErr;
-      console.debug('✅ تم إدراج سجلات الأرباح بنجاح');
+      devLog.debug('✅ تم إدراج سجلات الأرباح بنجاح');
 
       // جلب القاصة الرئيسية
       const { data: cashSource, error: cashErr } = await supabase
@@ -1765,7 +1765,7 @@ export const SuperProvider = ({ children }) => {
       if (invoiceErr) {
         console.error('❌ خطأ في إنشاء فاتورة التسوية:', invoiceErr);
       } else {
-        console.debug('✅ تم إنشاء فاتورة التسوية:', invoiceNumber);
+        devLog.debug('✅ تم إنشاء فاتورة التسوية:', invoiceNumber);
         
         // تطبيق الخصومات المعلقة على هذه التسوية
         if (deductionToApply > 0 && invoice?.id) {
@@ -1779,7 +1779,7 @@ export const SuperProvider = ({ children }) => {
           if (applyErr) {
             console.error('⚠️ خطأ في تطبيق الخصومات المعلقة:', applyErr);
           } else {
-            console.debug('✅ تم تطبيق الخصومات المعلقة:', appliedAmount);
+            devLog.debug('✅ تم تطبيق الخصومات المعلقة:', appliedAmount);
           }
         }
       }
@@ -1820,7 +1820,7 @@ export const SuperProvider = ({ children }) => {
         console.error('❌ خطأ في إضافة مصروف مستحقات الموظف:', expenseErr);
         throw expenseErr;
       }
-      console.debug('✅ تم إضافة مصروف مستحقات الموظف:', expenseRecord.id);
+      devLog.debug('✅ تم إضافة مصروف مستحقات الموظف:', expenseRecord.id);
 
       // إضافة حركة نقدية (خروج نقد) - المبلغ النهائي فقط
       if (cashSource && finalSettlementAmount > 0) {
@@ -1843,7 +1843,7 @@ export const SuperProvider = ({ children }) => {
         if (movementErr) {
           console.error('❌ خطأ في إضافة حركة نقدية:', movementErr);
         } else {
-          console.debug('✅ تم إضافة حركة نقدية لمستحقات الموظف');
+          devLog.debug('✅ تم إضافة حركة نقدية لمستحقات الموظف');
           
           // تحديث رصيد القاصة
           const { error: updateErr } = await supabase
@@ -1854,7 +1854,7 @@ export const SuperProvider = ({ children }) => {
           if (updateErr) {
             console.error('❌ خطأ في تحديث رصيد القاصة:', updateErr);
           } else {
-            console.debug('✅ تم تحديث رصيد القاصة بعد خصم مستحقات الموظف');
+            devLog.debug('✅ تم تحديث رصيد القاصة بعد خصم مستحقات الموظف');
           }
         }
       }
@@ -1868,7 +1868,7 @@ export const SuperProvider = ({ children }) => {
         console.error('❌ خطأ في أرشفة الطلبات:', ordersErr);
         throw ordersErr;
       }
-      console.debug('✅ تم أرشفة الطلبات بنجاح');
+      devLog.debug('✅ تم أرشفة الطلبات بنجاح');
 
       // تحديث الذاكرة وCache
       superAPI.invalidate('all_data');
@@ -1906,9 +1906,9 @@ export const SuperProvider = ({ children }) => {
   
   // تحديث فوري بدون جلب - تنظيف كاش فقط والاعتماد على Real-time
   const refreshDataInstantly = useCallback(async () => { 
-    console.log('⚡ تنظيف كاش فوري - بدون جلب بيانات'); 
+    devLog.log('⚡ تنظيف كاش فوري - بدون جلب بيانات'); 
     superAPI.clearAll(); // تنظيف شامل للكاش فقط
-    console.log('✅ تنظيف كاش مكتمل - Real-time سيحدث البيانات');
+    devLog.log('✅ تنظيف كاش مكتمل - Real-time سيحدث البيانات');
   }, []);
   // دالة مساعدة لضمان وجود created_by صالح
   const resolveCurrentUserUUID = useCallback(() => {
@@ -1923,11 +1923,11 @@ export const SuperProvider = ({ children }) => {
   // تحويل طلب ذكي إلى طلب حقيقي مباشرةً
   const approveAiOrder = useCallback(async (orderId, destination = 'local', selectedAccount = null) => {
     try {
-      console.log('🚀 بدء موافقة طلب ذكي:', { orderId, destination, selectedAccount });
+      devLog.log('🚀 بدء موافقة طلب ذكي:', { orderId, destination, selectedAccount });
       
       // التأكد من وجود مستخدم صالح
       const createdBy = resolveCurrentUserUUID();
-      console.log('👤 معرف المستخدم المستخدم:', createdBy);
+      devLog.log('👤 معرف المستخدم المستخدم:', createdBy);
       
       // 1) جلب الطلب الذكي
       const { data: aiOrder, error: aiErr } = await supabase
@@ -1943,14 +1943,14 @@ export const SuperProvider = ({ children }) => {
 
       // إذا كان الوجهة شركة توصيل، استخدم AlWaseet مباشرة
       if (destination !== 'local') {
-        console.log('🚀 إنشاء طلب شركة توصيل:', { destination, selectedAccount });
+        devLog.log('🚀 إنشاء طلب شركة توصيل:', { destination, selectedAccount });
         
         // التحقق من وجود الحساب أو جلبه من التفضيلات
         let actualAccount = selectedAccount;
         let profile = null; // تعريف profile خارج try-catch
         
         if (!actualAccount) {
-          console.log('⚠️ لا يوجد حساب محدد، محاولة جلبه من التفضيلات...');
+          devLog.log('⚠️ لا يوجد حساب محدد، محاولة جلبه من التفضيلات...');
           try {
             const { data: profileData } = await supabase
               .from('profiles')
@@ -1960,8 +1960,8 @@ export const SuperProvider = ({ children }) => {
             
             profile = profileData;
             actualAccount = profile?.selected_delivery_account;
-            console.log('📋 تم جلب الحساب من التفضيلات:', actualAccount);
-            console.log('👤 اسم الزبون الافتراضي:', profile?.default_customer_name);
+            devLog.log('📋 تم جلب الحساب من التفضيلات:', actualAccount);
+            devLog.log('👤 اسم الزبون الافتراضي:', profile?.default_customer_name);
           } catch (error) {
             console.error('❌ فشل في جلب الحساب من التفضيلات:', error);
           }
@@ -1988,7 +1988,7 @@ export const SuperProvider = ({ children }) => {
         const rawAccount = actualAccount;
         actualAccount = actualAccount.trim().toLowerCase().replace(/\s+/g, '-');
         
-        console.log('🔍 تطبيع اسم الحساب:', {
+        devLog.log('🔍 تطبيع اسم الحساب:', {
           original: rawAccount,
           normalized: actualAccount,
           destination: destination
@@ -1996,12 +1996,12 @@ export const SuperProvider = ({ children }) => {
         
         // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات
         try {
-          console.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
+          devLog.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
           
           // الحصول على توكن الحساب مباشرة بدلاً من الاعتماد على تحديث السياق
           const accountData = await getTokenForUser(createdBy, actualAccount, destination);
           
-          console.log('🔍 [DEBUG approveAiOrder] نتيجة getTokenForUser:', {
+          devLog.log('🔍 [DEBUG approveAiOrder] نتيجة getTokenForUser:', {
             requestedAccount: actualAccount,
             requestedPartner: destination,
             foundToken: !!accountData?.token,
@@ -2020,8 +2020,8 @@ export const SuperProvider = ({ children }) => {
             throw new Error(`فشل في الحصول على توكن صالح للحساب: ${actualAccount} (${destination})`);
           }
           
-          console.log('✅ تم الحصول على توكن صالح للحساب:', actualAccount);
-          console.log('📋 بيانات الحساب:', { 
+          devLog.log('✅ تم الحصول على توكن صالح للحساب:', actualAccount);
+          devLog.log('📋 بيانات الحساب:', { 
             username: accountData.account_username,
             partner: accountData.partner_name,
             hasToken: !!accountData.token,
@@ -2031,7 +2031,7 @@ export const SuperProvider = ({ children }) => {
           // تعيين الشريك النشط حسب الوجهة المختارة
           setActivePartner(destination === 'modon' ? 'modon' : 'alwaseet');
           
-          console.log('🔍 [approveAiOrder] تفاصيل الطلب:', {
+          devLog.log('🔍 [approveAiOrder] تفاصيل الطلب:', {
             destination,
             actualAccount,
             activePartner: destination === 'modon' ? 'modon' : 'alwaseet',
@@ -2132,10 +2132,10 @@ export const SuperProvider = ({ children }) => {
           total_amount: enrichedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
         };
 
-        console.log('📦 إرسال طلب للوسيط:', alwaseetPayload);
+        devLog.log('📦 إرسال طلب للوسيط:', alwaseetPayload);
         
         // جلب المدن والمناطق - تماماً كما في صفحة الطلب السريع
-        console.log('🌆 جلب المدن من الوسيط...');
+        devLog.log('🌆 جلب المدن من الوسيط...');
         const citiesData = await getCities(accountData.token);
         const cities = Array.isArray(citiesData?.data) ? citiesData.data : (Array.isArray(citiesData) ? citiesData : []);
         
@@ -2183,7 +2183,7 @@ export const SuperProvider = ({ children }) => {
       
       // ✅ إذا كان aiOrder يحتوي على region_id و resolved_region_name صحيحة، استخدمها مباشرة
       if (aiOrder.region_id && aiOrder.resolved_region_name && aiOrder.city_id && aiOrder.resolved_city_name) {
-          console.log('✅ استخدام بيانات ai_orders مباشرة (صحيحة 100%):', {
+          devLog.log('✅ استخدام بيانات ai_orders مباشرة (صحيحة 100%):', {
             city_id: aiOrder.city_id,
             city_name: aiOrder.resolved_city_name,
             region_id: aiOrder.region_id,
@@ -2216,7 +2216,7 @@ export const SuperProvider = ({ children }) => {
         
           nearestPoint = extractedData.landmark || '';
           
-          console.log('📊 استخدام البيانات المستخرجة مباشرة:', {
+          devLog.log('📊 استخدام البيانات المستخرجة مباشرة:', {
             city: cityToSearch,
             region: regionToSearch,
             landmark: nearestPoint,
@@ -2226,7 +2226,7 @@ export const SuperProvider = ({ children }) => {
         // البحث عن المدينة - تطبيق نفس المنطق من QuickOrderContent
         if (cityToSearch) {
             const searchCity = normalizeArabic(cityToSearch);
-            console.log('🏙️ البحث عن المدينة:', { original: cityToSearch, normalized: searchCity });
+            devLog.log('🏙️ البحث عن المدينة:', { original: cityToSearch, normalized: searchCity });
             
             // مطابقة دقيقة أولاً
             let cityMatch = cities.find(city => normalizeArabic(city.name) === searchCity);
@@ -2242,25 +2242,25 @@ export const SuperProvider = ({ children }) => {
             if (cityMatch) {
               cityId = cityMatch.id;
               foundCityName = cityMatch.name;
-              console.log('✅ تم العثور على المدينة:', { id: cityId, name: foundCityName });
+              devLog.log('✅ تم العثور على المدينة:', { id: cityId, name: foundCityName });
             }
           }
           
           // إذا لم نجد المدينة، استخدم بغداد كافتراضي (نفس منطق QuickOrderContent)
           if (!cityId) {
-            console.log('⚠️ لم يتم العثور على المدينة، البحث عن بغداد...');
+            devLog.log('⚠️ لم يتم العثور على المدينة، البحث عن بغداد...');
             const baghdadCity = cities.find(city => normalizeArabic(city.name).includes('بغداد'));
             if (baghdadCity) {
               cityId = baghdadCity.id;
               foundCityName = baghdadCity.name;
-              console.log('✅ استخدام بغداد كافتراضي:', foundCityName);
+              devLog.log('✅ استخدام بغداد كافتراضي:', foundCityName);
             } else {
               throw new Error(`لم يتم العثور على مدينة مطابقة أو بغداد. المدن المتاحة: ${cities.slice(0, 10).map(c => c.name).join(', ')}`);
             }
           }
 
           // جلب المناطق للمدينة المحددة
-          console.log('🗺️ جلب المناطق للمدينة:', foundCityName);
+          devLog.log('🗺️ جلب المناطق للمدينة:', foundCityName);
           const regionsData = await getRegionsByCity(accountData.token, cityId);
           const regions = Array.isArray(regionsData?.data) ? regionsData.data : (Array.isArray(regionsData) ? regionsData : []);
           
@@ -2269,7 +2269,7 @@ export const SuperProvider = ({ children }) => {
           
           if (regions.length > 0) {
             if (regionToSearch) {
-              console.log('🔍 البحث عن المنطقة:', regionToSearch);
+              devLog.log('🔍 البحث عن المنطقة:', regionToSearch);
               
               // توليد جميع المرشحات المحتملة من النص
               const allCandidates = generateRegionCandidates(regionToSearch);
@@ -2310,7 +2310,7 @@ export const SuperProvider = ({ children }) => {
               if (bestMatch && bestScore >= 60) {
                 regionId = bestMatch.id;
                 foundRegionName = bestMatch.name;
-                console.log('✅ تم العثور على المنطقة:', { 
+                devLog.log('✅ تم العثور على المنطقة:', { 
                   id: regionId, 
                   name: foundRegionName, 
                   score: bestScore,
@@ -2321,10 +2321,10 @@ export const SuperProvider = ({ children }) => {
                 const remainingText = regionToSearch.replace(matchedText, '').trim();
                 if (remainingText.length >= 3) {
                   nearestPoint = remainingText;
-                  console.log('📍 نقطة الدلالة:', nearestPoint);
+                  devLog.log('📍 نقطة الدلالة:', nearestPoint);
                 }
               } else {
-                console.log('⚠️ لم يتم العثور على مطابقة جيدة للمنطقة');
+                devLog.log('⚠️ لم يتم العثور على مطابقة جيدة للمنطقة');
               }
             }
             
@@ -2332,9 +2332,9 @@ export const SuperProvider = ({ children }) => {
             if (!regionId && !regionToSearch) {
               regionId = regions[0].id;
               foundRegionName = regions[0].name;
-              console.log('⚠️ استخدام أول منطقة متاحة (لعدم وجود نص منطقة):', foundRegionName);
+              devLog.log('⚠️ استخدام أول منطقة متاحة (لعدم وجود نص منطقة):', foundRegionName);
             } else if (!regionId && regionToSearch) {
-              console.log('⚠️ لم يتم العثور على مطابقة للمنطقة، ترك المنطقة غير محددة لتجنب الخطأ');
+              devLog.log('⚠️ لم يتم العثور على مطابقة للمنطقة، ترك المنطقة غير محددة لتجنب الخطأ');
             }
           }
           
@@ -2342,7 +2342,7 @@ export const SuperProvider = ({ children }) => {
           if (!regionId && regions.length > 0) {
             regionId = regions[0].id;
             foundRegionName = regions[0].name;
-            console.log('⚠️ فشل تحديد المنطقة، استخدام المنطقة الافتراضية:', foundRegionName);
+            devLog.log('⚠️ فشل تحديد المنطقة، استخدام المنطقة الافتراضية:', foundRegionName);
           }
         } // نهاية else للمعالجة القديمة
 
@@ -2405,8 +2405,8 @@ export const SuperProvider = ({ children }) => {
         };
 
         const partnerName = destination === 'modon' ? 'مدن' : 'الوسيط';
-        console.log(`📋 بيانات الطلب النهائية المرسلة لـ ${partnerName}:`, updatedPayload);
-        console.log(`💰 السعر المرسل لـ ${partnerName}:`, aiOrder.total_amount || finalPrice, '(AI Order total_amount:', aiOrder.total_amount, ', Calculated finalPrice:', finalPrice, ')');
+        devLog.log(`📋 بيانات الطلب النهائية المرسلة لـ ${partnerName}:`, updatedPayload);
+        devLog.log(`💰 السعر المرسل لـ ${partnerName}:`, aiOrder.total_amount || finalPrice, '(AI Order total_amount:', aiOrder.total_amount, ', Calculated finalPrice:', finalPrice, ')');
 
         // إنشاء الطلب في شركة التوصيل - اختيار API حسب الوجهة
         let alwaseetResult;
@@ -2418,7 +2418,7 @@ export const SuperProvider = ({ children }) => {
           alwaseetResult = await createAlWaseetOrderApi(updatedPayload, accountData.token);
         }
         
-        console.log('📦 استجابة الوسيط الكاملة:', alwaseetResult);
+        devLog.log('📦 استجابة الوسيط الكاملة:', alwaseetResult);
         
         // معالجة qr_id - الآن من المفترض أن يحتوي على qr_id من التحسينات
         let qrId = alwaseetResult?.qr_id || alwaseetResult?.id;
@@ -2426,13 +2426,13 @@ export const SuperProvider = ({ children }) => {
         
         // Smart retry if qr_id is still missing - 3 attempts with proper delays
         if (!qrId || qrId === 'undefined' || qrId === 'null') {
-          console.log('⚠️ لم نحصل على qr_id صحيح، محاولة smart retry...');
+          devLog.log('⚠️ لم نحصل على qr_id صحيح، محاولة smart retry...');
           const maxRetries = 3;
           const delayBetweenRetries = 1500; // 1.5 seconds
           
           for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-              console.log(`🔄 محاولة ${attempt}/${maxRetries} للحصول على qr_id...`);
+              devLog.log(`🔄 محاولة ${attempt}/${maxRetries} للحصول على qr_id...`);
               await new Promise(resolve => setTimeout(resolve, delayBetweenRetries));
               
               // استخدام API الصحيح حسب شركة التوصيل
@@ -2462,13 +2462,13 @@ export const SuperProvider = ({ children }) => {
               if (matchingOrder) {
                 qrId = matchingOrder.qr_id || matchingOrder.tracking_number || matchingOrder.id;
                 orderId = matchingOrder.id || orderId;
-                console.log(`✅ تم استخراج qr_id في المحاولة ${attempt}:`, { qrId, orderId });
+                devLog.log(`✅ تم استخراج qr_id في المحاولة ${attempt}:`, { qrId, orderId });
                 break;
               }
               
-              console.log(`⚠️ لم يتم العثور على طلب مطابق في المحاولة ${attempt}`);
+              devLog.log(`⚠️ لم يتم العثور على طلب مطابق في المحاولة ${attempt}`);
             } catch (retryError) {
-              console.warn(`❌ فشل في المحاولة ${attempt}:`, retryError.message);
+              devLog.warn(`❌ فشل في المحاولة ${attempt}:`, retryError.message);
             }
             
             // If last attempt fails, log the issue
@@ -2482,8 +2482,8 @@ export const SuperProvider = ({ children }) => {
           throw new Error('فشل في الحصول على رقم التتبع من شركة التوصيل بعد عدة محاولات');
         }
 
-        console.log('🔍 qr_id المستخرج:', qrId);
-        console.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId: alwaseetResult.id });
+        devLog.log('🔍 qr_id المستخرج:', qrId);
+        devLog.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId: alwaseetResult.id });
 
         // إنشاء الطلب المحلي مع ربطه بشركة التوصيل - استخدام orderId بدلاً من qrId
         return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, aiOrder.id, {
@@ -2629,7 +2629,7 @@ export const SuperProvider = ({ children }) => {
       let priceAdjustment = Number(aiOrder.price_adjustment || 0);
       let adjustmentType = aiOrder.adjustment_type;
       
-      console.log('💰 معالجة التعديل السعري:', { 
+      devLog.log('💰 معالجة التعديل السعري:', { 
         subtotal, 
         priceAdjustment, 
         adjustmentType,
@@ -2640,11 +2640,11 @@ export const SuperProvider = ({ children }) => {
       // في حالة الخصم: نحفظه كخصم منفصل
       if (adjustmentType === 'discount' && priceAdjustment < 0) {
         discount = Math.abs(priceAdjustment);
-        console.log('🎁 تطبيق خصم:', discount);
+        devLog.log('🎁 تطبيق خصم:', discount);
       }
       // في حالة الزيادة: لا نعمل شيء هنا، سيتم معالجتها في حساب الأرباح
       else if (adjustmentType === 'markup' && priceAdjustment > 0) {
-        console.log('📈 سيتم توزيع الزيادة على الأرباح:', priceAdjustment);
+        devLog.log('📈 سيتم توزيع الزيادة على الأرباح:', priceAdjustment);
       }
       
       const total = subtotal - discount + deliveryFee;
@@ -2734,7 +2734,7 @@ export const SuperProvider = ({ children }) => {
 
       // ✅ تطبيق الخصم في applied_customer_discounts إذا كان موجوداً
       if (discount > 0) {
-        console.log('💾 حفظ الخصم في applied_customer_discounts:', discount);
+        devLog.log('💾 حفظ الخصم في applied_customer_discounts:', discount);
         try {
           await supabase.from('applied_customer_discounts').insert({
             order_id: createdOrder.id,
@@ -2744,13 +2744,13 @@ export const SuperProvider = ({ children }) => {
             applied_by: resolveCurrentUserUUID()
           });
         } catch (discountErr) {
-          console.warn('⚠️ فشل حفظ الخصم:', discountErr);
+          devLog.warn('⚠️ فشل حفظ الخصم:', discountErr);
         }
       }
       
       // ✅ معالجة الزيادة حسب قواعد أرباح الموظف
       if (adjustmentType === 'markup' && priceAdjustment > 0) {
-        console.log('📈 معالجة الزيادة:', priceAdjustment);
+        devLog.log('📈 معالجة الزيادة:', priceAdjustment);
         
         // التحقق من وجود قاعدة ربح للموظف لأي من المنتجات في الطلب
         const employeeId = aiOrder.created_by || resolveCurrentUserUUID();
@@ -2768,7 +2768,7 @@ export const SuperProvider = ({ children }) => {
           
           hasEmployeeProfitRule = profitRules && profitRules.length > 0;
           
-          console.log('🔍 نتيجة البحث عن قواعد الأرباح:', { 
+          devLog.log('🔍 نتيجة البحث عن قواعد الأرباح:', { 
             employeeId, 
             hasEmployeeProfitRule,
             productIds 
@@ -2784,9 +2784,9 @@ export const SuperProvider = ({ children }) => {
             applied_by: resolveCurrentUserUUID()
           });
           
-          console.log(`✅ تم حفظ الزيادة كـ ${hasEmployeeProfitRule ? 'employee_markup' : 'system_markup'}`);
+          devLog.log(`✅ تم حفظ الزيادة كـ ${hasEmployeeProfitRule ? 'employee_markup' : 'system_markup'}`);
         } catch (markupErr) {
-          console.warn('⚠️ فشل حفظ معلومة الزيادة:', markupErr);
+          devLog.warn('⚠️ فشل حفظ معلومة الزيادة:', markupErr);
         }
       }
 
@@ -2811,7 +2811,7 @@ export const SuperProvider = ({ children }) => {
       superAPI.invalidate('all_data');
 
       const method = deliveryPartnerData.delivery_partner === 'alwaseet' ? 'alwaseet' : 'local';
-      console.log(`✅ تم تحويل الطلب الذكي بنجاح - ${method}:`, { 
+      devLog.log(`✅ تم تحويل الطلب الذكي بنجاح - ${method}:`, { 
         orderId: createdOrder.id, 
         trackingNumber,
         deliveryPartner: deliveryPartnerData.delivery_partner,
@@ -2867,7 +2867,7 @@ export const SuperProvider = ({ children }) => {
 
   const setEmployeeProfitRule = useCallback(async (employeeId, ruleData) => {
     try {
-      console.log('📋 SuperProvider: تعديل قاعدة ربح للموظف:', { employeeId, ruleData });
+      devLog.log('📋 SuperProvider: تعديل قاعدة ربح للموظف:', { employeeId, ruleData });
       
       if (ruleData.id && ruleData.is_active === false) {
         // حذف قاعدة
@@ -3022,7 +3022,7 @@ export const SuperProvider = ({ children }) => {
           }
         }
       } catch (e) {
-        console.warn('⚠️ تحديث allData.products بعد updateProduct فشل (سيُعالج عبر realtime):', e?.message);
+        devLog.warn('⚠️ تحديث allData.products بعد updateProduct فشل (سيُعالج عبر realtime):', e?.message);
       }
       return res;
     },
@@ -3033,7 +3033,7 @@ export const SuperProvider = ({ children }) => {
       }
 
       const idsArray = Array.isArray(productIds) ? productIds : [productIds];
-      console.log('🗑️ SuperProvider: بدء حذف المنتجات:', idsArray);
+      devLog.log('🗑️ SuperProvider: بدء حذف المنتجات:', idsArray);
       
       // الحذف الفوري من الواجهة (optimistic update)
       setAllData(prev => ({
@@ -3045,7 +3045,7 @@ export const SuperProvider = ({ children }) => {
         const res = await dbDeleteProducts(idsArray);
         
         if (res?.success || res?.data || !res?.error) {
-          console.log('✅ SuperProvider: تم الحذف بنجاح من قاعدة البيانات');
+          devLog.log('✅ SuperProvider: تم الحذف بنجاح من قاعدة البيانات');
           
           // إضافة إشعار للحذف الناجح
           if (addNotification) {
@@ -3239,7 +3239,7 @@ export const SuperProvider = ({ children }) => {
     // دالة تحديث الإعدادات
     updateSettings: async (newSettings) => {
       try {
-        console.log('🔧 SuperProvider: تحديث الإعدادات:', newSettings);
+        devLog.log('🔧 SuperProvider: تحديث الإعدادات:', newSettings);
         
         // تحديث كل إعداد في قاعدة البيانات
         for (const [key, value] of Object.entries(newSettings)) {
@@ -3265,7 +3265,7 @@ export const SuperProvider = ({ children }) => {
           }
         }));
 
-        console.log('✅ تم تحديث الإعدادات بنجاح');
+        devLog.log('✅ تم تحديث الإعدادات بنجاح');
         return { success: true };
       } catch (error) {
         console.error('❌ فشل في تحديث الإعدادات:', error);
@@ -3279,7 +3279,7 @@ export const SuperProvider = ({ children }) => {
     // دالة حذف المصروف - الـ trigger في قاعدة البيانات يتكفل بالحركة العكسية تلقائياً
     deleteExpense: async (expenseId) => {
       try {
-        console.log('🗑️ حذف المصروف:', expenseId);
+        devLog.log('🗑️ حذف المصروف:', expenseId);
         
         // حذف المصروف فقط - الـ trigger يُنشئ حركة إرجاع تلقائياً
         const { error: deleteError } = await supabase
@@ -3322,7 +3322,7 @@ export const SuperProvider = ({ children }) => {
     // دالة طلب التسوية - ربط مع ProfitsContext
     requestProfitSettlement: async (orderIds, notes = '') => {
       try {
-        console.log('🏦 SuperProvider: طلب تسوية الأرباح:', { orderIds, notes });
+        devLog.log('🏦 SuperProvider: طلب تسوية الأرباح:', { orderIds, notes });
         
         if (!orderIds || orderIds.length === 0) {
           throw new Error('يجب تحديد طلبات للتحاسب');
@@ -3332,7 +3332,7 @@ export const SuperProvider = ({ children }) => {
         const result = await profitsCreateSettlement(orderIds, notes);
         
         if (result) {
-          console.log('✅ تم إرسال طلب التسوية بنجاح');
+          devLog.log('✅ تم إرسال طلب التسوية بنجاح');
           return result;
         } else {
           throw new Error('فشل في إرسال طلب التسوية');
@@ -3353,7 +3353,7 @@ export const SuperProvider = ({ children }) => {
     sizes: allData.sizes || [],
   };
 
-  // ⚡ تم إزالة console.log المتكرر لتحسين الأداء
+  // ⚡ تم إزالة devLog.log المتكرر لتحسين الأداء
   // في Development فقط: devLog.log('🔍 SuperProvider contextValue:', {...});
 
   return (

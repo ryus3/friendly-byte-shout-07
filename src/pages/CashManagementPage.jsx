@@ -30,6 +30,7 @@ import SystemProfitSummary from '@/components/cash/SystemProfitSummary';
 import StatCard from '@/components/dashboard/StatCard';
 import { format, startOfMonth, endOfMonth, startOfWeek, startOfDay, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import devLog from '@/lib/devLogger';
 
 const CashManagementPage = () => {
   const navigate = useNavigate();
@@ -106,7 +107,7 @@ const CashManagementPage = () => {
             });
           }
         } catch (rpcError) {
-          console.warn('⚠️ RPC timeout/error, using basic data');
+          devLog.warn('⚠️ RPC timeout/error, using basic data');
           if (isMounted) {
             setEnhancedFinancialData({
               capitalValue: mainBalance,

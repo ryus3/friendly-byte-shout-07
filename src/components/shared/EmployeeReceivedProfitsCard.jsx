@@ -6,6 +6,7 @@ import EmployeeReceivedProfitsDialog from './EmployeeReceivedProfitsDialog';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useEmployeeReceivedPeriod } from '@/hooks/useEmployeeReceivedPeriod';
 import { parseISO, isValid } from 'date-fns';
+import devLog from '@/lib/devLogger';
 
 /**
  * كارت أرباحي المستلمة للموظفين - موحد مع النافذة ويستخدم نفس فلترة الفترة
@@ -33,7 +34,7 @@ const EmployeeReceivedProfitsCard = ({
         console.error('❌ خطأ في جلب فواتير أرباحي المستلمة:', error);
         setInvoices([]);
       } else {
-        console.log('✅ تم جلب الفواتير بنجاح:', data?.length, 'فاتورة');
+        devLog.log('✅ تم جلب الفواتير بنجاح:', data?.length, 'فاتورة');
         setInvoices(data || []);
       }
     };

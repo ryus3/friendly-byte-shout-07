@@ -28,6 +28,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { normalizePhone, extractOrderPhone } from '@/utils/phoneUtils';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 import { linkReturnToOriginalOrder } from '@/utils/return-order-linker';
+import devLog from '@/lib/devLogger';
 
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
@@ -216,7 +217,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 name: r.name,
                 city_id: r.city_id
               })));
-            console.log('✅ تم تحميل المناطق مسبقاً:', aiOrderData.preloadedRegions.length);
+            devLog.log('✅ تم تحميل المناطق مسبقاً:', aiOrderData.preloadedRegions.length);
           }
         }
       } else {
@@ -700,7 +701,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       if ((activePartner === 'alwaseet' || activePartner === 'modon') && waseetToken) {
         // ✅ انتظار تحميل الـ cache للوسيط
         if (activePartner === 'alwaseet' && !isCacheLoaded) {
-          console.log('⏳ انتظار تحميل الـ Cache للوسيط...');
+          devLog.log('⏳ انتظار تحميل الـ Cache للوسيط...');
           return;
         }
         
@@ -742,7 +743,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               
               if (cachedSizes && cachedSizes.length > 0) {
                 packageSizesData = cachedSizes.map(s => ({ id: s.external_id, size: s.size_name }));
-                console.log(`✅ تم جلب ${packageSizesData.length} حجم طرد من الكاش المحلي`);
+                devLog.log(`✅ تم جلب ${packageSizesData.length} حجم طرد من الكاش المحلي`);
               } else {
                 packageSizesData = [{ id: '1', size: 'Normal' }, { id: '2', size: 'Medium' }, { id: '3', size: 'Large' }, { id: '4', size: 'X-Large' }];
               }
@@ -820,7 +821,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   useEffect(() => {
     // ✅ تجاهل إذا كانت المناطق محملة مسبقاً في وضع التعديل
     if (isEditMode && preloadedRegionsApplied.current && regions.length > 0) {
-      console.log('⏭️ تجاهل جلب المناطق - محملة مسبقاً');
+      devLog.log('⏭️ تجاهل جلب المناطق - محملة مسبقاً');
       return;
     }
     
@@ -875,11 +876,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 }));
               } else {
                 // ✅ الوسيط: فلترة المناطق من الـ Cache فوراً
-                console.log(`🔍 فلترة المناطق للمدينة ${cityIdForRegions} (cache: ${globalRegionsCache.length} منطقة)...`);
+                devLog.log(`🔍 فلترة المناطق للمدينة ${cityIdForRegions} (cache: ${globalRegionsCache.length} منطقة)...`);
                 
                 if (isCacheLoaded && globalRegionsCache.length > 0) {
                   const filteredRegions = getRegionsByCity(cityIdForRegions);
-                  console.log(`✅ تم فلترة ${filteredRegions.length} منطقة من الـ Cache`);
+                  devLog.log(`✅ تم فلترة ${filteredRegions.length} منطقة من الـ Cache`);
                   
                   regionsData = filteredRegions.map(region => ({
                     id: region.alwaseet_id || region.id,
@@ -887,7 +888,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                     city_id: cityIdForRegions
                   }));
                 } else {
-                  console.log('⏳ انتظار تحميل الـ Cache...');
+                  devLog.log('⏳ انتظار تحميل الـ Cache...');
                   regionsData = [];
                 }
               }
@@ -938,7 +939,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   useEffect(() => {
     // ✅ في وضع التعديل: لا تُعد حساب السعر تلقائياً - احتفظ بالسعر الأصلي
     if (isEditMode && originalPriceRef.current !== null) {
-      console.log('⏭️ تجاهل إعادة حساب السعر - وضع التعديل (السعر الأصلي:', originalPriceRef.current, ')');
+      devLog.log('⏭️ تجاهل إعادة حساب السعر - وضع التعديل (السعر الأصلي:', originalPriceRef.current, ')');
       
       // فقط تحديث التفاصيل والكمية بدون تغيير السعر
       const safeCart = Array.isArray(cart) ? cart.filter(item => item != null) : [];
@@ -1295,14 +1296,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           const cartProductsTotal = cart.reduce((sum, item) => 
             sum + ((item.quantity || 1) * (item.unit_price || item.price || 0)), 0);
 
-          console.log('📊 مجموع المنتجات في السلة:', cartProductsTotal.toLocaleString(), 'د.ع');
+          devLog.log('📊 مجموع المنتجات في السلة:', cartProductsTotal.toLocaleString(), 'د.ع');
 
           // ✅ حساب السعر المتوقع (منتجات + توصيل)
           const deliveryFee = originalOrder.delivery_fee || 0;
           const expectedTotalPrice = cartProductsTotal + deliveryFee;
 
-          console.log('💰 السعر المتوقع:', expectedTotalPrice.toLocaleString(), 'د.ع', `(${cartProductsTotal.toLocaleString()} + ${deliveryFee.toLocaleString()} توصيل)`);
-          console.log('💵 السعر المدخل:', userEnteredPrice.toLocaleString(), 'د.ع');
+          devLog.log('💰 السعر المتوقع:', expectedTotalPrice.toLocaleString(), 'د.ع', `(${cartProductsTotal.toLocaleString()} + ${deliveryFee.toLocaleString()} توصيل)`);
+          devLog.log('💵 السعر المدخل:', userEnteredPrice.toLocaleString(), 'د.ع');
 
           // ✅ حساب الفرق بين ما أدخله المستخدم والسعر المتوقع
           const priceDiff = userEnteredPrice - expectedTotalPrice;
@@ -1317,18 +1318,18 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             // خصم - المستخدم أدخل سعر أقل من سعر المنتجات + التوصيل
             discountAmount = Math.abs(priceDiff);
             priceChangeType = 'discount';
-            console.log(`🔻 خصم: ${discountAmount.toLocaleString()} د.ع (المدخل ${userEnteredPrice.toLocaleString()} < المتوقع ${expectedTotalPrice.toLocaleString()})`);
+            devLog.log(`🔻 خصم: ${discountAmount.toLocaleString()} د.ع (المدخل ${userEnteredPrice.toLocaleString()} < المتوقع ${expectedTotalPrice.toLocaleString()})`);
           } else if (priceDiff > 0) {
             // زيادة - المستخدم أدخل سعر أكبر من سعر المنتجات + التوصيل
             priceIncreaseAmount = priceDiff;
             priceChangeType = 'increase';
-            console.log(`🔺 زيادة: ${priceIncreaseAmount.toLocaleString()} د.ع (المدخل ${userEnteredPrice.toLocaleString()} > المتوقع ${expectedTotalPrice.toLocaleString()})`);
+            devLog.log(`🔺 زيادة: ${priceIncreaseAmount.toLocaleString()} د.ع (المدخل ${userEnteredPrice.toLocaleString()} > المتوقع ${expectedTotalPrice.toLocaleString()})`);
           } else {
             // ✅ السعر مطابق تماماً - لا خصم ولا زيادة
-            console.log(`✅ السعر صحيح: ${userEnteredPrice.toLocaleString()} = ${cartProductsTotal.toLocaleString()} + ${deliveryFee.toLocaleString()} (توصيل)`);
+            devLog.log(`✅ السعر صحيح: ${userEnteredPrice.toLocaleString()} = ${cartProductsTotal.toLocaleString()} + ${deliveryFee.toLocaleString()} (توصيل)`);
           }
           
-          console.log('📝 بيانات العميل للحفظ:', {
+          devLog.log('📝 بيانات العميل للحفظ:', {
             name: formData.name,
             phone: formData.phone,
             phone2: formData.second_phone,
@@ -1366,7 +1367,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             console.error('❌ لم يتم تحديث أي صف - قد تكون مشكلة صلاحيات RLS');
             throw new Error('فشل تحديث الطلب - تحقق من الصلاحيات');
           } else {
-            console.log('✅ تم تحديث قاعدة البيانات المحلية بنجاح:', {
+            devLog.log('✅ تم تحديث قاعدة البيانات المحلية بنجاح:', {
               customer_name: updatedData.customer_name,
               customer_phone: updatedData.customer_phone
             });
@@ -1425,7 +1426,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       ) || [];
       
       if (validCartItems.length === 0 && originalOrder.items?.length > 0) {
-        console.warn('⚠️ السلة فارغة - الحفاظ على المنتجات الأصلية');
+        devLog.warn('⚠️ السلة فارغة - الحفاظ على المنتجات الأصلية');
       } else if (validCartItems.length > 0) {
         // حذف العناصر القديمة فقط إذا كانت هناك عناصر صالحة جديدة
         const { error: deleteError } = await supabase
@@ -1448,7 +1449,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           total_price: item.quantity * item.price
         }));
         
-        console.log('✅ حفظ المنتجات:', newOrderItems.length, 'منتجات', newOrderItems);
+        devLog.log('✅ حفظ المنتجات:', newOrderItems.length, 'منتجات', newOrderItems);
         
         const { error: insertError } = await supabase
           .from('order_items')
@@ -1459,7 +1460,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           throw new Error(`فشل إدخال المنتجات الجديدة: ${insertError.message}`);
         }
         
-        console.log('✅ تم حفظ المنتجات بنجاح في قاعدة البيانات');
+        devLog.log('✅ تم حفظ المنتجات بنجاح في قاعدة البيانات');
       }
 
       // تحديث SuperProvider أيضاً لضمان انعكاس التغييرات في صفحة الطلبات
@@ -1491,7 +1492,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       }, 200);
 
       // عرض رسالة نجاح مع رقم التتبع الصحيح
-      console.log('📢 عرض تنبيه نجاح التحديث:', updateResult);
+      devLog.log('📢 عرض تنبيه نجاح التحديث:', updateResult);
       const trackingNumber = updateResult.order?.tracking_number || originalOrder.tracking_number || updateResult.order?.order_number || originalOrder.order_number || 'غير محدد';
       toast({
         title: "تم تحديث الطلب بنجاح",
@@ -1517,7 +1518,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               city: '',
               region: ''
             }));
-            console.log('🔄 تم إعادة تعيين النموذج للمدينة الافتراضية بعد التحديث');
+            devLog.log('🔄 تم إعادة تعيين النموذج للمدينة الافتراضية بعد التحديث');
           }
         }, 1000);
       }
@@ -1661,7 +1662,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             throw new Error('جميع المنتجات يجب أن تحتوي على اتجاه (outgoing/incoming)');
           }
           
-          console.log('📦 [QuickOrderContent] تمرير cart للاستبدال:', cart);
+          devLog.log('📦 [QuickOrderContent] تمرير cart للاستبدال:', cart);
           return cart.map(item => ({
             product_id: item.productId,
             variant_id: item.variantId,
@@ -1896,7 +1897,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               replacement: (formData.type === 'return' || formData.type === 'exchange') ? 1 : 0,
               type: formData.type === 'return' || formData.type === 'exchange' ? 'replacement' : 'new'
            };
-           console.log('🔍 Diagnostic check before delivery order creation:', {
+           devLog.log('🔍 Diagnostic check before delivery order creation:', {
              activePartner,
              city_id: effectiveCityId,
              region_id: effectiveRegionId,
@@ -2022,7 +2023,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           
           if (linkResult.success && linkResult.originalOrderId) {
             linkedOriginalOrderId = linkResult.originalOrderId;
-            console.log('✅ تم ربط طلب الاستبدال تلقائياً بالطلب الأصلي:', linkResult.originalOrderNumber);
+            devLog.log('✅ تم ربط طلب الاستبدال تلقائياً بالطلب الأصلي:', linkResult.originalOrderNumber);
             
             // ✅ الخطوة 4: تحديث ai_orders و orders معاً
             await supabase
@@ -2046,7 +2047,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           // ✅ الخطوة 1 و 5: حذف الخصم اليدوي - نظام الحجز الموحد سيتولى المهمة
           // المنتج الخارج مُضاف لـ order_items بنوع 'outgoing'
           // سيُحجز تلقائياً عند إنشاء الطلب وسيُخصم عند Status 21
-          console.log('✅ المنتج الخارج سيُحجز تلقائياً عبر نظام الحجز الموحد');
+          devLog.log('✅ المنتج الخارج سيُحجز تلقائياً عبر نظام الحجز الموحد');
           
           // معالجة المحاسبة الكاملة
           const { error: accountingError } = await supabase.rpc('handle_exchange_price_difference', {
@@ -2134,7 +2135,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             return sum + ((productPrice - productCost) * quantity);
           }, 0);
           
-          console.log('💰 تفاصيل الإرجاع:', {
+          devLog.log('💰 تفاصيل الإرجاع:', {
             عدد_المنتجات: incomingItems.length,
             إجمالي_الربح: totalProductProfit,
             مبلغ_الإرجاع: refundAmount,
@@ -2165,11 +2166,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           if (adjustError) {
             console.error('❌ خطأ في معالجة الأرباح:', adjustError);
           } else {
-            console.log('✅ نتيجة معالجة الأرباح:', adjustResult);
+            devLog.log('✅ نتيجة معالجة الأرباح:', adjustResult);
           }
           
           // ✅ لا نسجل حركة نقد الآن - سيتم تسجيلها عند تغيير الحالة إلى 21 (دفع للزبون)
-          console.log('⏳ حركة النقد ستُسجل تلقائياً عند تغيير حالة التوصيل إلى 21 (تم الدفع للزبون)');
+          devLog.log('⏳ حركة النقد ستُسجل تلقائياً عند تغيير حالة التوصيل إلى 21 (تم الدفع للزبون)');
           
           // 5. Toast محسّن مع تفاصيل دقيقة
           toast({
@@ -2261,7 +2262,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   // إضافة دالة للتعامل مع تحديث الطلبات
   const handleOrderUpdate = async () => {
     try {
-      console.log('🔄 بدء تحديث الطلب - وضع التعديل');
+      devLog.log('🔄 بدء تحديث الطلب - وضع التعديل');
       
        // حساب الإجمالي الجديد مع حماية من الأخطاء
        const safeCart = Array.isArray(cart) ? cart.filter(item => item && typeof item.total === 'number') : [];
@@ -2298,13 +2299,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       };
 
       // تحديث الطلب في النظام المحلي
-      console.log('🔄 تحديث الطلب في النظام المحلي...', updateData);
+      devLog.log('🔄 تحديث الطلب في النظام المحلي...', updateData);
       await updateOrder(aiOrderData.orderId, updateData);
 
       // إذا كان شريك الوسيط متصل وهناك معرف طلب خارجي، قم بتحديث الطلب
       const trackingNumber = aiOrderData.tracking_number || aiOrderData.delivery_partner_order_id || aiOrderData.originalOrder?.tracking_number;
       
-      console.log('🔍 Checking AlWaseet update conditions:', {
+      devLog.log('🔍 Checking AlWaseet update conditions:', {
         isWaseetLoggedIn,
         activePartner,
         trackingNumber,
@@ -2333,9 +2334,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           details: `طلب محدث - ${cart.length} عنصر`
         };
         
-        console.log('📤 AlWaseet edit data prepared:', editData);
+        devLog.log('📤 AlWaseet edit data prepared:', editData);
 
-        console.log('🔄 محاولة تحديث الطلب في الوسيط...');
+        devLog.log('🔄 محاولة تحديث الطلب في الوسيط...');
         
         try {
           // التحقق من البيانات المطلوبة قبل الإرسال
@@ -2343,13 +2344,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             throw new Error('بيانات مفقودة: يجب توفر رقم التتبع واسم العميل ورقم الهاتف');
           }
           
-          console.log('📤 إرسال بيانات التحديث إلى الوسيط:', editData);
+          devLog.log('📤 إرسال بيانات التحديث إلى الوسيط:', editData);
           const editResponse = await editAlWaseetOrder(editData, waseetToken);
           
-          console.log('📥 استجابة الوسيط:', editResponse);
+          devLog.log('📥 استجابة الوسيط:', editResponse);
           
           if (editResponse?.success) {
-            console.log('✅ تم تحديث الطلب في الوسيط بنجاح');
+            devLog.log('✅ تم تحديث الطلب في الوسيط بنجاح');
             toast({
               title: "✅ تم التحديث بنجاح",
               description: `تم تحديث الطلب ${trackingNumber} في شركة التوصيل بنجاح`,
@@ -2376,7 +2377,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           });
         }
       } else {
-        console.log('ℹ️ تخطي تحديث الوسيط:', {
+        devLog.log('ℹ️ تخطي تحديث الوسيط:', {
           reason: !isWaseetLoggedIn ? 'غير متصل بالوسيط' : 
                   activePartner !== 'alwaseet' ? 'الشريك ليس الوسيط' : 
                   !trackingNumber ? 'لا يوجد رقم تتبع' : 'سبب غير معروف'
@@ -2422,7 +2423,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   };
 
   const handleConfirmOutgoingProducts = (selectedItems) => {
-    console.log('🔵 تأكيد المنتجات الصادرة:', selectedItems);
+    devLog.log('🔵 تأكيد المنتجات الصادرة:', selectedItems);
     
     setCart(prev => {
       // مسح المنتجات الصادرة القديمة فقط
@@ -2458,7 +2459,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   };
 
   const handleConfirmIncomingProducts = (selectedItems) => {
-    console.log('🟢 تأكيد المنتجات الواردة:', selectedItems);
+    devLog.log('🟢 تأكيد المنتجات الواردة:', selectedItems);
     
     setCart(prev => {
       // مسح المنتجات الواردة القديمة فقط
@@ -2527,7 +2528,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const originalCityText = formData.originalCity || formData.customer_city || '';
       const originalRegionText = formData.originalRegion || formData.customer_province || '';
       
-      console.log('🏙️ Partner fields - Values for display:', {
+      devLog.log('🏙️ Partner fields - Values for display:', {
         effectiveCityId,
         effectiveRegionId,
         originalCityText,
@@ -2551,7 +2552,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 <SearchableSelectFixed
                   value={formData.city_id}
                   onValueChange={(v) => {
-                   console.log('🏙️ City selection changed:', v);
+                   devLog.log('🏙️ City selection changed:', v);
                    setSelectedCityId(v);
                    handleSelectChange('city_id', v);
                    // مسح المنطقة عند تغيير المدينة
@@ -2579,8 +2580,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                  <SearchableSelectFixed
                    value={formData.region_id}
                    onValueChange={(v) => {
-                    console.log('🌍 الحل الجذري - تغيير المنطقة:', v);
-                    console.log('🔍 Region dropdown debug:', {
+                    devLog.log('🌍 الحل الجذري - تغيير المنطقة:', v);
+                    devLog.log('🔍 Region dropdown debug:', {
                       effectiveRegionId,
                       regionsLength: regions.length,
                       selectedOption: regions.find(r => String(r.id) === String(effectiveRegionId)),
@@ -2609,7 +2610,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const pageProps = { 
     ref: formRef, 
     onSubmit: (e) => {
-      console.log('Form submit intercepted');
+      devLog.log('Form submit intercepted');
       handleSubmit(e);
     } 
   };

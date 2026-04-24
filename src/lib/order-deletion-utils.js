@@ -1,3 +1,4 @@
+import devLog from '@/lib/devLogger';
 /**
  * نظام موحد لمنطق حذف الطلبات
  */
@@ -24,12 +25,12 @@ const DELETABLE_DELIVERY_STATUSES = [
  */
 export const canDeleteOrder = (order) => {
   if (!order) {
-    console.warn('🚫 لا يمكن فحص طلب فارغ');
+    devLog.warn('🚫 لا يمكن فحص طلب فارغ');
     return false;
   }
 
   // تسجيل لمراقبة المنطق
-  console.log('🔍 فحص إمكانية حذف الطلب:', {
+  devLog.log('🔍 فحص إمكانية حذف الطلب:', {
     orderId: order.id,
     orderNumber: order.order_number,
     status: order.status,
@@ -42,7 +43,7 @@ export const canDeleteOrder = (order) => {
   if (isLocalOrder) {
     // الطلبات المحلية: فقط إذا كانت في انتظار
     const canDelete = order.status === 'pending';
-    console.log('📝 طلب محلي - يمكن الحذف:', canDelete);
+    devLog.log('📝 طلب محلي - يمكن الحذف:', canDelete);
     return canDelete;
   }
 
@@ -58,7 +59,7 @@ export const canDeleteOrder = (order) => {
   
   const canDelete = canDeleteByStatus || canDeleteByDelivery;
   
-  console.log('🚚 طلب خارجي - تفاصيل الحذف:', {
+  devLog.log('🚚 طلب خارجي - تفاصيل الحذف:', {
     orderStatus,
     deliveryStatus,
     canDeleteByStatus,

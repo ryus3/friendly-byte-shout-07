@@ -15,6 +15,7 @@ import { Receipt, Calendar, User, DollarSign, FileText, CheckCircle, TrendingUp,
 import { parseISO, startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, subDays, subWeeks, subMonths, subYears, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { formatInTimeZone } from 'date-fns-tz/formatInTimeZone';
+import devLog from '@/lib/devLogger';
 
 // تعيين التوقيت المحلي العراقي
 const IRAQ_TIMEZONE = 'Asia/Baghdad';
@@ -45,12 +46,12 @@ const EmployeeReceivedProfitsDialog = ({
   useEffect(() => {
     const fetchEmployeeInvoices = async () => {
       if (!user?.employee_code) {
-        console.log('🔍 EmployeeReceivedProfitsDialog: لا يوجد معرف موظف صغير');
+        devLog.log('🔍 EmployeeReceivedProfitsDialog: لا يوجد معرف موظف صغير');
         return;
       }
 
       try {
-        console.log('🔍 EmployeeReceivedProfitsDialog: جلب فواتير بالمعرف الصغير:', {
+        devLog.log('🔍 EmployeeReceivedProfitsDialog: جلب فواتير بالمعرف الصغير:', {
           employeeCode: user.employee_code,
           userName: user.full_name
         });
@@ -68,7 +69,7 @@ const EmployeeReceivedProfitsDialog = ({
           return;
         }
 
-        console.log('✅ EmployeeReceivedProfitsDialog: فواتير محملة بنجاح بالمعرف الصغير:', {
+        devLog.log('✅ EmployeeReceivedProfitsDialog: فواتير محملة بنجاح بالمعرف الصغير:', {
           employeeCode: user.employee_code,
           invoicesCount: invoices?.length || 0,
           invoices: invoices || [],

@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useCart } from '@/hooks/useCart.jsx';
 import { supabase } from '@/integrations/supabase/client';
+import devLog from '@/lib/devLogger';
 
 /**
  * مكون محسن لتحميل البيانات الحقيقية في وضع التعديل
@@ -16,7 +17,7 @@ export const UnifiedEditOrderLoader = ({ aiOrderData, isEditMode, onDataLoaded }
       return;
     }
 
-    console.log('🔧 UnifiedEditOrderLoader - بدء تحميل البيانات للتعديل الكامل');
+    devLog.log('🔧 UnifiedEditOrderLoader - بدء تحميل البيانات للتعديل الكامل');
 
     const loadFullEditableProducts = async () => {
       try {
@@ -26,7 +27,7 @@ export const UnifiedEditOrderLoader = ({ aiOrderData, isEditMode, onDataLoaded }
         // تحميل جميع المنتجات الحقيقية من قاعدة البيانات
         for (const item of aiOrderData.items) {
           if (item?.product_id && item?.variant_id) {
-            console.log('🔍 تحميل منتج حقيقي للتعديل:', item);
+            devLog.log('🔍 تحميل منتج حقيقي للتعديل:', item);
 
             try {
               // تحميل المنتج والمتغير الكامل من قاعدة البيانات
@@ -46,7 +47,7 @@ export const UnifiedEditOrderLoader = ({ aiOrderData, isEditMode, onDataLoaded }
                 .single();
 
               if (productError) {
-                console.warn('⚠️ خطأ في تحميل المنتج من قاعدة البيانات:', productError);
+                devLog.warn('⚠️ خطأ في تحميل المنتج من قاعدة البيانات:', productError);
                 throw new Error(productError.message);
               }
 
@@ -54,7 +55,7 @@ export const UnifiedEditOrderLoader = ({ aiOrderData, isEditMode, onDataLoaded }
                 const fullProduct = productData;
                 const fullVariant = productData.product_variants[0];
                 
-                console.log('✅ تم تحميل المنتج الكامل للتعديل:', {
+                devLog.log('✅ تم تحميل المنتج الكامل للتعديل:', {
                   product: fullProduct.name,
                   variant: fullVariant.id,
                   color: fullVariant.colors?.name,
@@ -68,17 +69,17 @@ export const UnifiedEditOrderLoader = ({ aiOrderData, isEditMode, onDataLoaded }
                 throw new Error('المنتج غير موجود في قاعدة البيانات');
               }
             } catch (error) {
-              console.log('⚠️ فشل تحميل المنتج من قاعدة البيانات، محاولة البحث في البيانات المحملة...');
+              devLog.log('⚠️ فشل تحميل المنتج من قاعدة البيانات، محاولة البحث في البيانات المحملة...');
               
               // البحث في البيانات المحملة كبديل
               const cachedProduct = allData?.products?.find(p => p.id === item.product_id);
               const cachedVariant = allData?.product_variants?.find(v => v.id === item.variant_id);
 
               if (cachedProduct && cachedVariant) {
-                console.log('✅ تم العثور على المنتج في البيانات المحملة');
+                devLog.log('✅ تم العثور على المنتج في البيانات المحملة');
                 addToCart(cachedProduct, cachedVariant, item.quantity || 1, false, true);
               } else {
-                console.log('⚠️ إنشاء منتج مؤقت قابل للتعديل الكامل');
+                devLog.log('⚠️ إنشاء منتج مؤقت قابل للتعديل الكامل');
                 
                 // إنشاء كائنات مؤقتة قابلة للتعديل الكامل
                 const editableProduct = {
@@ -121,7 +122,7 @@ export const UnifiedEditOrderLoader = ({ aiOrderData, isEditMode, onDataLoaded }
 
                 addToCart(editableProduct, editableVariant, item.quantity || 1, false, true);
                 
-                console.log('✅ تم إنشاء منتج مؤقت قابل للتعديل الكامل');
+                devLog.log('✅ تم إنشاء منتج مؤقت قابل للتعديل الكامل');
               }
             }
           }
@@ -132,7 +133,7 @@ export const UnifiedEditOrderLoader = ({ aiOrderData, isEditMode, onDataLoaded }
           onDataLoaded();
         }
         
-        console.log('✅ UnifiedEditOrderLoader - تم تحميل جميع المنتجات للتعديل الكامل');
+        devLog.log('✅ UnifiedEditOrderLoader - تم تحميل جميع المنتجات للتعديل الكامل');
       } catch (error) {
         console.error('❌ خطأ في تحميل المنتجات للتعديل:', error);
         

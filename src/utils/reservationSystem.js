@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/customSupabaseClient';
+import devLog from '@/lib/devLogger';
 
 /**
  * نظام إدارة حجز المخزون المتقدم
@@ -47,7 +48,7 @@ export const shouldReleaseStock = (status, deliveryStatus, deliveryPartner, item
         return releasesStock(deliveryStatus);
       }
     } catch (error) {
-      console.warn('تعذر تحميل نظام الوسيط، سيتم استخدام النظام الافتراضي');
+      devLog.warn('تعذر تحميل نظام الوسيط، سيتم استخدام النظام الافتراضي');
     }
     
     // النظام الافتراضي للوسيط - فقط الحالات 4 و 17 تحرر المخزون
@@ -131,7 +132,7 @@ export const updateOrderReservationStatus = async (orderId, status, deliveryStat
     const shouldRelease = shouldReleaseStock(status, deliveryStatus, deliveryPartner);
     const shouldKeep = shouldKeepReservation(status, deliveryStatus, deliveryPartner);
 
-    console.log(`🔄 تحديث حجز الطلب ${order.order_number}:`, {
+    devLog.log(`🔄 تحديث حجز الطلب ${order.order_number}:`, {
       status,
       deliveryStatus,
       deliveryPartner,
@@ -153,7 +154,7 @@ export const updateOrderReservationStatus = async (orderId, status, deliveryStat
         if (releaseError) {
           console.error(`خطأ في تحرير المخزون للعنصر ${item.product_id}:`, releaseError);
         } else {
-          console.log(`✅ تم تحرير ${item.quantity} قطعة من المنتج ${item.product_id}`);
+          devLog.log(`✅ تم تحرير ${item.quantity} قطعة من المنتج ${item.product_id}`);
         }
       }
 
@@ -172,7 +173,7 @@ export const updateOrderReservationStatus = async (orderId, status, deliveryStat
         });
 
         if (reserveError) {
-          console.warn(`تحذير: تعذر إعادة حجز المخزون للعنصر ${item.product_id}:`, reserveError);
+          devLog.warn(`تحذير: تعذر إعادة حجز المخزون للعنصر ${item.product_id}:`, reserveError);
         }
       }
 
@@ -193,7 +194,7 @@ export const updateOrderReservationStatus = async (orderId, status, deliveryStat
  */
 export const auditAndFixReservations = async () => {
   try {
-    console.log('🔍 بدء فحص شامل لحالات حجز المخزون...');
+    devLog.log('🔍 بدء فحص شامل لحالات حجز المخزون...');
 
     // جلب جميع الطلبات النشطة
     const { data: orders, error: ordersError } = await supabase
@@ -257,7 +258,7 @@ export const auditAndFixReservations = async () => {
       message: `تم فحص ${orders.length} طلب. تم تحرير ${released} طلب وحجز ${reserved} طلب. أخطاء: ${errors}`
     };
 
-    console.log('✅ انتهى الفحص الشامل:', report);
+    devLog.log('✅ انتهى الفحص الشامل:', report);
     return report;
 
   } catch (error) {

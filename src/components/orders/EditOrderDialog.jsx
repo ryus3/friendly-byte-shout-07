@@ -5,6 +5,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useCitiesCache } from '@/hooks/useCitiesCache'; // ✅ استخدام الـ Cache
 import { UnifiedEditOrderLoader } from '@/components/quick-order/UnifiedEditOrderLoader';
+import devLog from '@/lib/devLogger';
 
 const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
   const { isLoggedIn, token } = useAlWaseet();
@@ -144,7 +145,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
         
         // ✅ تحميل المناطق مسبقاً قبل تعيين editData
         if (data?.city_id && cachedRegions.length > 0) {
-          console.log(`🔍 فلترة المناطق للمدينة ${data.city_id} من ${cachedRegions.length} منطقة...`);
+          devLog.log(`🔍 فلترة المناطق للمدينة ${data.city_id} من ${cachedRegions.length} منطقة...`);
           
           // فلترة المناطق للمدينة المختارة باستخدام city_id فقط
           const cityRegions = cachedRegions.filter(r => {
@@ -153,7 +154,7 @@ const EditOrderDialog = ({ open, onOpenChange, order, onOrderUpdated }) => {
             return rCityId === dataCity;
           });
           
-          console.log(`✅ تم فلترة ${cityRegions.length} منطقة للمدينة ${data.city_id}`);
+          devLog.log(`✅ تم فلترة ${cityRegions.length} منطقة للمدينة ${data.city_id}`);
           
           // تمرير المناطق المحملة مع البيانات
           data.preloadedRegions = cityRegions;

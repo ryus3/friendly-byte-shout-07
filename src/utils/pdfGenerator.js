@@ -1,5 +1,17 @@
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+// 🚀 تحميل ديناميكي: jspdf و html2canvas يُحمَّلان فقط عند الحاجة (تقليل bundle الأولي)
+let _jsPDF = null;
+let _html2canvas = null;
+const loadPdfDeps = async () => {
+  if (!_jsPDF) {
+    const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+      import('jspdf'),
+      import('html2canvas'),
+    ]);
+    _jsPDF = jsPDF;
+    _html2canvas = html2canvas;
+  }
+  return { jsPDF: _jsPDF, html2canvas: _html2canvas };
+};
 
 // دالة تنسيق العملة
 const formatCurrency = (amount) => {
@@ -13,6 +25,7 @@ const formatCurrency = (amount) => {
 
 export const generateInventoryReportPDF = async (inventoryData) => {
   try {
+    const { jsPDF, html2canvas } = await loadPdfDeps();
     // إنشاء عنصر مؤقت في DOM
     const reportElement = document.createElement('div');
     reportElement.style.position = 'absolute';

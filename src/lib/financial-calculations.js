@@ -11,6 +11,7 @@ import {
   TIME_PERIODS,
   DEFAULT_FINANCIAL_VALUES
 } from './financial-constants';
+import devLog from '@/lib/devLogger';
 
 /**
  * حساب نطاق التاريخ بناءً على الفترة المحددة
@@ -223,7 +224,7 @@ export const calculateEmployeeDuesPaid = (expenses, dateRange) => {
  */
 export const calculateFinancialMetrics = (orders, expenses, timePeriod = TIME_PERIODS.ALL, cashMovements = []) => {
   try {
-    console.log('🔧 بدء حساب المؤشرات المالية:', { 
+    devLog.log('🔧 بدء حساب المؤشرات المالية:', { 
       ordersCount: orders?.length, 
       expensesCount: expenses?.length, 
       timePeriod 
@@ -260,7 +261,7 @@ export const calculateFinancialMetrics = (orders, expenses, timePeriod = TIME_PE
       timePeriod
     };
     
-    console.log('📊 نتائج الحسابات المالية:', result);
+    devLog.log('📊 نتائج الحسابات المالية:', result);
     
     return result;
     

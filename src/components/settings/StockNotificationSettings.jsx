@@ -18,6 +18,7 @@ import {
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useFilteredStockNotifications } from '@/hooks/useFilteredStockNotifications';
+import devLog from '@/lib/devLogger';
 
 const StockNotificationSettings = ({ open, onOpenChange, readonly = false, showLimitedView = false }) => {
   const { isAdmin } = useAuth();
@@ -95,7 +96,7 @@ const StockNotificationSettings = ({ open, onOpenChange, readonly = false, showL
         }
       }
       
-      console.log('Settings saved successfully:', settingsToSave);
+      devLog.log('Settings saved successfully:', settingsToSave);
     } catch (error) {
       console.error('Error saving settings to database:', error);
       throw error;

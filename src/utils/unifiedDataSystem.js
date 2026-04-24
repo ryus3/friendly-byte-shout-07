@@ -5,6 +5,7 @@
 
 import { useInventory } from '@/contexts/InventoryContext';
 import { createSimpleFilter, getSimpleEmployeeId } from './simpleIdSystem';
+import devLog from '@/lib/devLogger';
 
 /**
  * Hook موحد للحصول على البيانات (يمنع الطلبات المنفصلة)
@@ -19,7 +20,7 @@ export const useUnifiedData = () => {
     window.fetch = function(...args) {
       const url = args[0];
       if (typeof url === 'string' && url.includes('supabase.co')) {
-        console.warn('⚠️ استخدام supabase مباشر! يجب استخدام useUnifiedData() بدلاً من ذلك');
+        devLog.warn('⚠️ استخدام supabase مباشر! يجب استخدام useUnifiedData() بدلاً من ذلك');
         console.trace(); // طباعة stack trace لمعرفة المصدر
       }
       return originalFetch.apply(this, args);
@@ -125,9 +126,9 @@ export const generateDataUsageReport = () => {
   }
   
   console.group('📊 تقرير استخدام البيانات');
-  console.log('التاريخ:', report.timestamp);
-  console.log('المخالفات:', report.violations.length);
-  console.log('التوصيات:', report.recommendations);
+  devLog.log('التاريخ:', report.timestamp);
+  devLog.log('المخالفات:', report.violations.length);
+  devLog.log('التوصيات:', report.recommendations);
   console.groupEnd();
   
   return report;

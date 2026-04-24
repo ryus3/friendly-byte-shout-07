@@ -16,6 +16,7 @@ import { Loader2, AlertTriangle, PackagePlus, Trash2 } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
+import devLog from '@/lib/devLogger';
 
 const CreateOrderPage = () => {
   const { createOrder } = useInventory();
@@ -46,7 +47,7 @@ const CreateOrderPage = () => {
       if (isCacheLoaded && cachedCities.length > 0) {
         const mapped = cachedCities.map(c => ({ id: c.alwaseet_id || c.id, name: c.name }));
         setCities(mapped);
-        console.log(`✅ CreateOrderPage: تم جلب ${mapped.length} مدينة من الكاش المحلي`);
+        devLog.log(`✅ CreateOrderPage: تم جلب ${mapped.length} مدينة من الكاش المحلي`);
       }
     }
   }, [isWaseetLoggedIn, activePartner, total, isCacheLoaded, cachedCities]);
@@ -62,7 +63,7 @@ const CreateOrderPage = () => {
       if (cachedRegions && cachedRegions.length > 0) {
         const mapped = cachedRegions.map(r => ({ id: r.alwaseet_id || r.id, name: r.name }));
         setRegions(mapped);
-        console.log(`✅ CreateOrderPage: تم فلترة ${mapped.length} منطقة من الكاش`);
+        devLog.log(`✅ CreateOrderPage: تم فلترة ${mapped.length} منطقة من الكاش`);
       }
       setLoadingRegions(false);
     }
@@ -99,7 +100,7 @@ const CreateOrderPage = () => {
     }
     setLoading(true);
     try {
-      console.log('🎯 بدء إنشاء طلب بالنهج الجديد (remote-first)...');
+      devLog.log('🎯 بدء إنشاء طلب بالنهج الجديد (remote-first)...');
       
       // أولاً: إنشاء الطلب في الوسيط
       const validCart = cart.filter(item => item != null);
@@ -110,14 +111,14 @@ const CreateOrderPage = () => {
         price: total + 50000, // إضافة رسوم التوصيل المقدرة
       };
       
-      console.log('🚀 إنشاء طلب في الوسيط أولاً:', alWaseetPayload);
+      devLog.log('🚀 إنشاء طلب في الوسيط أولاً:', alWaseetPayload);
       const alWaseetResponse = await createAlWaseetOrder(alWaseetPayload, waseetToken);
       
       if (!alWaseetResponse?.id) {
         throw new Error('فشل إنشاء الطلب في الوسيط - لم يتم إرجاع معرف صحيح');
       }
       
-      console.log('✅ تم إنشاء طلب الوسيط بنجاح:', alWaseetResponse);
+      devLog.log('✅ تم إنشاء طلب الوسيط بنجاح:', alWaseetResponse);
       
       // ثانياً: إنشاء الطلب المحلي مع معرفات الوسيط
       const customerInfo = {
@@ -144,11 +145,11 @@ const CreateOrderPage = () => {
       // استخدام tracking_number من الوسيط كـ tracking_number محلي
       const trackingNumber = alWaseetResponse.qr_id || alWaseetResponse.tracking_id || String(alWaseetResponse.id);
 
-      console.log('🏠 إنشاء طلب محلي مع معرفات الوسيط:', { customerInfo, deliveryPartnerData, trackingNumber });
+      devLog.log('🏠 إنشاء طلب محلي مع معرفات الوسيط:', { customerInfo, deliveryPartnerData, trackingNumber });
       const localResult = await createOrder(customerInfo, cart, trackingNumber, discount, 'pending', null, deliveryPartnerData);
 
       if (localResult.success) {
-        console.log('✅ تم إنشاء الطلب المحلي مع ربط كامل:', localResult);
+        devLog.log('✅ تم إنشاء الطلب المحلي مع ربط كامل:', localResult);
         
         toast({ 
           title: "نجاح الإنشاء الكامل", 
