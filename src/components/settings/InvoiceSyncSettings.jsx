@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Clock, RefreshCw, Settings, Bell, BellOff,
@@ -289,28 +289,31 @@ const InvoiceSyncSettings = () => {
 
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto overflow-x-auto flex-nowrap">
-            <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
-              <Activity className="w-4 h-4 ml-2" /> الملخص
-            </TabsTrigger>
-            <TabsTrigger value="invoices" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
-              <FileText className="w-4 h-4 ml-2" /> الفواتير
-            </TabsTrigger>
-            <TabsTrigger value="orders" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
-              <Package className="w-4 h-4 ml-2" /> الطلبات
-            </TabsTrigger>
-            <TabsTrigger value="tokens" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
-              <Key className="w-4 h-4 ml-2" /> التوكنات
-            </TabsTrigger>
-            <TabsTrigger value="diagnostics" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3 relative">
-              <Wrench className="w-4 h-4 ml-2" /> التشخيص
-              {totalDiscrepancies > 0 && (
-                <Badge variant="destructive" className="absolute -top-1 -left-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
-                  {totalDiscrepancies}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+          <ScrollArea className="w-full border-b" dir="rtl">
+            <TabsList className="inline-flex w-max min-w-full justify-start rounded-none bg-transparent p-0 h-auto">
+              <TabsTrigger value="overview" className="shrink-0 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
+                <Activity className="w-4 h-4 ml-2" /> الملخص
+              </TabsTrigger>
+              <TabsTrigger value="invoices" className="shrink-0 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
+                <FileText className="w-4 h-4 ml-2" /> الفواتير
+              </TabsTrigger>
+              <TabsTrigger value="orders" className="shrink-0 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
+                <Package className="w-4 h-4 ml-2" /> الطلبات
+              </TabsTrigger>
+              <TabsTrigger value="tokens" className="shrink-0 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
+                <Key className="w-4 h-4 ml-2" /> التوكنات
+              </TabsTrigger>
+              <TabsTrigger value="diagnostics" className="shrink-0 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3 relative">
+                <Wrench className="w-4 h-4 ml-2" /> التشخيص
+                {totalDiscrepancies > 0 && (
+                  <Badge variant="destructive" className="absolute -top-1 -left-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                    {totalDiscrepancies}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+            <ScrollBar orientation="horizontal" className="h-1.5" />
+          </ScrollArea>
 
           {/* ============ تبويب الملخص ============ */}
           <TabsContent value="overview" className="p-4 space-y-4">

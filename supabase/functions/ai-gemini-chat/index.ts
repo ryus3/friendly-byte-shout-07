@@ -234,13 +234,55 @@ async function callGeminiWithFallback(systemPrompt: string, userMessage: string,
   throw new Error('فشل في جميع المحاولات');
 }
 
-// إنشاء عميل Supabase بصلاحيات SERVICE ROLE مثل بوت التليغرام
+// إنشاء عميل Supabase بصلاحيات SERVICE ROLE (نفلتر يدوياً حسب الدور)
 const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-// Helper functions to fetch real data with advanced analytics
+/**
+ * 🔐 تحديد نطاق المستخدم (Scope) من قاعدة البيانات
+ * - admin/super_admin: كل البيانات
+ * - department_manager: بياناته + موظفيه (employee_supervisors)
+ * - باقي الموظفين: بياناته فقط
+ */
+async function resolveUserScope(authToken?: string): Promise<{ userId: string | null; isAdmin: boolean; isManager: boolean; allowedUserIds: string[] | null }> {
+  if (!authToken) return { userId: null, isAdmin: false, isManager: false, allowedUserIds: [] };
+  try {
+    const { data: { user: authUser } } = await supabase.auth.getUser(authToken);
+    const userId = authUser?.id || null;
+    if (!userId) return { userId: null, isAdmin: false, isManager: false, allowedUserIds: [] };
+
+    // قراءة الأدوار من user_roles + roles
+    const { data: rolesData } = await supabase
+      .from('user_roles')
+      .select('roles!inner(name)')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+    const roleNames: string[] = (rolesData || []).map((r: any) => r.roles?.name).filter(Boolean);
+
+    const isAdmin = roleNames.some(r => ['super_admin', 'admin'].includes(r));
+    const isManager = roleNames.some(r => ['department_manager', 'deputy_manager'].includes(r));
+
+    if (isAdmin) return { userId, isAdmin, isManager, allowedUserIds: null }; // null = كل البيانات
+
+    if (isManager) {
+      const { data: subs } = await supabase
+        .from('employee_supervisors')
+        .select('employee_id')
+        .eq('supervisor_id', userId);
+      const ids = new Set<string>([userId, ...((subs || []).map((s: any) => s.employee_id))]);
+      return { userId, isAdmin, isManager, allowedUserIds: Array.from(ids) };
+    }
+
+    return { userId, isAdmin, isManager, allowedUserIds: [userId] };
+  } catch (e) {
+    console.error('resolveUserScope error:', e);
+    return { userId: null, isAdmin: false, isManager: false, allowedUserIds: [] };
+  }
+}
+
 async function getStoreData(userInfo: any, authToken?: string) {
   try {
-    console.log('🔍 بدء جلب بيانات المتجر للمستخدم:', userInfo?.full_name || userInfo?.id);
+    const scope = await resolveUserScope(authToken);
+    console.log('🔍 جلب البيانات — Scope:', { isAdmin: scope.isAdmin, isManager: scope.isManager, allowedCount: scope.allowedUserIds?.length ?? 'ALL' });
     
     // Get real cities and regions from cache with smart search functions
     const { data: cities } = await supabase
@@ -321,81 +363,85 @@ async function getStoreData(userInfo: any, authToken?: string) {
       console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
     }
 
-    // Get recent orders with detailed profit info - FIXED with tracking data
-    const { data: recentOrders, error: ordersError } = await supabase
+    // 🔐 Helper: تطبيق فلتر الـ Scope على أي query
+    const applyScope = (q: any, column: string = 'created_by') => {
+      if (scope.allowedUserIds === null) return q; // admin
+      if (!scope.allowedUserIds.length) return q.eq(column, '00000000-0000-0000-0000-000000000000'); // لا شيء
+      return q.in(column, scope.allowedUserIds);
+    };
+    // للأرباح: نستخدم employee_id بدل created_by
+    const applyProfitScope = (q: any) => {
+      if (scope.allowedUserIds === null) return q;
+      if (!scope.allowedUserIds.length) return q.eq('employee_id', '00000000-0000-0000-0000-000000000000');
+      return q.in('employee_id', scope.allowedUserIds);
+    };
+
+    // Get recent orders with detailed profit info — مفلترة حسب الـ Scope
+    let ordersQ = supabase
       .from('orders')
       .select(`
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
         total_amount, final_amount, delivery_fee, status, created_at, created_by,
         tracking_number, delivery_status, delivery_partner,
-        order_items (
-          id, quantity, unit_price, total_price,
-          variant_sku
-        ),
-        profits (
-          profit_amount, employee_profit, status
-        )
+        order_items ( id, quantity, unit_price, total_price, variant_sku ),
+        profits ( profit_amount, employee_profit, status )
       `)
       .order('created_at', { ascending: false })
       .limit(20);
-    
-    if (ordersError) {
-      console.error('❌ خطأ في جلب الطلبات:', ordersError);
-    } else {
-      console.log('✅ تم جلب الطلبات بنجاح:', recentOrders?.length || 0);
-    }
+    ordersQ = applyScope(ordersQ);
+    const { data: recentOrders, error: ordersError } = await ordersQ;
 
-    // Get today's sales with more details
+    if (ordersError) console.error('❌ خطأ في جلب الطلبات:', ordersError);
+    else console.log('✅ تم جلب الطلبات (مفلترة):', recentOrders?.length || 0);
+
+    // Today's sales — مفلترة
     const today = new Date().toISOString().split('T')[0];
-    const { data: todaySales } = await supabase
-      .from('orders')
+    let todayQ = supabase.from('orders')
       .select('total_amount, final_amount, delivery_fee, created_at')
       .gte('created_at', today);
+    const { data: todaySales } = await applyScope(todayQ);
 
-    // Get ALL-TIME sales data (not just this month)
-    const { data: allTimeSales } = await supabase
-      .from('orders')
+    // ALL-TIME sales — مفلترة
+    let allQ = supabase.from('orders')
       .select('total_amount, final_amount, delivery_fee, created_at')
       .in('status', ['completed', 'delivered'])
       .order('created_at', { ascending: false })
       .limit(1000);
+    const { data: allTimeSales } = await applyScope(allQ);
 
-    // Get this month's sales
+    // This month's sales — مفلترة
     const thisMonth = new Date().toISOString().slice(0, 7) + '-01';
-    const { data: monthSales } = await supabase
-      .from('orders')
+    let monthQ = supabase.from('orders')
       .select('total_amount, final_amount, delivery_fee')
       .gte('created_at', thisMonth)
       .in('status', ['completed', 'delivered']);
+    const { data: monthSales } = await applyScope(monthQ);
 
-    // Get expenses and profits for comprehensive financial data (ALL TIME)
-    const { data: allExpenses } = await supabase
-      .from('expenses')
-      .select('amount, expense_type, created_at')
-      .order('created_at', { ascending: false })
-      .limit(500);
+    // Expenses — للأدمن فقط (تمثل مصاريف النظام)
+    const { data: allExpenses } = scope.isAdmin
+      ? await supabase.from('expenses').select('amount, expense_type, created_at')
+          .order('created_at', { ascending: false }).limit(500)
+      : { data: [] as any[] };
+    const { data: monthExpenses } = scope.isAdmin
+      ? await supabase.from('expenses').select('amount, expense_type, created_at').gte('created_at', thisMonth)
+      : { data: [] as any[] };
 
-    const { data: monthExpenses } = await supabase
-      .from('expenses')
-      .select('amount, expense_type, created_at')
-      .gte('created_at', thisMonth);
-
-    // Get profit analytics (ALL TIME)
-    const { data: allProfits } = await supabase
-      .from('profits')
-      .select('profit_amount, employee_profit, status, created_at')
+    // Profits — مفلترة حسب employee_id للموظفين
+    let allProfitsQ = supabase.from('profits')
+      .select('profit_amount, employee_profit, status, created_at, employee_id')
       .order('created_at', { ascending: false })
       .limit(1000);
+    const { data: allProfits } = await applyProfitScope(allProfitsQ);
 
-    const { data: monthProfits } = await supabase
-      .from('profits')
-      .select('profit_amount, employee_profit, status, created_at')
+    let monthProfitsQ = supabase.from('profits')
+      .select('profit_amount, employee_profit, status, created_at, employee_id')
       .gte('created_at', thisMonth);
+    const { data: monthProfits } = await applyProfitScope(monthProfitsQ);
 
-    const { data: todayProfits } = await supabase
-      .from('profits')
-      .select('profit_amount, employee_profit, status')
+    let todayProfitsQ = supabase.from('profits')
+      .select('profit_amount, employee_profit, status, employee_id')
       .gte('created_at', today);
+    const { data: todayProfits } = await applyProfitScope(todayProfitsQ);
 
     // Calculate advanced analytics
     const todayTotal = todaySales?.reduce((sum, order) => 
@@ -536,7 +582,15 @@ serve(async (req) => {
     console.log('🔐 طلب من المستخدم:', userInfo?.full_name || userInfo?.id);
     console.log('🎫 Token متوفر:', !!authToken);
 
-    // Get real store data with user authentication
+    // 🔐 احتساب الـ Scope مرة واحدة لاستخدامه في النص التعريفي للنموذج
+    const userScope = await resolveUserScope(authToken);
+    const scopeLabel = userScope.isAdmin
+      ? 'مدير عام (يرى كل البيانات)'
+      : userScope.isManager
+        ? `مدير قسم (يرى بياناته وبيانات ${(userScope.allowedUserIds?.length ?? 1) - 1} موظف تابع)`
+        : 'موظف (يرى بياناته فقط)';
+
+    // Get real store data with user authentication (مفلترة حسب الدور)
     const storeData = await getStoreData(userInfo, authToken);
 
     // تحليلات متقدمة للبيانات
@@ -594,6 +648,9 @@ serve(async (req) => {
 const systemPrompt = `🧠 أنت مساعد RYUS الذكي الخارق - الآن لديك وصول كامل لقاعدة البيانات الحقيقية ونظام مثالي لإنشاء الطلبات
 
 **شخصيتك:** مساعد متجر RYUS الذكي الخارق. تعرف كل شيء في النظام وتستطيع: إنشاء طلبات حقيقية، فحص المخزون، عرض الأرباح الشاملة، التعرف على جميع المدن والمناطق.
+
+**🔐 نطاق صلاحيات هذا المستخدم:** ${scopeLabel}
+- إذا سأل المستخدم عن بيانات خارج نطاقه (طلبات/أرباح موظفين آخرين)، اعتذر بلطف ووضّح أنه يرى بياناته فقط حسب صلاحياته.
 
 **البيانات المالية الحقيقية - الوصول الكامل:**
 📊 مبيعات اليوم: ${storeData.analytics?.todayStats?.total?.toLocaleString() || 0} د.ع (${storeData.analytics?.todayStats?.count || 0} طلب)
