@@ -352,17 +352,17 @@ const SettingsPage = () => {
 
             {/* تم إزالة "إدارة التوصيل المتقدمة" — تم دمج كل ميزاتها داخل "جدولة مزامنة الفواتير" (لوحة المزامنة الموحّدة) أدناه */}
 
-            {/* جدولة مزامنة الفواتير - للمدراء فقط */}
+            {/* مركز المزامنة الموحّد - للمدراء فقط */}
             {isAdmin && (
               <ModernCard
-                icon={FileText}
-                title="جدولة مزامنة الفواتير"
-                description="تحكم بأوقات ربط الفواتير بالطلبات تلقائياً (مرة أو مرتين يومياً)"
+                icon={Activity}
+                title="مركز المزامنة الموحّد"
+                description="تحكم شامل بمزامنة الفواتير والطلبات والتوكنات وتشخيص النظام"
                 iconColor="from-teal-500 to-cyan-600"
                 onClick={() => setIsInvoiceSyncOpen(true)}
                 badge={
                   <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
-                    تلقائي
+                    شامل
                   </Badge>
                 }
               />
