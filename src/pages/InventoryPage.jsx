@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, useRef, lazy, Suspense } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useInventory } from '@/contexts/SuperProvider';
 import { useFilteredProducts } from '@/hooks/useFilteredProducts';
