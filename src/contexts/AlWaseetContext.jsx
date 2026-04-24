@@ -2067,21 +2067,27 @@ export const AlWaseetProvider = ({ children }) => {
               throw new Error('كلمة المرور غير متوفرة للتجديد التلقائي');
             }
           } catch (error) {
-            // فشل التجديد التلقائي - تسجيل خروج
-            console.error('❌ فشل التجديد التلقائي:', error);
-            devLog.log('⚠️ فشل التجديد التلقائي. تسجيل خروج...');
+            // فشل التجديد التلقائي - تسجيل خروج صامت (بدون UI noise)
+            // ملاحظة: MODON يتطلب تسجيل دخول يدوي عبر proxy، لذا الفشل في الخلفية متوقع
+            // التنبيه يظهر فقط عند الاستخدام الفعلي من قبل المستخدم
+            console.error('❌ فشل التجديد التلقائي (صامت):', error);
+            devLog.log(`⚠️ فشل التجديد التلقائي لـ ${activePartner}. تسجيل خروج صامت...`);
             
             setToken(null);
             setWaseetUser(null);
             setIsLoggedIn(false);
             
-            const partnerDisplayName = deliveryPartners[activePartner]?.name || activePartner;
-            toast({
-              title: "⚠️ فشل التجديد التلقائي",
-              description: `يرجى تسجيل الدخول يدوياً إلى ${partnerDisplayName}`,
-              variant: "destructive",
-              duration: 8000
-            });
+            // فقط لـ AlWaseet (الذي يدعم التجديد التلقائي الكامل) نظهر تنبيه
+            // MODON يحتاج تسجيل يدوي - الفشل في الخلفية لا يستحق إزعاج المستخدم
+            if (activePartner === 'alwaseet') {
+              const partnerDisplayName = deliveryPartners[activePartner]?.name || activePartner;
+              toast({
+                title: "⚠️ فشل التجديد التلقائي",
+                description: `يرجى تسجيل الدخول يدوياً إلى ${partnerDisplayName}`,
+                variant: "destructive",
+                duration: 8000
+              });
+            }
           }
         }
       } catch (error) {
