@@ -445,10 +445,10 @@ const SuperMessageBubble = ({ message, index, onSelectRegion, disabled }) => {
       )}>
         <div className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</div>
 
-        {/* ✅ قائمة المناطق القابلة للنقر */}
-        {clarification?.suggestions?.length > 0 && (
+        {/* ✅ قائمة المناطق القابلة للنقر — مرتبة من الأعلى تطابقاً */}
+        {sortedSuggestions.length > 0 && (
           <div className="mt-3 space-y-2">
-            {clarification.suggestions.map((sug, i) => {
+            {visibleSuggestions.map((sug, i) => {
               const isPicked = clarification.resolvedName === sug.name;
               return (
                 <Button
@@ -466,6 +466,21 @@ const SuperMessageBubble = ({ message, index, onSelectRegion, disabled }) => {
                 </Button>
               );
             })}
+
+            {!hasResolved && remainingCount > 0 && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs text-muted-foreground hover:text-foreground"
+                onClick={() => setShowAllRegions((v) => !v)}
+              >
+                {showAllRegions
+                  ? '🔼 طيّ القائمة'
+                  : `📂 عرض المزيد (${remainingCount} منطقة إضافية)`}
+              </Button>
+            )}
+
             {hasResolved && (
               <div className="text-xs text-muted-foreground text-center pt-1">
                 ✅ تم اختيار: {clarification.resolvedName}
