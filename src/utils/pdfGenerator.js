@@ -25,6 +25,7 @@ const formatCurrency = (amount) => {
 
 export const generateInventoryReportPDF = async (inventoryData) => {
   try {
+    const { jsPDF, html2canvas } = await loadPdfDeps();
     // إنشاء عنصر مؤقت في DOM
     const reportElement = document.createElement('div');
     reportElement.style.position = 'absolute';
