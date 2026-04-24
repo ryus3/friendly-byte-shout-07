@@ -95,11 +95,15 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partn
 
     const data = await response.json();
     const ok = data?.status === true || data?.errNum === 'S000';
-    
-    if (ok && Array.isArray(data?.data)) return data.data;
-    if (ok && Array.isArray(data?.orders)) return data.orders;
+    if (!ok) return [];
+
+    // ✅ AlWaseet الواقع الفعلي: data.data.orders (مصفوفة داخل كائن)
+    if (Array.isArray(data?.data?.orders)) return data.data.orders;
+    // ✅ MODON / صيغ بديلة
+    if (Array.isArray(data?.orders)) return data.orders;
+    if (Array.isArray(data?.data)) return data.data;
     if (Array.isArray(data)) return data;
-    
+
     return [];
   } catch (error) {
     console.error(`Error fetching orders for invoice ${invoiceId} from ${partner}:`, error);
@@ -226,6 +230,7 @@ serve(async (req) => {
               .maybeSingle();
 
             // ✅ إذا موجودة ومستلمة في DB ولم نطلب force = تخطي
+            // (الفواتير المستلمة لا تحتاج إعادة جلب طلباتها — تعمل عبر receipt_received)
             if (existingInvoice?.received === true && !force_refresh) {
               continue;
             }
@@ -457,9 +462,19 @@ serve(async (req) => {
             statusChangedCount++;
           }
 
-          // Skip if no changes at all
+          // Skip if no changes at all — لكن لا نقفز إذا الفاتورة pending وتحتاج طلباتها بعد (dio_count = 0)
+          // الفواتير المستلمة لا نعيد جلب طلباتها (تعمل عبر receipt_received) لتفادي rate-limit
           if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
-            continue;
+            if (sync_orders && !isReceived) {
+              const { count: dioCount } = await supabase
+                .from('delivery_invoice_orders')
+                .select('id', { count: 'exact', head: true })
+                .eq('invoice_id', existing.id);
+              if ((dioCount ?? 0) > 0) continue;
+              // فاتورة pending بدون طلبات → نتابع لجلبها وربطها
+            } else {
+              continue;
+            }
           }
 
           const { data: upsertedInvoice, error: upsertError } = await supabase
