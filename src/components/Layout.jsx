@@ -14,7 +14,7 @@ import { useTheme } from '@/contexts/ThemeContext.jsx';
 import NotificationsPanel from '@/components/NotificationsPanel.jsx';
 import BottomNav from '@/components/BottomNav.jsx';
 import { useAiChat } from '@/contexts/AiChatContext.jsx';
-import SuperAiChatDialog from '@/components/ai/SuperAiChatDialog';
+// SuperAiChatDialog مُسجَّل عالمياً في App.jsx
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog.jsx';
 import { useMediaQuery } from '@/hooks/useMediaQuery.js';
 import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
@@ -378,7 +378,7 @@ const Layout = ({ children }) => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <SuperAiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
+      {/* SuperAiChatDialog يُعرض من App.jsx — لا داعي لتكراره هنا */}
       <CartDialog 
         open={dialogs.cart} 
         onOpenChange={(open) => setDialogs(prev => ({ ...prev, cart: open }))}
