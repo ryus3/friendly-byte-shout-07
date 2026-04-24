@@ -850,11 +850,15 @@ const InventoryPage = () => {
         />
       )}
 
-      <BarcodeScannerDialog
-        open={isBarcodeScannerOpen}
-        onOpenChange={setIsBarcodeScannerOpen}
-        onScanSuccess={handleBarcodeScan}
-      />
+      {isBarcodeScannerOpen && (
+        <Suspense fallback={null}>
+          <BarcodeScannerDialog
+            open={isBarcodeScannerOpen}
+            onOpenChange={setIsBarcodeScannerOpen}
+            onScanSuccess={handleBarcodeScan}
+          />
+        </Suspense>
+      )}
       
       <ReservedStockDialog 
         open={isReservedStockDialogOpen} 
