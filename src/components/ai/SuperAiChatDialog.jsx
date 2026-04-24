@@ -336,7 +336,13 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
           <div className="space-y-6">
             <AnimatePresence>
               {messages.map((message, index) => (
-                <SuperMessageBubble key={index} message={message} />
+                <SuperMessageBubble
+                  key={index}
+                  message={message}
+                  index={index}
+                  onSelectRegion={handleRegionSelect}
+                  disabled={isLoading}
+                />
               ))}
                {isLoading && (
                  <SuperMessageBubble message={{
