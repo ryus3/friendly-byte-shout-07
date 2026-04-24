@@ -60,28 +60,17 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
 
   const loadUsageStats = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.access_token) {
-        const response = await fetch('https://tkheostkubborwkwzugl.functions.supabase.co/functions/v1/ai-gemini-chat', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGVvc3RrdWJib3J3a3d6dWdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNTE4NTEsImV4cCI6MjA2NzkyNzg1MX0.ar867zsTy9JCTaLs9_Hjf5YhKJ9s0rQfUNq7dKpzYfA'
-          },
-          body: JSON.stringify({
-            message: 'get_usage_stats',
-            userInfo: {
-              full_name: user?.full_name || user?.fullName,
-              id: user?.id
-            }
-          })
-        });
-        
-        const data = await response.json();
-        if (data.success && data.usage_stats) {
-          setModelUsage(data.usage_stats);
+      const { data, error } = await supabase.functions.invoke('ai-gemini-chat', {
+        body: {
+          message: 'get_usage_stats',
+          userInfo: {
+            full_name: user?.full_name || user?.fullName,
+            id: user?.id
+          }
         }
+      });
+      if (!error && data?.success && data?.usage_stats) {
+        setModelUsage(data.usage_stats);
       }
     } catch (error) {
       // Silent failure
@@ -102,41 +91,28 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
     setIsLoading(true);
     
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      const userToken = session?.access_token;
-
-      if (!userToken) {
-        throw new Error('لم يتم العثور على رمز المصادقة. يرجى تسجيل الدخول مرة أخرى.');
-      }
-
       const userInfo = {
         full_name: user?.full_name || user?.fullName || user?.display_name,
         default_customer_name: user?.default_customer_name,
         isAdmin: user?.isAdmin || false,
         id: user?.id,
+        roles: user?.roles || [],
         permissions: user?.permissions || [],
         conversation_context: conversationContext
       };
 
-      const response = await fetch('https://tkheostkubborwkwzugl.functions.supabase.co/functions/v1/ai-gemini-chat', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userToken}`,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRraGVvc3RrdWJib3J3a3d6dWdsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIzNTE4NTEsImV4cCI6MjA2NzkyNzg1MX0.ar867zsTy9JCTaLs9_Hjf5YhKJ9s0rQfUNq7dKpzYfA'
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('ai-gemini-chat', {
+        body: {
           message: input,
           userInfo: userInfo,
-          enhance_mode: true, // تفعيل الوضع المحسن
-          ryus_custom_mode: true // تفعيل النموذج المخصص
-        })
+          enhance_mode: true,
+          ryus_custom_mode: true
+        }
       });
 
-      const data = await response.json();
-      
-      if (!data.success) {
-        throw new Error(data.error || 'خطأ في الاتصال بالمساعد الذكي الخارق');
+      if (error) throw new Error(error.message || 'فشل الاتصال بالمساعد');
+      if (!data?.success) {
+        throw new Error(data?.error || 'خطأ في الاتصال بالمساعد الذكي');
       }
 
       // تحديث إحصائيات الاستخدام
