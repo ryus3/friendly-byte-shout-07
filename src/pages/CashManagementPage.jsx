@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { 
+import devLog from '@/lib/devLogger';
   ArrowLeft, 
   Plus, 
   Wallet, 
@@ -106,7 +107,7 @@ const CashManagementPage = () => {
             });
           }
         } catch (rpcError) {
-          console.warn('⚠️ RPC timeout/error, using basic data');
+          devLog.warn('⚠️ RPC timeout/error, using basic data');
           if (isMounted) {
             setEnhancedFinancialData({
               capitalValue: mainBalance,

@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/use-toast.js';
 import { 
+import devLog from '@/lib/devLogger';
   Sun, Moon, Monitor, Palette, Type, Zap, Eye, 
   RotateCcw, Check, Settings, Contrast, Volume2, Sparkles,
   Paintbrush, Grid, Layout, Download, Upload
@@ -267,7 +268,7 @@ const AppearanceDialog = ({ open, onOpenChange }) => {
         duration: 1500
       });
     } catch (error) {
-      console.log('تعذر تشغيل الصوت:', error);
+      devLog.log('تعذر تشغيل الصوت:', error);
     }
   };
 

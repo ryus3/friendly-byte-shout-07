@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import {
+import devLog from '@/lib/devLogger';
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
@@ -45,12 +46,12 @@ const EmployeeReceivedProfitsDialog = ({
   useEffect(() => {
     const fetchEmployeeInvoices = async () => {
       if (!user?.employee_code) {
-        console.log('🔍 EmployeeReceivedProfitsDialog: لا يوجد معرف موظف صغير');
+        devLog.log('🔍 EmployeeReceivedProfitsDialog: لا يوجد معرف موظف صغير');
         return;
       }
 
       try {
-        console.log('🔍 EmployeeReceivedProfitsDialog: جلب فواتير بالمعرف الصغير:', {
+        devLog.log('🔍 EmployeeReceivedProfitsDialog: جلب فواتير بالمعرف الصغير:', {
           employeeCode: user.employee_code,
           userName: user.full_name
         });
@@ -68,7 +69,7 @@ const EmployeeReceivedProfitsDialog = ({
           return;
         }
 
-        console.log('✅ EmployeeReceivedProfitsDialog: فواتير محملة بنجاح بالمعرف الصغير:', {
+        devLog.log('✅ EmployeeReceivedProfitsDialog: فواتير محملة بنجاح بالمعرف الصغير:', {
           employeeCode: user.employee_code,
           invoicesCount: invoices?.length || 0,
           invoices: invoices || [],

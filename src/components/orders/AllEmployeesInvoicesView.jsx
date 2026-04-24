@@ -13,6 +13,7 @@ import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
+import devLog from '@/lib/devLogger';
 
 const AllEmployeesInvoicesView = () => {
   const { token, isLoggedIn } = useAlWaseet();
@@ -128,10 +129,10 @@ const AllEmployeesInvoicesView = () => {
         // بعد نجاح المزامنة، تحديث البيانات من قاعدة البيانات
         await fetchFromDatabase();
         setLastSync(new Date().toISOString());
-        console.log('✅ Background sync completed');
+        devLog.log('✅ Background sync completed');
       }
     } catch (error) {
-      console.warn('Background sync failed:', error);
+      devLog.warn('Background sync failed:', error);
     } finally {
       setSyncing(false);
     }

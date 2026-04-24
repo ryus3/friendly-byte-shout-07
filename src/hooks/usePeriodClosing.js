@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { startOfMonth, endOfMonth, startOfYear, endOfYear, startOfQuarter, endOfQuarter, format, subMonths } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import devLog from '@/lib/devLogger';
 
 /**
  * Hook لإدارة إغلاق الفترات المالية
@@ -89,7 +90,7 @@ export const usePeriodClosing = () => {
     const start = startDate.toISOString();
     const end = endDate.toISOString();
 
-    console.log(`[PeriodClosing] Calculating data from ${start} to ${end}`);
+    devLog.log(`[PeriodClosing] Calculating data from ${start} to ${end}`);
 
     // جلب الطلبات المستلمة فاتورتها في الفترة
     const { data: orders, error: ordersError } = await supabase
@@ -108,7 +109,7 @@ export const usePeriodClosing = () => {
       throw new Error(`فشل في جلب الطلبات: ${ordersError.message}`);
     }
 
-    console.log(`[PeriodClosing] Found ${orders?.length || 0} orders with receipt_received=true`);
+    devLog.log(`[PeriodClosing] Found ${orders?.length || 0} orders with receipt_received=true`);
 
     // جلب المصاريف في الفترة
     const { data: expenses, error: expensesError } = await supabase
@@ -137,7 +138,7 @@ export const usePeriodClosing = () => {
     );
     const returnedOrders = (orders || []).filter(o => o.delivery_status === '17');
 
-    console.log(`[PeriodClosing] Delivered: ${deliveredOrders.length}, Returned: ${returnedOrders.length}`);
+    devLog.log(`[PeriodClosing] Delivered: ${deliveredOrders.length}, Returned: ${returnedOrders.length}`);
 
     const totalRevenue = deliveredOrders.reduce((sum, o) => sum + (o.final_amount || 0), 0);
     const totalDeliveryFees = deliveredOrders.reduce((sum, o) => sum + (o.delivery_fee || 0), 0);

@@ -8,6 +8,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
+import devLog from '@/lib/devLogger';
 
 export const useUnifiedFinancialSystem = (timePeriod = 'all', options = {}) => {
   const { orders, accounting, loading: inventoryLoading } = useInventory();
@@ -31,7 +32,7 @@ export const useUnifiedFinancialSystem = (timePeriod = 'all', options = {}) => {
       setError(null);
 
       if (enableDebugLogs) {
-        console.log('🔧 النظام المالي الموحد: بدء الحسابات...');
+        devLog.log('🔧 النظام المالي الموحد: بدء الحسابات...');
       }
 
       // جلب الطلبات المكتملة والمستلمة مع تفاصيل العناصر
@@ -229,7 +230,7 @@ export const useUnifiedFinancialSystem = (timePeriod = 'all', options = {}) => {
       };
 
       if (enableDebugLogs) {
-        console.log('💰 النظام المالي الموحد - النتائج النهائية:', unifiedData);
+        devLog.log('💰 النظام المالي الموحد - النتائج النهائية:', unifiedData);
       }
 
       setFinancialData(unifiedData);

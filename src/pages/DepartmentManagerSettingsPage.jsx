@@ -22,6 +22,7 @@ import { Switch } from '@/components/ui/switch';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
+import devLog from '@/lib/devLogger';
   Users, 
   DollarSign, 
   Package, 
@@ -218,12 +219,12 @@ const DepartmentManagerSettingsPage = () => {
   // جلب قواعد الأرباح للموظفين تحت الإشراف + Realtime
   const fetchProfitRules = React.useCallback(async () => {
     if (!isDepartmentManager || supervisedEmployeeIds.length === 0) {
-      console.log('⚠️ [ProfitRules] تخطي الجلب:', { isDepartmentManager, supervisedCount: supervisedEmployeeIds.length });
+      devLog.log('⚠️ [ProfitRules] تخطي الجلب:', { isDepartmentManager, supervisedCount: supervisedEmployeeIds.length });
       setProfitRules([]);
       return;
     }
     
-    console.log('🔄 [ProfitRules] جلب القواعد لـ', supervisedEmployeeIds.length, 'موظف:', supervisedEmployeeIds);
+    devLog.log('🔄 [ProfitRules] جلب القواعد لـ', supervisedEmployeeIds.length, 'موظف:', supervisedEmployeeIds);
     
     // ✅ جلب منفصل (لا يوجد FK بين employee_profit_rules.employee_id و profiles.user_id)
     const { data, error } = await supabase
@@ -237,7 +238,7 @@ const DepartmentManagerSettingsPage = () => {
       return;
     }
     
-    console.log('✅ [ProfitRules] تم جلب', data?.length || 0, 'قاعدة');
+    devLog.log('✅ [ProfitRules] تم جلب', data?.length || 0, 'قاعدة');
     
     if (data) {
       // جلب الموظفين منفصلاً
@@ -286,7 +287,7 @@ const DepartmentManagerSettingsPage = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'employee_profit_rules' }, (payload) => {
         const row = payload.new || payload.old;
         if (row?.employee_id && supervisedEmployeeIds.includes(row.employee_id)) {
-          console.log('🔄 [ProfitRules Realtime] تغيير مكتشف، إعادة الجلب');
+          devLog.log('🔄 [ProfitRules Realtime] تغيير مكتشف، إعادة الجلب');
           fetchProfitRules();
         }
       })

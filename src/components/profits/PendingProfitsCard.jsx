@@ -10,6 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import ReceiveInvoiceButton from '@/components/orders/ReceiveInvoiceButton';
+import devLog from '@/lib/devLogger';
 
 /**
  * كارت الأرباح المعلقة للموظفين - مع إمكانية استلام الفاتورة
@@ -65,7 +66,7 @@ const PendingProfitsCard = () => {
       if (hasExistingProfit) return sum;
       
       const employeeProfit = calculateProfit ? calculateProfit(order) : 0;
-      console.log(`🔍 ربح متوقع للطلب ${order.order_number}:`, employeeProfit);
+      devLog.log(`🔍 ربح متوقع للطلب ${order.order_number}:`, employeeProfit);
       return sum + employeeProfit;
     }, 0);
     

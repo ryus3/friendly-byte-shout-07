@@ -1,4 +1,5 @@
 import {
+import devLog from '@/lib/devLogger';
 	Toast,
 	ToastClose,
 	ToastDescription,
@@ -75,10 +76,10 @@ export function Toaster() {
 			const result = useToast();
 			toasts = Array.isArray(result?.toasts) ? result.toasts : [];
 		} else {
-			console.warn('Toaster: React context not available, using empty toasts');
+			devLog.warn('Toaster: React context not available, using empty toasts');
 		}
 	} catch (error) {
-		console.warn('Toaster component failed to get toasts:', error.message);
+		devLog.warn('Toaster component failed to get toasts:', error.message);
 		toasts = [];
 	}
 

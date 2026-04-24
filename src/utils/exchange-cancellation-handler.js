@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/customSupabaseClient';
+import devLog from '@/lib/devLogger';
 
 /**
  * معالجة إلغاء طلبات الاستبدال - إلغاء حجز المنتجات
@@ -25,7 +26,7 @@ export const handleExchangeCancellation = async (orderId) => {
 
     // ✅ إلغاء حجز المنتجات الصادرة
     if (order.exchange_metadata?.outgoing_items) {
-      console.log('🔓 إلغاء حجز المنتجات الصادرة...');
+      devLog.log('🔓 إلغاء حجز المنتجات الصادرة...');
       
       for (const item of order.exchange_metadata.outgoing_items) {
         await supabase.rpc('release_variant_stock', {
@@ -34,7 +35,7 @@ export const handleExchangeCancellation = async (orderId) => {
           p_order_id: orderId
         });
         
-        console.log(`✅ تم إلغاء حجز ${item.quantity} من ${item.product_name}`);
+        devLog.log(`✅ تم إلغاء حجز ${item.quantity} من ${item.product_name}`);
       }
     }
 

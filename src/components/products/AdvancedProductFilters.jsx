@@ -10,6 +10,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useFiltersData } from '@/hooks/useFiltersData';
+import devLog from '@/lib/devLogger';
 
 const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => {
   const { isAdmin } = useAuth();
@@ -39,7 +40,7 @@ const AdvancedProductFilters = ({ open, onOpenChange, filters, setFilters }) => 
 
   // الحصول على البيانات المسموحة من النظام التوحيدي
   const allowedData = useMemo(() => {
-    console.log('🎯 AdvancedProductFilters - البيانات المتوفرة:', {
+    devLog.log('🎯 AdvancedProductFilters - البيانات المتوفرة:', {
       hasFullAccess,
       categoriesCount: categories?.length || 0,
       departmentsCount: departments?.length || 0,

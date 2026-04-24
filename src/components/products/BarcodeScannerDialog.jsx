@@ -7,6 +7,7 @@ import { Flashlight, FlashlightOff, X } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useCart } from '@/hooks/useCart';
 import { findProductByBarcode } from '@/lib/barcode-utils';
+import devLog from '@/lib/devLogger';
 
 const BarcodeScannerDialog = ({ 
   open, 
@@ -276,7 +277,7 @@ const BarcodeScannerDialog = ({
       setHasFlash(!!capabilities.torch);
       track.stop();
     } catch (e) {
-      console.log("Flash check failed:", e);
+      devLog.log("Flash check failed:", e);
       setHasFlash(false);
     }
   };

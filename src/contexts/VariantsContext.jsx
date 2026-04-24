@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { useSuper } from '@/contexts/SuperProvider';
+import devLog from '@/lib/devLogger';
 
 const VariantsContext = createContext();
 
@@ -109,15 +110,15 @@ export const VariantsProvider = ({ children }) => {
   };
 
   const deleteVariant = async (table, id) => {
-    console.log(`Attempting to delete from ${table} with id:`, id);
+    devLog.log(`Attempting to delete from ${table} with id:`, id);
     const { data, error } = await supabase.from(table).delete().eq('id', id).select();
-    console.log('Delete result:', { data, error });
+    devLog.log('Delete result:', { data, error });
     if (error) {
       console.error('Delete error:', error);
       toast({ title: "فشل الحذف", description: error.message, variant: 'destructive' });
       return { success: false };
     }
-    console.log('Delete successful, refreshing data...');
+    devLog.log('Delete successful, refreshing data...');
     await refreshData();
     toast({ title: "تم الحذف بنجاح", variant: 'default' });
     return { success: true };
@@ -126,7 +127,7 @@ export const VariantsProvider = ({ children }) => {
   const updateVariantOrder = async (table, orderedItems) => {
     // الألوان لا تحتوي على عمود display_order، لذا نتجاهل تحديث الترتيب لها
     if (table === 'colors') {
-      console.log('تم تجاهل ترتيب الألوان - لا يوجد عمود display_order');
+      devLog.log('تم تجاهل ترتيب الألوان - لا يوجد عمود display_order');
       return;
     }
     

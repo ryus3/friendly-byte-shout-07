@@ -5,6 +5,7 @@ import { useProfits } from '@/contexts/ProfitsContext';
 import StatCard from '@/components/dashboard/StatCard';
 import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 import { Users } from 'lucide-react';
+import devLog from '@/lib/devLogger';
 
 /**
  * مكون مشترك لكارت "أرباحي من الموظفين" مع النافذة
@@ -58,7 +59,7 @@ const ManagerProfitsCard = ({
       return 0;
     }
 
-    console.log('🔍 ManagerProfitsCard: حساب إجمالي أرباح النظام من الموظفين:', {
+    devLog.log('🔍 ManagerProfitsCard: حساب إجمالي أرباح النظام من الموظفين:', {
       totalProfits: finalProfits.length,
       totalOrders: finalOrders.length,
       timePeriod
@@ -109,7 +110,7 @@ const ManagerProfitsCard = ({
       return sum + Math.max(0, systemProfit);
     }, 0);
 
-    console.log('✅ ManagerProfitsCard: النتيجة النهائية (إجمالي أرباح النظام من الموظفين):', {
+    devLog.log('✅ ManagerProfitsCard: النتيجة النهائية (إجمالي أرباح النظام من الموظفين):', {
       relevantProfitsCount: relevantProfits.length,
       totalSystemProfits: totalSystemProfits,
       timePeriod

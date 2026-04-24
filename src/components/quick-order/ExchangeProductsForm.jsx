@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Package, PackageCheck, X, Plus } from 'lucide-react';
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
+import devLog from '@/lib/devLogger';
 
 export const ExchangeProductsForm = ({
   cart,
@@ -100,8 +101,8 @@ export const ExchangeProductsForm = ({
             open={outgoingDialogOpen}
             onOpenChange={setOutgoingDialogOpen}
             onConfirm={(selectedItems) => {
-              console.log('✅ المنتجات الصادرة من الـ dialog:', selectedItems);
-              console.log('✅ عدد المنتجات الصادرة:', selectedItems.length);
+              devLog.log('✅ المنتجات الصادرة من الـ dialog:', selectedItems);
+              devLog.log('✅ عدد المنتجات الصادرة:', selectedItems.length);
               onAddOutgoing(selectedItems);
               setOutgoingDialogOpen(false);
             }}
@@ -181,8 +182,8 @@ export const ExchangeProductsForm = ({
             open={incomingDialogOpen}
             onOpenChange={setIncomingDialogOpen}
             onConfirm={(selectedItems) => {
-              console.log('✅ المنتجات الواردة من الـ dialog:', selectedItems);
-              console.log('✅ عدد المنتجات الواردة:', selectedItems.length);
+              devLog.log('✅ المنتجات الواردة من الـ dialog:', selectedItems);
+              devLog.log('✅ عدد المنتجات الواردة:', selectedItems.length);
               onAddIncoming(selectedItems);
               setIncomingDialogOpen(false);
             }}

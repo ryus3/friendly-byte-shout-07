@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { motion } from 'framer-motion';
 import { 
+import devLog from '@/lib/devLogger';
   RefreshCw, 
   Search, 
   Package, 
@@ -29,7 +30,7 @@ import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 
 const AlWaseetInvoicesTab = () => {
   // 🔥 v2.0.0 - فواتير موحدة لجميع شركات التوصيل (الوسيط + مدن)
-  console.log('🔥 النسخة الجديدة v2: فواتير موحدة لجميع الشركات');
+  devLog.log('🔥 النسخة الجديدة v2: فواتير موحدة لجميع الشركات');
   
   const { isLoggedIn, activePartner, syncAllAvailableTokens } = useAlWaseet();
   const { 
@@ -105,18 +106,18 @@ const AlWaseetInvoicesTab = () => {
   /*
   useEffect(() => {
     if (isLoggedIn && (activePartner === 'alwaseet' || activePartner === 'modon')) {
-      console.log('🔄 تبويب الفواتير نشط - جلب الفواتير تلقائياً');
+      devLog.log('🔄 تبويب الفواتير نشط - جلب الفواتير تلقائياً');
       fetchInvoices(timeFilter, false); // جلب الفواتير بدون loading indicator
       
       // استدعاء syncAllAvailableTokens في الخلفية
       if (syncAllAvailableTokens) {
-        console.log('🔄 تفعيل مزامنة كل الحسابات تلقائياً');
+        devLog.log('🔄 تفعيل مزامنة كل الحسابات تلقائياً');
         syncAllAvailableTokens().then(result => {
           if (result.success) {
-            console.log(`✅ مزامنة ${result.tokensSynced} حساب، تحديث ${result.totalOrdersUpdated} طلب`);
+            devLog.log(`✅ مزامنة ${result.tokensSynced} حساب، تحديث ${result.totalOrdersUpdated} طلب`);
           }
         }).catch(err => {
-          console.warn('⚠️ فشل في مزامنة كل الحسابات:', err);
+          devLog.warn('⚠️ فشل في مزامنة كل الحسابات:', err);
         });
       }
     }

@@ -227,7 +227,7 @@ export async function getAllMerchantOrders(token) {
   devLog.log('📦 getAllMerchantOrders: جلب الطلبات المباشرة من MODON');
   
   if (!token || typeof token !== 'string' || token.trim().length === 0) {
-    console.warn('⚠️ getAllMerchantOrders: توكن غير صالح');
+    devLog.warn('⚠️ getAllMerchantOrders: توكن غير صالح');
     return [];
   }
   
@@ -246,7 +246,7 @@ export async function getAllMerchantOrders(token) {
       return data.data || [];
     }
     
-    console.warn('⚠️ MODON API returned non-success:', data.errNum, data.msg);
+    devLog.warn('⚠️ MODON API returned non-success:', data.errNum, data.msg);
     return [];
     
   } catch (error) {
@@ -292,7 +292,7 @@ export async function getMerchantOrders(token) {
       
       devLog.log(`[2/2] جلب ${ordersFromInvoices.length} طلب من الفواتير`);
     } catch (error) {
-      console.warn('⚠️ تعذر جلب الطلبات من الفواتير:', error.message);
+      devLog.warn('⚠️ تعذر جلب الطلبات من الفواتير:', error.message);
     }
     
     // ============ دمج وإزالة التكرار ============
@@ -528,7 +528,7 @@ export async function getMerchantInvoices(token) {
       return data.data || [];
     }
     
-    console.warn('⚠️ MODON invoices response:', data.errNum, data.msg);
+    devLog.warn('⚠️ MODON invoices response:', data.errNum, data.msg);
     return [];
   } catch (error) {
     console.error('❌ خطأ في جلب الفواتير من مدن:', error);
@@ -609,7 +609,7 @@ export async function getOrderByQR(token, qrId) {
     
     return found || null;
   } catch (error) {
-    console.warn(`⚠️ getOrderByQR failed for ${qrId}:`, error.message);
+    devLog.warn(`⚠️ getOrderByQR failed for ${qrId}:`, error.message);
     return null;
   }
 }
@@ -656,7 +656,7 @@ export async function getDeliveryPrice(token, regionId) {
     const region = regions.find(r => String(r.id) === String(regionId));
     return region?.delivery_price || 0;
   } catch (error) {
-    console.warn('⚠️ خطأ في جلب سعر التوصيل:', error.message);
+    devLog.warn('⚠️ خطأ في جلب سعر التوصيل:', error.message);
     return 0;
   }
 }

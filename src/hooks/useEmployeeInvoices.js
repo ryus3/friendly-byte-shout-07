@@ -3,6 +3,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import * as AlWaseetAPI from '@/lib/alwaseet-api';
+import devLog from '@/lib/devLogger';
 
 /**
  * هوك محسن لإدارة فواتير الموظفين مع عرض البيانات الصحيحة للمديرين
@@ -24,7 +25,7 @@ export const useEmployeeInvoices = (employeeId) => {
     if (!token || !isLoggedIn || activePartner !== 'alwaseet') return;
     
     try {
-      console.log('🔄 مزامنة ذكية موحدة لفواتير الموظف:', employeeId);
+      devLog.log('🔄 مزامنة ذكية موحدة لفواتير الموظف:', employeeId);
       
       // جلب أحدث الفواتير من API
       const recentInvoices = await AlWaseetAPI.getMerchantInvoices(token);
@@ -37,9 +38,9 @@ export const useEmployeeInvoices = (employeeId) => {
         });
         
         if (error) {
-          console.warn('خطأ في upsert_alwaseet_invoice_list_with_cleanup:', error.message);
+          devLog.warn('خطأ في upsert_alwaseet_invoice_list_with_cleanup:', error.message);
         } else {
-          console.log('✅ مزامنة موحدة:', data?.processed || 0, 'فاتورة، حذف', data?.deleted_old || 0, 'قديمة');
+          devLog.log('✅ مزامنة موحدة:', data?.processed || 0, 'فاتورة، حذف', data?.deleted_old || 0, 'قديمة');
           setLastAutoSync(Date.now());
           
           // ضمان وجود الفاتورة المستهدفة 1849184
@@ -52,7 +53,7 @@ export const useEmployeeInvoices = (employeeId) => {
         }
       }
     } catch (error) {
-      console.warn('⚠️ Smart sync failed:', error.message);
+      devLog.warn('⚠️ Smart sync failed:', error.message);
     }
   };
 
@@ -80,13 +81,13 @@ export const useEmployeeInvoices = (employeeId) => {
     const CACHE_DURATION = 2 * 60 * 1000; // 2 دقيقة
     
     if (!forceRefresh && lastSync && (now - lastSync) < CACHE_DURATION) {
-      console.log('🔄 استخدام البيانات المحفوظة محلياً');
+      devLog.log('🔄 استخدام البيانات المحفوظة محلياً');
       return;
     }
 
     setLoading(true);
     try {
-      console.log('🔍 جلب فواتير من قاعدة البيانات الموحدة للموظف:', employeeId);
+      devLog.log('🔍 جلب فواتير من قاعدة البيانات الموحدة للموظف:', employeeId);
       
       // النظام الموحد: جميع المستخدمين يجلبون من قاعدة البيانات
       let query = supabase
@@ -135,8 +136,8 @@ export const useEmployeeInvoices = (employeeId) => {
         console.error('خطأ في جلب فواتير الموظف:', error);
         setInvoices([]);
       } else {
-        console.log('✅ النظام الموحد: تم جلب', employeeInvoices?.length || 0, 'فاتورة');
-        console.log('📊 عينة من البيانات:', employeeInvoices?.slice(0, 2));
+        devLog.log('✅ النظام الموحد: تم جلب', employeeInvoices?.length || 0, 'فاتورة');
+        devLog.log('📊 عينة من البيانات:', employeeInvoices?.slice(0, 2));
         
         // معالجة البيانات وحساب العداد الصحيح للطلبات
         const processedInvoices = (employeeInvoices || []).map(invoice => {
@@ -165,7 +166,7 @@ export const useEmployeeInvoices = (employeeId) => {
           };
         });
 
-        console.log('🔍 مراجعة عينة فاتورة:', processedInvoices[0] ? {
+        devLog.log('🔍 مراجعة عينة فاتورة:', processedInvoices[0] ? {
           id: processedInvoices[0].external_id,
           status: processedInvoices[0].status,
           received: processedInvoices[0].received,
@@ -187,7 +188,7 @@ export const useEmployeeInvoices = (employeeId) => {
   // تحميل بدون مزامنة تلقائية - فقط جلب البيانات المحفوظة
   useEffect(() => {
     if (employeeId && employeeId !== 'all') {
-      console.log('🚀 جلب الفواتير المحفوظة للموظف:', employeeId);
+      devLog.log('🚀 جلب الفواتير المحفوظة للموظف:', employeeId);
       
       // جلب البيانات بدون مزامنة تلقائية لتجنب البطء
       fetchInvoices(false, false); // no force, no sync - just cached data
@@ -213,7 +214,7 @@ export const useEmployeeInvoices = (employeeId) => {
         lastSyncDate !== today &&
         Math.abs(now - syncTime) < 60000 // Within 1 minute of sync time
       ) {
-        console.log('🕘 تشغيل المزامنة اليومية المجدولة');
+        devLog.log('🕘 تشغيل المزامنة اليومية المجدولة');
         smartSync();
       }
     };

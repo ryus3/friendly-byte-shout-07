@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import devLog from '@/lib/devLogger';
 
 function useLocalStorage(key, initialValue) {
   // Get value from localStorage or use initial value
@@ -16,7 +17,7 @@ function useLocalStorage(key, initialValue) {
         return JSON.parse(item);
       } catch (parseError) {
         // ✅ إذا فشل، افترض أنها قيمة نصية مباشرة وقم بحفظها بشكل صحيح
-        console.warn(`localStorage key "${key}" is not valid JSON, using raw value:`, item);
+        devLog.warn(`localStorage key "${key}" is not valid JSON, using raw value:`, item);
         window.localStorage.setItem(key, JSON.stringify(item));
         return item;
       }

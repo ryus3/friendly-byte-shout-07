@@ -9,6 +9,7 @@ import { useImprovedPurchases } from '@/hooks/useImprovedPurchases';
 import { useCashSources } from '@/hooks/useCashSources';
 import { toast } from '@/hooks/use-toast';
 import { 
+import devLog from '@/lib/devLogger';
     Loader2, PlusCircle, Wallet, X, Receipt, 
     Truck, CreditCard, DollarSign, Package, Sparkles, CalendarIcon 
 } from 'lucide-react';
@@ -135,7 +136,7 @@ const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded, filterByOwnerU
                 totalInUSD: currency === 'USD' ? totalCost : null
             };
             
-            console.log('Purchase data with shipping:', purchaseData);
+            devLog.log('Purchase data with shipping:', purchaseData);
             const result = await addPurchase(purchaseData);
             
             if (result.success) {

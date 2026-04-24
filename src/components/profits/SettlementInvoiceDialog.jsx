@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { MobileTable, MobileTableBody, MobileTableRow, MobileTableCell } from '@/components/ui/mobile-table';
+import devLog from '@/lib/devLogger';
 
 const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     const IRAQ_TIMEZONE = 'Asia/Baghdad'; // المنطقة الزمنية العراقية
@@ -29,7 +30,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     // جلب بيانات فاتورة التسوية الحقيقية
     const fetchRealInvoiceData = async () => {
         if (!invoice.id) {
-            console.log('لا يوجد معرف للفاتورة');
+            devLog.log('لا يوجد معرف للفاتورة');
             return;
         }
 
@@ -47,9 +48,9 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                 return;
             }
 
-            console.log('🔥 البيانات الحقيقية للفاتورة:', data);
-            console.log('📅 تاريخ التسوية الحقيقي:', data?.settlement_date);
-            console.log('📅 تاريخ الإنشاء الحقيقي:', data?.created_at);
+            devLog.log('🔥 البيانات الحقيقية للفاتورة:', data);
+            devLog.log('📅 تاريخ التسوية الحقيقي:', data?.settlement_date);
+            devLog.log('📅 تاريخ الإنشاء الحقيقي:', data?.created_at);
             setRealInvoiceData(data);
         } catch (error) {
             console.error('خطأ غير متوقع في جلب الفاتورة:', error);
@@ -59,7 +60,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     // جلب البيانات الحقيقية للطلبات من قاعدة البيانات
     const fetchRealOrdersData = async () => {
         if (!invoice.order_ids || invoice.order_ids.length === 0) {
-            console.log('لا توجد order_ids في الفاتورة');
+            devLog.log('لا توجد order_ids في الفاتورة');
             return;
         }
 
@@ -77,7 +78,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                 return;
             }
 
-            console.log('🔥 البيانات الحقيقية للطلبات:', data);
+            devLog.log('🔥 البيانات الحقيقية للطلبات:', data);
             setRealOrdersData(data || []);
         } catch (error) {
             console.error('خطأ غير متوقع:', error);
@@ -116,7 +117,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
             return orders.find(o => o.id === orderId);
         }).filter(Boolean);
 
-    console.log('🔍 SettlementInvoiceDialog Final Debug:', {
+    devLog.log('🔍 SettlementInvoiceDialog Final Debug:', {
         invoiceId: invoice.id,
         orderIds: invoice.order_ids,
         realOrdersCount: realOrdersData.length,

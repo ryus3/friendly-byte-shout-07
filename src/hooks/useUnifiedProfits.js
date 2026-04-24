@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
 import { parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays, startOfDay, endOfDay } from 'date-fns';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
+import devLog from '@/lib/devLogger';
 
 /**
  * هوك موحد لجلب بيانات الأرباح - يستخدم نفس منطق AccountingPage
@@ -46,7 +47,7 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = []
       setAllProfits(profitsData || []);
       // استخدام نفس منطق AccountingPage
       if (!orders || !Array.isArray(orders)) {
-        console.warn('⚠️ لا توجد بيانات طلبات');
+        devLog.warn('⚠️ لا توجد بيانات طلبات');
         setProfitData({
           totalRevenue: 0,
           deliveryFees: 0, 
@@ -106,7 +107,7 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = []
           dateTo = null;
       }
 
-      console.log(`📅 تطبيق فلتر الفترة: ${timePeriod}`, { dateFrom, dateTo });
+      devLog.log(`📅 تطبيق فلتر الفترة: ${timePeriod}`, { dateFrom, dateTo });
 
       const filterByDate = (dateStr) => {
         if (!dateFrom || !dateTo || !dateStr) return true;
@@ -128,7 +129,7 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = []
         return isDeliveredStatus && isReceiptReceived && isInDateRange;
       });
 
-      console.log('🔍 Unified Profits - Delivered Orders:', deliveredOrders.length, '(filtered by permissions)');
+      devLog.log('🔍 Unified Profits - Delivered Orders:', deliveredOrders.length, '(filtered by permissions)');
 
       const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date)); // فلترة المصاريف حسب الفترة
 
@@ -311,8 +312,8 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = []
         chartData
       };
 
-      console.log('💰 Unified Profits Result:', resultData);
-      console.log('💰 Net Profit Value:', netProfit);
+      devLog.log('💰 Unified Profits Result:', resultData);
+      devLog.log('💰 Net Profit Value:', netProfit);
       setProfitData(resultData);
 
     } catch (error) {

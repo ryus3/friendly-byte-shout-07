@@ -12,6 +12,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { 
+import devLog from '@/lib/devLogger';
   PackageX, Volume2, VolumeX, Clock, AlertTriangle, 
   CheckCircle, BellOff, Settings, RefreshCw 
 } from 'lucide-react';
@@ -95,7 +96,7 @@ const StockNotificationSettings = ({ open, onOpenChange, readonly = false, showL
         }
       }
       
-      console.log('Settings saved successfully:', settingsToSave);
+      devLog.log('Settings saved successfully:', settingsToSave);
     } catch (error) {
       console.error('Error saving settings to database:', error);
       throw error;

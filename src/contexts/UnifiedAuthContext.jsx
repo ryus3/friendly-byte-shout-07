@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, use
 import { toast } from '@/components/ui/use-toast.js';
 import { supabase } from '@/integrations/supabase/client';
 import { UnifiedPermissionsProvider } from '@/contexts/UnifiedPermissionsProvider';
+import devLog from '@/lib/devLogger';
 
 const UnifiedAuthContext = createContext(null);
 
@@ -87,7 +88,7 @@ export const UnifiedAuthProvider = ({ children }) => {
         
         roles = rolesData?.map(ur => ur.roles?.name).filter(Boolean) || [];
       } catch (rolesErr) {
-        console.warn('Roles fetch failed, continuing with empty roles:', rolesErr);
+        devLog.warn('Roles fetch failed, continuing with empty roles:', rolesErr);
       }
 
       // 3. جلب الشركة الافتراضية
@@ -231,7 +232,7 @@ export const UnifiedAuthProvider = ({ children }) => {
           // فشل جلب البروفايل لكن الجلسة صالحة - retry
           if (profileFetchRetries < MAX_RETRIES) {
             profileFetchRetries++;
-            console.warn(`⚠️ فشل جلب البروفايل، محاولة ${profileFetchRetries}/${MAX_RETRIES}`);
+            devLog.warn(`⚠️ فشل جلب البروفايل، محاولة ${profileFetchRetries}/${MAX_RETRIES}`);
             setTimeout(() => {
               if (isMounted) handleSession(session, 'retry');
             }, 1500 * profileFetchRetries);
@@ -513,7 +514,7 @@ export const UnifiedAuthProvider = ({ children }) => {
           localStorage.removeItem('delivery_partner_default_token');
         }
       } catch (error) {
-        console.warn('⚠️ خطأ في جلب الحساب الافتراضي:', error);
+        devLog.warn('⚠️ خطأ في جلب الحساب الافتراضي:', error);
       }
 
       return { success: true };
@@ -685,7 +686,7 @@ export const UnifiedAuthProvider = ({ children }) => {
     try {
       // إذا كان data يحتوي على useCompleteApproval، استخدم دالة الموافقة الكاملة
       if (data?.useCompleteApproval) {
-        console.log('Using complete approval function for user:', userId);
+        devLog.log('Using complete approval function for user:', userId);
         
         const { data: approvalResult, error: approvalError } = await supabase
           .rpc('approve_employee_complete', {
@@ -703,7 +704,7 @@ export const UnifiedAuthProvider = ({ children }) => {
           return { success: false, error: approvalError };
         }
         
-        console.log('Complete approval result:', approvalResult);
+        devLog.log('Complete approval result:', approvalResult);
         toast({ 
           title: 'تمت الموافقة ✅', 
           description: 'تم تفعيل الموظف بنجاح مع دور مبيعات ورمز تليغرام',
@@ -950,7 +951,7 @@ export const UnifiedAuthProvider = ({ children }) => {
     filterProductsByPermissions,
     // إضافة debug للصلاحيات
     debugPermissions: () => {
-      console.log('🔍 Debug الصلاحيات:', {
+      devLog.log('🔍 Debug الصلاحيات:', {
         userRoles,
         userPermissions,
         productPermissions,

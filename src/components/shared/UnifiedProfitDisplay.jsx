@@ -6,6 +6,7 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { 
+import devLog from '@/lib/devLogger';
   User, 
   Hourglass, 
   CheckCircle, 
@@ -187,7 +188,7 @@ const UnifiedProfitDisplay = ({
       
       personalData.archivedOrdersCount = userArchivedCount;
 
-      console.log('📊 البيانات الشخصية للموظف:', {
+      devLog.log('📊 البيانات الشخصية للموظف:', {
         userId: currentUser.id,
         userProfitsCount: userProfits.length,
         personalTotalProfit: personalData.personalTotalProfit,
@@ -287,7 +288,7 @@ const UnifiedProfitDisplay = ({
       })
       .reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
     
-    console.log('💰 UnifiedProfitDisplay - البيانات المحسوبة:', {
+    devLog.log('💰 UnifiedProfitDisplay - البيانات المحسوبة:', {
       totalRevenue,
       cogs,
       grossProfit,
@@ -328,7 +329,7 @@ const UnifiedProfitDisplay = ({
   const buildCards = () => {
     const cards = [];
 
-    console.log('🔧 بناء كروت العرض (موحد):', { unifiedFinancialData, canViewAll, displayMode });
+    devLog.log('🔧 بناء كروت العرض (موحد):', { unifiedFinancialData, canViewAll, displayMode });
 
     if (canViewAll) {
       // للمدير: عرض بيانات النظام الكاملة
@@ -427,7 +428,7 @@ const UnifiedProfitDisplay = ({
         })
         .reduce((sum, p) => sum + (p.employee_profit || 0), 0);
 
-      console.log('🔍 الأرباح المعلقة الصحيحة:', {
+      devLog.log('🔍 الأرباح المعلقة الصحيحة:', {
         pendingProfitsFromTable,
         deliveredOrdersCount: unifiedFinancialData.deliveredOrders?.length || 0,
         pendingProfitsCount: allProfits.filter(p => p.status === 'pending').length
@@ -467,7 +468,7 @@ const UnifiedProfitDisplay = ({
       );
     }
 
-    console.log('✅ تم بناء الكروت (موحد):', cards.map(c => ({ key: c.key, value: c.value })));
+    devLog.log('✅ تم بناء الكروت (موحد):', cards.map(c => ({ key: c.key, value: c.value })));
     return cards;
   };
 

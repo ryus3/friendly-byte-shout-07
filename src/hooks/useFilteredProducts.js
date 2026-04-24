@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import devLog from '@/lib/devLogger';
 
 /**
  * Hook موحد لفلترة المنتجات حسب صلاحيات المستخدم
@@ -18,7 +19,7 @@ export const useFilteredProducts = (products) => {
   const filteredProducts = useMemo(() => {
     // التحقق من وجود Auth context أولاً
     if (!auth) {
-      console.warn('useAuth context is null');
+      devLog.warn('useAuth context is null');
       return products || [];
     }
     
@@ -134,7 +135,7 @@ export const useFilteredVariants = (variants) => {
   const filteredVariants = useMemo(() => {
     // التحقق من وجود Auth context أولاً
     if (!auth) {
-      console.warn('useAuth context is null in useFilteredVariants');
+      devLog.warn('useAuth context is null in useFilteredVariants');
       return variants || [];
     }
     

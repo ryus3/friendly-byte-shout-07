@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/customSupabaseClient';
+import devLog from '@/lib/devLogger';
 
 /**
  * معالجة الحسابات المالية للتسليم الجزئي
@@ -46,7 +47,7 @@ export const handlePartialDeliveryFinancials = async (
     const finalAmount = useFinalPrice ? finalPrice : (order.final_amount || order.total_amount || 0);
     const orderTotalRevenue = order.total_amount || 0;
     
-    console.log('💰 حساب الماليات:', {
+    devLog.log('💰 حساب الماليات:', {
       useFinalPrice,
       finalPrice,
       finalAmount,
@@ -65,7 +66,7 @@ export const handlePartialDeliveryFinancials = async (
       totalCost += itemCost;
     });
     
-    console.log('💰 الإيراد الحقيقي للمنتجات المسلمة:', totalRevenue);
+    devLog.log('💰 الإيراد الحقيقي للمنتجات المسلمة:', totalRevenue);
 
     // 4️⃣ حساب ربح الموظف للمنتجات المسلمة فقط
     const employeeId = order.created_by;
@@ -92,7 +93,7 @@ export const handlePartialDeliveryFinancials = async (
       };
 
       employeeProfit = calculateProfit(tempOrder, employeeId) || 0;
-      console.log('💰 ربح الموظف المحسوب:', employeeProfit, 'بتاريخ معالجة:', processingDate);
+      devLog.log('💰 ربح الموظف المحسوب:', employeeProfit, 'بتاريخ معالجة:', processingDate);
     }
 
     // 5️⃣ حساب ربح النظام

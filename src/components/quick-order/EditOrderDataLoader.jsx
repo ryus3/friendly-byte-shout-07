@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { supabase } from '@/integrations/supabase/client';
+import devLog from '@/lib/devLogger';
 
 /**
  * مكون مساعد لتحميل البيانات الصحيحة في وضع التعديل
@@ -90,7 +91,7 @@ export const EditOrderDataLoader = ({ aiOrderData, isEditMode, onDataLoaded }) =
         onDataLoaded();
       }
       
-      console.log('✅ EditOrderDataLoader - تم تحميل جميع المنتجات للتعديل');
+      devLog.log('✅ EditOrderDataLoader - تم تحميل جميع المنتجات للتعديل');
     };
 
     loadRealProducts();

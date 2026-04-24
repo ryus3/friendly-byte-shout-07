@@ -5,6 +5,7 @@
 
 import { parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays } from 'date-fns';
 import { 
+import devLog from '@/lib/devLogger';
   EXCLUDED_EXPENSE_TYPES, 
   VALID_ORDER_STATUSES, 
   FINANCIAL_FORMULAS,
@@ -223,7 +224,7 @@ export const calculateEmployeeDuesPaid = (expenses, dateRange) => {
  */
 export const calculateFinancialMetrics = (orders, expenses, timePeriod = TIME_PERIODS.ALL, cashMovements = []) => {
   try {
-    console.log('🔧 بدء حساب المؤشرات المالية:', { 
+    devLog.log('🔧 بدء حساب المؤشرات المالية:', { 
       ordersCount: orders?.length, 
       expensesCount: expenses?.length, 
       timePeriod 
@@ -260,7 +261,7 @@ export const calculateFinancialMetrics = (orders, expenses, timePeriod = TIME_PE
       timePeriod
     };
     
-    console.log('📊 نتائج الحسابات المالية:', result);
+    devLog.log('📊 نتائج الحسابات المالية:', result);
     
     return result;
     

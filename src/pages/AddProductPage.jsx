@@ -22,6 +22,7 @@ import ProductPrimaryInfo from '@/components/add-product/ProductPrimaryInfo';
 import MultiSelectCategorization from '@/components/add-product/MultiSelectCategorization';
 import ProductVariantSelection from '@/components/add-product/ProductVariantSelection';
 import ColorVariantCard from '@/components/add-product/ColorVariantCard';
+import devLog from '@/lib/devLogger';
 
 const SortableColorCard = React.memo((props) => {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: props.color.id });
@@ -166,7 +167,7 @@ const AddProductPage = () => {
   // تحميل بيانات المنتج في وضع التعديل
   useEffect(() => {
     if (isEditMode && editProductData) {
-      console.log('📝 تحميل بيانات المنتج للتعديل:', editProductData);
+      devLog.log('📝 تحميل بيانات المنتج للتعديل:', editProductData);
       
       try {
         // تحميل البيانات الأساسية
@@ -264,12 +265,12 @@ const AddProductPage = () => {
           
           // ⚠️ مهم جداً: تحديد نوع القياس أولاً قبل أي شيء آخر
           const firstVariantSizeType = editProductData.variants[0]?.sizes?.type || 'letter';
-          console.log('🔧 نوع القياس المستخرج من البيانات:', firstVariantSizeType);
+          devLog.log('🔧 نوع القياس المستخرج من البيانات:', firstVariantSizeType);
           setSizeType(firstVariantSizeType);
           
           // تعيين أنواع القياسات المستخرجة لكل لون
           setColorSizeTypes(extractedColorSizeTypes);
-          console.log('🎨 أنواع القياسات المستخرجة لكل لون:', extractedColorSizeTypes);
+          devLog.log('🎨 أنواع القياسات المستخرجة لكل لون:', extractedColorSizeTypes);
           
           // تحويل المتغيرات للتنسيق المطلوب مع تحميل الكمية من المخزون
           const formattedVariants = editProductData.variants.map(variant => {
@@ -298,14 +299,14 @@ const AddProductPage = () => {
             };
           });
           
-          console.log('📊 المتغيرات المحولة:', formattedVariants);
+          devLog.log('📊 المتغيرات المحولة:', formattedVariants);
           setVariants(formattedVariants);
         }
         
         // ✅ تأخير تفعيل الحماية للتأكد من اكتمال جميع setState
         setTimeout(() => {
           isInitialEditLoadComplete.current = true;
-          console.log('✅ تم تحميل بيانات المنتج بنجاح للتعديل - الحماية مفعلة');
+          devLog.log('✅ تم تحميل بيانات المنتج بنجاح للتعديل - الحماية مفعلة');
         }, 100);
       } catch (error) {
         console.error('❌ خطأ في تحميل بيانات المنتج للتعديل:', error);
@@ -376,7 +377,7 @@ const AddProductPage = () => {
     
     // ⚠️ لا نولّد متغيرات جديدة حتى يكتمل التحميل الأولي
     if (!isInitialEditLoadComplete.current) {
-      console.log('⏳ انتظار اكتمال التحميل الأولي قبل توليد متغيرات جديدة...');
+      devLog.log('⏳ انتظار اكتمال التحميل الأولي قبل توليد متغيرات جديدة...');
       return;
     }
     
@@ -388,7 +389,7 @@ const AddProductPage = () => {
         
         if (newColors.length === 0) return currentVariants;
         
-        console.log('🆕 توليد متغيرات للألوان الجديدة:', newColors);
+        devLog.log('🆕 توليد متغيرات للألوان الجديدة:', newColors);
         
         const newVariants = [];
         newColors.forEach(color => {
@@ -423,7 +424,7 @@ const AddProductPage = () => {
         });
         
         if (newVariants.length > 0) {
-          console.log('✅ تم إضافة متغيرات للألوان الجديدة:', newVariants);
+          devLog.log('✅ تم إضافة متغيرات للألوان الجديدة:', newVariants);
           return [...currentVariants, ...newVariants];
         }
         
@@ -458,7 +459,7 @@ const AddProductPage = () => {
     
     if (!hasRealChange || !shouldUpdate) return;
     
-    console.log('🔄 تم اكتشاف تغيير في نوع القياس، إعادة توليد المتغيرات...');
+    devLog.log('🔄 تم اكتشاف تغيير في نوع القياس، إعادة توليد المتغيرات...');
     
     setVariants(currentVariants => {
       const newVariants = [];
@@ -481,7 +482,7 @@ const AddProductPage = () => {
                                    !existingTypes.every(t => newSizeTypes.includes(t));
         
         if (needsRegeneration) {
-          console.log(`🔧 إعادة توليد متغيرات اللون ${color.name} من ${existingTypes} إلى ${newSizeTypes}`);
+          devLog.log(`🔧 إعادة توليد متغيرات اللون ${color.name} من ${existingTypes} إلى ${newSizeTypes}`);
           
           // إعادة توليد المتغيرات بنوع القياس الجديد
           newSizeTypes.forEach(sizeTypeForColor => {
@@ -520,7 +521,7 @@ const AddProductPage = () => {
         }
       });
       
-      console.log('✅ تم إعادة توليد المتغيرات:', newVariants.length);
+      devLog.log('✅ تم إعادة توليد المتغيرات:', newVariants.length);
       return newVariants;
     });
   }, [colorSizeTypes, isEditMode, selectedColors, sizes, sizeType, productInfo.name, productInfo.price, productInfo.costPrice]);
@@ -547,7 +548,7 @@ const AddProductPage = () => {
         setTempProductData(dataToSave);
         
         // عرض مؤشر الحفظ
-        console.log('💾 تم حفظ البيانات مؤقتاً:', new Date().toLocaleTimeString('ar-EG'));
+        devLog.log('💾 تم حفظ البيانات مؤقتاً:', new Date().toLocaleTimeString('ar-EG'));
       }, 2000); // حفظ بعد ثانيتين من عدم النشاط
 
       return () => clearTimeout(timeoutId);
@@ -598,7 +599,7 @@ const AddProductPage = () => {
       });
     }
 
-    console.log('📊 بيانات المتغيرات قبل الحفظ:', variants);
+    devLog.log('📊 بيانات المتغيرات قبل الحفظ:', variants);
 
     setIsSubmitting(true);
     setUploadProgress(0);
@@ -630,7 +631,7 @@ const AddProductPage = () => {
       const currentCategories = [...selectedCategories].sort();
       productData.categoriesChanged = JSON.stringify(originalCategories) !== JSON.stringify(currentCategories);
       
-      console.log('🏷️ تصنيفات التعديل:', {
+      devLog.log('🏷️ تصنيفات التعديل:', {
         categories: selectedCategories?.length || 0,
         types: selectedProductTypes?.length || 0,
         seasons: selectedSeasonsOccasions?.length || 0,
@@ -644,7 +645,7 @@ const AddProductPage = () => {
       productData.selectedDepartments = selectedDepartments || [];
     }
     
-    console.log('📦 إرسال التصنيفات:', {
+    devLog.log('📦 إرسال التصنيفات:', {
       categoriesCount: productData.selectedCategories?.length || 0,
       typesCount: productData.selectedProductTypes?.length || 0,
       seasonsCount: productData.selectedSeasonsOccasions?.length || 0,
@@ -653,7 +654,7 @@ const AddProductPage = () => {
       categoriesChanged: productData.categoriesChanged
     });
     
-    console.log('📦 بيانات المنتج النهائية للحفظ:', productData);
+    devLog.log('📦 بيانات المنتج النهائية للحفظ:', productData);
     
     const imageFiles = {
       general: generalImages.filter(Boolean),

@@ -843,7 +843,7 @@ const Dashboard = () => {
                         pendingProfitOrders={dashboardData.pendingProfitOrders || []}
                         user={user}
                         onReceiveInvoices={() => {
-                            console.log('تم استلام الفواتير بنجاح');
+                            devLog.log('تم استلام الفواتير بنجاح');
                             fetchProfitsData();
                         }}
                     />

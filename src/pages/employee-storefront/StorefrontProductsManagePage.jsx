@@ -10,6 +10,7 @@ import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
 import { Search, Star, Package, Store, AlertCircle, Palette, Ruler } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
+import devLog from '@/lib/devLogger';
 
 const StorefrontProductsManagePage = () => {
   const [products, setProducts] = useState([]);
@@ -53,9 +54,9 @@ const StorefrontProductsManagePage = () => {
   const fetchAllowedProducts = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      console.log('📦 Fetching allowed products for user:', user?.id);
+      devLog.log('📦 Fetching allowed products for user:', user?.id);
       if (!user) {
-        console.log('❌ No user found');
+        devLog.log('❌ No user found');
         return;
       }
 
@@ -66,16 +67,16 @@ const StorefrontProductsManagePage = () => {
         .eq('employee_id', user.id)
         .eq('is_active', true);
 
-      console.log('📋 Allowed products data:', allowedData, 'Error:', allowedError);
+      devLog.log('📋 Allowed products data:', allowedData, 'Error:', allowedError);
 
       if (allowedError) throw allowedError;
 
       const productIds = allowedData?.map(ap => ap.product_id) || [];
       setAllowedProductIds(productIds);
-      console.log('📋 Product IDs:', productIds);
+      devLog.log('📋 Product IDs:', productIds);
 
       if (productIds.length === 0) {
-        console.log('⚠️ No allowed products found for this employee');
+        devLog.log('⚠️ No allowed products found for this employee');
         setProducts([]);
         return;
       }
@@ -96,26 +97,26 @@ const StorefrontProductsManagePage = () => {
         .in('id', productIds)
         .eq('is_active', true);
 
-      console.log('📦 Products data:', productsData, 'Error:', productsError);
+      devLog.log('📦 Products data:', productsData, 'Error:', productsError);
 
       if (productsError) throw productsError;
 
       if (!productsData || productsData.length === 0) {
-        console.log('⚠️ No products found');
+        devLog.log('⚠️ No products found');
         setProducts([]);
         return;
       }
 
       // جلب المخزون بشكل منفصل للتأكد من عدم فشل الـ join
       const variantIds = productsData.flatMap(p => p.variants?.map(v => v.id) || []);
-      console.log('📦 Variant IDs:', variantIds);
+      devLog.log('📦 Variant IDs:', variantIds);
 
       const { data: inventoryData, error: inventoryError } = await supabase
         .from('inventory')
         .select('variant_id, quantity, reserved_quantity')
         .in('variant_id', variantIds);
 
-      console.log('📦 Inventory data:', inventoryData, 'Error:', inventoryError);
+      devLog.log('📦 Inventory data:', inventoryData, 'Error:', inventoryError);
 
       // إنشاء خريطة المخزون
       const inventoryMap = {};
@@ -141,7 +142,7 @@ const StorefrontProductsManagePage = () => {
         })
       );
 
-      console.log('✅ Available products with stock:', available.length);
+      devLog.log('✅ Available products with stock:', available.length);
       setProducts(available);
     } catch (err) {
       console.error('❌ Error fetching allowed products:', err);

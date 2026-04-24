@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
 import { 
+import devLog from '@/lib/devLogger';
   calculateFinancialMetrics,
   filterOrdersByPermissions,
   filterExpensesByPermissions,
@@ -56,14 +57,14 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
   const financialMetrics = useMemo(() => {
     if (inventoryLoading) {
       if (enableDebugLogs) {
-        console.log('⏳ النظام المالي: في انتظار تحميل البيانات...');
+        devLog.log('⏳ النظام المالي: في انتظار تحميل البيانات...');
       }
       return { ...DEFAULT_FINANCIAL_VALUES, loading: true };
     }
     
     if (!filteredOrders.length && !filteredExpenses.length) {
       if (enableDebugLogs) {
-        console.log('⚠️ النظام المالي: لا توجد بيانات للحساب');
+        devLog.log('⚠️ النظام المالي: لا توجد بيانات للحساب');
       }
       return { 
         ...DEFAULT_FINANCIAL_VALUES, 
@@ -74,7 +75,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
     
     try {
       if (enableDebugLogs) {
-        console.log('🔧 النظام المالي: بدء الحسابات...', {
+        devLog.log('🔧 النظام المالي: بدء الحسابات...', {
           ordersCount: filteredOrders.length,
           expensesCount: filteredExpenses.length,
           timePeriod,
@@ -85,7 +86,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
       const metrics = calculateFinancialMetrics(filteredOrders, filteredExpenses, timePeriod);
       
       if (enableDebugLogs) {
-        console.log('✅ النظام المالي: اكتملت الحسابات بنجاح', metrics);
+        devLog.log('✅ النظام المالي: اكتملت الحسابات بنجاح', metrics);
       }
       
       setLastCalculationTime(new Date());
@@ -129,7 +130,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
         setCurrentBalance(cashData?.current_balance || 0);
         
         if (enableDebugLogs) {
-          console.log('💰 البيانات المالية الإضافية:', {
+          devLog.log('💰 البيانات المالية الإضافية:', {
             capitalAmount: cashData?.current_balance || 0,
             totalPurchases: totalPurchasesSum,
             currentBalance: cashData?.current_balance || 0
@@ -151,7 +152,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
   // دالة إعادة التحميل
   const refreshData = useCallback(() => {
     if (enableDebugLogs) {
-      console.log('🔄 النظام المالي: إعادة تحميل البيانات...');
+      devLog.log('🔄 النظام المالي: إعادة تحميل البيانات...');
     }
     setError(null);
     setLastCalculationTime(new Date());
@@ -160,7 +161,7 @@ export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) 
   // دالة تغيير الفترة الزمنية
   const changePeriod = useCallback((newPeriod) => {
     if (enableDebugLogs) {
-      console.log('📅 النظام المالي: تغيير الفترة الزمنية:', { from: timePeriod, to: newPeriod });
+      devLog.log('📅 النظام المالي: تغيير الفترة الزمنية:', { from: timePeriod, to: newPeriod });
     }
   }, [timePeriod, enableDebugLogs]);
   

@@ -2,6 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { notificationService } from '@/utils/NotificationService';
+import devLog from '@/lib/devLogger';
 
 export const useInstantNotifications = (userId, userRole) => {
   const channelsRef = useRef(new Set());
@@ -9,11 +10,11 @@ export const useInstantNotifications = (userId, userRole) => {
 
   useEffect(() => {
     if (!userId || !supabase) {
-      console.log('❌ useInstantNotifications: Missing requirements');
+      devLog.log('❌ useInstantNotifications: Missing requirements');
       return;
     }
 
-    console.log('🚀 Setting up instant notifications for user:', userId);
+    devLog.log('🚀 Setting up instant notifications for user:', userId);
 
     // إعداد قناة الطلبات الذكية - بدون إشعار متصفح هنا
     // (الإشعار الموثوق يُرسَل من Edge Function ai-order-notifications
@@ -28,7 +29,7 @@ export const useInstantNotifications = (userId, userRole) => {
           table: 'ai_orders'
         },
         (payload) => {
-          console.log('⚡ Instant AI order event (UI only):', payload.new?.id);
+          devLog.log('⚡ Instant AI order event (UI only):', payload.new?.id);
           // فقط بث حدث للواجهة لتحديث القوائم - لا إشعارات متصفح هنا
           window.dispatchEvent(new CustomEvent('aiOrderCreated', { 
             detail: payload.new 
@@ -36,7 +37,7 @@ export const useInstantNotifications = (userId, userRole) => {
         }
       )
       .subscribe((status) => {
-        console.log('📊 Instant AI orders subscription status:', status);
+        devLog.log('📊 Instant AI orders subscription status:', status);
       });
 
     channelsRef.current.add(aiOrdersChannel);
@@ -53,7 +54,7 @@ export const useInstantNotifications = (userId, userRole) => {
         },
         (payload) => {
           const eventType = payload.eventType;
-          console.log(`⚡ Instant order ${eventType}:`, payload.new || payload.old);
+          devLog.log(`⚡ Instant order ${eventType}:`, payload.new || payload.old);
           
           // بث أحداث فورية بدون تأخير
           if (eventType === 'INSERT') {
@@ -87,7 +88,7 @@ export const useInstantNotifications = (userId, userRole) => {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('⚡ Instant invoice notification:', payload.new);
+          devLog.log('⚡ Instant invoice notification:', payload.new);
           
           const notification = payload.new;
           
@@ -98,7 +99,7 @@ export const useInstantNotifications = (userId, userRole) => {
             notification.notification_type,
             notification.data
           ).catch(error => {
-            console.log('⚠️ Browser notification not available:', error);
+            devLog.log('⚠️ Browser notification not available:', error);
           });
 
           // بث حدث للواجهة
@@ -108,9 +109,9 @@ export const useInstantNotifications = (userId, userRole) => {
         }
       )
       .subscribe((status) => {
-        console.log('📊 Invoice notifications subscription status:', status);
+        devLog.log('📊 Invoice notifications subscription status:', status);
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Invoice notifications ready for user:', userId);
+          devLog.log('✅ Invoice notifications ready for user:', userId);
         }
       });
 
@@ -118,7 +119,7 @@ export const useInstantNotifications = (userId, userRole) => {
 
     // تنظيف القنوات عند إلغاء التحميل
     return () => {
-      console.log('🧹 Cleaning up instant notification channels');
+      devLog.log('🧹 Cleaning up instant notification channels');
       channelsRef.current.forEach(channel => {
         supabase.removeChannel(channel);
       });
@@ -129,7 +130,7 @@ export const useInstantNotifications = (userId, userRole) => {
   // دالة إضافية لإرسال إشعار فوري
   const sendInstantNotification = (title, message, type = 'default', data = {}) => {
     notificationService.notify(title, message, type, data).catch(error => {
-      console.log('⚠️ Could not send browser notification:', error);
+      devLog.log('⚠️ Could not send browser notification:', error);
     });
   };
 

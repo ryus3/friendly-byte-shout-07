@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import superAPI from '@/api/SuperAPI';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import devLog from '@/lib/devLogger';
 
 // Cache موحّد لتقليل الاستهلاك وتجنب الازدواج
 const FILTERS_CACHE_TTL = 3 * 60 * 1000; // 3 دقائق
@@ -123,7 +124,7 @@ export const useFiltersData = (options = {}) => {
       const data = await pendingPromise;
       setFiltersData(data);
 
-      console.log('🔍 useFiltersData - تم جلب البيانات بنجاح:', {
+      devLog.log('🔍 useFiltersData - تم جلب البيانات بنجاح:', {
         departments: data.departments?.length || 0,
         categories: data.categories?.length || 0,
         colors: data.colors?.length || 0,

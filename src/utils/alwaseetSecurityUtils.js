@@ -4,6 +4,7 @@
  */
 
 import { getUserUUID } from './userIdUtils';
+import devLog from '@/lib/devLogger';
 
 /**
  * التحقق من ملكية الطلب قبل أي عملية
@@ -53,7 +54,7 @@ export const createSecureOrderFilter = (user) => {
  */
 export const logSecurityWarning = (action, orderId, user) => {
   const userUUID = getUserUUID(user);
-  console.warn(`🚨 محاولة وصول غير مصرح: ${action} على الطلب ${orderId} من المستخدم ${userUUID}`);
+  devLog.warn(`🚨 محاولة وصول غير مصرح: ${action} على الطلب ${orderId} من المستخدم ${userUUID}`);
   
   // يمكن إرسال تنبيه للمدير هنا في المستقبل
   if (typeof window !== 'undefined' && window.gtag) {

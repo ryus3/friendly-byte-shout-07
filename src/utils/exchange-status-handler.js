@@ -1,5 +1,6 @@
 import { processReplacementInventory } from './replacement-inventory-handler';
 import { supabase } from '@/lib/customSupabaseClient';
+import devLog from '@/lib/devLogger';
 
 /**
  * معالجة المخزون التلقائية لطلبات الاستبدال عند تغيير الحالة
@@ -30,7 +31,7 @@ export const handleExchangeStatusChange = async (orderId, newDeliveryStatus) => 
     // الحالة 4: في الطريق للزبون | الحالة 21: تم التسليم
     if (newDeliveryStatus === '21' || newDeliveryStatus === 21 || 
         newDeliveryStatus === '4' || newDeliveryStatus === 4) {
-      console.log('🔄 تحويل الحجز إلى مبيعات للطلب', orderId);
+      devLog.log('🔄 تحويل الحجز إلى مبيعات للطلب', orderId);
       
       // ✅ 1. إلغاء الحجز أولاً
       if (order.exchange_metadata?.outgoing_items) {
@@ -40,7 +41,7 @@ export const handleExchangeStatusChange = async (orderId, newDeliveryStatus) => 
             p_quantity: item.quantity || 1,
             p_order_id: orderId
           });
-          console.log(`✅ تم إلغاء حجز ${item.product_name}`);
+          devLog.log(`✅ تم إلغاء حجز ${item.product_name}`);
         }
       }
       
@@ -63,22 +64,22 @@ export const handleExchangeStatusChange = async (orderId, newDeliveryStatus) => 
           employeeId: order.created_by
         });
         
-        console.log('✅ تمت معالجة فرق السعر');
+        devLog.log('✅ تمت معالجة فرق السعر');
       }
       
-      console.log('✅ تم تحويل المنتجات الصادرة من "محجوز" إلى "مباع"');
+      devLog.log('✅ تم تحويل المنتجات الصادرة من "محجوز" إلى "مباع"');
       return result;
     }
 
     // ✅ الحالة 17: استلام من الزبون (إضافة المنتجات الواردة)
     if (newDeliveryStatus === '17' || newDeliveryStatus === 17) {
-      console.log('🔄 إضافة المنتجات الواردة للطلب', orderId);
+      devLog.log('🔄 إضافة المنتجات الواردة للطلب', orderId);
       const result = await processReplacementInventory(
         orderId,
         order.exchange_metadata,
         'incoming'
       );
-      console.log('✅ تم إضافة المنتجات الواردة للمخزون');
+      devLog.log('✅ تم إضافة المنتجات الواردة للمخزون');
       return result;
     }
 

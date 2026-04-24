@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Bell, CheckCircle2, XCircle, Smartphone } from 'lucide-react';
+import devLog from '@/lib/devLogger';
 
 // Dynamic import for Capacitor
 let PushNotifications = null;
@@ -12,7 +13,7 @@ try {
   const capacitorModule = await import('@capacitor/push-notifications');
   PushNotifications = capacitorModule.PushNotifications;
 } catch (e) {
-  console.log('📱 Capacitor not available - running in web mode');
+  devLog.log('📱 Capacitor not available - running in web mode');
 }
 
 const PushNotificationControl = () => {
@@ -36,7 +37,7 @@ const PushNotificationControl = () => {
 
       // Check if Capacitor is available
       if (!PushNotifications) {
-        console.log('📱 Running in web mode - Capacitor Push Notifications not available');
+        devLog.log('📱 Running in web mode - Capacitor Push Notifications not available');
         setIsRegistering(false);
         toast({
           title: "📱 وضع الويب",
@@ -73,7 +74,7 @@ const PushNotificationControl = () => {
         
         // استلام Token
         PushNotifications.addListener('registration', async (token) => {
-          console.log('✅ FCM Token registered:', token.value);
+          devLog.log('✅ FCM Token registered:', token.value);
           
           const { data: { user } } = await supabase.auth.getUser();
           if (user) {
@@ -97,12 +98,12 @@ const PushNotificationControl = () => {
 
         // معالجة استلام الإشعارات
         PushNotifications.addListener('pushNotificationReceived', (notification) => {
-          console.log('📨 Notification received:', notification);
+          devLog.log('📨 Notification received:', notification);
         });
 
         // معالجة النقر على الإشعار
         PushNotifications.addListener('pushNotificationActionPerformed', (notification) => {
-          console.log('👆 Notification clicked:', notification);
+          devLog.log('👆 Notification clicked:', notification);
           const data = notification.notification.data;
           if (data.route) {
             window.location.href = data.route;

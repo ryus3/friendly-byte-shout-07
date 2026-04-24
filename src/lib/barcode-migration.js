@@ -4,13 +4,14 @@
 
 import { supabase } from '@/lib/customSupabaseClient';
 import { generateUniqueBarcode, validateBarcode } from '@/lib/barcode-utils';
+import devLog from '@/lib/devLogger';
 
 /**
  * تحديث الباركود للمنتجات والمتغيرات الموجودة
  */
 export const updateExistingBarcodes = async () => {
   try {
-    console.log('🔄 بدء تحديث الباركود للمنتجات الموجودة...');
+    devLog.log('🔄 بدء تحديث الباركود للمنتجات الموجودة...');
     
     // 1. تحديث باركود المنتجات الأساسية
     const { data: products, error: productsError } = await supabase
@@ -20,7 +21,7 @@ export const updateExistingBarcodes = async () => {
       
     if (productsError) throw productsError;
     
-    console.log(`📦 العثور على ${products?.length || 0} منتج بحاجة لباركود`);
+    devLog.log(`📦 العثور على ${products?.length || 0} منتج بحاجة لباركود`);
     
     // تحديث باركود المنتجات
     for (const product of products || []) {
@@ -29,7 +30,7 @@ export const updateExistingBarcodes = async () => {
         .from('products')
         .update({ barcode: newBarcode })
         .eq('id', product.id);
-      console.log(`✅ تم تحديث باركود المنتج: ${product.name} -> ${newBarcode}`);
+      devLog.log(`✅ تم تحديث باركود المنتج: ${product.name} -> ${newBarcode}`);
     }
     
     // 2. تحديث باركود المتغيرات
@@ -47,7 +48,7 @@ export const updateExistingBarcodes = async () => {
       
     if (variantsError) throw variantsError;
     
-    console.log(`🎨 العثور على ${variants?.length || 0} متغير بحاجة لباركود`);
+    devLog.log(`🎨 العثور على ${variants?.length || 0} متغير بحاجة لباركود`);
     
     // تحديث باركود المتغيرات
     for (const variant of variants || []) {
@@ -67,10 +68,10 @@ export const updateExistingBarcodes = async () => {
         .update({ barcode: newBarcode })
         .eq('id', variant.id);
         
-      console.log(`✅ تم تحديث باركود المتغير: ${productName} (${colorName}-${sizeName}) -> ${newBarcode}`);
+      devLog.log(`✅ تم تحديث باركود المتغير: ${productName} (${colorName}-${sizeName}) -> ${newBarcode}`);
     }
     
-    console.log('🎉 تم تحديث جميع الباركودات بنجاح!');
+    devLog.log('🎉 تم تحديث جميع الباركودات بنجاح!');
     return { success: true, updatedProducts: products?.length || 0, updatedVariants: variants?.length || 0 };
     
   } catch (error) {
@@ -84,7 +85,7 @@ export const updateExistingBarcodes = async () => {
  */
 export const validateSystemBarcodes = async () => {
   try {
-    console.log('🔍 بدء فحص صحة الباركودات...');
+    devLog.log('🔍 بدء فحص صحة الباركودات...');
     
     // فحص باركود المنتجات
     const { data: products } = await supabase
@@ -100,11 +101,11 @@ export const validateSystemBarcodes = async () => {
       
     const invalidVariants = variants?.filter(v => !validateBarcode(v.barcode)) || [];
     
-    console.log(`📊 نتائج الفحص:`);
-    console.log(`   - منتجات صحيحة: ${(products?.length || 0) - invalidProducts.length}`);
-    console.log(`   - منتجات غير صحيحة: ${invalidProducts.length}`);
-    console.log(`   - متغيرات صحيحة: ${(variants?.length || 0) - invalidVariants.length}`);
-    console.log(`   - متغيرات غير صحيحة: ${invalidVariants.length}`);
+    devLog.log(`📊 نتائج الفحص:`);
+    devLog.log(`   - منتجات صحيحة: ${(products?.length || 0) - invalidProducts.length}`);
+    devLog.log(`   - منتجات غير صحيحة: ${invalidProducts.length}`);
+    devLog.log(`   - متغيرات صحيحة: ${(variants?.length || 0) - invalidVariants.length}`);
+    devLog.log(`   - متغيرات غير صحيحة: ${invalidVariants.length}`);
     
     return {
       success: true,
@@ -130,7 +131,7 @@ export const validateSystemBarcodes = async () => {
 export const autoUpdateBarcodes = async () => {
   const validationResult = await validateSystemBarcodes();
   if (validationResult.success && (validationResult.invalidProducts > 0 || validationResult.invalidVariants > 0)) {
-    console.log('🔧 العثور على باركودات غير صحيحة، سيتم تحديثها تلقائياً...');
+    devLog.log('🔧 العثور على باركودات غير صحيحة، سيتم تحديثها تلقائياً...');
     return await updateExistingBarcodes();
   }
   return { success: true, message: 'جميع الباركودات صحيحة' };

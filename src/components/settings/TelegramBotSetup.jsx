@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/components/ui/use-toast';
 import { 
+import devLog from '@/lib/devLogger';
   MessageCircle, Bot, CheckCircle, AlertTriangle, ExternalLink, Copy,
   Settings, Zap, Shield, Smartphone
 } from 'lucide-react';
@@ -190,7 +191,7 @@ const TelegramBotSetup = ({ open, onOpenChange }) => {
 
 🚀 البوت جاهز للعمل!`;
 
-      console.log('Bot setup completed:', testMessage);
+      devLog.log('Bot setup completed:', testMessage);
       
     } catch (error) {
       console.error('Error sending test message:', error);

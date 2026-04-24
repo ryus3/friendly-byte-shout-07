@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import devLog from '@/lib/devLogger';
 
 export const useMediaQuery = (query) => {
   // Safe fallback for server-side rendering
@@ -8,7 +9,7 @@ export const useMediaQuery = (query) => {
     try {
       return window.matchMedia ? window.matchMedia(query).matches : false;
     } catch (error) {
-      console.warn('MediaQuery error:', error);
+      devLog.warn('MediaQuery error:', error);
       return false;
     }
   };
@@ -22,7 +23,7 @@ export const useMediaQuery = (query) => {
     try {
       media = window.matchMedia(query);
     } catch (error) {
-      console.warn('MediaQuery useEffect error:', error);
+      devLog.warn('MediaQuery useEffect error:', error);
       return;
     }
     
@@ -30,7 +31,7 @@ export const useMediaQuery = (query) => {
       try {
         setMatches(media.matches);
       } catch (error) {
-        console.warn('MediaQuery setMatches error:', error);
+        devLog.warn('MediaQuery setMatches error:', error);
       }
     };
     

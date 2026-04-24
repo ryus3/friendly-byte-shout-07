@@ -1,3 +1,4 @@
+import devLog from '@/lib/devLogger';
 /**
  * نظام معرفات بسيط وموحد
  * يحل مشكلة UUID المعقد ويجعل النظام أبسط وأسرع
@@ -97,7 +98,7 @@ export const convertToEmployeeCode = async (userId) => {
     }
     
   } catch (error) {
-    console.warn('لا يمكن تحويل UUID إلى employee_code:', error);
+    devLog.warn('لا يمكن تحويل UUID إلى employee_code:', error);
   }
   
   return null;
@@ -126,14 +127,14 @@ export const createSimpleFilter = (user, isAdmin = false, columnName = 'created_
  */
 export const migrateToSimpleIds = async (user) => {
   if (!user?.employee_code || !user?.user_id) {
-    console.warn('لا يمكن التحديث: بيانات المستخدم ناقصة');
+    devLog.warn('لا يمكن التحديث: بيانات المستخدم ناقصة');
     return;
   }
   
   const { supabase } = await import('@/lib/customSupabaseClient');
   const { employee_code, user_id } = user;
   
-  console.log(`🔄 تحديث جميع السجلات من UUID إلى employee_code: ${employee_code}`);
+  devLog.log(`🔄 تحديث جميع السجلات من UUID إلى employee_code: ${employee_code}`);
   
   try {
     // تحديث الطلبات
@@ -166,7 +167,7 @@ export const migrateToSimpleIds = async (user) => {
       .update({ user_id: employee_code })
       .eq('user_id', user_id);
     
-    console.log(`✅ تم تحديث جميع السجلات إلى employee_code: ${employee_code}`);
+    devLog.log(`✅ تم تحديث جميع السجلات إلى employee_code: ${employee_code}`);
     
   } catch (error) {
     console.error('❌ خطأ في تحديث السجلات:', error);

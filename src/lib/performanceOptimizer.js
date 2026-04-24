@@ -4,6 +4,7 @@
  */
 
 import { useCallback, useEffect, useRef, useMemo } from 'react';
+import devLog from '@/lib/devLogger';
 
 /**
  * ⚡ Debounce - تأخير تنفيذ دالة لتحسين الأداء
@@ -178,7 +179,7 @@ export const createPerformanceLogger = () => {
       const start = performance.now();
       const result = fn();
       const duration = performance.now() - start;
-      console.log(`⚡ ${label}: ${duration.toFixed(2)}ms`);
+      devLog.log(`⚡ ${label}: ${duration.toFixed(2)}ms`);
       return result;
     }
   };

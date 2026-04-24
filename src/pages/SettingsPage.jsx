@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast.js';
 import { 
+import devLog from '@/lib/devLogger';
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
   Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
@@ -162,7 +163,7 @@ const SettingsPage = () => {
       if (!canViewAllData) return;
       
       // استخدام النظام الموحد بدلاً من استدعاء supabase مباشر
-      console.log('📊 جلب عدد رموز الموظفين من النظام الموحد');
+      devLog.log('📊 جلب عدد رموز الموظفين من النظام الموحد');
       
       // TODO: إضافة هذه البيانات لـ SuperAPI لاحقاً
       // مؤقتاً: عرض رقم ثابت

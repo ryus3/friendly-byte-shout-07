@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { toast } from '@/hooks/use-toast';
+import devLog from '@/lib/devLogger';
 
 export const useCashSources = () => {
   const [cashSources, setCashSources] = useState([]);
@@ -55,7 +56,7 @@ export const useCashSources = () => {
       const { data, error } = await query;
       if (error) throw error;
       
-      console.log('📋 حركات النقد المجلبة:', data?.length || 0);
+      devLog.log('📋 حركات النقد المجلبة:', data?.length || 0);
       setCashMovements(data || []);
     } catch (error) {
       console.error('❌ خطأ في جلب حركات النقد:', error);
@@ -214,7 +215,7 @@ export const useCashSources = () => {
       }
 
       const balance = Number(data?.current_balance || 0);
-      console.log('💰 رصيد القاصة الرئيسية:', balance.toLocaleString());
+      devLog.log('💰 رصيد القاصة الرئيسية:', balance.toLocaleString());
       return balance;
     } catch (error) {
       console.error('❌ فشل في جلب رصيد القاصة الرئيسية:', error);
@@ -241,8 +242,8 @@ export const useCashSources = () => {
       .filter(source => source.is_active)
       .reduce((sum, source) => sum + (source.current_balance || 0), 0);
     
-    console.log('💰 مجموع جميع المصادر النشطة:', total.toLocaleString(), 'د.ع');
-    console.log('📊 تفاصيل المصادر:', cashSources.map(s => ({
+    devLog.log('💰 مجموع جميع المصادر النشطة:', total.toLocaleString(), 'د.ع');
+    devLog.log('📊 تفاصيل المصادر:', cashSources.map(s => ({
       name: s.name, 
       balance: s.current_balance?.toLocaleString() || '0'
     })));
@@ -281,7 +282,7 @@ export const useCashSources = () => {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'cash_sources' },
         () => {
-          console.log('🔄 Cash sources changed, refreshing...');
+          devLog.log('🔄 Cash sources changed, refreshing...');
           fetchCashSources();
         }
       )
@@ -292,7 +293,7 @@ export const useCashSources = () => {
       .on('postgres_changes',
         { event: '*', schema: 'public', table: 'cash_movements' },
         () => {
-          console.log('🔄 Cash movements changed, refreshing...');
+          devLog.log('🔄 Cash movements changed, refreshing...');
           fetchCashMovements();
         }
       )
@@ -304,7 +305,7 @@ export const useCashSources = () => {
       .on('postgres_changes', 
         { event: 'UPDATE', schema: 'public', table: 'orders' },
         (payload) => {
-          console.log('🔄 Order updated, refreshing cash sources...');
+          devLog.log('🔄 Order updated, refreshing cash sources...');
           // إذا تم تحديث حالة الطلب للتسليم، قم بتحديث الأرباح
           if (payload.new.status === 'delivered' || payload.new.receipt_received) {
             fetchCashSources();
@@ -319,7 +320,7 @@ export const useCashSources = () => {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'purchases' },
         async () => {
-          console.log('🔄 Purchases changed, refreshing cash sources immediately...');
+          devLog.log('🔄 Purchases changed, refreshing cash sources immediately...');
           // تحديث فوري للبيانات بدون تأخير
           await Promise.all([
             fetchCashSources(),
@@ -335,7 +336,7 @@ export const useCashSources = () => {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'expenses' },
         (payload) => {
-          console.log('🔄 Expense changed:', payload.eventType, payload.new?.id);
+          devLog.log('🔄 Expense changed:', payload.eventType, payload.new?.id);
           // تحديث مؤجل لتجنب التكرار
           setTimeout(() => {
             fetchCashMovements();

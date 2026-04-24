@@ -36,6 +36,7 @@ import FinancialPerformanceCard from '@/components/shared/FinancialPerformanceCa
 import UnifiedFinancialDisplay from '@/components/financial/UnifiedFinancialDisplay';
 import PeriodClosingManager from '@/components/cash/PeriodClosingManager';
 import EmployeeFinancialCenterManager from '@/components/accounting/EmployeeFinancialCenterManager';
+import devLog from '@/lib/devLogger';
 
 const formatCurrency = (amount) => {
   return new Intl.NumberFormat('ar-IQ', {
@@ -185,8 +186,8 @@ const AccountingPage = () => {
     const { analysisData: profitsAnalysis } = useAdvancedProfitsAnalysis(profitsDateRange, profitsFilters);
     // استخدام البيانات الموحدة - نفس منطق لوحة التحكم
     const { profitData: unifiedProfitData, loading: unifiedLoading } = useUnifiedProfits(selectedTimePeriod);
-    console.log('🔥 البيانات المالية الموحدة:', unifiedProfitData);
-    console.log('🔍 فترة مختارة:', selectedTimePeriod);
+    devLog.log('🔥 البيانات المالية الموحدة:', unifiedProfitData);
+    devLog.log('🔍 فترة مختارة:', selectedTimePeriod);
     
     // استخدام البيانات الموحدة لجميع الحسابات
     
@@ -223,13 +224,13 @@ const AccountingPage = () => {
             const capitalValue = Number(capitalData?.value) || 0;
             setInitialCapital(capitalValue);
             
-            console.log('💰 تم تحديث رأس المال:', capitalValue);
+            devLog.log('💰 تم تحديث رأس المال:', capitalValue);
 
             // إعادة حساب الرصيد النقدي الفعلي
             const totalRealBalance = getTotalSourcesBalance();
             setRealCashBalance(totalRealBalance);
             
-            console.log('💰 تم تحديث الرصيد النقدي الفعلي:', totalRealBalance);
+            devLog.log('💰 تم تحديث الرصيد النقدي الفعلي:', totalRealBalance);
             
         } catch (error) {
             console.error('❌ خطأ في تحديث البيانات المالية:', error);
