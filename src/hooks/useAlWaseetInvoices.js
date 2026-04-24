@@ -204,7 +204,9 @@ export const useAlWaseetInvoices = () => {
           mode: 'smart',
           employee_id: user?.id,
           sync_invoices: true,
-          sync_orders: false // Only sync invoices in background
+          // CRITICAL: must be true so background sync creates delivery_invoice_orders
+          // and triggers link_invoice_orders_to_orders automatically (no UI open required).
+          sync_orders: true
         }
       });
       
@@ -1050,7 +1052,8 @@ export const useAlWaseetInvoices = () => {
           mode: 'smart',
           employee_id: user?.id,
           sync_invoices: true,
-          sync_orders: false,
+          // CRITICAL: must be true to populate delivery_invoice_orders + auto-link.
+          sync_orders: true,
           force_refresh: false
         }
       });
