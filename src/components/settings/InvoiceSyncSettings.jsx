@@ -8,224 +8,242 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Progress } from '@/components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Clock, 
-  RefreshCw, 
-  Settings, 
-  Calendar,
-  Bell,
-  BellOff,
-  CheckCircle,
-  AlertTriangle,
-  FileText,
-  Users,
-  Activity,
-  Wrench,
-  TrendingUp,
-  Zap,
-  Timer,
-  AlertCircle,
-  XCircle,
-  Play,
-  Pause,
-  RotateCcw,
-  Shield,
-  Eye
+import {
+  Clock, RefreshCw, Settings, Bell, BellOff,
+  CheckCircle, AlertTriangle, FileText, Users, Activity,
+  Wrench, Zap, Timer, AlertCircle, XCircle, Play, Pause,
+  RotateCcw, Shield, Eye, Package, Key, Plus, Minus, MonitorSmartphone
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { toZonedTime, format as formatTz } from 'date-fns-tz';
 
 /**
- * 🚀 لوحة تحكم مزامنة الفواتير الاحترافية
- * نظام شامل للتحكم بالمزامنة التلقائية والتشخيص والإصلاح
+ * 🚀 لوحة التحكم الموحّدة لكل المزامنات (المعيار العالمي)
+ * - الفواتير | الطلبات | التوكنات | الواجهة | التشخيص
+ * - مصدر حقيقة واحد: auto_sync_schedule_settings + RPCs
  */
 const InvoiceSyncSettings = () => {
   const { toast } = useToast();
-  
-  // ============ States ============
+
   const [activeTab, setActiveTab] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [fixing, setFixing] = useState(false);
-  
-  // Stats & Data
+
   const [stats, setStats] = useState(null);
-  const [cronJobs, setCronJobs] = useState([]);
   const [recentLogs, setRecentLogs] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [discrepancies, setDiscrepancies] = useState([]);
-  
-  // Settings
-  const [settings, setSettings] = useState({
-    daily_sync_enabled: true,
-    sync_frequency: 'twice_daily',
-    morning_sync_time: '09:00',
-    evening_sync_time: '21:00',
-    lookback_days: 30,
-    auto_cleanup_enabled: true,
-    keep_invoices_per_employee: 10
+  const [tokens, setTokens] = useState([]);
+
+  // الإعدادات الموحّدة (مرآة لـ auto_sync_schedule_settings)
+  const [u, setU] = useState({
+    invoice_sync_enabled: true,
+    invoice_morning_time: '09:00',
+    invoice_evening_time: '23:45',
+    orders_sync_enabled: true,
+    orders_sync_times: ['02:15', '21:00'],
+    orders_working_hours_only: true,
+    tokens_auto_renew_enabled: true,
+    tokens_check_time: '03:00',
+    frontend_orders_page_auto_sync: true,
+    frontend_employee_page_auto_sync: true,
+    frontend_login_sync: false,
+    last_run_at: null,
+    active_crons: []
   });
 
-  // ============ Data Fetching ============
   const fetchAllData = useCallback(async () => {
     setLoading(true);
     try {
-      // Fetch all data in parallel - including auto_sync_schedule_settings for actual cron times
-      const [statsRes, cronRes, logsRes, employeesRes, discrepanciesRes, settingsRes, scheduleRes] = await Promise.all([
+      const [statsRes, logsRes, employeesRes, discrepanciesRes, unifiedRes, tokensRes] = await Promise.all([
         supabase.rpc('get_invoice_sync_stats'),
-        supabase.rpc('get_invoice_cron_status'),
         supabase.rpc('get_recent_sync_logs', { p_limit: 10 }),
         supabase.rpc('get_employee_invoice_stats'),
         supabase.rpc('get_invoice_discrepancies'),
-        supabase.from('invoice_sync_settings').select('*').maybeSingle(),
-        supabase.from('auto_sync_schedule_settings').select('*').eq('id', '00000000-0000-0000-0000-000000000001').maybeSingle()
+        supabase.rpc('get_unified_sync_settings'),
+        supabase.from('delivery_partner_tokens')
+          .select('id, partner_name, account_username, expires_at, is_active, auto_renew_enabled, last_used_at')
+          .eq('is_active', true)
+          .order('expires_at', { ascending: true })
       ]);
 
       if (statsRes.data) setStats(statsRes.data[0] || {});
-      if (cronRes.data) setCronJobs(cronRes.data || []);
       if (logsRes.data) setRecentLogs(logsRes.data || []);
       if (employeesRes.data) setEmployees(employeesRes.data || []);
       if (discrepanciesRes.data) setDiscrepancies(discrepanciesRes.data || []);
-      
-      // Priority: read sync times from auto_sync_schedule_settings (source of truth for cron)
-      // Fallback to invoice_sync_settings for other settings
-      const scheduleData = scheduleRes.data;
-      const syncTimes = scheduleData?.sync_times || [];
-      
-      setSettings(prev => ({
-        ...prev,
-        ...(settingsRes.data || {}),
-        daily_sync_enabled: scheduleData?.enabled ?? prev.daily_sync_enabled,
-        // Read from auto_sync_schedule_settings.sync_times array (Baghdad time)
-        morning_sync_time: syncTimes[0]?.slice(0, 5) || settingsRes.data?.morning_sync_time?.slice(0, 5) || '09:00',
-        evening_sync_time: syncTimes[1]?.slice(0, 5) || settingsRes.data?.evening_sync_time?.slice(0, 5) || '21:00'
-      }));
+      if (tokensRes.data) setTokens(tokensRes.data || []);
+      if (unifiedRes.data) {
+        const d = unifiedRes.data;
+        setU(prev => ({
+          ...prev,
+          ...d,
+          orders_sync_times: Array.isArray(d.orders_sync_times) && d.orders_sync_times.length > 0
+            ? d.orders_sync_times.map(t => String(t).slice(0, 5))
+            : prev.orders_sync_times,
+          invoice_morning_time: String(d.invoice_morning_time || '09:00').slice(0, 5),
+          invoice_evening_time: String(d.invoice_evening_time || '23:45').slice(0, 5),
+          tokens_check_time: String(d.tokens_check_time || '03:00').slice(0, 5)
+        }));
+      }
     } catch (error) {
-      console.error('Error fetching invoice sync data:', error);
+      console.error('Error fetching unified sync data:', error);
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => {
-    fetchAllData();
-  }, [fetchAllData]);
+  useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
   // ============ Actions ============
-  
-  // تحديث الجدولة
-  const updateSchedule = async () => {
+
+  const saveInvoiceSchedule = async () => {
     setSaving(true);
     try {
-      // استخدام الدالة الجديدة الموحدة - تقبل فقط morning و evening time كنص
-      const { data, error } = await supabase.rpc('update_invoice_sync_schedule', {
-        p_morning_time: settings.morning_sync_time,
-        p_evening_time: settings.evening_sync_time
+      const { error } = await supabase.rpc('update_invoice_sync_schedule', {
+        p_morning_time: u.invoice_morning_time,
+        p_evening_time: u.invoice_evening_time
       });
-
       if (error) throw error;
-      
-      console.log('✅ Schedule update result:', data);
-
-      toast({
-        title: "✅ تم تحديث الجدولة",
-        description: "تم تحديث جدولة المزامنة التلقائية بنجاح",
-      });
-      
+      toast({ title: '✅ تم حفظ جدولة الفواتير', description: `صباحاً ${u.invoice_morning_time} • مساءً ${u.invoice_evening_time}` });
       fetchAllData();
-    } catch (error) {
-      console.error('Error updating schedule:', error);
-      const errorMessage = error?.message || error?.details || error?.hint || 'فشل في تحديث الجدولة';
-      toast({
-        title: "❌ خطأ في تحديث الجدولة",
-        description: errorMessage,
-        variant: "destructive"
-      });
-    } finally {
-      setSaving(false);
-    }
+    } catch (e) {
+      toast({ title: '❌ فشل الحفظ', description: e.message, variant: 'destructive' });
+    } finally { setSaving(false); }
   };
 
-  // مزامنة شاملة فورية
+  const saveOrdersSchedule = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.rpc('update_orders_sync_schedule', {
+        p_times: u.orders_sync_times,
+        p_enabled: u.orders_sync_enabled,
+        p_working_hours_only: u.orders_working_hours_only
+      });
+      if (error) throw error;
+      toast({ title: '✅ تم حفظ جدولة الطلبات', description: `${u.orders_sync_times.length} مرات يومياً` });
+      fetchAllData();
+    } catch (e) {
+      toast({ title: '❌ فشل الحفظ', description: e.message, variant: 'destructive' });
+    } finally { setSaving(false); }
+  };
+
+  const saveTokensSettings = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.rpc('update_tokens_renewal_settings', {
+        p_enabled: u.tokens_auto_renew_enabled,
+        p_check_time: u.tokens_check_time
+      });
+      if (error) throw error;
+      toast({ title: '✅ تم حفظ إعدادات التوكنات', description: u.tokens_auto_renew_enabled ? `فحص يومي عند ${u.tokens_check_time}` : 'تم تعطيل التجديد التلقائي' });
+      fetchAllData();
+    } catch (e) {
+      toast({ title: '❌ فشل الحفظ', description: e.message, variant: 'destructive' });
+    } finally { setSaving(false); }
+  };
+
+  const saveFrontendSettings = async () => {
+    setSaving(true);
+    try {
+      const { error } = await supabase.rpc('update_frontend_sync_settings', {
+        p_orders_page_auto_sync: u.frontend_orders_page_auto_sync,
+        p_employee_page_auto_sync: u.frontend_employee_page_auto_sync,
+        p_login_sync: u.frontend_login_sync
+      });
+      if (error) throw error;
+      toast({ title: '✅ تم حفظ إعدادات الواجهة' });
+      fetchAllData();
+    } catch (e) {
+      toast({ title: '❌ فشل الحفظ', description: e.message, variant: 'destructive' });
+    } finally { setSaving(false); }
+  };
+
   const runFullSync = async () => {
     setSyncing(true);
     try {
       const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { 
-          mode: 'comprehensive',
-          sync_invoices: true,
-          sync_orders: true,
-          force_refresh: false,
-          run_reconciliation: true
-        }
+        body: { mode: 'comprehensive', sync_invoices: true, sync_orders: true, force_refresh: false, run_reconciliation: true }
       });
-
       if (error) throw error;
-
-      toast({
-        title: "✅ اكتملت المزامنة",
-        description: `فواتير: ${data?.invoices_synced || 0} | طلبات: ${data?.orders_updated || 0} | تسوية: ${data?.reconciled_count || 0}`,
-      });
-      
+      toast({ title: '✅ اكتملت المزامنة', description: `فواتير: ${data?.invoices_synced || 0} | طلبات: ${data?.orders_updated || 0}` });
       fetchAllData();
-    } catch (error) {
-      console.error('Error running sync:', error);
-      toast({
-        title: "❌ خطأ في المزامنة",
-        description: error.message || "حدث خطأ أثناء المزامنة",
-        variant: "destructive"
-      });
-    } finally {
-      setSyncing(false);
-    }
+    } catch (e) {
+      toast({ title: '❌ خطأ في المزامنة', description: e.message, variant: 'destructive' });
+    } finally { setSyncing(false); }
   };
 
-  // إصلاح التناقضات
+  const runOrdersSync = async () => {
+    setSyncing(true);
+    try {
+      const { error } = await supabase.functions.invoke('sync-order-updates', { body: {} });
+      if (error) throw error;
+      toast({ title: '✅ تمت مزامنة الطلبات' });
+      fetchAllData();
+    } catch (e) {
+      toast({ title: '❌ فشلت مزامنة الطلبات', description: e.message, variant: 'destructive' });
+    } finally { setSyncing(false); }
+  };
+
+  const refreshTokensNow = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('refresh-delivery-partner-tokens', { body: {} });
+      if (error) throw error;
+      toast({ title: '✅ فحص التوكنات', description: `تم تجديد ${data?.renewed || 0} توكن` });
+      fetchAllData();
+    } catch (e) {
+      toast({ title: '❌ فشل', description: e.message, variant: 'destructive' });
+    } finally { setSyncing(false); }
+  };
+
   const fixDiscrepancies = async () => {
     setFixing(true);
     try {
-      // إصلاح الفواتير بحالة "التاجر" لكن received=false
       const { data: fixedInvoices } = await supabase.rpc('fix_merchant_received_invoices');
-      
-      // تسوية الطلبات
       const { data: reconciledOrders } = await supabase.rpc('reconcile_invoice_receipts');
-
-      toast({
-        title: "✅ تم الإصلاح",
-        description: `تم إصلاح ${fixedInvoices || 0} فاتورة و ${reconciledOrders?.length || 0} طلب`,
-      });
-      
+      toast({ title: '✅ تم الإصلاح', description: `${fixedInvoices || 0} فاتورة و ${reconciledOrders?.length || 0} طلب` });
       fetchAllData();
-    } catch (error) {
-      console.error('Error fixing discrepancies:', error);
-      toast({
-        title: "❌ خطأ",
-        description: "فشل في إصلاح التناقضات",
-        variant: "destructive"
-      });
-    } finally {
-      setFixing(false);
-    }
+    } catch (e) {
+      toast({ title: '❌ خطأ', description: e.message, variant: 'destructive' });
+    } finally { setFixing(false); }
   };
 
-  // ============ Render Helpers ============
-  
-  // ✅ عرض التاريخ بتوقيت بغداد (Asia/Baghdad)
+  // ============ Helpers ============
+
   const formatDate = (date) => {
     if (!date) return 'غير متاح';
     try {
       const baghdadTime = toZonedTime(new Date(date), 'Asia/Baghdad');
       return formatTz(baghdadTime, 'yyyy/MM/dd HH:mm', { timeZone: 'Asia/Baghdad' });
     } catch {
-      return new Date(date).toLocaleString('ar-EG', {
-        dateStyle: 'short',
-        timeStyle: 'short'
-      });
+      return new Date(date).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' });
     }
+  };
+
+  const daysUntilExpiry = (date) => {
+    if (!date) return null;
+    const ms = new Date(date).getTime() - Date.now();
+    return Math.floor(ms / (1000 * 60 * 60 * 24));
+  };
+
+  const updateOrderTime = (idx, val) => {
+    setU(s => {
+      const next = [...s.orders_sync_times];
+      next[idx] = val;
+      return { ...s, orders_sync_times: next };
+    });
+  };
+  const addOrderTime = () => {
+    if (u.orders_sync_times.length >= 4) return;
+    setU(s => ({ ...s, orders_sync_times: [...s.orders_sync_times, '12:00'] }));
+  };
+  const removeOrderTime = (idx) => {
+    if (u.orders_sync_times.length <= 1) return;
+    setU(s => ({ ...s, orders_sync_times: s.orders_sync_times.filter((_, i) => i !== idx) }));
   };
 
   const totalDiscrepancies = discrepancies.reduce((sum, d) => sum + (d.count || 0), 0);
@@ -235,7 +253,7 @@ const InvoiceSyncSettings = () => {
       <Card className="w-full">
         <CardContent className="p-8 text-center">
           <RefreshCw className="w-8 h-8 mx-auto mb-3 animate-spin text-primary" />
-          <p className="text-muted-foreground">جاري تحميل بيانات المزامنة...</p>
+          <p className="text-muted-foreground">جاري تحميل لوحة التحكم الموحّدة...</p>
         </CardContent>
       </Card>
     );
@@ -246,64 +264,43 @@ const InvoiceSyncSettings = () => {
       <CardHeader className="pb-2 bg-gradient-to-r from-primary/5 to-transparent">
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-primary" />
-            <span>لوحة تحكم مزامنة الفواتير</span>
+            <Activity className="w-5 h-5 text-primary" />
+            <span>لوحة تحكم المزامنة الموحّدة</span>
           </div>
-          <div className="flex items-center gap-2">
-            {stats?.last_sync_success !== null && (
-              <Badge variant={stats?.last_sync_success ? "default" : "destructive"} className="text-xs">
-                {stats?.last_sync_success ? (
-                  <><CheckCircle className="w-3 h-3 ml-1" /> آخر مزامنة ناجحة</>
-                ) : (
-                  <><XCircle className="w-3 h-3 ml-1" /> فشلت آخر مزامنة</>
-                )}
-              </Badge>
-            )}
-            <Button 
-              size="sm" 
-              variant="outline" 
-              onClick={fetchAllData}
-              disabled={loading}
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
+          <Button size="sm" variant="outline" onClick={fetchAllData} disabled={loading}>
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent className="p-0">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0 h-auto overflow-x-auto flex-nowrap">
             <TabsTrigger value="overview" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
-              <Activity className="w-4 h-4 ml-2" />
-              الملخص
+              <Activity className="w-4 h-4 ml-2" /> الملخص
             </TabsTrigger>
-            <TabsTrigger value="scheduler" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
-              <Timer className="w-4 h-4 ml-2" />
-              الجدولة
+            <TabsTrigger value="invoices" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
+              <FileText className="w-4 h-4 ml-2" /> الفواتير
             </TabsTrigger>
-            <TabsTrigger value="employees" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
-              <Users className="w-4 h-4 ml-2" />
-              الموظفين
+            <TabsTrigger value="orders" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
+              <Package className="w-4 h-4 ml-2" /> الطلبات
+            </TabsTrigger>
+            <TabsTrigger value="tokens" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
+              <Key className="w-4 h-4 ml-2" /> التوكنات
             </TabsTrigger>
             <TabsTrigger value="diagnostics" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3 relative">
-              <Wrench className="w-4 h-4 ml-2" />
-              التشخيص
+              <Wrench className="w-4 h-4 ml-2" /> التشخيص
               {totalDiscrepancies > 0 && (
                 <Badge variant="destructive" className="absolute -top-1 -left-1 h-5 w-5 p-0 flex items-center justify-center text-[10px]">
                   {totalDiscrepancies}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="logs" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-4 py-3">
-              <Eye className="w-4 h-4 ml-2" />
-              السجلات
-            </TabsTrigger>
           </TabsList>
 
           {/* ============ تبويب الملخص ============ */}
           <TabsContent value="overview" className="p-4 space-y-4">
-            {/* إحصائيات رئيسية */}
+            {/* إحصائيات */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
                 <div className="text-2xl font-bold text-blue-600">{stats?.total_invoices || 0}</div>
@@ -323,188 +320,161 @@ const InvoiceSyncSettings = () => {
               </div>
             </div>
 
-            {/* تحذير التناقضات */}
-            {stats?.orders_awaiting_receipt > 0 && (
-              <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                <div className="flex-1">
-                  <p className="font-medium text-amber-700">يوجد {stats.orders_awaiting_receipt} طلب بحاجة لتسوية</p>
-                  <p className="text-xs text-amber-600/80">طلبات مرتبطة بفواتير مستلمة لكن لم تُعلَّم كمستلمة</p>
-                </div>
-                <Button size="sm" variant="outline" onClick={fixDiscrepancies} disabled={fixing}>
-                  {fixing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
-                  إصلاح
-                </Button>
-              </div>
-            )}
-
-            {/* آخر مزامنة وزر التشغيل */}
+            {/* مزامنة شاملة */}
             <div className="flex items-center justify-between p-4 bg-muted/50 rounded-lg">
-              <div className="space-y-1">
-                <p className="text-sm font-medium">آخر مزامنة</p>
+              <div>
+                <p className="text-sm font-medium">آخر مزامنة شاملة</p>
                 <p className="text-xs text-muted-foreground">{formatDate(stats?.last_sync_at)}</p>
               </div>
               <Button onClick={runFullSync} disabled={syncing} className="gap-2">
-                {syncing ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Zap className="w-4 h-4" />
-                )}
+                {syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
                 مزامنة شاملة الآن
               </Button>
             </div>
 
-            {/* حالة Cron Jobs - فقط invoice-sync-am/pm */}
+            {/* حالة الكرونات */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">حالة المهام المجدولة</Label>
+              <Label className="text-sm font-medium">حالة المهام المجدولة (الخلفية)</Label>
               <div className="grid gap-2">
-                {cronJobs.length === 0 ? (
+                {(u.active_crons || []).length === 0 ? (
                   <div className="p-3 bg-muted/30 rounded-lg text-center text-muted-foreground text-sm">
                     لا توجد مهام مجدولة
                   </div>
                 ) : (
-                  cronJobs.map((job, i) => (
+                  u.active_crons.map((job, i) => (
                     <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                       <div className="flex items-center gap-2">
-                        {job.is_active ? (
-                          <Play className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <Pause className="w-4 h-4 text-muted-foreground" />
-                        )}
+                        {job.active ? <Play className="w-4 h-4 text-green-600" /> : <Pause className="w-4 h-4 text-muted-foreground" />}
                         <span className="text-sm">
-                          {job.job_name === 'smart-invoice-sync-morning' ? 'مزامنة الصباح' : 
-                           job.job_name === 'smart-invoice-sync-evening' ? 'مزامنة المساء' : 
-                           job.job_name?.replace(/-/g, ' ')}
+                          {job.jobname === 'smart-invoice-sync-morning' && 'مزامنة الفواتير - صباحاً'}
+                          {job.jobname === 'smart-invoice-sync-evening' && 'مزامنة الفواتير - مساءً'}
+                          {job.jobname === 'sync-order-updates-scheduled' && 'فاحص الطلبات (Tick Scheduler)'}
+                          {job.jobname === 'refresh-delivery-tokens-daily' && 'فحص التوكنات يومياً'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant={job.is_active ? "default" : "secondary"} className="text-xs">
-                          {job.schedule}
-                        </Badge>
-                        <Badge variant={job.is_active ? "outline" : "secondary"} className="text-xs">
-                          {job.is_active ? 'نشط' : 'معطل'}
-                        </Badge>
-                      </div>
+                      <Badge variant="outline" className="text-xs font-mono">{job.schedule}</Badge>
                     </div>
                   ))
                 )}
               </div>
-              <p className="text-xs text-muted-foreground">التوقيت: Asia/Baghdad (UTC+3)</p>
+              <p className="text-xs text-muted-foreground">التوقيت بصيغة UTC. الإعدادات في الواجهة بتوقيت بغداد (UTC+3).</p>
+            </div>
+
+            <Separator />
+
+            {/* تحكم بالواجهة */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <MonitorSmartphone className="w-4 h-4" /> مزامنات الواجهة (Frontend)
+              </Label>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <p className="text-sm">مزامنة تلقائية في صفحة الطلبات</p>
+                    <p className="text-xs text-muted-foreground">عند فتح صفحة "الطلبات"</p>
+                  </div>
+                  <Switch checked={u.frontend_orders_page_auto_sync} onCheckedChange={(v) => setU(s => ({ ...s, frontend_orders_page_auto_sync: v }))} />
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <p className="text-sm">مزامنة تلقائية في صفحة متابعة الموظفين</p>
+                    <p className="text-xs text-muted-foreground">عند فتح صفحة المتابعة</p>
+                  </div>
+                  <Switch checked={u.frontend_employee_page_auto_sync} onCheckedChange={(v) => setU(s => ({ ...s, frontend_employee_page_auto_sync: v }))} />
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <p className="text-sm">مزامنة عند تسجيل الدخول</p>
+                    <p className="text-xs text-muted-foreground">سحب الفواتير الجديدة فور دخول الموقع</p>
+                  </div>
+                  <Switch checked={u.frontend_login_sync} onCheckedChange={(v) => setU(s => ({ ...s, frontend_login_sync: v }))} />
+                </div>
+              </div>
+              <Button onClick={saveFrontendSettings} disabled={saving} className="w-full gap-2" variant="secondary">
+                {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Settings className="w-4 h-4" />}
+                حفظ إعدادات الواجهة
+              </Button>
+            </div>
+
+            <Separator />
+
+            {/* آخر السجلات */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">آخر عمليات المزامنة</Label>
+              <ScrollArea className="h-[200px]">
+                <div className="space-y-2">
+                  {recentLogs.length === 0 ? (
+                    <p className="text-center text-sm text-muted-foreground py-4">لا توجد سجلات</p>
+                  ) : recentLogs.map((log, i) => (
+                    <div key={i} className={`p-2 rounded-lg border text-xs ${log.success ? 'bg-green-500/5 border-green-500/20' : 'bg-red-500/5 border-red-500/20'}`}>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {log.success ? <CheckCircle className="w-3 h-3 text-green-600" /> : <XCircle className="w-3 h-3 text-red-600" />}
+                          <span className="font-medium">{log.sync_type?.replace(/_/g, ' ')}</span>
+                        </div>
+                        <span className="text-muted-foreground">{formatDate(log.sync_time)}</span>
+                      </div>
+                      <div className="flex gap-3 mt-1 text-muted-foreground">
+                        <span>فواتير: {log.invoices_synced || 0}</span>
+                        <span>طلبات: {log.orders_updated || 0}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
           </TabsContent>
 
-          {/* ============ تبويب الجدولة ============ */}
-          <TabsContent value="scheduler" className="p-4 space-y-4">
-            {/* تفعيل/تعطيل */}
+          {/* ============ تبويب الفواتير ============ */}
+          <TabsContent value="invoices" className="p-4 space-y-4">
             <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-              <div className="space-y-1">
-                <Label className="text-sm font-medium">المزامنة التلقائية</Label>
-                <p className="text-xs text-muted-foreground">
-                  تعمل تلقائياً حتى لو كان الموقع مغلقاً
-                </p>
+              <div>
+                <Label className="text-sm font-medium">جدولة مزامنة الفواتير (الخلفية)</Label>
+                <p className="text-xs text-muted-foreground">مرتين يومياً عبر Supabase Cron — تعمل حتى لو الموقع مغلق</p>
               </div>
               <div className="flex items-center gap-2">
-                {settings.daily_sync_enabled ? (
-                  <Bell className="w-4 h-4 text-green-600" />
-                ) : (
-                  <BellOff className="w-4 h-4 text-muted-foreground" />
-                )}
-                <Switch
-                  checked={settings.daily_sync_enabled}
-                  onCheckedChange={(checked) => setSettings(s => ({ ...s, daily_sync_enabled: checked }))}
-                />
+                {u.invoice_sync_enabled ? <Bell className="w-4 h-4 text-green-600" /> : <BellOff className="w-4 h-4 text-muted-foreground" />}
+                <Switch checked={u.invoice_sync_enabled} onCheckedChange={(v) => setU(s => ({ ...s, invoice_sync_enabled: v }))} />
               </div>
             </div>
 
-            {settings.daily_sync_enabled && (
-              <>
-                {/* تكرار المزامنة */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">تكرار المزامنة</Label>
-                  <Select 
-                    value={settings.sync_frequency} 
-                    onValueChange={(value) => setSettings(s => ({ ...s, sync_frequency: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="once_daily">مرة واحدة يومياً</SelectItem>
-                      <SelectItem value="twice_daily">مرتين يومياً (صباح ومساء)</SelectItem>
-                    </SelectContent>
-                  </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">المزامنة الصباحية</Label>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <Input type="time" value={u.invoice_morning_time}
+                    onChange={(e) => setU(s => ({ ...s, invoice_morning_time: e.target.value }))} />
                 </div>
-
-                {/* أوقات المزامنة */}
-                <div className="space-y-3">
-                  <Label className="text-sm font-medium">أوقات المزامنة</Label>
-                  
-                  {settings.sync_frequency === 'twice_daily' ? (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">مزامنة الصباح</Label>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-muted-foreground" />
-                          <Input
-                            type="time"
-                            value={settings.morning_sync_time}
-                            onChange={(e) => setSettings(s => ({ ...s, morning_sync_time: e.target.value }))}
-                            className="w-32"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">مزامنة المساء</Label>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-muted-foreground" />
-                          <Input
-                            type="time"
-                            value={settings.evening_sync_time}
-                            onChange={(e) => setSettings(s => ({ ...s, evening_sync_time: e.target.value }))}
-                            className="w-32"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <Clock className="w-4 h-4 text-muted-foreground" />
-                      <Input
-                        type="time"
-                        value={settings.morning_sync_time}
-                        onChange={(e) => setSettings(s => ({ ...s, morning_sync_time: e.target.value }))}
-                        className="w-32"
-                      />
-                      <Badge variant="secondary" className="text-xs">كل يوم</Badge>
-                    </div>
-                  )}
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">المزامنة المسائية</Label>
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <Input type="time" value={u.invoice_evening_time}
+                    onChange={(e) => setU(s => ({ ...s, invoice_evening_time: e.target.value }))} />
                 </div>
+              </div>
+            </div>
 
-                {/* زر الحفظ */}
-                <Button onClick={updateSchedule} disabled={saving} className="w-full gap-2">
-                  {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Settings className="w-4 h-4" />}
-                  حفظ إعدادات الجدولة
-                </Button>
+            <Button onClick={saveInvoiceSchedule} disabled={saving} className="w-full gap-2">
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Settings className="w-4 h-4" />}
+              حفظ جدولة الفواتير
+            </Button>
 
-                {/* معلومات */}
-                <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                  <div className="flex items-start gap-2">
-                    <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
-                    <div className="text-xs text-green-700">
-                      <p className="font-medium mb-1">المزامنة التلقائية نشطة</p>
-                      <p>تعمل في الخلفية حتى لو كان الموقع مغلقاً عبر Supabase Cron Jobs</p>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {/* قواعد تفسير الحالات */}
             <Separator />
+
+            <Button onClick={runFullSync} disabled={syncing} variant="secondary" className="w-full gap-2">
+              {syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              مزامنة الفواتير الآن (يدوياً)
+            </Button>
+
+            <Separator />
+
+            {/* قواعد التفسير */}
             <div className="space-y-2">
               <Label className="text-sm font-medium flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                قواعد تفسير حالات الفواتير
+                <Shield className="w-4 h-4" /> قواعد تفسير حالات الفواتير
               </Label>
               <div className="grid gap-2 text-sm">
                 <div className="flex items-center justify-between p-3 bg-amber-500/10 rounded-lg">
@@ -512,76 +482,184 @@ const InvoiceSyncSettings = () => {
                   <Badge variant="secondary">معلقة</Badge>
                 </div>
                 <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
-                  <span>"تم الاستلام من قبل التاجر"</span>
-                  <Badge variant="default">مستلمة ✓</Badge>
-                </div>
-                <div className="flex items-center justify-between p-3 bg-green-500/10 rounded-lg">
-                  <span>"مستلم"</span>
+                  <span>"تم الاستلام من قبل التاجر" / "مستلم"</span>
                   <Badge variant="default">مستلمة ✓</Badge>
                 </div>
               </div>
             </div>
+
+            {/* إحصائيات الموظفين */}
+            <Separator />
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">إحصائيات فواتير الموظفين</Label>
+              <ScrollArea className="h-[300px]">
+                <div className="space-y-2">
+                  {employees.length === 0 ? (
+                    <p className="text-center text-sm text-muted-foreground py-4">لا يوجد موظفين</p>
+                  ) : employees.map((emp, i) => {
+                    const isActive = (emp.token_status || '').toLowerCase() === 'active' ||
+                      (emp.token_expires_at && new Date(emp.token_expires_at) > new Date());
+                    return (
+                      <div key={i} className="p-3 bg-muted/30 rounded-lg space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Users className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium">{emp.employee_name || 'بدون اسم'}</span>
+                            <span className="text-xs text-muted-foreground">({emp.account_username})</span>
+                          </div>
+                          <Badge variant={isActive ? 'default' : 'destructive'} className="text-xs">
+                            {isActive ? 'Token نشط' : 'Token منتهي'}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                          <div className="p-2 bg-background rounded"><div className="font-bold">{emp.total_invoices}</div><div className="text-muted-foreground">إجمالي</div></div>
+                          <div className="p-2 bg-green-500/10 rounded"><div className="font-bold text-green-600">{emp.received_invoices}</div><div className="text-muted-foreground">مستلمة</div></div>
+                          <div className="p-2 bg-amber-500/10 rounded"><div className="font-bold text-amber-600">{emp.pending_invoices}</div><div className="text-muted-foreground">معلقة</div></div>
+                          <div className="p-2 bg-blue-500/10 rounded"><div className="font-bold text-blue-600">{((emp.total_amount || 0) / 1000).toFixed(0)}K</div><div className="text-muted-foreground">المبلغ</div></div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
           </TabsContent>
 
-          {/* ============ تبويب الموظفين ============ */}
-          <TabsContent value="employees" className="p-4 space-y-4">
-            <Label className="text-sm font-medium">إحصائيات فواتير الموظفين</Label>
-            
-            <ScrollArea className="h-[400px]">
-              <div className="space-y-3">
-                {employees.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>لا يوجد موظفين مسجلين بعد</p>
-                  </div>
-                ) : (
-                  employees.map((emp, i) => {
-                    // Robust token status check (case insensitive + fallback to expiry date)
-                    const tokenStatusText = (emp.token_status || '').trim().toLowerCase();
-                    const isTokenActive = tokenStatusText === 'active' || 
-                      (emp.token_expires_at && new Date(emp.token_expires_at) > new Date());
-                    
-                    return (
-                    <div key={i} className="p-4 bg-muted/30 rounded-lg space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Users className="w-4 h-4 text-primary" />
-                          <span className="font-medium">{emp.employee_name || 'بدون اسم'}</span>
-                          <span className="text-xs text-muted-foreground">({emp.account_username})</span>
-                        </div>
-                        <Badge variant={isTokenActive ? "default" : "destructive"} className="text-xs">
-                          {isTokenActive ? 'Token نشط' : 'Token منتهي'}
-                        </Badge>
-                      </div>
-                      
-                      <div className="grid grid-cols-4 gap-2 text-center">
-                        <div className="p-2 bg-background rounded">
-                          <div className="text-lg font-bold">{emp.total_invoices}</div>
-                          <div className="text-[10px] text-muted-foreground">إجمالي</div>
-                        </div>
-                        <div className="p-2 bg-green-500/10 rounded">
-                          <div className="text-lg font-bold text-green-600">{emp.received_invoices}</div>
-                          <div className="text-[10px] text-muted-foreground">مستلمة</div>
-                        </div>
-                        <div className="p-2 bg-amber-500/10 rounded">
-                          <div className="text-lg font-bold text-amber-600">{emp.pending_invoices}</div>
-                          <div className="text-[10px] text-muted-foreground">معلقة</div>
-                        </div>
-                        <div className="p-2 bg-blue-500/10 rounded">
-                          <div className="text-lg font-bold text-blue-600">{(emp.total_amount / 1000).toFixed(0)}K</div>
-                          <div className="text-[10px] text-muted-foreground">المبلغ</div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>آخر مزامنة: {formatDate(emp.last_sync_at)}</span>
-                        <span>انتهاء Token: {formatDate(emp.token_expires_at)}</span>
-                      </div>
-                    </div>
-                  )})
-                )}
+          {/* ============ تبويب الطلبات ============ */}
+          <TabsContent value="orders" className="p-4 space-y-4">
+            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+              <div>
+                <Label className="text-sm font-medium">جدولة مزامنة الطلبات (الخلفية)</Label>
+                <p className="text-xs text-muted-foreground">يفحص حالات الطلبات من شركة التوصيل في الأوقات المحددة</p>
               </div>
-            </ScrollArea>
+              <Switch checked={u.orders_sync_enabled} onCheckedChange={(v) => setU(s => ({ ...s, orders_sync_enabled: v }))} />
+            </div>
+
+            {u.orders_sync_enabled && (
+              <>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">أوقات المزامنة (1-4 مرات يومياً)</Label>
+                    <div className="flex items-center gap-1">
+                      <Button size="sm" variant="outline" onClick={removeOrderTime} disabled={u.orders_sync_times.length <= 1}>
+                        <Minus className="w-3 h-3" />
+                      </Button>
+                      <Badge variant="outline">{u.orders_sync_times.length}</Badge>
+                      <Button size="sm" variant="outline" onClick={addOrderTime} disabled={u.orders_sync_times.length >= 4}>
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {u.orders_sync_times.map((t, i) => (
+                      <div key={i} className="flex items-center gap-2 p-2 bg-muted/20 rounded">
+                        <Clock className="w-3 h-3 text-muted-foreground" />
+                        <Input type="time" value={t} onChange={(e) => updateOrderTime(i, e.target.value)} className="h-8" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <Label className="text-sm">تقييد بساعات العمل</Label>
+                    <p className="text-xs text-muted-foreground">المزامنة فقط بين 8 صباحاً و 8 مساءً (بغداد)</p>
+                  </div>
+                  <Switch checked={u.orders_working_hours_only}
+                    onCheckedChange={(v) => setU(s => ({ ...s, orders_working_hours_only: v }))} />
+                </div>
+              </>
+            )}
+
+            <Button onClick={saveOrdersSchedule} disabled={saving} className="w-full gap-2">
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Settings className="w-4 h-4" />}
+              حفظ جدولة الطلبات
+            </Button>
+
+            <Separator />
+
+            <Button onClick={runOrdersSync} disabled={syncing} variant="secondary" className="w-full gap-2">
+              {syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Zap className="w-4 h-4" />}
+              مزامنة الطلبات الآن (يدوياً)
+            </Button>
+
+            <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg text-xs text-blue-700">
+              <p className="font-medium mb-1">💡 ملاحظة فنية</p>
+              <p>الكرون "sync-order-updates-scheduled" ينبض كل دقيقة ليفحص فقط، ويُشغّل المزامنة الفعلية عند مطابقة الوقت. لا يوجد ضغط على API.</p>
+            </div>
+          </TabsContent>
+
+          {/* ============ تبويب التوكنات ============ */}
+          <TabsContent value="tokens" className="p-4 space-y-4">
+            <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+              <div>
+                <Label className="text-sm font-medium">التجديد التلقائي للتوكنات (Lazy)</Label>
+                <p className="text-xs text-muted-foreground">فحص يومي + تجديد فقط للتوكنات المنتهية خلال 24 ساعة</p>
+              </div>
+              <Switch checked={u.tokens_auto_renew_enabled}
+                onCheckedChange={(v) => setU(s => ({ ...s, tokens_auto_renew_enabled: v }))} />
+            </div>
+
+            {u.tokens_auto_renew_enabled && (
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground">وقت الفحص اليومي (بغداد)</Label>
+                <div className="flex items-center gap-2 max-w-xs">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <Input type="time" value={u.tokens_check_time}
+                    onChange={(e) => setU(s => ({ ...s, tokens_check_time: e.target.value }))} />
+                </div>
+              </div>
+            )}
+
+            <Button onClick={saveTokensSettings} disabled={saving} className="w-full gap-2">
+              {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Settings className="w-4 h-4" />}
+              حفظ إعدادات التوكنات
+            </Button>
+
+            <Separator />
+
+            <Button onClick={refreshTokensNow} disabled={syncing} variant="secondary" className="w-full gap-2">
+              {syncing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <RotateCcw className="w-4 h-4" />}
+              فحص + تجديد الآن (يدوياً)
+            </Button>
+
+            <Separator />
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">التوكنات النشطة ({tokens.length})</Label>
+              <ScrollArea className="h-[300px]">
+                <div className="space-y-2">
+                  {tokens.length === 0 ? (
+                    <p className="text-center text-sm text-muted-foreground py-4">لا توجد توكنات نشطة</p>
+                  ) : tokens.map((t) => {
+                    const days = daysUntilExpiry(t.expires_at);
+                    const expiringSoon = days !== null && days <= 1;
+                    const expired = days !== null && days < 0;
+                    return (
+                      <div key={t.id} className={`p-3 rounded-lg border ${expired ? 'bg-red-500/10 border-red-500/20' : expiringSoon ? 'bg-amber-500/10 border-amber-500/20' : 'bg-muted/30'}`}>
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-2">
+                            <Key className="w-3 h-3" />
+                            <span className="text-sm font-medium">{t.account_username}</span>
+                            <Badge variant="outline" className="text-[10px]">{t.partner_name}</Badge>
+                          </div>
+                          <Badge variant={expired ? 'destructive' : expiringSoon ? 'secondary' : 'default'} className="text-[10px]">
+                            {expired ? 'منتهي' : days !== null ? `${days} يوم` : 'دائم'}
+                          </Badge>
+                        </div>
+                        <div className="text-xs text-muted-foreground space-y-0.5">
+                          <div>ينتهي: {formatDate(t.expires_at)}</div>
+                          <div className="flex items-center gap-2">
+                            <span>تجديد تلقائي:</span>
+                            {t.auto_renew_enabled ? <Badge variant="outline" className="text-[10px] h-4">مفعّل</Badge> : <Badge variant="secondary" className="text-[10px] h-4">معطّل</Badge>}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </ScrollArea>
+            </div>
           </TabsContent>
 
           {/* ============ تبويب التشخيص ============ */}
@@ -589,107 +667,36 @@ const InvoiceSyncSettings = () => {
             <div className="flex items-center justify-between">
               <Label className="text-sm font-medium">فحص التناقضات</Label>
               <Button size="sm" variant="outline" onClick={fetchAllData}>
-                <RotateCcw className="w-4 h-4 ml-1" />
-                تحديث
+                <RotateCcw className="w-4 h-4 ml-1" /> تحديث
               </Button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2">
               {discrepancies.map((d, i) => (
-                <div 
-                  key={i} 
-                  className={`p-4 rounded-lg border ${
-                    d.count > 0 
-                      ? 'bg-red-500/10 border-red-500/20' 
-                      : 'bg-green-500/10 border-green-500/20'
-                  }`}
-                >
+                <div key={i} className={`p-4 rounded-lg border ${d.count > 0 ? 'bg-red-500/10 border-red-500/20' : 'bg-green-500/10 border-green-500/20'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      {d.count > 0 ? (
-                        <AlertCircle className="w-5 h-5 text-red-600" />
-                      ) : (
-                        <CheckCircle className="w-5 h-5 text-green-600" />
-                      )}
-                      <span className="font-medium">{d.details}</span>
+                      {d.count > 0 ? <AlertCircle className="w-5 h-5 text-red-600" /> : <CheckCircle className="w-5 h-5 text-green-600" />}
+                      <span className="text-sm font-medium">{d.details}</span>
                     </div>
-                    <Badge variant={d.count > 0 ? "destructive" : "default"}>
-                      {d.count}
-                    </Badge>
+                    <Badge variant={d.count > 0 ? 'destructive' : 'default'}>{d.count}</Badge>
                   </div>
                 </div>
               ))}
             </div>
 
-            {totalDiscrepancies > 0 && (
-              <Button 
-                onClick={fixDiscrepancies} 
-                disabled={fixing}
-                className="w-full gap-2"
-                variant="destructive"
-              >
-                {fixing ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Wrench className="w-4 h-4" />
-                )}
+            {totalDiscrepancies > 0 ? (
+              <Button onClick={fixDiscrepancies} disabled={fixing} className="w-full gap-2" variant="destructive">
+                {fixing ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Wrench className="w-4 h-4" />}
                 إصلاح جميع التناقضات ({totalDiscrepancies})
               </Button>
-            )}
-
-            {totalDiscrepancies === 0 && (
+            ) : (
               <div className="text-center py-6 text-green-600">
                 <CheckCircle className="w-12 h-12 mx-auto mb-2" />
                 <p className="font-medium">لا توجد تناقضات</p>
                 <p className="text-xs text-muted-foreground">جميع الفواتير والطلبات متزامنة بشكل صحيح</p>
               </div>
             )}
-          </TabsContent>
-
-          {/* ============ تبويب السجلات ============ */}
-          <TabsContent value="logs" className="p-4 space-y-4">
-            <Label className="text-sm font-medium">آخر عمليات المزامنة</Label>
-            
-            <ScrollArea className="h-[400px]">
-              <div className="space-y-2">
-                {recentLogs.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                    <p>لا توجد سجلات بعد</p>
-                  </div>
-                ) : (
-                  recentLogs.map((log, i) => (
-                    <div 
-                      key={i} 
-                      className={`p-3 rounded-lg border ${
-                        log.success 
-                          ? 'bg-green-500/5 border-green-500/20' 
-                          : 'bg-red-500/5 border-red-500/20'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          {log.success ? (
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <XCircle className="w-4 h-4 text-red-600" />
-                          )}
-                          <span className="text-sm font-medium">{log.sync_type?.replace(/_/g, ' ')}</span>
-                        </div>
-                        <span className="text-xs text-muted-foreground">{formatDate(log.sync_time)}</span>
-                      </div>
-                      <div className="flex gap-4 text-xs text-muted-foreground">
-                        <span>فواتير: {log.invoices_synced || 0}</span>
-                        <span>طلبات: {log.orders_updated || 0}</span>
-                      </div>
-                      {log.error_message && (
-                        <p className="text-xs text-red-600 mt-2">{log.error_message}</p>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            </ScrollArea>
           </TabsContent>
         </Tabs>
       </CardContent>
