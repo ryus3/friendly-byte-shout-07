@@ -1221,10 +1221,7 @@ ${regionsBlock}
 
           // إذا وجدنا مدينة لكن لم نحسم المنطقة → اعرض "هل تقصد؟" بدل إنشاء طلب خاطئ
           if (resolvedCityExternalId && !resolvedRegionExternalId && regionSuggestions.length > 0) {
-            const list = regionSuggestions
-              .map((s, i) => `${i + 1}. ${s.name} (${Math.round(s.conf * 100)}%)`)
-              .join('\n');
-            finalAiResponse = `🤔 **هل تقصد إحدى هذه المناطق في ${resolvedCityName}؟**\n\nاضغط على المنطقة الصحيحة من القائمة أدناه:\n\n${list}`;
+            finalAiResponse = `🤔 **هل تقصد إحدى هذه المناطق في ${resolvedCityName}؟**\n\nاضغط على المنطقة الصحيحة من القائمة أدناه (مرتبة من الأعلى تطابقاً):`;
             responseType = 'region_clarification';
             orderData = {
               needs_clarification: true,
