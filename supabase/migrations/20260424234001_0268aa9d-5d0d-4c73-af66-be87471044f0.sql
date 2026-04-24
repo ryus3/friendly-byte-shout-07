@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.process_telegram_order(bigint, text, text, integer, integer, text, text);

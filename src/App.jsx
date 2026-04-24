@@ -13,31 +13,25 @@ import { useAiChat } from './contexts/AiChatContext';
 import SuperAiChatDialog from './components/ai/SuperAiChatDialog';
 import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
-import { useAppStartSync } from '@/hooks/useAppStartSync';
+// ملاحظة: useAppStartSync يعمل داخل AppProviders (AppStartSync) — لا تكرّره هنا
 import AppSplashScreen from '@/components/AppSplashScreen.jsx';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 
-// ⚡ Prefetch الصفحات الشائعة عند idle - موسع للسرعة القصوى
+// ⚡ Prefetch خفيف: صفحتان فقط الأكثر استخداماً، عند idle، بعد فترة كافية
+// (تقليل العبء على الشبكة و JS thread وقت الإقلاع)
 const prefetchCommonRoutes = () => {
   if ('requestIdleCallback' in window) {
     requestIdleCallback(() => {
-      // الصفحات الأساسية
       import('@/pages/Dashboard.jsx');
       import('@/pages/OrdersPage.jsx');
-      import('@/pages/QuickOrderPage.jsx');
-      // ⚡ صفحات إضافية شائعة
-      import('@/pages/CashManagementPage.jsx');
-      import('@/pages/AccountingPage.jsx');
-      import('@/pages/InventoryPage.jsx');
-      import('@/pages/ProductsPage.jsx');
-    });
+    }, { timeout: 5000 });
   }
 };
 
-// ⚡ تنفيذ prefetch بعد 2 ثانية بدلاً من 3
 if (typeof window !== 'undefined') {
-  setTimeout(prefetchCommonRoutes, 2000);
+  // تأخير لإعطاء الأولوية لأول رسم/تفاعل
+  setTimeout(prefetchCommonRoutes, 4000);
 }
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
@@ -162,8 +156,7 @@ function AppContent() {
     return !hasShownSplash;
   });
   
-  // Enable app start synchronization
-  useAppStartSync();
+  // useAppStartSync يعمل عبر AppStartSync داخل AppProviders
 
   useEffect(() => {
     if (showSplash) {
