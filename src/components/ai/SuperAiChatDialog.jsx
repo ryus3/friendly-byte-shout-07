@@ -127,7 +127,23 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
       setConversationContext(prev => [...prev.slice(-10), { role: 'model', content: data.response }]);
 
       // معالجة أنواع الردود المختلفة
-      if (data.type === 'order' && data.orderData) {
+      if (data.type === 'region_clarification' && data.orderData?.suggestions?.length > 0) {
+        // عرض قائمة المناطق كأزرار قابلة للنقر
+        setMessages(prev => [...prev, {
+          role: 'model',
+          content: data.response,
+          regionClarification: {
+            suggestions: data.orderData.suggestions,
+            city_name: data.orderData.city_name,
+            city_external_id: data.orderData.city_external_id,
+            original_message: data.orderData.original_message,
+          },
+          metadata: {
+            model_used: data.model_used,
+            confidence: data.confidence || 95,
+          }
+        }]);
+      } else if (data.type === 'order' && data.orderData) {
         await handleOrderResponse(data);
       } else if (data.type === 'analytics') {
         await handleAnalyticsResponse(data);
@@ -218,6 +234,70 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
     }]);
   };
   
+  // ✅ معالجة اختيار المنطقة من قائمة "هل تقصد؟"
+  const handleRegionSelect = async (messageIndex, suggestion, clarification) => {
+    if (isLoading) return;
+
+    setMessages(prev => {
+      const next = [...prev];
+      if (next[messageIndex]) {
+        next[messageIndex] = {
+          ...next[messageIndex],
+          regionClarification: { ...next[messageIndex].regionClarification, resolvedName: suggestion.name }
+        };
+      }
+      next.push({ role: 'user', content: `📍 ${suggestion.name}` });
+      return next;
+    });
+
+    setIsLoading(true);
+    try {
+      const userInfo = {
+        full_name: user?.full_name || user?.fullName || user?.display_name,
+        default_customer_name: user?.default_customer_name,
+        isAdmin: user?.isAdmin || false,
+        id: user?.id,
+        roles: user?.roles || [],
+        permissions: user?.permissions || [],
+      };
+
+      const { data, error } = await supabase.functions.invoke('ai-gemini-chat', {
+        body: {
+          message: clarification.original_message,
+          userInfo,
+          pendingAction: {
+            type: 'confirm_region',
+            original_message: clarification.original_message,
+            city_external_id: clarification.city_external_id,
+            region_external_id: suggestion.external_id,
+            city_name: clarification.city_name,
+            region_name: suggestion.name,
+          }
+        }
+      });
+
+      if (error) throw new Error(error.message || 'فشل تأكيد المنطقة');
+
+      if (data?.type === 'order' && data?.orderData?.orderSaved) {
+        await handleOrderResponse(data);
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'model',
+          content: data?.response || '⚠️ تعذر إنشاء الطلب.',
+          error: !data?.success,
+        }]);
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        role: 'model',
+        content: `⚠️ خطأ في تأكيد المنطقة: ${err.message}`,
+        error: true,
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -256,7 +336,13 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
           <div className="space-y-6">
             <AnimatePresence>
               {messages.map((message, index) => (
-                <SuperMessageBubble key={index} message={message} />
+                <SuperMessageBubble
+                  key={index}
+                  message={message}
+                  index={index}
+                  onSelectRegion={handleRegionSelect}
+                  disabled={isLoading}
+                />
               ))}
                {isLoading && (
                  <SuperMessageBubble message={{
@@ -304,9 +390,11 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
   );
 };
 
-const SuperMessageBubble = ({ message }) => {
+const SuperMessageBubble = ({ message, index, onSelectRegion, disabled }) => {
   const hasMetadata = message.metadata;
   const isError = message.error;
+  const clarification = message.regionClarification;
+  const hasResolved = !!clarification?.resolvedName;
   
   return (
      <motion.div
@@ -340,6 +428,35 @@ const SuperMessageBubble = ({ message }) => {
           : 'bg-card border text-card-foreground rounded-bl-none'
       )}>
         <div className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</div>
+
+        {/* ✅ قائمة المناطق القابلة للنقر */}
+        {clarification?.suggestions?.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {clarification.suggestions.map((sug, i) => {
+              const isPicked = clarification.resolvedName === sug.name;
+              return (
+                <Button
+                  key={`${sug.external_id}-${i}`}
+                  type="button"
+                  variant={isPicked ? 'default' : 'outline'}
+                  className="w-full justify-between text-right h-auto py-2.5 px-3"
+                  disabled={disabled || hasResolved}
+                  onClick={() => onSelectRegion?.(index, sug, clarification)}
+                >
+                  <Badge variant="secondary" className="text-[10px]">
+                    {Math.round((sug.confidence || 0) * 100)}%
+                  </Badge>
+                  <span className="flex-1 text-right font-medium">📍 {sug.name}</span>
+                </Button>
+              );
+            })}
+            {hasResolved && (
+              <div className="text-xs text-muted-foreground text-center pt-1">
+                ✅ تم اختيار: {clarification.resolvedName}
+              </div>
+            )}
+          </div>
+        )}
         
         {hasMetadata && (
           <div className="mt-3 pt-2 border-t border-border/50 flex items-center gap-2 text-xs text-muted-foreground">

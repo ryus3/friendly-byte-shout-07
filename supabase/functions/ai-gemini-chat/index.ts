@@ -581,7 +581,7 @@ serve(async (req) => {
   }
 
   try {
-    const { message, userInfo, orderContext } = await req.json();
+    const { message, userInfo, orderContext, pendingAction } = await req.json();
     
     // الحصول على authorization header
     const authHeader = req.headers.get('Authorization');
@@ -589,6 +589,123 @@ serve(async (req) => {
     
     console.log('🔐 طلب من المستخدم:', userInfo?.full_name || userInfo?.id);
     console.log('🎫 Token متوفر:', !!authToken);
+
+    // ============================================================
+    // 🎯 مسار خاص: تأكيد اختيار المنطقة من قائمة "هل تقصد؟"
+    // ============================================================
+    if (pendingAction?.type === 'confirm_region') {
+      try {
+        const {
+          original_message,
+          city_external_id,
+          region_external_id,
+          city_name,
+          region_name,
+        } = pendingAction;
+
+        console.log('🎯 تأكيد اختيار المنطقة:', { city_name, region_name, city_external_id, region_external_id });
+
+        // جلب employee_code
+        const userIdForCode = userInfo?.user_id || userInfo?.id;
+        let employeeCode: string | null = null;
+        if (userIdForCode) {
+          const { data: codeRow } = await supabase
+            .from('employee_telegram_codes')
+            .select('telegram_code')
+            .eq('user_id', userIdForCode)
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle();
+          employeeCode = codeRow?.telegram_code || null;
+        }
+        if (!employeeCode) {
+          const { data: anyCode } = await supabase
+            .from('employee_telegram_codes')
+            .select('telegram_code')
+            .eq('is_active', true)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          employeeCode = anyCode?.telegram_code || null;
+        }
+
+        if (!employeeCode) {
+          return new Response(JSON.stringify({
+            success: false,
+            response: '⚠️ لم يتم العثور على كود موظف نشط لإنشاء الطلب.',
+            type: 'order_failed',
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        const { data: orderResult, error: orderError } = await supabase
+          .rpc('process_telegram_order', {
+            p_telegram_chat_id: -999999999,
+            p_employee_code: employeeCode,
+            p_message_text: original_message,
+            p_city_id: city_external_id,
+            p_region_id: region_external_id,
+            p_city_name: city_name,
+            p_region_name: region_name,
+          });
+
+        if (orderError || !orderResult?.success) {
+          console.error('❌ فشل إنشاء الطلب بعد اختيار المنطقة:', orderError, orderResult);
+          return new Response(JSON.stringify({
+            success: false,
+            response: orderResult?.message || '⚠️ فشل في إنشاء الطلب. يرجى المحاولة مرة أخرى.',
+            type: 'order_failed',
+            orderData: orderResult || null,
+          }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+
+        // ✅ تحديث المصدر إلى ai_assistant
+        await supabase
+          .from('ai_orders')
+          .update({ source: 'ai_assistant' })
+          .eq('id', orderResult.order_id);
+
+        const items = (orderResult.items || []).map((it: any) =>
+          `• ${it.product_name || 'منتج'}${it.color ? ' - ' + it.color : ''}${it.size ? ' - ' + it.size : ''} × ${it.quantity || 1}`
+        ).join('\n');
+
+        const adjustmentLine = orderResult.adjustment_type === 'discount'
+          ? `\n🎁 خصم: ${Math.abs(orderResult.price_adjustment || 0).toLocaleString()} د.ع`
+          : orderResult.adjustment_type === 'markup'
+            ? `\n📈 زيادة: ${(orderResult.price_adjustment || 0).toLocaleString()} د.ع`
+            : '';
+
+        const locationLabel = [city_name, region_name].filter(Boolean).join(' - ');
+        const successMsg = `✅ **تم تثبيت الطلب في نافذة طلبات الذكاء الاصطناعي**
+
+👤 الزبون: ${orderResult.customer_name || '-'}
+📞 الهاتف: ${orderResult.customer_phone || '-'}${orderResult.customer_phone2 ? ' / ' + orderResult.customer_phone2 : ''}
+📍 الموقع: ${locationLabel || 'غير محدد'}
+🏠 العنوان: ${orderResult.customer_address || '-'}
+
+📦 المنتجات:
+${items || '• لا توجد منتجات محددة'}
+
+💰 المحسوب: ${(orderResult.calculated_amount || 0).toLocaleString()} د.ع
+🚚 توصيل: ${(orderResult.delivery_fee || 5000).toLocaleString()} د.ع${adjustmentLine}
+💵 **الإجمالي: ${(orderResult.total_amount || 0).toLocaleString()} د.ع**`;
+
+        return new Response(JSON.stringify({
+          success: true,
+          response: successMsg,
+          type: 'order',
+          orderData: { ...orderResult, orderSaved: true, aiOrderId: orderResult.order_id },
+          model_used: 'region_confirm',
+          confidence: 100,
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      } catch (e) {
+        console.error('❌ خطأ في تأكيد المنطقة:', e);
+        return new Response(JSON.stringify({
+          success: false,
+          response: '⚠️ خطأ أثناء معالجة اختيار المنطقة.',
+          type: 'order_failed',
+        }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+    }
 
     // 🔐 احتساب الـ Scope مرة واحدة لاستخدامه في النص التعريفي للنموذج
     const userScope = await resolveUserScope(authToken);
@@ -1105,13 +1222,29 @@ ${regionsBlock}
             const list = regionSuggestions
               .map((s, i) => `${i + 1}. ${s.name} (${Math.round(s.conf * 100)}%)`)
               .join('\n');
-            finalAiResponse = `🤔 **هل تقصد إحدى هذه المناطق في ${resolvedCityName}؟**\n\n${list}\n\n✍️ أعد إرسال الطلب مع الاسم الكامل للمنطقة من القائمة.`;
+            finalAiResponse = `🤔 **هل تقصد إحدى هذه المناطق في ${resolvedCityName}؟**\n\nاضغط على المنطقة الصحيحة من القائمة أدناه:\n\n${list}`;
             responseType = 'region_clarification';
-            orderData = { needs_clarification: true, suggestions: regionSuggestions, city_name: resolvedCityName };
+            orderData = {
+              needs_clarification: true,
+              suggestions: regionSuggestions.map(s => ({
+                name: s.name,
+                external_id: s.externalId,
+                confidence: s.conf,
+              })),
+              city_name: resolvedCityName,
+              city_external_id: resolvedCityExternalId,
+              original_message: processedMessage,
+            };
           } else if (resolvedCityExternalId && !resolvedRegionExternalId) {
             finalAiResponse = `⚠️ لم أتمكن من تحديد المنطقة في **${resolvedCityName}**.\n\n🔍 يرجى كتابة اسم المنطقة بشكل أوضح.`;
             responseType = 'region_clarification';
-            orderData = { needs_clarification: true, suggestions: [], city_name: resolvedCityName };
+            orderData = {
+              needs_clarification: true,
+              suggestions: [],
+              city_name: resolvedCityName,
+              city_external_id: resolvedCityExternalId,
+              original_message: processedMessage,
+            };
           } else {
             console.log('📞 استدعاء process_telegram_order:', {
               employeeCode, aiChatId, resolvedCityExternalId, resolvedRegionExternalId
