@@ -56,12 +56,18 @@ async function fetchCities(token: string) {
   }
   if (!citiesData || citiesData.length === 0) throw new Error('لا توجد مدن في الاستجابة');
   console.log(`✅ تم جلب ${citiesData.length} مدينة`);
-  return citiesData.map((city: Record<string, unknown>) => ({
-    id: parseInt(String(city.id)) || (city.id as number),
-    name: city.name as string,
-    name_ar: (city.name_ar || city.name) as string,
-    name_en: (city.name_en || null) as string | undefined,
-  }));
+  return citiesData
+    .map((city: Record<string, unknown>) => {
+      // ✅ API may return field as `name` OR `city_name`
+      const cityName = (city.name || city.city_name) as string | undefined;
+      return {
+        id: parseInt(String(city.id)) || (city.id as number),
+        name: cityName as string,
+        name_ar: (city.name_ar || cityName) as string,
+        name_en: (city.name_en || null) as string | undefined,
+      };
+    })
+    .filter((c) => c.name && String(c.name).trim().length > 0);
 }
 
 async function fetchRegions(token: string, cityId: number) {
@@ -73,13 +79,19 @@ async function fetchRegions(token: string, cityId: number) {
       regionsData = (raw as Record<string, unknown>).data as unknown[];
     }
     if (!regionsData || regionsData.length === 0) return [];
-    return regionsData.map((region: Record<string, unknown>) => ({
-      id: parseInt(String(region.id)) || (region.id as number),
-      city_id: cityId,
-      name: region.name as string,
-      name_ar: (region.name_ar || region.name) as string | undefined,
-      name_en: (region.name_en || null) as string | undefined,
-    }));
+    return regionsData
+      .map((region: Record<string, unknown>) => {
+        // ✅ API may return field as `name` OR `region_name`
+        const regionName = (region.name || region.region_name) as string | undefined;
+        return {
+          id: parseInt(String(region.id)) || (region.id as number),
+          city_id: cityId,
+          name: regionName as string,
+          name_ar: (region.name_ar || regionName) as string | undefined,
+          name_en: (region.name_en || null) as string | undefined,
+        };
+      })
+      .filter((r) => r.name && String(r.name).trim().length > 0);
   } catch (error) {
     console.error(`❌ خطأ مناطق المدينة ${cityId}:`, error);
     return [];
@@ -184,7 +196,7 @@ serve(async (req) => {
           totalRegionsUpdated += regionsUpdated;
         }
 
-        console.log(`✅ [${i + 1}/${cities.length}] ${city.name}: ${regions.length} منطقة`);
+        console.log(`✅ [${i + 1}/${cities.length}] ${city.name || '(no name)'}: ${regions.length} منطقة`);
 
         // تحديث التقدم بعد كل مدينة (وليس كل 5)
         if (syncLogId) {
