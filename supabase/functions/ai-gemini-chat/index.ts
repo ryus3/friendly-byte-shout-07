@@ -998,7 +998,9 @@ ${regionsBlock}
             expanded.push(part);
           }
         }
-        out.push(expanded.join('\n'));
+        // ⚠️ نستخدم " + " كفاصل لأن extract_product_items_from_text في DB
+        // تعتمد على علامة + لتقسيم العناصر المتعددة في نفس الطلب
+        out.push(expanded.join(' + '));
       }
       return out.join('\n');
     };
