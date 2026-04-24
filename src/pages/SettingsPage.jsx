@@ -18,7 +18,7 @@ import {
    Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign,
    BarChart, TrendingUp, Activity, Settings
 } from 'lucide-react';
-import ComprehensiveDeliveryManagementDialog from '@/components/delivery/ComprehensiveDeliveryManagementDialog';
+// ComprehensiveDeliveryManagementDialog removed — features merged into Unified Sync Dashboard
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramManagementDialog from '@/components/settings/TelegramManagementDialog';
 import CitiesCacheManager from '@/components/cities-cache/CitiesCacheManager';
