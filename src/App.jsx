@@ -156,8 +156,7 @@ function AppContent() {
     return !hasShownSplash;
   });
   
-  // Enable app start synchronization
-  useAppStartSync();
+  // useAppStartSync يعمل عبر AppStartSync داخل AppProviders
 
   useEffect(() => {
     if (showSplash) {
