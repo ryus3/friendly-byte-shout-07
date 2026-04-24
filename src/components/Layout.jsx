@@ -378,7 +378,7 @@ const Layout = ({ children }) => {
           onClick={() => setSidebarOpen(false)}
         />
       )}
-      <AiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
+      <SuperAiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
       <CartDialog 
         open={dialogs.cart} 
         onOpenChange={(open) => setDialogs(prev => ({ ...prev, cart: open }))}
