@@ -1187,6 +1187,7 @@ ${items || '• لا توجد منتجات محددة'}
               }
             }
           }
+        }
       } catch (error) {
         console.error('Error processing smart order:', error);
       }
