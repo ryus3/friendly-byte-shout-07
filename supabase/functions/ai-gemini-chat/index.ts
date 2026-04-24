@@ -234,13 +234,55 @@ async function callGeminiWithFallback(systemPrompt: string, userMessage: string,
   throw new Error('فشل في جميع المحاولات');
 }
 
-// إنشاء عميل Supabase بصلاحيات SERVICE ROLE مثل بوت التليغرام
+// إنشاء عميل Supabase بصلاحيات SERVICE ROLE (نفلتر يدوياً حسب الدور)
 const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-// Helper functions to fetch real data with advanced analytics
+/**
+ * 🔐 تحديد نطاق المستخدم (Scope) من قاعدة البيانات
+ * - admin/super_admin: كل البيانات
+ * - department_manager: بياناته + موظفيه (employee_supervisors)
+ * - باقي الموظفين: بياناته فقط
+ */
+async function resolveUserScope(authToken?: string): Promise<{ userId: string | null; isAdmin: boolean; isManager: boolean; allowedUserIds: string[] | null }> {
+  if (!authToken) return { userId: null, isAdmin: false, isManager: false, allowedUserIds: [] };
+  try {
+    const { data: { user: authUser } } = await supabase.auth.getUser(authToken);
+    const userId = authUser?.id || null;
+    if (!userId) return { userId: null, isAdmin: false, isManager: false, allowedUserIds: [] };
+
+    // قراءة الأدوار من user_roles + roles
+    const { data: rolesData } = await supabase
+      .from('user_roles')
+      .select('roles!inner(name)')
+      .eq('user_id', userId)
+      .eq('is_active', true);
+    const roleNames: string[] = (rolesData || []).map((r: any) => r.roles?.name).filter(Boolean);
+
+    const isAdmin = roleNames.some(r => ['super_admin', 'admin'].includes(r));
+    const isManager = roleNames.some(r => ['department_manager', 'deputy_manager'].includes(r));
+
+    if (isAdmin) return { userId, isAdmin, isManager, allowedUserIds: null }; // null = كل البيانات
+
+    if (isManager) {
+      const { data: subs } = await supabase
+        .from('employee_supervisors')
+        .select('employee_id')
+        .eq('supervisor_id', userId);
+      const ids = new Set<string>([userId, ...((subs || []).map((s: any) => s.employee_id))]);
+      return { userId, isAdmin, isManager, allowedUserIds: Array.from(ids) };
+    }
+
+    return { userId, isAdmin, isManager, allowedUserIds: [userId] };
+  } catch (e) {
+    console.error('resolveUserScope error:', e);
+    return { userId: null, isAdmin: false, isManager: false, allowedUserIds: [] };
+  }
+}
+
 async function getStoreData(userInfo: any, authToken?: string) {
   try {
-    console.log('🔍 بدء جلب بيانات المتجر للمستخدم:', userInfo?.full_name || userInfo?.id);
+    const scope = await resolveUserScope(authToken);
+    console.log('🔍 جلب البيانات — Scope:', { isAdmin: scope.isAdmin, isManager: scope.isManager, allowedCount: scope.allowedUserIds?.length ?? 'ALL' });
     
     // Get real cities and regions from cache with smart search functions
     const { data: cities } = await supabase
