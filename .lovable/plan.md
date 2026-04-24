@@ -1,125 +1,115 @@
 
 
-# خطة إصلاح الكارثة — الفاتورة المعلقة لا يجب أن تُكمل الطلبات
+# إصلاح أرشفة الكارثة + توضيح نظام المزامنة الحالي
 
-## السبب الجذري المؤكد (لا افتراضات)
+## أولاً: السبب الجذري للأرشفة (مؤكد من قاعدة البيانات)
 
-عند تنفيذ migration الـ backfill (إدراج 12 طلب مفقود في `delivery_invoice_orders` للفاتورة 3247172):
-- الـ trigger **`auto_link_dio_to_order`** اشتعل قبل/مع الإدراج وفعل التالي **بدون فحص `received` للفاتورة**:
-  ```sql
-  UPDATE orders SET receipt_received = true ...
-  ```
-- ثم triggers الطلبات (`handle_order_status_change` / `auto_create_revenue_movement`) شعّلت سلسلة:
-  - `status` انتقل من `delivered` → `completed`
-  - 12 حركة نقد `in` تم إنشاؤها
+الـ12 طلب الآن:
+- `status='delivered'` ✅
+- `receipt_received=false` ✅
+- `cash_movements` محذوفة ✅
+- لكن: **`isarchived=true` ❌** و **`profits.settled_at='2026-04-24 06:20:51'` ❌** (بقايا الكارثة الأولى)
 
-**المشكلة الجوهرية**: `auto_link_dio_to_order` يخلط بين **الربط المنطقي** و**الاستلام المالي**. وهذا انتهاك صريح لـ Completion Gate المسجل في الذاكرة:
-> "Order 'completed' status requires delivery_status '4' AND receipt_received = true [from a real received invoice]"
+عند الكارثة الأصلية (06:20:51):
+1. trigger `auto_link_dio_to_order` علّم `receipt_received=true`
+2. trigger الطلبات نقل status إلى `completed`
+3. trigger الأرباح نقل profit إلى `settled` ووضع `settled_at`
+4. trigger `auto_archive_completed_orders` رأى `completed + receipt_received=true` → **`isarchived=true`**
 
-نفس المشكلة موجودة في `sync_order_receipt_on_invoice_link` لكنها تتحقق من `received=true` بشكل صحيح.  
-**الجاني الفعلي** = `auto_link_dio_to_order` فقط.
+الـrollback السابق أعاد `status` و `receipt_received` و حركات النقد، لكن نسي `isarchived` و `profits.settled_at`.
 
-الفاتورة 3247172 الآن `received=false` → 12 طلب يجب أن يكونوا `delivered + receipt_received=false` وليس `completed`.
+## ثانياً: الإصلاح (migration واحدة دقيقة)
 
-## الإصلاحات (3 كوارث + إزعاج MODON)
+**تنظيف بقايا الكارثة فقط للفاتورة 3247172** (شروط صارمة لمنع أي تأثير جانبي):
 
-### 1) إصلاح الـ trigger الجذري `auto_link_dio_to_order` (لا تكرار للكارثة أبداً)
+```sql
+-- 1) إزالة الأرشفة الخاطئة عن الـ12 طلب
+UPDATE orders 
+SET isarchived = false, updated_at = now()
+WHERE delivery_partner_invoice_id = '3247172'
+  AND status = 'delivered'
+  AND receipt_received = false
+  AND isarchived = true;
 
-تعديل الدالة لتفصل الربط عن الاستلام:
-- **يبقى**: ربط `order_id` + كتابة `delivery_partner_invoice_id` (هذا منطقي وآمن)
-- **يُحذف نهائياً**: تعليم `receipt_received = true` و `receipt_received_at` و `receipt_received_by`
-- منطق الاستلام يبقى **حصرياً** عبر:
-  - `sync_orders_on_invoice_received` (يعمل فقط عند `NEW.received=true`)
-  - `ensure_all_invoice_orders_received` (يعمل فقط عند `NEW.received=true`)
-  - `sync_order_receipt_on_invoice_link` (يفحص `v_is_received=true` قبل التحديث)
+-- 2) إعادة profits إلى pending (مسح settled_at الكاذب)
+UPDATE profits
+SET status = 'pending', settled_at = NULL, updated_at = now()
+WHERE order_id IN (
+  SELECT id FROM orders 
+  WHERE delivery_partner_invoice_id = '3247172'
+    AND receipt_received = false
+)
+AND settled_at = '2026-04-24 06:20:51.230773+00'::timestamptz;
+```
 
-النتيجة: الربط المستقبلي لن يُعلّم أي طلب مستلماً ما لم تكن الفاتورة فعلاً `received=true`.
+**ضمانات**:
+- شرط `delivery_partner_invoice_id = '3247172'` يحصر التأثير على هذه الفاتورة فقط
+- شرط `receipt_received = false` يحمي أي طلب فعلاً مستلم
+- شرط `settled_at = '2026-04-24 06:20:51.230773'` يطابق بصمة الكارثة بالضبط - لا يلمس أي profit آخر
+- الـ19 طلب للفاتورة السابقة 3210286 (المستلمة فعلاً) **لن يتأثروا** لأن `receipt_received=true` لهم
 
-### 2) تنظيف الكارثة الحالية (الفاتورة 3247172)
+## ثالثاً: نظام المزامنة الحالي - شرح كامل
 
-**migration واحدة دقيقة، آمنة، قابلة للتراجع منطقياً**:
+### المسار الموحد الآن
 
-أ) **حذف 12 حركة نقد** أُنشئت خطأً في `2026-04-24 06:20:51.230773+00` للطلبات المرتبطة بالفاتورة 3247172:
-- التحقق من معايير صارمة: `created_at` بالضبط + `reference_type='order'` + `reference_id IN (12 IDs محددة)` + `movement_type='in'`
-- استخدام `delete_cash_movement_on_return` فلسفة **clean state** (الحركات لم تكن صحيحة أصلاً)
+كل المزامنات (خلفية وأمامية) تمر عبر **edge function واحد**: `smart-invoice-sync`.
 
-ب) **إعادة 12 طلب**:
-- `receipt_received = false`
-- `receipt_received_at = NULL`
-- `receipt_received_by = NULL`
-- `status = 'delivered'` (لأن `delivery_status=4` لا يزال صحيحاً)
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  smart-invoice-sync  (المصدر الوحيد للكتابة)              │
+├─────────────────────────────────────────────────────────────┤
+│  1. fetch invoices من AlWaseet API                          │
+│  2. upsert إلى delivery_invoices                            │
+│  3. fetch orders لكل فاتورة (مع retry حتى 3 محاولات)        │
+│  4. التحقق من اكتمال snapshot (dio_count == orders_count)   │
+│  5. upsert إلى delivery_invoice_orders                      │
+│     ↓                                                        │
+│     trigger: auto_link_dio_to_order                          │
+│       → ربط order_id (منطقي فقط)                            │
+│       → تحديث delivery_partner_invoice_id (للعرض فقط)       │
+│       → ❌ لا يلمس receipt_received إطلاقاً                 │
+│  6. استدعاء link_invoice_orders_to_orders() (ضمان إضافي)    │
+└─────────────────────────────────────────────────────────────┘
+```
 
-ج) **عدم لمس** `delivery_partner_invoice_id` و **عدم حذف** سجلات `delivery_invoice_orders` (الربط المنطقي صحيح ومفيد، فقط الاستلام كان خطأً).
+### من يستدعي smart-invoice-sync؟
 
-د) **عدم لمس** سجلات `profits` المرتبطة - ستُحدَّث تلقائياً عبر `sync_profit_status_with_receipt` عند إعادة `receipt_received=false`.
+| المسار | متى | sync_orders |
+|---|---|---|
+| **مزامنة خلفية تلقائية** (الموقع مغلق/مفتوح) | كل فترة عبر `useGlobalInvoiceSync` و `useAlWaseetInvoices.smartBackgroundSync` | ✅ true → تربط الطلبات تلقائياً |
+| **فتح صفحة متابعة الموظفين** | مرة واحدة عند الفتح | ✅ true |
+| **زر مزامنة يدوي** | عند الضغط | ✅ true |
+| **فتح فاتورة في الواجهة** (self-heal) | كطبقة أمان فقط لو dio_count=0 | ✅ true |
 
-### 3) ضمان أن الـ migration لم تُسبب ضرراً في فواتير أخرى
+### إجابات أسئلتك المباشرة
 
-فحص شامل قبل التطبيق: هل أي طلب آخر تأثر في `2026-04-24 06:20:51.230773` بنفس الكارثة عبر فواتير أخرى معلقة؟ (متوقع: لا، لكن سيتم التحقق ضمن الـ migration كـ safety check).
+**س: هل أصبح الربط عالمياً بدون فتح الفاتورة؟**  
+✅ **نعم**. المزامنة الخلفية الآن تجلب الفواتير + تجلب طلبات كل فاتورة + تربطها بالطلبات المحلية تلقائياً عبر trigger `auto_link_dio_to_order`. فتح الفاتورة في الواجهة لم يعد شرطاً للربط - يبقى فقط كطبقة self-heal احتياطية.
 
-### 4) إزعاج MODON — إخفاء التحذير المتكرر "فشل التجديد التلقائي"
+**س: هل المزامنة عندما يكون الموقع مغلق تربط الطلبات المحلية؟**  
+✅ **نعم**. أي مستخدم يفتح أي صفحة → `useGlobalInvoiceSync` يستدعي `smart-invoice-sync` في الخلفية → الفواتير + الطلبات + الربط يحدث تلقائياً. لا حاجة لفتح صفحة الفواتير ولا فتح فاتورة محددة.
 
-من الصورة: التحذير الأحمر يظهر دائماً عند فتح الواجهة لأن `refresh-delivery-partner-tokens` يفشل بصمت لـ MODON (token منتهي + يتطلب تسجيل دخول يدوي حسب memory `modon-proxy-authentication-requirement`).
+**س: ماذا عن استلام الفاتورة (receipt_received)؟**  
+- الربط (linking) = آلي وعالمي بدون أي تدخل
+- الاستلام (receipt_received=true) = **يحدث حصراً** عندما تنتقل الفاتورة في AlWaseet إلى `received=true`، عندها trigger `sync_orders_on_invoice_received` يُعلّم كل الطلبات المرتبطة كمستلمة ويبدأ سلسلة الإكمال (status=completed، cash_movements، إلخ)
 
-التعديل في `src/contexts/AlWaseetContext.jsx`:
-- إزالة الـ toast التحذيري التلقائي عند فشل MODON refresh في الخلفية
-- إبقاء الإشعار **فقط** عند محاولة المستخدم استخدام MODON فعلياً (مزامنة، فحص فاتورة، إلخ)
-- تسجيل الفشل في console فقط، لا UI noise
-
-## ضمانات صارمة (لا تخريب)
+## رابعاً: ضمانات
 
 | العنصر | الحالة |
 |---|---|
-| الفواتير القديمة المستلمة فعلاً | ✅ بدون أي تأثير |
-| `delivery_invoice_orders` للفاتورة 3247172 | ✅ تبقى الـ 42 سجل (الربط منطقي صحيح) |
-| `delivery_partner_invoice_id` للطلبات | ✅ يبقى `3247172` (مفيد للعرض) |
-| `link_invoice_orders_to_orders()` | ✅ بدون تعديل (تعمل صحيح) |
-| schema الجداول | ✅ بدون تعديل |
-| triggers الأخرى للاستلام | ✅ بدون تعديل (تفحص `received=true` صحيحاً) |
-| المزامنة الخلفية | ✅ تعمل بنفس الطريقة، لكن آمنة الآن |
+| 12 طلب isarchived | true ❌ → false ✅ |
+| 12 سجل profit | settled (كاذب) → pending ✅ |
+| الفاتورة 3210286 (المستلمة فعلاً) | بدون أي تأثير ✅ |
+| أي فاتورة أخرى | بدون أي تأثير ✅ |
+| triggers | بدون تعديل (مُصلحة في الدفعة السابقة) ✅ |
+| schema | بدون تعديل ✅ |
+| **عند استلام 3247172 لاحقاً** | الـ12 طلب يكتملون تلقائياً ✅ |
 
-## النتيجة النهائية المتوقعة
-
-| العنصر | قبل | بعد |
-|---|---|---|
-| 12 طلب `status` | completed ❌ | delivered ✅ |
-| 12 طلب `receipt_received` | true ❌ | false ✅ |
-| 12 حركة نقد كاذبة | موجودة ❌ | محذوفة ✅ |
-| 12 سجل profit | invoice_received | pending ✅ (تلقائي) |
-| ربط 12 طلب بالفاتورة | موجود ✅ | يبقى موجود ✅ |
-| فاتورة 3247172 `received` | false (صحيح) | false (صحيح) ✅ |
-| **عند استلام الفاتورة لاحقاً** | — | الـ 12 طلب يصبحون completed تلقائياً عبر `sync_orders_on_invoice_received` ✅ |
-| ربط مستقبلي لأي فاتورة معلقة | يُعلّم خطأً مستلماً ❌ | يربط فقط، لا يُعلّم استلاماً ✅ |
-| تحذير MODON المزعج | يظهر دائماً ❌ | يظهر فقط عند الاستخدام الفعلي ✅ |
-
-## الملفات المعدّلة
+## خامساً: الملف الوحيد المعدّل
 
 | الملف | التغيير |
 |---|---|
-| migration جديدة | (1) إصلاح `auto_link_dio_to_order` بإزالة كتابة `receipt_received` (2) تنظيف الـ 12 طلب + 12 حركة نقد للفاتورة 3247172 (3) safety check لفواتير أخرى |
-| `src/contexts/AlWaseetContext.jsx` | إخفاء toast فشل تجديد MODON التلقائي + إبقاء التنبيه عند الاستخدام الفعلي فقط |
+| migration جديدة | تنظيف `isarchived` و `profits.settled_at` للـ12 طلب فقط (شروط صارمة) |
 
-## السبب التفصيلي للسماح للكارثة
-
-```text
-قبل migration الـ backfill:
-  - الفاتورة 3247172: dio_count=30, received=false
-  - 30 سطر مربوطين بـ order_id لكن الطلبات receipt_received=false (صحيح، لأن الفاتورة معلقة)
-  - لاحظ: الـ 30 السابقين دخلوا قبل وجود الـ trigger الكارثي بصيغته الحالية، أو أن auto_link_dio_to_order لم يربطهم لأن order_id كان NULL ولم يجد match
-
-بعد migration الـ backfill:
-  - INSERT 12 سطر جديد بـ NEW.order_id = NULL
-  - trigger BEFORE INSERT auto_link_dio_to_order يشتغل
-  - يجد order_id عبر tracking_number
-  - يضع NEW.order_id := v_order_id
-  - ثم UPDATE orders SET receipt_received=true (الكارثة ❌)
-  - ثم triggers الطلبات تنقل status إلى completed وتنشئ cash_movements
-
-بعد الإصلاح:
-  - نفس السيناريو + INSERT
-  - trigger يربط فقط (NEW.order_id := v_order_id)
-  - لا UPDATE على receipt_received
-  - الطلبات تبقى delivered + receipt_received=false (صحيح)
-  - عند استلام الفاتورة لاحقاً (received=true) → sync_orders_on_invoice_received يكمل كل شيء تلقائياً ✅
-```
+لا تعديل كود. لا تعديل triggers. لا تعديل edge functions. النظام الحالي للمزامنة سليم بالكامل بعد إصلاحات الدفعات السابقة.
 
