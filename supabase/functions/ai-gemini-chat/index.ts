@@ -363,81 +363,85 @@ async function getStoreData(userInfo: any, authToken?: string) {
       console.log('✅ تم جلب المنتجات بنجاح:', products?.length || 0);
     }
 
-    // Get recent orders with detailed profit info - FIXED with tracking data
-    const { data: recentOrders, error: ordersError } = await supabase
+    // 🔐 Helper: تطبيق فلتر الـ Scope على أي query
+    const applyScope = (q: any, column: string = 'created_by') => {
+      if (scope.allowedUserIds === null) return q; // admin
+      if (!scope.allowedUserIds.length) return q.eq(column, '00000000-0000-0000-0000-000000000000'); // لا شيء
+      return q.in(column, scope.allowedUserIds);
+    };
+    // للأرباح: نستخدم employee_id بدل created_by
+    const applyProfitScope = (q: any) => {
+      if (scope.allowedUserIds === null) return q;
+      if (!scope.allowedUserIds.length) return q.eq('employee_id', '00000000-0000-0000-0000-000000000000');
+      return q.in('employee_id', scope.allowedUserIds);
+    };
+
+    // Get recent orders with detailed profit info — مفلترة حسب الـ Scope
+    let ordersQ = supabase
       .from('orders')
       .select(`
         id, order_number, customer_name, customer_phone, customer_city, customer_province,
         total_amount, final_amount, delivery_fee, status, created_at, created_by,
         tracking_number, delivery_status, delivery_partner,
-        order_items (
-          id, quantity, unit_price, total_price,
-          variant_sku
-        ),
-        profits (
-          profit_amount, employee_profit, status
-        )
+        order_items ( id, quantity, unit_price, total_price, variant_sku ),
+        profits ( profit_amount, employee_profit, status )
       `)
       .order('created_at', { ascending: false })
       .limit(20);
-    
-    if (ordersError) {
-      console.error('❌ خطأ في جلب الطلبات:', ordersError);
-    } else {
-      console.log('✅ تم جلب الطلبات بنجاح:', recentOrders?.length || 0);
-    }
+    ordersQ = applyScope(ordersQ);
+    const { data: recentOrders, error: ordersError } = await ordersQ;
 
-    // Get today's sales with more details
+    if (ordersError) console.error('❌ خطأ في جلب الطلبات:', ordersError);
+    else console.log('✅ تم جلب الطلبات (مفلترة):', recentOrders?.length || 0);
+
+    // Today's sales — مفلترة
     const today = new Date().toISOString().split('T')[0];
-    const { data: todaySales } = await supabase
-      .from('orders')
+    let todayQ = supabase.from('orders')
       .select('total_amount, final_amount, delivery_fee, created_at')
       .gte('created_at', today);
+    const { data: todaySales } = await applyScope(todayQ);
 
-    // Get ALL-TIME sales data (not just this month)
-    const { data: allTimeSales } = await supabase
-      .from('orders')
+    // ALL-TIME sales — مفلترة
+    let allQ = supabase.from('orders')
       .select('total_amount, final_amount, delivery_fee, created_at')
       .in('status', ['completed', 'delivered'])
       .order('created_at', { ascending: false })
       .limit(1000);
+    const { data: allTimeSales } = await applyScope(allQ);
 
-    // Get this month's sales
+    // This month's sales — مفلترة
     const thisMonth = new Date().toISOString().slice(0, 7) + '-01';
-    const { data: monthSales } = await supabase
-      .from('orders')
+    let monthQ = supabase.from('orders')
       .select('total_amount, final_amount, delivery_fee')
       .gte('created_at', thisMonth)
       .in('status', ['completed', 'delivered']);
+    const { data: monthSales } = await applyScope(monthQ);
 
-    // Get expenses and profits for comprehensive financial data (ALL TIME)
-    const { data: allExpenses } = await supabase
-      .from('expenses')
-      .select('amount, expense_type, created_at')
-      .order('created_at', { ascending: false })
-      .limit(500);
+    // Expenses — للأدمن فقط (تمثل مصاريف النظام)
+    const { data: allExpenses } = scope.isAdmin
+      ? await supabase.from('expenses').select('amount, expense_type, created_at')
+          .order('created_at', { ascending: false }).limit(500)
+      : { data: [] as any[] };
+    const { data: monthExpenses } = scope.isAdmin
+      ? await supabase.from('expenses').select('amount, expense_type, created_at').gte('created_at', thisMonth)
+      : { data: [] as any[] };
 
-    const { data: monthExpenses } = await supabase
-      .from('expenses')
-      .select('amount, expense_type, created_at')
-      .gte('created_at', thisMonth);
-
-    // Get profit analytics (ALL TIME)
-    const { data: allProfits } = await supabase
-      .from('profits')
-      .select('profit_amount, employee_profit, status, created_at')
+    // Profits — مفلترة حسب employee_id للموظفين
+    let allProfitsQ = supabase.from('profits')
+      .select('profit_amount, employee_profit, status, created_at, employee_id')
       .order('created_at', { ascending: false })
       .limit(1000);
+    const { data: allProfits } = await applyProfitScope(allProfitsQ);
 
-    const { data: monthProfits } = await supabase
-      .from('profits')
-      .select('profit_amount, employee_profit, status, created_at')
+    let monthProfitsQ = supabase.from('profits')
+      .select('profit_amount, employee_profit, status, created_at, employee_id')
       .gte('created_at', thisMonth);
+    const { data: monthProfits } = await applyProfitScope(monthProfitsQ);
 
-    const { data: todayProfits } = await supabase
-      .from('profits')
-      .select('profit_amount, employee_profit, status')
+    let todayProfitsQ = supabase.from('profits')
+      .select('profit_amount, employee_profit, status, employee_id')
       .gte('created_at', today);
+    const { data: todayProfits } = await applyProfitScope(todayProfitsQ);
 
     // Calculate advanced analytics
     const todayTotal = todaySales?.reduce((sum, order) => 
