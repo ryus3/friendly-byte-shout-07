@@ -1,95 +1,73 @@
 
 
-# الخطة - 3 إصلاحات مستقلة
+# الخطة - إصلاح ربط الفواتير تلقائياً (الفواتير فقط)
 
-## 📊 ما اكتشفته من الفحص الفعلي (لا افتراضات)
+## السبب الجذري المؤكد (لا افتراضات)
 
-### الفواتير - لماذا "كانت تعمل":
-- معظم فواتيرك القديمة `dio_count = 0` (لا سجلات في `delivery_invoice_orders`) لكنها **`received = true`** - أي تعمل!
-- السبب: 546 طلب لديها `receipt_received = true` يتم تحديثها عبر مسار آخر (مزامنة الطلبات `sync-order-updates` مباشرة)، **ليس عبر** ربط `delivery_invoice_orders`
-- 3 فواتير فقط لها `dio_count > 0`: 3210286 (60)، 3182855 (63)، 3101599 (103) - من مزامنة قديمة كانت تجلب التفاصيل
-- **آخر تحديث لـ `delivery_invoice_orders`**: 2026-04-21 (قبل 3 أيام)
-- **الفاتورة 3247172** (آخر فاتورة، `received=false`، 42 طلب) هي الوحيدة التي تحتاج فعلياً ربط `delivery_invoice_orders` لتمكين زر "استلام الفاتورة"
+من فحص قاعدة البيانات والكود مباشرة:
 
-### المشكلة الحقيقية للفاتورة 3247172:
-من logs الـ smart-invoice-sync:
-```
-⚠️ Failed to link invoice orders: invalid reference to FROM-clause entry for table "dio"
-```
-**خطأ SQL في إحدى دوال DB** (وليس في كود upsert كما ظننت سابقاً). الـ self-heal في `useAlWaseetInvoices.js` يعمل عند **فتح الفاتورة في الواجهة فقط**، لكنك لم تفتحها بعد.
+1. **الفاتورة 3247172**: موجودة في `delivery_invoices` بـ `orders_count=42` لكن `dio_count=0` (لا سجل واحد في `delivery_invoice_orders`).
+2. **دالة `link_invoice_orders_to_orders`**: مُصلحة وتعمل، لكن لا يوجد ما تربطه (لأن جدول `delivery_invoice_orders` فارغ لهذه الفاتورة).
+3. **السبب الفعلي**: المزامنة الخلفية في `src/hooks/useAlWaseetInvoices.js` تستدعي `smart-invoice-sync` بـ:
+   ```js
+   sync_orders: false   // ← السطر 207 و 1053
+   ```
+   فيتم upsert الفاتورة فقط بدون جلب طلباتها → جدول `delivery_invoice_orders` يبقى فارغاً → لا شيء للربط.
+4. **smart-invoice-sync** (الخادم): الافتراضي `sync_orders=true` ومنطق جلب طلبات الفاتورة + استدعاء `link_invoice_orders_to_orders` بعد المزامنة موجود ويعمل (السطر 279-340 و 493-540 و 585).
+5. **لماذا الفواتير القديمة "تعمل"**: ليس لأنها مرتبطة عبر `delivery_invoice_orders`، بل لأن الطلبات المحلية تحمل `receipt_received=true` و `delivery_partner_invoice_id` من مسار `sync-order-updates` (مسار مختلف). الربط الحقيقي عبر `delivery_invoice_orders` كان معطلاً منذ مدة، لكن لم يلاحَظ لأن الفواتير القديمة كانت `received=true`.
 
----
+## الإصلاح (دقيق وآمن)
 
-## 🔧 الإصلاح 1: AlWaseet Cache (المناطق = 0)
+### 1) `src/hooks/useAlWaseetInvoices.js` — تفعيل جلب الطلبات في المزامنة الخلفية
+- **السطر 207**: `sync_orders: false` → `sync_orders: true`
+- **السطر 1053**: `sync_orders: false` → `sync_orders: true`
+- إضافة تعليق يوضح السبب: المزامنة الخلفية يجب أن تُنشئ سجلات `delivery_invoice_orders` لتفعيل الربط التلقائي.
 
-**السبب المؤكد** من logs:
-```
-✅ [18/18] undefined: 286 منطقة
-❌ regions_master batch: null value in column "name" violates not-null constraint
-```
-- API يرجع `region_name` بدل `name` → الكود يحفظ `null`
-- اسم المدينة `undefined` → يعني `city_name` بدل `name` أيضاً
+### 2) `supabase/functions/smart-invoice-sync/index.ts` — تمرير حقل `partner` في upsert طلبات الفاتورة
+الكود الحالي (السطر 287-297 و 499-511) لا يضع `partner` ضمن سجل `delivery_invoice_orders`. إذا كان العمود موجوداً في الجدول وغير nullable، يفشل upsert بصمت. سأتحقق فعلياً من schema قبل التعديل، فإن لزم سأضيفه.
 
-**الإصلاح في `supabase/functions/update-cities-cache/index.ts`**:
-- `fetchCities`: `name: (city.name || city.city_name)`
-- `fetchRegions`: `name: (region.name || region.region_name)`
-- فلتر صفوف null قبل upsert
-- log اسم المدينة الصحيح
+### 3) إعادة مزامنة الفاتورة 3247172 يدوياً (إصلاح فوري لمرة واحدة)
+بعد deploy التغييرات أعلاه:
+- استدعاء `smart-invoice-sync` بـ `mode: 'comprehensive'` و `sync_orders: true` و `force_refresh: true` للمستخدم `91484496-b887-44f7-9e5d-be9db5567604` (مالك الفاتورة).
+- النتيجة المتوقعة: الفاتورة 3247172 تحصل على 42 سجل في `delivery_invoice_orders` مع `order_id` مربوط للطلبات الموجودة محلياً.
+- **بدون فتح الفاتورة من الواجهة**.
 
----
+## ما لن يتغير (ضمانات صارمة)
+- ❌ لا تعديل على schema الفواتير أو الطلبات.
+- ❌ لا حذف لأي بيانات.
+- ❌ لا تعديل على الفواتير القديمة المستلمة (تبقى تعمل عبر `receipt_received`).
+- ❌ لا تعديل على دالة `link_invoice_orders_to_orders` (مُصلحة بالفعل وتعمل).
+- ❌ لا تعديل على كاش المدن/المناطق في هذه الدفعة (سنناقشه بعد إصلاح الفواتير كما طلبت).
+- ❌ لا تعديل على `AlWaseetContext.jsx` (الـ self-heal الحالي يبقى كطبقة أمان).
 
-## 🔧 الإصلاح 2: MODON Cache (يتوقف 7/18، CPU timeout)
+## النتائج المتوقعة
 
-**السبب المؤكد** من logs: `CPU Time exceeded` بعد 7 مدن
-- الكود يعمل **2 استعلامات لكل منطقة** (SELECT then INSERT) = آلاف الاستعلامات → تجاوز CPU
+| العنصر | قبل | بعد |
+|--------|-----|-----|
+| فاتورة 3247172 dio_count | 0 | 42 ✅ |
+| فاتورة 3247172 linked_count | 0 | 42 (تقريباً، حسب وجود الطلبات المحلية) ✅ |
+| فواتير مستقبلية | تُحفظ بدون طلبات | تُحفظ + طلباتها + الربط تلقائياً ✅ |
+| الحاجة لفتح الفاتورة من الواجهة | شرط للربط | لم تعد شرطاً ✅ |
+| فواتير قديمة مستلمة | تعمل ✅ | تبقى تعمل ✅ |
 
-**الإصلاح في `supabase/functions/update-modon-cache/index.ts`**:
-- استبدال lookup-then-insert بـ **batch upsert واحد** على `(city_id, name)` للمناطق و `(name)` للمدن
-- استخدام نفس نمط `update-cities-cache` (batch upsert direct)
-- إضافة UNIQUE index على `regions_master(city_id, name)` إن لم يكن موجوداً
-- وقت متوقع: من >150 ثانية إلى ~10 ثوان
-
----
-
-## 🔧 الإصلاح 3: ربط الفاتورة 3247172 (الوحيدة المعطلة)
-
-**السبب المؤكد** من logs:
-```
-⚠️ Failed to link invoice orders: invalid reference to FROM-clause entry for table "dio"
-```
-خطأ SQL في دالة DB يستدعيها `smart-invoice-sync` بعد upsert الفواتير.
-
-**الإصلاح**:
-1. البحث عن الـ SQL المعطوب الذي يشير لـ `dio` بشكل خاطئ في الـ Edge Function `smart-invoice-sync`
-2. إصلاح الاستعلام
-3. **بعد الإصلاح**: فتح الفاتورة 3247172 من الواجهة سيُشغّل self-heal الموجود في `useAlWaseetInvoices.js` (السطر 426-440) ويربطها تلقائياً
-
-**لا حاجة لـ "إصلاح فواتير قديمة"** - كلها تعمل بالفعل عبر `receipt_received` على الطلبات.
-
----
-
-## 📋 الملفات المعدلة
-
+## الملفات المعدلة
 | الملف | التغيير |
-|------|---------|
-| `supabase/functions/update-cities-cache/index.ts` | aliases للحقول + filter null |
-| `supabase/functions/update-modon-cache/index.ts` | تحويل إلى batch upsert (سرعة 15x) |
-| `supabase/functions/smart-invoice-sync/index.ts` | إصلاح خطأ SQL `dio` |
-| migration (إن لزم) | إضافة UNIQUE constraint لـ `regions_master(city_id, name)` للسماح بـ upsert |
+|------|--------|
+| `src/hooks/useAlWaseetInvoices.js` | سطرين: `sync_orders: true` |
+| `supabase/functions/smart-invoice-sync/index.ts` | إضافة `partner` في upsert إن لزم (بعد التحقق من schema) |
 
-## ✅ النتائج المتوقعة
+## التفاصيل التقنية
+```
+قبل:
+Background sync → invoices only (sync_orders=false)
+                 → 0 records in delivery_invoice_orders
+                 → link_invoice_orders_to_orders has nothing to link
+                 → user must open invoice → self-heal → finally links
 
-| المشكلة | قبل | بعد |
-|---------|-----|-----|
-| AlWaseet كاش | 0/0 (يفشل) | 18 + ~6232 منطقة ✅ |
-| MODON كاش | 7/18 (timeout) | 18/18 خلال ~10s ✅ |
-| فاتورة 3247172 | 0 طلبات | 42 طلب مرتبط بعد فتحها ✅ |
-| فواتير قديمة | تعمل ✅ | تبقى تعمل (لا تخريب) |
-
-## ⚠️ ضمانات صارمة (لا تخريب)
-- **لا تعديل** على schema الفواتير
-- **لا حذف** أي بيانات (6232 منطقة + 2163 سجل dio محفوظة)
-- **لا تعديل** على الفواتير القديمة المستلمة (تعمل عبر `receipt_received` بشكل سليم)
-- **لا تعديل** على `AlWaseetContext.jsx` (الكود الحالي يعمل، الخطأ في DB function/SQL)
-- لا backfill جماعي - فقط الفاتورة 3247172 ستُربط عند فتحها بواسطة self-heal الموجود
+بعد:
+Background sync → invoices + invoice orders (sync_orders=true)
+                 → 42 records in delivery_invoice_orders
+                 → link_invoice_orders_to_orders runs once
+                 → invoice fully linked, no UI interaction needed
+```
 
