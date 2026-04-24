@@ -71,53 +71,64 @@ async function fetchRegionsFromModon(token: string, cityId: string) {
   }
 }
 
-// Batch upsert cities for MODON - lookup/create in cities_master then batch upsert mappings
+// ✅ Batch upsert cities for MODON: 1 SELECT for all + 1 batch INSERT for missing + 1 batch upsert mappings
 async function upsertCitiesBatch(cities: { id: string; city_name: string }[]) {
-  let updatedCount = 0;
   const timestamp = new Date().toISOString();
-
-  // Build city master IDs
   const cityMasterMap: Record<string, number> = {};
-  
-  for (const city of cities) {
-    try {
-      const { data: existing } = await supabase
-        .from('cities_master')
-        .select('id')
-        .eq('name', city.city_name)
-        .maybeSingle();
 
-      if (existing) {
-        cityMasterMap[city.id] = existing.id;
-      } else {
-        const { data: newCity, error } = await supabase
-          .from('cities_master')
-          .insert({ name: city.city_name, name_ar: city.city_name, is_active: true })
-          .select('id')
-          .single();
-        if (error || !newCity) continue;
-        cityMasterMap[city.id] = newCity.id;
-      }
-    } catch (e) {
-      console.error(`❌ خطأ مدينة ${city.city_name}:`, e);
+  // Filter out cities with empty names
+  const validCities = cities.filter(c => c.city_name && c.city_name.trim().length > 0);
+  if (validCities.length === 0) return { updatedCount: 0, cityMasterMap };
+
+  const names = Array.from(new Set(validCities.map(c => c.city_name)));
+
+  // 1) Single SELECT for all existing cities
+  const { data: existing } = await supabase
+    .from('cities_master')
+    .select('id, name')
+    .in('name', names);
+
+  const nameToId: Record<string, number> = {};
+  for (const row of existing || []) nameToId[row.name as string] = row.id as number;
+
+  // 2) Batch INSERT for missing cities
+  const missing = names.filter(n => !(n in nameToId));
+  if (missing.length > 0) {
+    const { data: inserted, error } = await supabase
+      .from('cities_master')
+      .insert(missing.map(n => ({ name: n, name_ar: n, is_active: true })))
+      .select('id, name');
+    if (error) {
+      console.error('❌ batch insert cities_master:', error);
+    } else {
+      for (const row of inserted || []) nameToId[row.name as string] = row.id as number;
     }
   }
 
-  // Batch upsert mappings
+  // Build map MODON id → master id
+  for (const city of validCities) {
+    const masterId = nameToId[city.city_name];
+    if (masterId) cityMasterMap[city.id] = masterId;
+  }
+
+  // 3) Batch upsert mappings
   const mappings = Object.entries(cityMasterMap).map(([externalId, cityId]) => {
-    const city = cities.find(c => c.id === externalId);
+    const city = validCities.find(c => c.id === externalId);
     return {
       city_id: cityId,
       delivery_partner: 'modon',
       external_id: externalId,
       external_name: city?.city_name || '',
       is_active: true,
-      updated_at: timestamp
+      updated_at: timestamp,
     };
   });
 
+  let updatedCount = 0;
   if (mappings.length > 0) {
-    const { error } = await supabase.from('city_delivery_mappings').upsert(mappings, { onConflict: 'city_id,delivery_partner' });
+    const { error } = await supabase
+      .from('city_delivery_mappings')
+      .upsert(mappings, { onConflict: 'city_id,delivery_partner' });
     if (error) console.error('❌ city_delivery_mappings batch:', error);
     else updatedCount = mappings.length;
   }
@@ -125,57 +136,65 @@ async function upsertCitiesBatch(cities: { id: string; city_name: string }[]) {
   return { updatedCount, cityMasterMap };
 }
 
-// Batch upsert regions for one city
+// ✅ Batch upsert regions for one city: 1 SELECT for all + 1 batch INSERT for missing + 1 batch upsert mappings
 async function upsertRegionsBatch(cityMasterId: number, regions: { id: string; region_name: string }[]) {
-  if (regions.length === 0) return 0;
+  const validRegions = regions.filter(r => r.region_name && r.region_name.trim().length > 0);
+  if (validRegions.length === 0) return 0;
   const timestamp = new Date().toISOString();
-  let updatedCount = 0;
 
-  // Lookup/create region master records
-  const regionMasterMap: Record<string, number> = {};
-  
-  for (const region of regions) {
-    try {
-      const { data: existing } = await supabase
-        .from('regions_master')
-        .select('id')
-        .eq('city_id', cityMasterId)
-        .eq('name', region.region_name)
-        .maybeSingle();
+  const names = Array.from(new Set(validRegions.map(r => r.region_name)));
 
-      if (existing) {
-        regionMasterMap[region.id] = existing.id;
-      } else {
-        const { data: newRegion, error } = await supabase
-          .from('regions_master')
-          .insert({ city_id: cityMasterId, name: region.region_name, is_active: true })
-          .select('id')
-          .single();
-        if (error || !newRegion) continue;
-        regionMasterMap[region.id] = newRegion.id;
-      }
-    } catch (e) {
-      console.error(`❌ خطأ منطقة ${region.region_name}:`, e);
+  // 1) Single SELECT for all existing regions in this city
+  const { data: existing } = await supabase
+    .from('regions_master')
+    .select('id, name')
+    .eq('city_id', cityMasterId)
+    .in('name', names);
+
+  const nameToId: Record<string, number> = {};
+  for (const row of existing || []) nameToId[row.name as string] = row.id as number;
+
+  // 2) Batch INSERT for missing regions
+  const missing = names.filter(n => !(n in nameToId));
+  if (missing.length > 0) {
+    const { data: inserted, error } = await supabase
+      .from('regions_master')
+      .insert(missing.map(n => ({ city_id: cityMasterId, name: n, is_active: true })))
+      .select('id, name');
+    if (error) {
+      console.error(`❌ batch insert regions_master (city ${cityMasterId}):`, error);
+    } else {
+      for (const row of inserted || []) nameToId[row.name as string] = row.id as number;
     }
   }
 
-  // Batch upsert region mappings
+  // Build region MODON id → master id
+  const regionMasterMap: Record<string, number> = {};
+  for (const region of validRegions) {
+    const masterId = nameToId[region.region_name];
+    if (masterId) regionMasterMap[region.id] = masterId;
+  }
+
+  // 3) Batch upsert mappings
   const mappings = Object.entries(regionMasterMap).map(([externalId, regionId]) => {
-    const region = regions.find(r => r.id === externalId);
+    const region = validRegions.find(r => r.id === externalId);
     return {
       region_id: regionId,
       delivery_partner: 'modon',
       external_id: externalId,
       external_name: region?.region_name || '',
       is_active: true,
-      updated_at: timestamp
+      updated_at: timestamp,
     };
   });
 
+  let updatedCount = 0;
   if (mappings.length > 0) {
-    const { error } = await supabase.from('region_delivery_mappings').upsert(mappings, { onConflict: 'region_id,delivery_partner' });
-    if (!error) updatedCount = mappings.length;
-    else console.error('❌ region_delivery_mappings batch:', error);
+    const { error } = await supabase
+      .from('region_delivery_mappings')
+      .upsert(mappings, { onConflict: 'region_id,delivery_partner' });
+    if (error) console.error('❌ region_delivery_mappings batch:', error);
+    else updatedCount = mappings.length;
   }
 
   return updatedCount;
