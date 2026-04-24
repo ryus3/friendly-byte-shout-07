@@ -390,9 +390,11 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
   );
 };
 
-const SuperMessageBubble = ({ message }) => {
+const SuperMessageBubble = ({ message, index, onSelectRegion, disabled }) => {
   const hasMetadata = message.metadata;
   const isError = message.error;
+  const clarification = message.regionClarification;
+  const hasResolved = !!clarification?.resolvedName;
   
   return (
      <motion.div
@@ -426,6 +428,35 @@ const SuperMessageBubble = ({ message }) => {
           : 'bg-card border text-card-foreground rounded-bl-none'
       )}>
         <div className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</div>
+
+        {/* ✅ قائمة المناطق القابلة للنقر */}
+        {clarification?.suggestions?.length > 0 && (
+          <div className="mt-3 space-y-2">
+            {clarification.suggestions.map((sug, i) => {
+              const isPicked = clarification.resolvedName === sug.name;
+              return (
+                <Button
+                  key={`${sug.external_id}-${i}`}
+                  type="button"
+                  variant={isPicked ? 'default' : 'outline'}
+                  className="w-full justify-between text-right h-auto py-2.5 px-3"
+                  disabled={disabled || hasResolved}
+                  onClick={() => onSelectRegion?.(index, sug, clarification)}
+                >
+                  <Badge variant="secondary" className="text-[10px]">
+                    {Math.round((sug.confidence || 0) * 100)}%
+                  </Badge>
+                  <span className="flex-1 text-right font-medium">📍 {sug.name}</span>
+                </Button>
+              );
+            })}
+            {hasResolved && (
+              <div className="text-xs text-muted-foreground text-center pt-1">
+                ✅ تم اختيار: {clarification.resolvedName}
+              </div>
+            )}
+          </div>
+        )}
         
         {hasMetadata && (
           <div className="mt-3 pt-2 border-t border-border/50 flex items-center gap-2 text-xs text-muted-foreground">
