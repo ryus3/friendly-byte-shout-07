@@ -359,8 +359,8 @@ serve(async (req) => {
       .order('usage_count', { ascending: false })
       .limit(100);
 
-    const learnedExamples = topPatterns?.map(p => 
-      `"${p.pattern_text}" → ${p.cities_cache.name}${p.regions_cache ? ' - ' + p.regions_cache.name : ''}`
+    const learnedExamples = topPatterns?.map((p: any) => 
+      `"${p.pattern_text}" → ${p.cities_cache?.name}${p.regions_cache ? ' - ' + p.regions_cache.name : ''}`
     ).join('\n') || '';
 
     const citiesList = cities?.map(c => c.name).join('، ') || '';
