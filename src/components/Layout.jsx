@@ -14,7 +14,7 @@ import { useTheme } from '@/contexts/ThemeContext.jsx';
 import NotificationsPanel from '@/components/NotificationsPanel.jsx';
 import BottomNav from '@/components/BottomNav.jsx';
 import { useAiChat } from '@/contexts/AiChatContext.jsx';
-import AiChatDialog from '@/components/ai/AiChatDialog.jsx';
+import SuperAiChatDialog from '@/components/ai/SuperAiChatDialog';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog.jsx';
 import { useMediaQuery } from '@/hooks/useMediaQuery.js';
 import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
