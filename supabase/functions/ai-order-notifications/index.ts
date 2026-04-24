@@ -40,6 +40,19 @@ Deno.serve(async (req) => {
 
     const record = payload.record;
 
+    // ⏳ انتظار قصير لإتاحة الفرصة لتحديث source بعد INSERT (مثلاً من ai-gemini-chat)
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+
+    // 🔄 قراءة source الفعلي من قاعدة البيانات (وليس من payload)
+    const { data: freshRow } = await supabase
+      .from('ai_orders')
+      .select('source')
+      .eq('id', record.id)
+      .maybeSingle();
+    if (freshRow?.source) {
+      record.source = freshRow.source;
+    }
+
     // جلب اسم المنشئ
     const { data: creator } = await supabase
       .from('profiles')
