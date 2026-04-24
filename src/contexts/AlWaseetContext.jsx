@@ -5344,15 +5344,8 @@ export const AlWaseetProvider = ({ children }) => {
         return false;
       }
       
-      // منع حذف الحساب الافتراضي إذا كان الوحيد المتبقي
-      if (accountToDelete.is_default && activeAccounts.length === 1) {
-        toast({
-          title: "تعذر الحذف",
-          description: "لا يمكن حذف الحساب الافتراضي الوحيد. أضف حساب آخر أولاً",
-          variant: "destructive"
-        });
-        return false;
-      }
+      // ✅ السماح بحذف الحساب الوحيد - لا قيود (المعيار العالمي)
+      const isLastAccount = activeAccounts.length === 1;
       
       // حذف الحساب نهائياً من قاعدة البيانات
       const { error: deleteError } = await supabase
@@ -5364,7 +5357,7 @@ export const AlWaseetProvider = ({ children }) => {
       
       if (deleteError) throw deleteError;
       
-      // إذا كان الحساب المحذوف افتراضياً، تعيين حساب آخر كافتراضي
+      // إذا كان الحساب المحذوف افتراضياً وهناك حسابات أخرى، رقّ حساباً آخر للافتراضي
       if (accountToDelete.is_default && activeAccounts.length > 1) {
         const remainingAccounts = activeAccounts.filter(acc => 
           normalizeUsername(acc.account_username) !== normalizedUsername
@@ -5378,9 +5371,22 @@ export const AlWaseetProvider = ({ children }) => {
         }
       }
       
+      // إذا كان الحساب الوحيد، نظّف حالة السياق المحلية والرجوع إلى local
+      if (isLastAccount) {
+        setIsLoggedIn(false);
+        setToken(null);
+        setWaseetUser(null);
+        setCities([]);
+        setRegions([]);
+        setPackageSizes([]);
+        setActivePartner('local');
+      }
+      
       toast({
         title: "تم الحذف",
-        description: "تم حذف الحساب بشكل نهائي من النظام",
+        description: isLastAccount 
+          ? "تم حذف الحساب نهائياً. تم التحويل إلى الوضع المحلي."
+          : "تم حذف الحساب بشكل نهائي من النظام",
         variant: "default"
       });
       
