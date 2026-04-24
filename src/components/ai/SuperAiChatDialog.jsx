@@ -127,7 +127,23 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
       setConversationContext(prev => [...prev.slice(-10), { role: 'model', content: data.response }]);
 
       // معالجة أنواع الردود المختلفة
-      if (data.type === 'order' && data.orderData) {
+      if (data.type === 'region_clarification' && data.orderData?.suggestions?.length > 0) {
+        // عرض قائمة المناطق كأزرار قابلة للنقر
+        setMessages(prev => [...prev, {
+          role: 'model',
+          content: data.response,
+          regionClarification: {
+            suggestions: data.orderData.suggestions,
+            city_name: data.orderData.city_name,
+            city_external_id: data.orderData.city_external_id,
+            original_message: data.orderData.original_message,
+          },
+          metadata: {
+            model_used: data.model_used,
+            confidence: data.confidence || 95,
+          }
+        }]);
+      } else if (data.type === 'order' && data.orderData) {
         await handleOrderResponse(data);
       } else if (data.type === 'analytics') {
         await handleAnalyticsResponse(data);
