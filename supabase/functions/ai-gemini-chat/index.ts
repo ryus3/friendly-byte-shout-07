@@ -637,6 +637,20 @@ serve(async (req) => {
           }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
 
+        // 🛡️ Pre-extract phones from the raw original_message (multi-layer defense)
+        const _arDigits = (s: string): string =>
+          s.replace(/[٠-٩۰-۹]/g, (d) => String('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹'.indexOf(d) % 10));
+        const _digitsOnly = _arDigits(original_message || '').replace(/[^0-9]/g, '');
+        const _phones: string[] = [];
+        const _seen = new Set<string>();
+        for (const re of [/00964(7\d{9})/g, /0964(7\d{9})/g, /964(7\d{9})/g, /(07\d{9})/g]) {
+          let mm: RegExpExecArray | null;
+          while ((mm = re.exec(_digitsOnly)) !== null) {
+            const local = mm[1].startsWith('0') ? mm[1] : '0' + mm[1];
+            if (/^07\d{9}$/.test(local) && !_seen.has(local)) { _seen.add(local); _phones.push(local); }
+          }
+        }
+
         const { data: orderResult, error: orderError } = await supabase
           .rpc('process_telegram_order', {
             p_telegram_chat_id: -999999999,
@@ -646,6 +660,8 @@ serve(async (req) => {
             p_region_id: region_external_id,
             p_city_name: city_name,
             p_region_name: region_name,
+            p_customer_phone_override: _phones[0] || null,
+            p_customer_phone2_override: _phones[1] || null,
           });
 
         if (orderError || !orderResult?.success) {
