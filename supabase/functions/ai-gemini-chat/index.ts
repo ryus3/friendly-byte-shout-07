@@ -930,11 +930,12 @@ ${regionsBlock}
           const aiChatId = -999999999; // معرف خاص للمساعد الذكي
 
           // 🗺️ مطابقة محلية ذكية للمدينة والمنطقة (مماثلة لمنطق بوت التليغرام)
-          let resolvedCityId: number | null = null;
-          let resolvedRegionId: number | null = null;
+          let resolvedCityExternalId: number | null = null;   // alwaseet_id
+          let resolvedRegionExternalId: number | null = null; // alwaseet_id
           let resolvedCityName: string | null = null;
           let resolvedRegionName: string | null = null;
-          let regionSuggestions: Array<{ id: number; name: string }> = [];
+          type RegionMatch = { externalId: number; name: string; conf: number };
+          let regionSuggestions: RegionMatch[] = [];
 
           const normalizeAr = (t: string) => (t || '')
             .toString()
@@ -944,130 +945,204 @@ ${regionsBlock}
             .replace(/[ة]/g, 'ه')
             .replace(/[ؤ]/g, 'و')
             .replace(/[ئ]/g, 'ي')
-            .replace(/[\u064B-\u0652]/g, '') // إزالة التشكيل
+            .replace(/[\u064B-\u0652]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          // إزالة أرقام الهواتف وكلمات المنتجات الشائعة لتنقية نص المنطقة
+          const stripNoise = (t: string) => (t || '')
+            .replace(/(\+?964|00964)?0?7[0-9]{9}/g, ' ')
+            .replace(/\b\d{3,}\b/g, ' ')
+            .replace(/\b(سمول|ميديم|لارج|اكس|اكسات|اكسين|xs|s|m|l|xl|xxl|xxxl|2xl|3xl)\b/gi, ' ')
+            .replace(/\b(احمر|ازرق|اخضر|اصفر|ابيض|اسود|سمائي|وردي|نيلي)\b/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
 
           try {
-            const msgNorm = normalizeAr(processedMessage);
             const lines = processedMessage.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
 
+            // جلب كل المدن والمناطق دفعة واحدة
             const { data: citiesList } = await supabase
               .from('cities_cache')
-              .select('id, name, name_ar')
+              .select('id, name, name_ar, alwaseet_id')
               .eq('is_active', true);
 
-            // ابحث عن المدينة سطراً سطراً (الكلمة الأولى أولاً)
-            if (citiesList && citiesList.length > 0) {
-              const cityCandidates = citiesList.map((c: any) => ({
-                id: c.id,
-                name: c.name,
-                norms: [c.name, c.name_ar].filter(Boolean).map((n: string) => normalizeAr(n))
-              }));
+            const { data: aliasesList } = await supabase
+              .from('city_aliases')
+              .select('city_id, alias_name, confidence_score');
 
-              outer: for (const line of lines) {
-                const lineNorm = normalizeAr(line);
-                if (!lineNorm) continue;
-                const firstWord = lineNorm.split(/\s+/)[0];
-                // مطابقة دقيقة بأول كلمة
-                for (const c of cityCandidates) {
-                  if (c.norms.some(n => n === firstWord)) {
-                    resolvedCityId = c.id; resolvedCityName = c.name; break outer;
-                  }
+            type CityRow = { id: number; name: string; alwaseet_id: number; norms: string[] };
+            const cityCandidates: CityRow[] = (citiesList || []).map((c: any) => ({
+              id: c.id,
+              name: c.name,
+              alwaseet_id: c.alwaseet_id ?? c.id,
+              norms: [c.name, c.name_ar].filter(Boolean).map((n: string) => normalizeAr(n)),
+            }));
+            const aliasIndex: Array<{ city_id: number; norm: string }> =
+              (aliasesList || []).map((a: any) => ({ city_id: a.city_id, norm: normalizeAr(a.alias_name) })).filter(a => a.norm);
+
+            // ابحث عن المدينة سطراً سطراً، مع استخدام الكلمة الأولى أولاً
+            let cityLine = '';
+            outerCity: for (const line of lines) {
+              const lineNorm = normalizeAr(line);
+              if (!lineNorm) continue;
+              const firstWord = lineNorm.split(/\s+/)[0];
+
+              // 1) مطابقة الكلمة الأولى مع اسم مدينة
+              for (const c of cityCandidates) {
+                if (c.norms.some(n => n === firstWord || firstWord.includes(n) || n.includes(firstWord))) {
+                  resolvedCityExternalId = c.alwaseet_id;
+                  resolvedCityName = c.name;
+                  cityLine = line;
+                  break outerCity;
                 }
-                // مطابقة احتواء
-                for (const c of cityCandidates) {
-                  if (c.norms.some(n => lineNorm.includes(n))) {
-                    resolvedCityId = c.id; resolvedCityName = c.name; break outer;
+              }
+              // 2) مطابقة المرادفات
+              for (const al of aliasIndex) {
+                if (al.norm === firstWord || firstWord.includes(al.norm)) {
+                  const c = cityCandidates.find(x => x.id === al.city_id);
+                  if (c) {
+                    resolvedCityExternalId = c.alwaseet_id;
+                    resolvedCityName = c.name;
+                    cityLine = line;
+                    break outerCity;
                   }
                 }
               }
-              // fallback: ابحث في الرسالة كلها
-              if (!resolvedCityId) {
-                for (const c of cityCandidates) {
-                  if (c.norms.some(n => msgNorm.includes(n))) {
-                    resolvedCityId = c.id; resolvedCityName = c.name; break;
-                  }
+              // 3) احتواء داخل السطر
+              for (const c of cityCandidates) {
+                if (c.norms.some(n => lineNorm.includes(n))) {
+                  resolvedCityExternalId = c.alwaseet_id;
+                  resolvedCityName = c.name;
+                  cityLine = line;
+                  break outerCity;
                 }
               }
             }
 
-            if (resolvedCityId) {
+            if (resolvedCityExternalId && resolvedCityName) {
+              // اجلب مناطق هذه المدينة
+              const cityRow = cityCandidates.find(c => c.alwaseet_id === resolvedCityExternalId);
+              const cityInternalId = cityRow?.id;
               const { data: regionsList } = await supabase
                 .from('regions_cache')
-                .select('id, name, name_ar')
-                .eq('city_id', resolvedCityId)
+                .select('id, name, name_ar, alwaseet_id, city_id')
+                .eq('city_id', cityInternalId)
                 .eq('is_active', true);
 
               if (regionsList && regionsList.length > 0) {
-                // أزل اسم المدينة من الرسالة لتسهيل البحث عن المنطقة
-                const cityNorm = normalizeAr(resolvedCityName || '');
-                const cleaned = msgNorm.replace(new RegExp(cityNorm, 'g'), ' ').replace(/\s+/g, ' ').trim();
-
-                type Match = { id: number; name: string; conf: number };
-                const matches: Match[] = [];
-                for (const r of regionsList as any[]) {
-                  const candidates = [r.name, r.name_ar].filter(Boolean).map((n: string) => normalizeAr(n));
-                  for (const cand of candidates) {
-                    if (!cand || cand.length < 2) continue;
-                    if (cleaned === cand) { matches.push({ id: r.id, name: r.name, conf: 1.0 }); break; }
-                    if (cleaned.includes(cand)) { matches.push({ id: r.id, name: r.name, conf: 0.95 }); break; }
-                    // مطابقة كلمة-كلمة
-                    const words = cleaned.split(/\s+/);
-                    if (words.some(w => w.length >= 3 && (w === cand || cand.includes(w) || w.includes(cand)))) {
-                      matches.push({ id: r.id, name: r.name, conf: 0.8 });
-                      break;
-                    }
-                  }
+                // أزل اسم المدينة والضوضاء من نص البحث
+                const cityNorm = normalizeAr(resolvedCityName);
+                const searchSource = stripNoise(cityLine || processedMessage);
+                let searchNorm = normalizeAr(searchSource).replace(new RegExp(cityNorm, 'g'), ' ').replace(/\s+/g, ' ').trim();
+                // أزل المرادفات أيضاً
+                for (const al of aliasIndex.filter(a => a.city_id === cityInternalId)) {
+                  searchNorm = searchNorm.replace(new RegExp(al.norm, 'g'), ' ').replace(/\s+/g, ' ').trim();
                 }
 
-                // إزالة التكرار + الترتيب
+                const matches: RegionMatch[] = [];
+                const words = searchNorm.split(/\s+/).filter(w => w.length >= 2);
+
+                for (const r of regionsList as any[]) {
+                  const candidates = [r.name, r.name_ar].filter(Boolean).map((n: string) => normalizeAr(n));
+                  let best = 0;
+                  for (const cand of candidates) {
+                    if (!cand) continue;
+                    if (searchNorm === cand) { best = Math.max(best, 1.0); continue; }
+                    if (searchNorm.includes(cand)) {
+                      // تطابق احتواء قوي - الأطول أفضل
+                      const score = Math.min(0.98, 0.85 + cand.length / 100);
+                      best = Math.max(best, score);
+                      continue;
+                    }
+                    // تطابق على مستوى الكلمات
+                    const candTokens = cand.split(/\s+/).filter((t: string) => t.length >= 2);
+                    if (!candTokens.length) continue;
+                    const overlap = candTokens.filter((t: string) => words.includes(t)).length;
+                    if (overlap > 0) {
+                      const ratio = overlap / candTokens.length;
+                      // اطلب على الأقل تطابق نصف كلمات اسم المنطقة لتجنب نتائج عشوائية
+                      if (ratio >= 0.5) best = Math.max(best, 0.6 + ratio * 0.3);
+                    }
+                  }
+                  if (best >= 0.6) matches.push({ externalId: r.alwaseet_id ?? r.id, name: r.name, conf: best });
+                }
+
+                // إزالة التكرار وترتيب
                 const seen = new Set<number>();
                 const unique = matches
-                  .filter(m => (seen.has(m.id) ? false : (seen.add(m.id), true)))
+                  .filter(m => (seen.has(m.externalId) ? false : (seen.add(m.externalId), true)))
                   .sort((a, b) => b.conf - a.conf);
 
+                regionSuggestions = unique.slice(0, 5);
+
                 if (unique.length > 0) {
-                  // نأخذ الأفضل، ونحتفظ بأفضل 5 كاقتراحات
-                  resolvedRegionId = unique[0].id;
-                  resolvedRegionName = unique[0].name;
-                  regionSuggestions = unique.slice(0, 5).map(u => ({ id: u.id, name: u.name }));
+                  const top = unique[0];
+                  const second = unique[1];
+                  // اعتمد المنطقة فقط إذا كانت ثقتها عالية جداً وفرقها واضح
+                  const accept = top.conf >= 0.95 && (!second || top.conf - second.conf >= 0.05);
+                  if (accept) {
+                    resolvedRegionExternalId = top.externalId;
+                    resolvedRegionName = top.name;
+                  }
                 }
               }
             }
 
-            console.log('🗺️ المطابقة المحلية:', { resolvedCityName, resolvedRegionName, suggestionsCount: regionSuggestions.length });
+            console.log('🗺️ المطابقة المحلية:', {
+              resolvedCityName,
+              resolvedCityExternalId,
+              resolvedRegionName,
+              resolvedRegionExternalId,
+              suggestionsCount: regionSuggestions.length,
+            });
           } catch (geoErr) {
             console.warn('⚠️ فشل مطابقة المدينة/المنطقة:', geoErr);
           }
 
-          console.log('📞 استدعاء process_telegram_order:', { employeeCode, aiChatId, resolvedCityId, resolvedRegionId });
-
-          // ⚠️ استدعاء بـ 7 معاملات مع المدينة والمنطقة المُحَلّة محلياً + الرسالة المُطبّعة
-          const { data: orderResult, error: orderError } = await supabase
-            .rpc('process_telegram_order', {
-              p_telegram_chat_id: aiChatId,
-              p_employee_code: employeeCode,
-              p_message_text: processedMessage,
-              p_city_id: resolvedCityId,
-              p_region_id: resolvedRegionId,
-              p_city_name: resolvedCityName,
-              p_region_name: resolvedRegionName,
+          // إذا وجدنا مدينة لكن لم نحسم المنطقة → اعرض "هل تقصد؟" بدل إنشاء طلب خاطئ
+          if (resolvedCityExternalId && !resolvedRegionExternalId && regionSuggestions.length > 0) {
+            const list = regionSuggestions
+              .map((s, i) => `${i + 1}. ${s.name} (${Math.round(s.conf * 100)}%)`)
+              .join('\n');
+            finalAiResponse = `🤔 **هل تقصد إحدى هذه المناطق في ${resolvedCityName}؟**\n\n${list}\n\n✍️ أعد إرسال الطلب مع الاسم الكامل للمنطقة من القائمة.`;
+            responseType = 'region_clarification';
+            orderData = { needs_clarification: true, suggestions: regionSuggestions, city_name: resolvedCityName };
+          } else if (resolvedCityExternalId && !resolvedRegionExternalId) {
+            finalAiResponse = `⚠️ لم أتمكن من تحديد المنطقة في **${resolvedCityName}**.\n\n🔍 يرجى كتابة اسم المنطقة بشكل أوضح.`;
+            responseType = 'region_clarification';
+            orderData = { needs_clarification: true, suggestions: [], city_name: resolvedCityName };
+          } else {
+            console.log('📞 استدعاء process_telegram_order:', {
+              employeeCode, aiChatId, resolvedCityExternalId, resolvedRegionExternalId
             });
 
-          if (orderError) {
-            console.error('❌ خطأ في process_telegram_order:', orderError);
-          } else if (orderResult?.success) {
-            console.log('✅ تم إنشاء الطلب الذكي:', orderResult.order_id);
+            // ⚠️ نمرّر المعرفات الخارجية (alwaseet_id) لأن مسار التوصيل يقرأ
+            // ai_orders.city_id / region_id كمعرفات خارجية مباشرة
+            const { data: orderResult, error: orderError } = await supabase
+              .rpc('process_telegram_order', {
+                p_telegram_chat_id: aiChatId,
+                p_employee_code: employeeCode,
+                p_message_text: processedMessage,
+                p_city_id: resolvedCityExternalId,
+                p_region_id: resolvedRegionExternalId,
+                p_city_name: resolvedCityName,
+                p_region_name: resolvedRegionName,
+              });
 
-            // 🏷️ تحديث المصدر إلى ai_assistant (الدالة تحفظه افتراضياً كـ telegram)
-            const { error: updateSourceError } = await supabase
-              .from('ai_orders')
-              .update({ source: 'ai_assistant' })
-              .eq('id', orderResult.order_id);
-            if (updateSourceError) {
-              console.warn('⚠️ تعذر تحديث source للطلب:', updateSourceError);
-            }
+            if (orderError) {
+              console.error('❌ خطأ في process_telegram_order:', orderError);
+            } else if (orderResult?.success) {
+              console.log('✅ تم إنشاء الطلب الذكي:', orderResult.order_id);
+
+              // 🏷️ تحديث المصدر إلى ai_assistant
+              const { error: updateSourceError } = await supabase
+                .from('ai_orders')
+                .update({ source: 'ai_assistant' })
+                .eq('id', orderResult.order_id);
+              if (updateSourceError) {
+                console.warn('⚠️ تعذر تحديث source للطلب:', updateSourceError);
+              }
 
             responseType = 'order';
             orderData = {
