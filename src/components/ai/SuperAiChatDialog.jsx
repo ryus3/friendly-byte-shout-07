@@ -234,6 +234,70 @@ const SuperAiChatDialog = ({ open, onOpenChange }) => {
     }]);
   };
   
+  // ✅ معالجة اختيار المنطقة من قائمة "هل تقصد؟"
+  const handleRegionSelect = async (messageIndex, suggestion, clarification) => {
+    if (isLoading) return;
+
+    setMessages(prev => {
+      const next = [...prev];
+      if (next[messageIndex]) {
+        next[messageIndex] = {
+          ...next[messageIndex],
+          regionClarification: { ...next[messageIndex].regionClarification, resolvedName: suggestion.name }
+        };
+      }
+      next.push({ role: 'user', content: `📍 ${suggestion.name}` });
+      return next;
+    });
+
+    setIsLoading(true);
+    try {
+      const userInfo = {
+        full_name: user?.full_name || user?.fullName || user?.display_name,
+        default_customer_name: user?.default_customer_name,
+        isAdmin: user?.isAdmin || false,
+        id: user?.id,
+        roles: user?.roles || [],
+        permissions: user?.permissions || [],
+      };
+
+      const { data, error } = await supabase.functions.invoke('ai-gemini-chat', {
+        body: {
+          message: clarification.original_message,
+          userInfo,
+          pendingAction: {
+            type: 'confirm_region',
+            original_message: clarification.original_message,
+            city_external_id: clarification.city_external_id,
+            region_external_id: suggestion.external_id,
+            city_name: clarification.city_name,
+            region_name: suggestion.name,
+          }
+        }
+      });
+
+      if (error) throw new Error(error.message || 'فشل تأكيد المنطقة');
+
+      if (data?.type === 'order' && data?.orderData?.orderSaved) {
+        await handleOrderResponse(data);
+      } else {
+        setMessages(prev => [...prev, {
+          role: 'model',
+          content: data?.response || '⚠️ تعذر إنشاء الطلب.',
+          error: !data?.success,
+        }]);
+      }
+    } catch (err) {
+      setMessages(prev => [...prev, {
+        role: 'model',
+        content: `⚠️ خطأ في تأكيد المنطقة: ${err.message}`,
+        error: true,
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
