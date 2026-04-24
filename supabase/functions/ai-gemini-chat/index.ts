@@ -802,99 +802,131 @@ ${regionsBlock}
 
     const aiResponse = data.candidates[0].content.parts[0].text;
 
-    // تحليل الرد لاستخراج طلبات محتملة باستخدام نفس منطق بوت التليغرام المطور
-    
-    // تحقق من وجود طلب في النص - كلمات أكثر ذكاءً
-    const orderKeywords = ['طلب', 'اطلب', 'اريد', 'احتاج', 'للزبون', 'عميل', 'زبون', 'أنشئ', 'إنشاء', 'سجل', 'أضف'];
-    const hasOrderIntent = orderKeywords.some(keyword => message.toLowerCase().includes(keyword)) || 
-                          message.includes('د.ع') || 
-                          (storeData.cities || []).some(city => message.toLowerCase().includes(city.name.toLowerCase()));
-    
-    let responseType = 'text';
-    let orderData = null;
+    // 🧠 كشف نية الطلب الذكي (Smart Intent Detection)
+    // إشارتان قويتان من 3: 1) رقم هاتف عراقي  2) اسم مدينة من الكاش  3) سعر مكتوب
+    const phoneRegex = /\b07[3-9]\d{8}\b/;
+    const priceRegex = /\d{2,}\s*(الف|ألف|د\.ع|دينار|الاف|آلاف|ك\b)/i;
+    const hasPhone = phoneRegex.test(message);
+    const hasPrice = priceRegex.test(message);
+    const lowerMsg = message.toLowerCase();
+    const hasCity = (storeData.cities || []).some((city: any) =>
+      city.name && lowerMsg.includes(String(city.name).toLowerCase())
+    );
 
-    // تطبيق معالجة الطلبات الذكية إذا كان النص يحتوي على نية طلب
+    const orderKeywords = ['طلب', 'اطلب', 'اريد', 'أريد', 'احتاج', 'للزبون', 'عميل', 'زبون', 'أنشئ', 'إنشاء', 'سجل', 'أضف'];
+    const hasOrderKeyword = orderKeywords.some(k => lowerMsg.includes(k));
+
+    const signalCount = (hasPhone ? 1 : 0) + (hasCity ? 1 : 0) + (hasPrice ? 1 : 0);
+    const hasOrderIntent = signalCount >= 2 || (hasOrderKeyword && signalCount >= 1);
+
+    console.log('🔎 كشف نية الطلب:', { hasPhone, hasCity, hasPrice, hasOrderKeyword, signalCount, hasOrderIntent });
+
+    let responseType = 'text';
+    let orderData: any = null;
+    let finalAiResponse = aiResponse;
+
     if (hasOrderIntent) {
       try {
         console.log('🔍 تحليل طلب ذكي للنص:', message);
-        
-          // استخدام نفس منطق بوت التليغرام تماماً مع معرف خاص للمساعد الذكي
-        const aiChatId = -999999999; // معرف خاص للمساعد الذكي
-        const { data: orderResult, error: orderError } = await supabase
-          .rpc('process_telegram_order', {
-            p_message_text: message,
-            p_chat_id: aiChatId
-          });
-        
-        if (orderError) {
-          console.error('❌ خطأ في معالجة الطلب:', orderError);
-        } else if (orderResult?.success) {
-          console.log('✅ تم تحليل الطلب بنجاح:', orderResult);
-          
-          responseType = 'order';
-          orderData = orderResult.order_data;
-          
-          // تحسين البيانات وحفظ الطلب في ai_orders
-          const customerName = orderData.customer_name && 
-            orderData.customer_name !== orderData.customer_city && 
-            orderData.customer_name !== orderData.customer_province 
-            ? orderData.customer_name 
-            : (userInfo?.default_customer_name || 'ريوس');
 
-          // فحص المخزون الحقيقي للمنتجات وإضافة تفاصيل إضافية
-          const enhancedItems = await Promise.all((orderData.items || []).map(async (item: any) => {
-            if (item.variant_id) {
-              const { data: inventoryData } = await supabase
-                .from('inventory')
-                .select('quantity, reserved_quantity')
-                .eq('variant_id', item.variant_id)
-                .single();
-              
-              const availableStock = (inventoryData?.quantity || 0) - (inventoryData?.reserved_quantity || 0);
-              return {
-                ...item,
-                available_stock: availableStock,
-                stock_status: availableStock >= (item.quantity || 1) ? 'available' : 'insufficient'
-              };
-            }
-            return item;
-          }));
-            
-          const aiOrderData = {
-            customer_name: customerName,
-            customer_phone: orderData.customer_phone,
-            customer_city: orderData.customer_city,
-            customer_province: orderData.customer_province,
-            customer_address: orderData.customer_address || message,
-            city_id: orderData.city_id,
-            region_id: orderData.region_id,
-            items: enhancedItems,
-            total_amount: orderData.total_amount || 0,
-            order_data: { ...orderData, items: enhancedItems },
-            source: 'ai_assistant',
-            created_by: userInfo?.id || null,
-            original_text: message,
-            telegram_chat_id: aiChatId
-          };
+        // 🔑 جلب employee_code للمستخدم الحالي (نفس آلية بوت التليغرام)
+        const userIdForCode = userInfo?.user_id || userInfo?.id;
+        let employeeCode: string | null = null;
 
-          const { data: savedOrder, error: saveError } = await supabase
-            .from('ai_orders')
-            .insert(aiOrderData)
-            .select()
-            .single();
+        if (userIdForCode) {
+          const { data: codeRow } = await supabase
+            .from('employee_telegram_codes')
+            .select('telegram_code')
+            .eq('user_id', userIdForCode)
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle();
+          employeeCode = codeRow?.telegram_code || null;
+        }
 
-          if (saveError) {
-            console.error('❌ خطأ في حفظ الطلب الذكي:', saveError);
+        // احتياطي: أول كود نشط في النظام (لو المستخدم بدون كود)
+        if (!employeeCode) {
+          const { data: anyCode } = await supabase
+            .from('employee_telegram_codes')
+            .select('telegram_code')
+            .eq('is_active', true)
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          employeeCode = anyCode?.telegram_code || null;
+          console.log('⚠️ استخدام كود افتراضي:', employeeCode);
+        }
+
+        if (!employeeCode) {
+          console.error('❌ لا يوجد أي employee_code نشط في النظام');
+        } else {
+          const aiChatId = -999999999; // معرف خاص للمساعد الذكي
+
+          console.log('📞 استدعاء process_telegram_order:', { employeeCode, aiChatId });
+
+          // ⚠️ استدعاء بـ 7 معاملات (مطابق لاستدعاء بوت التليغرام)
+          // الدالة نفسها تُدخل في ai_orders وتُرجع order_id — لا حاجة لإدخال يدوي
+          const { data: orderResult, error: orderError } = await supabase
+            .rpc('process_telegram_order', {
+              p_telegram_chat_id: aiChatId,
+              p_employee_code: employeeCode,
+              p_message_text: message,
+              p_city_id: null,
+              p_region_id: null,
+              p_city_name: null,
+              p_region_name: null,
+            });
+
+          if (orderError) {
+            console.error('❌ خطأ في process_telegram_order:', orderError);
+          } else if (orderResult?.success) {
+            console.log('✅ تم إنشاء الطلب الذكي:', orderResult.order_id);
+
+            responseType = 'order';
+            orderData = {
+              ...orderResult,
+              orderSaved: true,
+              aiOrderId: orderResult.order_id,
+            };
+
+            // 📝 رسالة تأكيد واضحة
+            const items = (orderResult.items || []).map((it: any) =>
+              `• ${it.product_name || 'منتج'}${it.color ? ' - ' + it.color : ''}${it.size ? ' - ' + it.size : ''} × ${it.quantity || 1}`
+            ).join('\n');
+
+            const adjustmentLine = orderResult.adjustment_type === 'discount'
+              ? `\n🎁 خصم: ${Math.abs(orderResult.price_adjustment || 0).toLocaleString()} د.ع`
+              : orderResult.adjustment_type === 'markup'
+                ? `\n📈 زيادة: ${(orderResult.price_adjustment || 0).toLocaleString()} د.ع`
+                : '';
+
+            finalAiResponse = `✅ **تم تثبيت الطلب في نافذة طلبات الذكاء الاصطناعي**
+
+👤 الزبون: ${orderResult.customer_name || '-'}
+📞 الهاتف: ${orderResult.customer_phone || '-'}${orderResult.customer_phone2 ? ' / ' + orderResult.customer_phone2 : ''}
+📍 العنوان: ${orderResult.customer_address || '-'}
+
+📦 المنتجات:
+${items || '• لا توجد منتجات محددة'}
+
+💰 المحسوب: ${(orderResult.calculated_amount || 0).toLocaleString()} د.ع
+🚚 توصيل: ${(orderResult.delivery_fee || 5000).toLocaleString()} د.ع${adjustmentLine}
+💵 **الإجمالي: ${(orderResult.total_amount || 0).toLocaleString()} د.ع**`;
           } else {
-            console.log('✅ تم حفظ الطلب الذكي:', savedOrder?.id);
-            orderData.orderSaved = true;
-            orderData.aiOrderId = savedOrder?.id;
+            // فشل (مثل: منتج غير متوفر) — أعرض رسالة الدالة
+            console.warn('⚠️ فشل process_telegram_order:', orderResult?.message);
+            if (orderResult?.message) {
+              finalAiResponse = orderResult.message;
+              responseType = 'order_failed';
+              orderData = orderResult;
+            }
           }
         }
       } catch (error) {
         console.error('Error processing smart order:', error);
       }
     }
+
 
     // إذا كان طلب إحصائيات الاستخدام
     if (message === 'get_usage_stats') {
