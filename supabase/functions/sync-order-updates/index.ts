@@ -282,8 +282,8 @@ Deno.serve(async (req) => {
         const currentFinalAmount = parseInt(String(localOrder.final_amount || 0));
         const newFinalAmount = parseInt(String(waseetOrder.price || 0));
         const currentDeliveryFee = parseInt(String(localOrder.delivery_fee || 0));
-        const currentDiscount = parseInt(String(localOrder.discount || 0));
-        const currentPriceChangeType = localOrder.price_change_type;
+        const currentDiscount = parseInt(String((localOrder as any).discount || 0));
+        const currentPriceChangeType = (localOrder as any).price_change_type;
 
         // ✅ إعادة حساب الخصم حتى لو السعر لم يتغير (للطلبات التي تم تحديثها قبل الإصلاح)
         const priceNeedsRecalculation = 
@@ -388,7 +388,7 @@ Deno.serve(async (req) => {
                   priceChanged,
                   accountChanged,
                   newStatus,
-                  newPrice,
+                  newPrice: newFinalAmount,
                   account: waseetOrder._account
                 }
               }

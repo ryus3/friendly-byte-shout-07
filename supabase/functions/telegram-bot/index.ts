@@ -413,8 +413,8 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     // ==========================================
     // CRITICAL VALIDATION
     // ==========================================
-    const totalRegions = regionsCache.size;
-    console.log(`✅ تم تحميل ${cities?.length || 0} مدينة و ${totalRegions} منطقة و ${cityAliasesCache.size} اسم بديل لشركة ${deliveryPartner}`);
+    const totalRegions = regionsCache.length;
+    console.log(`✅ تم تحميل ${cities?.length || 0} مدينة و ${totalRegions} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
     
     // تحديث وقت آخر تحميل
     lastCacheLoadTime = Date.now();
@@ -429,7 +429,7 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     
     console.log('Load version: ' + BOT_VERSION);
     
-    console.log(`✅ تم تحميل ${citiesCache.size} مدينة و ${regionsCache.size} منطقة و ${cityAliasesCache.size} اسم بديل لشركة ${deliveryPartner}`);
+    console.log(`✅ تم تحميل ${citiesCache.length} مدينة و ${regionsCache.length} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
     console.log(`📅 Cache TTL: 30 أيام (${CACHE_TTL / (24 * 60 * 60 * 1000)} يوم)`);
     console.log(`💾 الـ Cache سيبقى نشط حتى: ${new Date(lastCacheUpdate + CACHE_TTL).toLocaleDateString('ar-IQ')}`);
     console.log(`🔄 إصدار التحميل: ${BOT_VERSION}`);
@@ -460,7 +460,7 @@ async function warmupCache() {
 // ==========================================
 // Search City Locally - مع استخراج السطر الذي يحتوي على المدينة
 // ==========================================
-function searchCityLocal(text: string): { cityId: number; cityName: string; confidence: number; cityLine: string } | null {
+function searchCityLocal(text: string): { cityId: number; cityName: string; confidence: number; cityLine: string; externalId?: number } | null {
   try {
     // تقسيم النص إلى أسطر
     const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
