@@ -132,12 +132,28 @@ class NotificationService {
     }
   }
 
-  // إشعار للطلبات الذكية
+  // إشعار للطلبات الذكية - يقرأ من ai_orders للتأكد من المصدر الفعلي
   async notifyAiOrder(orderData) {
-    const src = orderData?.source || 'ai_assistant';
-    const sourceLabel = src === 'telegram' ? 'التليغرام' : 'المساعد الذكي';
+    let src = orderData?.source;
+    // إذا لم يصلنا source صريح، نتجنب التخمين بـ"telegram"
+    if (!src && orderData?.id) {
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data } = await supabase
+          .from('ai_orders')
+          .select('source')
+          .eq('id', orderData.id)
+          .maybeSingle();
+        src = data?.source || 'ai_assistant';
+      } catch {
+        src = 'ai_assistant';
+      }
+    }
+    src = src || 'ai_assistant';
+    const isAi = src === 'ai_assistant' || src === 'ai_chat';
+    const sourceLabel = isAi ? 'المساعد الذكي' : (src === 'telegram' ? 'التليغرام' : 'النظام');
     const notificationData = {
-      title: src === 'telegram' ? 'طلب ذكي جديد' : 'طلب ذكي جديد - المساعد الذكي',
+      title: `طلب ذكي جديد - ${sourceLabel}`,
       message: `استلام طلب جديد من ${sourceLabel} يحتاج للمراجعة`,
       type: 'new_ai_order',
       ai_order_id: orderData.id

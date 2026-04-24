@@ -15,7 +15,9 @@ export const useInstantNotifications = (userId, userRole) => {
 
     console.log('🚀 Setting up instant notifications for user:', userId);
 
-    // إعداد قناة الطلبات الذكية مع أداء محسّن
+    // إعداد قناة الطلبات الذكية - بدون إشعار متصفح هنا
+    // (الإشعار الموثوق يُرسَل من Edge Function ai-order-notifications
+    //  ويعتمد على source الفعلي للطلب، فلا نريد إنشاء إشعار "تليغرام" خاطئ)
     const aiOrdersChannel = supabase
       .channel(`instant-ai-orders-${userId}-${Date.now()}`)
       .on(
@@ -26,26 +28,8 @@ export const useInstantNotifications = (userId, userRole) => {
           table: 'ai_orders'
         },
         (payload) => {
-          console.log('⚡ Instant AI order notification:', payload.new);
-          
-          // إشعار فوري بدون تأخير
-          const orderData = {
-            id: payload.new.id,
-            source: payload.new.source || 'telegram',
-            created_by: payload.new.created_by,
-            timestamp: new Date().toISOString()
-          };
-
-          // إشعار متصفح فوري
-          notificationService.notifyAiOrder(orderData).catch(error => {
-            console.log('⚠️ Browser notification not available:', error);
-          });
-
-          // بث أحداث فورية للواجهة
-          window.dispatchEvent(new CustomEvent('instantAiOrderNotification', { 
-            detail: orderData 
-          }));
-          
+          console.log('⚡ Instant AI order event (UI only):', payload.new?.id);
+          // فقط بث حدث للواجهة لتحديث القوائم - لا إشعارات متصفح هنا
           window.dispatchEvent(new CustomEvent('aiOrderCreated', { 
             detail: payload.new 
           }));
@@ -53,9 +37,6 @@ export const useInstantNotifications = (userId, userRole) => {
       )
       .subscribe((status) => {
         console.log('📊 Instant AI orders subscription status:', status);
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ Instant AI orders notifications ready');
-        }
       });
 
     channelsRef.current.add(aiOrdersChannel);
