@@ -230,8 +230,17 @@ serve(async (req) => {
               .maybeSingle();
 
             // ✅ إذا موجودة ومستلمة في DB ولم نطلب force = تخطي
+            // لكن لا نقفز إذا كانت تحتاج طلباتها (dio_count = 0)
             if (existingInvoice?.received === true && !force_refresh) {
-              continue;
+              if (sync_orders) {
+                const { count: dioCount } = await supabase
+                  .from('delivery_invoice_orders')
+                  .select('id', { count: 'exact', head: true })
+                  .eq('invoice_id', existingInvoice.id);
+                if ((dioCount ?? 0) > 0) continue;
+              } else {
+                continue;
+              }
             }
 
             // ✅ تحقق من تغيير الحالة
