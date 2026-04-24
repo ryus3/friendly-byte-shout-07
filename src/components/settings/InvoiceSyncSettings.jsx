@@ -47,11 +47,18 @@ const InvoiceSyncSettings = () => {
     orders_sync_enabled: true,
     orders_sync_times: ['02:15', '21:00'],
     orders_working_hours_only: true,
+    orders_working_hours_start: '08:00',
+    orders_working_hours_end: '20:00',
+    orders_max_per_sync: 100,
+    smart_sync_enabled: true,
     tokens_auto_renew_enabled: true,
     tokens_check_time: '03:00',
     frontend_orders_page_auto_sync: true,
     frontend_employee_page_auto_sync: true,
+    frontend_employee_followup_sync: true,
+    employee_invoice_sync_enabled: true,
     frontend_login_sync: false,
+    notifications_enabled: true,
     last_run_at: null,
     active_crons: []
   });
