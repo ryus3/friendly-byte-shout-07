@@ -1,73 +1,180 @@
 
 
-# الخطة - إصلاح ربط الفواتير تلقائياً (الفواتير فقط)
+# الحل النهائي - ربط الفواتير تلقائياً + IP الوسيط
 
-## السبب الجذري المؤكد (لا افتراضات)
+## أولاً: IP السيرفر لشركة الوسيط (Whitelist)
 
-من فحص قاعدة البيانات والكود مباشرة:
+أعطِ شركة الوسيط هذا الـ IP العام لإضافته في القائمة البيضاء:
 
-1. **الفاتورة 3247172**: موجودة في `delivery_invoices` بـ `orders_count=42` لكن `dio_count=0` (لا سجل واحد في `delivery_invoice_orders`).
-2. **دالة `link_invoice_orders_to_orders`**: مُصلحة وتعمل، لكن لا يوجد ما تربطه (لأن جدول `delivery_invoice_orders` فارغ لهذه الفاتورة).
-3. **السبب الفعلي**: المزامنة الخلفية في `src/hooks/useAlWaseetInvoices.js` تستدعي `smart-invoice-sync` بـ:
-   ```js
-   sync_orders: false   // ← السطر 207 و 1053
-   ```
-   فيتم upsert الفاتورة فقط بدون جلب طلباتها → جدول `delivery_invoice_orders` يبقى فارغاً → لا شيء للربط.
-4. **smart-invoice-sync** (الخادم): الافتراضي `sync_orders=true` ومنطق جلب طلبات الفاتورة + استدعاء `link_invoice_orders_to_orders` بعد المزامنة موجود ويعمل (السطر 279-340 و 493-540 و 585).
-5. **لماذا الفواتير القديمة "تعمل"**: ليس لأنها مرتبطة عبر `delivery_invoice_orders`، بل لأن الطلبات المحلية تحمل `receipt_received=true` و `delivery_partner_invoice_id` من مسار `sync-order-updates` (مسار مختلف). الربط الحقيقي عبر `delivery_invoice_orders` كان معطلاً منذ مدة، لكن لم يلاحَظ لأن الفواتير القديمة كانت `received=true`.
+```
+52.57.82.157
+```
 
-## الإصلاح (دقيق وآمن)
+- موقع السيرفر: AWS Lightsail – فرانكفورت (أوروبا)
+- الدومين: `api.ryusbrand.com`
+- جميع طلبات AlWaseet و MODON الآن تخرج من هذا الـ IP الثابت حصراً
 
-### 1) `src/hooks/useAlWaseetInvoices.js` — تفعيل جلب الطلبات في المزامنة الخلفية
-- **السطر 207**: `sync_orders: false` → `sync_orders: true`
-- **السطر 1053**: `sync_orders: false` → `sync_orders: true`
-- إضافة تعليق يوضح السبب: المزامنة الخلفية يجب أن تُنشئ سجلات `delivery_invoice_orders` لتفعيل الربط التلقائي.
+---
 
-### 2) `supabase/functions/smart-invoice-sync/index.ts` — تمرير حقل `partner` في upsert طلبات الفاتورة
-الكود الحالي (السطر 287-297 و 499-511) لا يضع `partner` ضمن سجل `delivery_invoice_orders`. إذا كان العمود موجوداً في الجدول وغير nullable، يفشل upsert بصمت. سأتحقق فعلياً من schema قبل التعديل، فإن لزم سأضيفه.
+## ثانياً: السبب الجذري الحقيقي لعدم ربط الفاتورة 3247172
 
-### 3) إعادة مزامنة الفاتورة 3247172 يدوياً (إصلاح فوري لمرة واحدة)
-بعد deploy التغييرات أعلاه:
-- استدعاء `smart-invoice-sync` بـ `mode: 'comprehensive'` و `sync_orders: true` و `force_refresh: true` للمستخدم `91484496-b887-44f7-9e5d-be9db5567604` (مالك الفاتورة).
-- النتيجة المتوقعة: الفاتورة 3247172 تحصل على 42 سجل في `delivery_invoice_orders` مع `order_id` مربوط للطلبات الموجودة محلياً.
-- **بدون فتح الفاتورة من الواجهة**.
+### ما اكتشفته بالفحص الفعلي (مؤكد، لا افتراضات)
 
-## ما لن يتغير (ضمانات صارمة)
-- ❌ لا تعديل على schema الفواتير أو الطلبات.
-- ❌ لا حذف لأي بيانات.
-- ❌ لا تعديل على الفواتير القديمة المستلمة (تبقى تعمل عبر `receipt_received`).
-- ❌ لا تعديل على دالة `link_invoice_orders_to_orders` (مُصلحة بالفعل وتعمل).
-- ❌ لا تعديل على كاش المدن/المناطق في هذه الدفعة (سنناقشه بعد إصلاح الفواتير كما طلبت).
-- ❌ لا تعديل على `AlWaseetContext.jsx` (الـ self-heal الحالي يبقى كطبقة أمان).
+استدعيت AlWaseet API مباشرة وحصلت على الرد الحقيقي للفاتورة 3247172:
+
+```json
+{
+  "status": true,
+  "errNum": "S000",
+  "data": {
+    "invoice": [ {...} ],
+    "orders":  [ 42 طلب فعلي بأرقام 137987578، 137987585،... ]
+  }
+}
+```
+
+API يُرجع الطلبات داخل `data.orders` (مصفوفة داخل كائن)، **وليس** في `data` كمصفوفة مباشرة.
+
+### الكود الحالي في `smart-invoice-sync` (السطر 99-101) معطوب:
+
+```ts
+if (ok && Array.isArray(data?.data))   return data.data;     // ❌ data.data كائن وليس مصفوفة
+if (ok && Array.isArray(data?.orders)) return data.orders;   // ❌ غير موجود في الجذر
+if (Array.isArray(data))               return data;
+return [];                                                    // ← يصل هنا دائماً
+```
+
+النتيجة: دالة `fetchInvoiceOrdersFromAPI` ترجع **مصفوفة فارغة دائماً** للفواتير غير المستلمة، فلا يُكتب ولا سجل واحد في `delivery_invoice_orders`، وبالتالي `link_invoice_orders_to_orders` لا تجد ما تربطه.
+
+### حاجز إضافي في نفس الملف (السطر 460-463):
+
+```ts
+if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
+  continue;  // ❌ يقفز قبل محاولة جلب الطلبات
+}
+```
+
+يقفز حتى عن محاولة جلب الطلبات إذا كانت الفاتورة موجودة بنفس الحالة، حتى لو كانت `dio_count = 0`.
+
+### لماذا الفاتورة السابقة 3210286 ارتبطت ولم تتأثر؟
+
+الجدول `delivery_invoice_orders` لها يحتوي 60 سجل، لكن:
+- `status = NULL`، `amount = NULL`، `is_fallback = NULL`
+- `created_at = 2026-04-19` (قبل تعديلات smart-invoice-sync الأخيرة)
+
+أي أنها كُتبت من **مسار قديم آخر** (إما من `useAlWaseetInvoices.fetchInvoiceOrders` عند فتح الفاتورة في الواجهة، أو من Edge Function أقدم). الكود الحالي لو واجه نفس الفاتورة الجديدة سيفشل بنفس الطريقة.
+
+---
+
+## ثالثاً: الإصلاحات (دقيقة، آمنة، نهائية)
+
+### 1) `supabase/functions/smart-invoice-sync/index.ts` — إصلاح parser الطلبات
+
+في `fetchInvoiceOrdersFromAPI` (السطر 96-103) تعديل المنطق ليستخلص الطلبات بترتيب صحيح ومرن:
+
+```ts
+const ok = data?.status === true || data?.errNum === 'S000';
+if (!ok) return [];
+
+// ✅ AlWaseet: data.data.orders (الواقع الفعلي)
+if (Array.isArray(data?.data?.orders)) return data.data.orders;
+// ✅ MODON / صيغ بديلة
+if (Array.isArray(data?.orders))       return data.orders;
+if (Array.isArray(data?.data))         return data.data;
+if (Array.isArray(data))               return data;
+return [];
+```
+
+### 2) إزالة الـ skip القاتل في SMART mode (السطر 460-463)
+
+تعديل الشرط ليُسمح بإكمال جلب الطلبات إذا كانت الفاتورة لها `orders_count > 0` لكن لا توجد سجلات في `delivery_invoice_orders` بعد:
+
+```ts
+// تحقق فعلي من dio_count قبل القفز
+if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
+  // لكن لا نقفز إذا الفاتورة بحاجة طلباتها
+  if (sync_orders) {
+    const { count: dioCount } = await supabase
+      .from('delivery_invoice_orders')
+      .select('id', { count: 'exact', head: true })
+      .eq('invoice_id', existing.id);
+    if ((dioCount ?? 0) > 0) continue;  // عندها فقط نقفز
+  } else {
+    continue;
+  }
+}
+```
+
+نفس المنطق يُطبَّق في COMPREHENSIVE mode (السطر 229-231) إذا لزم.
+
+### 3) ضمان حقل `partner` و `owner_user_id` صحيحان في upsert الطلبات
+
+السطر 287-294 و 501-508: التأكد من تمرير `owner_user_id` (موجود) — لا حاجة لـ `partner` (العمود غير موجود في الجدول، تأكدت).
+
+### 4) إعادة مزامنة فورية للفاتورة 3247172 بعد deploy
+
+بعد deploy التعديلات:
+- استدعاء `smart-invoice-sync` بـ `mode='comprehensive', sync_orders=true, force_refresh=true` للموظف `91484496-b887-44f7-9e5d-be9db5567604`
+- النتيجة المتوقعة: 42 سجل في `delivery_invoice_orders` للفاتورة → استدعاء `link_invoice_orders_to_orders` يربط الـ 14 طلباً المحلي تلقائياً (منها الطلب `138385901`)
+- **بدون فتح الفاتورة في الواجهة**
+
+### 5) ضمان أن المزامنة الخلفية المستقبلية تربط دائماً
+
+المزامنة الخلفية (`useAlWaseetInvoices.smartBackgroundSync`) تستدعي بـ `sync_orders: true` (تم سابقاً). بعد إصلاح parser، سيتم:
+1. جلب الفاتورة من API
+2. جلب طلبات الفاتورة (الآن بشكل صحيح)
+3. upsert إلى `delivery_invoice_orders`
+4. استدعاء `link_invoice_orders_to_orders` (يعمل بالفعل)
+5. الطلبات المحلية تتربط بالفاتورة تلقائياً
+
+---
 
 ## النتائج المتوقعة
 
 | العنصر | قبل | بعد |
-|--------|-----|-----|
+|---|---|---|
 | فاتورة 3247172 dio_count | 0 | 42 ✅ |
-| فاتورة 3247172 linked_count | 0 | 42 (تقريباً، حسب وجود الطلبات المحلية) ✅ |
-| فواتير مستقبلية | تُحفظ بدون طلبات | تُحفظ + طلباتها + الربط تلقائياً ✅ |
-| الحاجة لفتح الفاتورة من الواجهة | شرط للربط | لم تعد شرطاً ✅ |
-| فواتير قديمة مستلمة | تعمل ✅ | تبقى تعمل ✅ |
+| طلب 138385901 مرتبط | ❌ | ✅ |
+| 14 طلب محلي للفاتورة 3247172 | غير مرتبطة | مرتبطة كلها ✅ |
+| أي فاتورة جديدة من المزامنة الخلفية | تُحفظ بدون طلبات | تُحفظ + طلباتها + الربط تلقائياً ✅ |
+| الحاجة لفتح الفاتورة من الواجهة | كانت شرطاً | لم تعد شرطاً ✅ |
+| الفواتير القديمة المستلمة (60+، 63، 103، إلخ) | تعمل ✅ | تبقى تعمل بلا تأثير ✅ |
 
-## الملفات المعدلة
+---
+
+## ضمانات صارمة (لا تخريب)
+
+- ❌ لا تعديل على schema جداول `delivery_invoices` أو `delivery_invoice_orders` أو `orders`
+- ❌ لا حذف لأي بيانات (سجلات `dio` الحالية تبقى)
+- ❌ لا تعديل على دالة `link_invoice_orders_to_orders` (مُصلحة وتعمل)
+- ❌ لا تعديل على الفواتير المستلمة سابقاً (`receipt_received=true` يبقى يعمل)
+- ❌ لا تعديل على الكاش في هذه الدفعة (سننتقل له بعد تأكيد نجاح الفواتير)
+- ✅ التعديلات محصورة في ملف واحد: `supabase/functions/smart-invoice-sync/index.ts`
+
+## الملف المعدل الوحيد
+
 | الملف | التغيير |
-|------|--------|
-| `src/hooks/useAlWaseetInvoices.js` | سطرين: `sync_orders: true` |
-| `supabase/functions/smart-invoice-sync/index.ts` | إضافة `partner` في upsert إن لزم (بعد التحقق من schema) |
+|---|---|
+| `supabase/functions/smart-invoice-sync/index.ts` | إصلاح parser في `fetchInvoiceOrdersFromAPI` + شرط skip ذكي يحترم `dio_count` |
 
-## التفاصيل التقنية
+## تفاصيل تقنية للسبب الجذري
+
 ```
-قبل:
-Background sync → invoices only (sync_orders=false)
-                 → 0 records in delivery_invoice_orders
-                 → link_invoice_orders_to_orders has nothing to link
-                 → user must open invoice → self-heal → finally links
+رد API الحقيقي للفاتورة 3247172:
+{
+  data: {
+    invoice: [...],
+    orders:  [42 طلب]   ← هنا فعلاً
+  }
+}
 
-بعد:
-Background sync → invoices + invoice orders (sync_orders=true)
-                 → 42 records in delivery_invoice_orders
-                 → link_invoice_orders_to_orders runs once
-                 → invoice fully linked, no UI interaction needed
+الكود الحالي يبحث في:
+  data.data    → كائن، ليس مصفوفة → يُتجاهل
+  data.orders  → undefined         → يُتجاهل
+  data         → كائن               → يُتجاهل
+  return []                         ← دائماً
+
+بعد الإصلاح:
+  data.data.orders → 42 طلب → upsert → link_invoice_orders_to_orders → ربط 14 طلب محلي
 ```
 
