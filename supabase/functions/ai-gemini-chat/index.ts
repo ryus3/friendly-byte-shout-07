@@ -825,9 +825,81 @@ ${regionsBlock}
     let orderData: any = null;
     let finalAiResponse = aiResponse;
 
+    // ===== Helpers: تطبيع السعر العربي + توسيع المنتجات المركبة =====
+    // 1) "24 الف"/"24 ألف"/"24k" → "24000"
+    const normalizePriceTokens = (txt: string): string => {
+      if (!txt) return txt;
+      let out = txt;
+      // أرقام عربية → إنجليزية
+      const arDigits: Record<string, string> = { '٠':'0','١':'1','٢':'2','٣':'3','٤':'4','٥':'5','٦':'6','٧':'7','٨':'8','٩':'9' };
+      out = out.replace(/[٠-٩]/g, (d) => arDigits[d] || d);
+      // (الف|ألف|آلاف|الاف|k|K) بعد رقم → *1000
+      out = out.replace(/(\d{1,4})\s*(الف|ألف|آلاف|الاف|k|K)\b/g, (_m, n) => String(parseInt(n, 10) * 1000));
+      // "د.ع" / "دينار" → احذفها (يبقى الرقم فقط) لتجنّب أن تُفسّر كوحدة
+      out = out.replace(/\s*(د\.?\s*ع|دينار)\s*/g, ' ');
+      return out;
+    };
+
+    // 2) توسيع "نايك نيلي سمول + ميديم" إلى منتجين: "نايك نيلي سمول" + "نايك نيلي ميديم"
+    //    يطبق على آخر سطر يحتوي '+' فقط، ويحافظ على باقي السطور كما هي.
+    const SIZE_TOKENS = [
+      'سمول','ميديم','لارج','اكس','اكسات','اكسين','xs','s','m','l','xl','xxl','xxxl','2xl','3xl','4xl','5xl',
+      'صغير','وسط','متوسط','كبير'
+    ];
+    const isSizeToken = (w: string) => {
+      const t = w.trim().toLowerCase();
+      return SIZE_TOKENS.includes(t);
+    };
+    const expandCompoundProducts = (txt: string): string => {
+      if (!txt || !txt.includes('+')) return txt;
+      const lines = txt.split(/\r?\n/);
+      const out: string[] = [];
+      for (const rawLine of lines) {
+        const line = rawLine;
+        // تجاهل أرقام الهواتف أو الأسعار
+        if (/07[3-9]\d{8}/.test(line) || /\b\d{4,}\b/.test(line.replace(/\+/g,''))) {
+          out.push(line);
+          continue;
+        }
+        if (!line.includes('+')) { out.push(line); continue; }
+        const parts = line.split('+').map(p => p.trim()).filter(Boolean);
+        if (parts.length < 2) { out.push(line); continue; }
+
+        // استخرج "الجذر" (اسم المنتج بدون آخر كلمة قياس) من الجزء الأول
+        const firstTokens = parts[0].split(/\s+/);
+        const lastIsSize = isSizeToken(firstTokens[firstTokens.length - 1] || '');
+        const baseTokens = lastIsSize ? firstTokens.slice(0, -1) : firstTokens;
+        const base = baseTokens.join(' ').trim();
+
+        const expanded: string[] = [];
+        for (const part of parts) {
+          const toks = part.split(/\s+/).filter(Boolean);
+          // إذا الجزء عبارة عن قياس فقط → اضف الجذر
+          if (toks.length === 1 && isSizeToken(toks[0]) && base) {
+            expanded.push(`${base} ${toks[0]}`.trim());
+          } else if (base && !part.toLowerCase().includes(base.toLowerCase())) {
+            // الجزء قصير ولا يحوي اسم المنتج → ورّث الجذر
+            const onlySizes = toks.every(isSizeToken);
+            if (onlySizes) expanded.push(`${base} ${toks.join(' ')}`.trim());
+            else expanded.push(part);
+          } else {
+            expanded.push(part);
+          }
+        }
+        out.push(expanded.join('\n'));
+      }
+      return out.join('\n');
+    };
+
+    // 3) رسالة معالَجة لتمريرها للدوال (تطبيع سعر + توسيع المركّب)
+    const processedMessage = expandCompoundProducts(normalizePriceTokens(message));
+    if (processedMessage !== message) {
+      console.log('🧪 تم تطبيع الرسالة قبل المعالجة:', { before: message, after: processedMessage });
+    }
+
     if (hasOrderIntent) {
       try {
-        console.log('🔍 تحليل طلب ذكي للنص:', message);
+        console.log('🔍 تحليل طلب ذكي للنص (مُطبّع):', processedMessage);
 
         // 🔑 جلب employee_code للمستخدم الحالي (نفس آلية بوت التليغرام)
         const userIdForCode = userInfo?.user_id || userInfo?.id;
@@ -862,60 +934,126 @@ ${regionsBlock}
         } else {
           const aiChatId = -999999999; // معرف خاص للمساعد الذكي
 
-          // 🗺️ مطابقة محلية للمدينة والمنطقة (لتجنب "العنوان غير محدد")
+          // 🗺️ مطابقة محلية ذكية للمدينة والمنطقة (مماثلة لمنطق بوت التليغرام)
           let resolvedCityId: number | null = null;
           let resolvedRegionId: number | null = null;
           let resolvedCityName: string | null = null;
           let resolvedRegionName: string | null = null;
+          let regionSuggestions: Array<{ id: number; name: string }> = [];
+
+          const normalizeAr = (t: string) => (t || '')
+            .toString()
+            .toLowerCase()
+            .replace(/[إأآا]/g, 'ا')
+            .replace(/[ى]/g, 'ي')
+            .replace(/[ة]/g, 'ه')
+            .replace(/[ؤ]/g, 'و')
+            .replace(/[ئ]/g, 'ي')
+            .replace(/[\u064B-\u0652]/g, '') // إزالة التشكيل
+            .replace(/\s+/g, ' ')
+            .trim();
 
           try {
-            const messageLower = message.toLowerCase();
+            const msgNorm = normalizeAr(processedMessage);
+            const lines = processedMessage.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+
             const { data: citiesList } = await supabase
               .from('cities_cache')
               .select('id, name, name_ar')
               .eq('is_active', true);
 
+            // ابحث عن المدينة سطراً سطراً (الكلمة الأولى أولاً)
             if (citiesList && citiesList.length > 0) {
-              const matchedCity = citiesList.find((c: any) => {
-                const candidates = [c.name, c.name_ar].filter(Boolean).map((n: string) => n.toLowerCase());
-                return candidates.some((n: string) => messageLower.includes(n));
-              });
-              if (matchedCity) {
-                resolvedCityId = matchedCity.id;
-                resolvedCityName = matchedCity.name;
+              const cityCandidates = citiesList.map((c: any) => ({
+                id: c.id,
+                name: c.name,
+                norms: [c.name, c.name_ar].filter(Boolean).map((n: string) => normalizeAr(n))
+              }));
 
-                // البحث عن المنطقة ضمن نفس المدينة
-                const { data: regionsList } = await supabase
-                  .from('regions_cache')
-                  .select('id, name, name_ar')
-                  .eq('city_id', matchedCity.id)
-                  .eq('is_active', true);
-
-                if (regionsList && regionsList.length > 0) {
-                  const matchedRegion = regionsList.find((r: any) => {
-                    const candidates = [r.name, r.name_ar].filter(Boolean).map((n: string) => n.toLowerCase());
-                    return candidates.some((n: string) => n.length >= 3 && messageLower.includes(n));
-                  });
-                  if (matchedRegion) {
-                    resolvedRegionId = matchedRegion.id;
-                    resolvedRegionName = matchedRegion.name;
+              outer: for (const line of lines) {
+                const lineNorm = normalizeAr(line);
+                if (!lineNorm) continue;
+                const firstWord = lineNorm.split(/\s+/)[0];
+                // مطابقة دقيقة بأول كلمة
+                for (const c of cityCandidates) {
+                  if (c.norms.some(n => n === firstWord)) {
+                    resolvedCityId = c.id; resolvedCityName = c.name; break outer;
+                  }
+                }
+                // مطابقة احتواء
+                for (const c of cityCandidates) {
+                  if (c.norms.some(n => lineNorm.includes(n))) {
+                    resolvedCityId = c.id; resolvedCityName = c.name; break outer;
+                  }
+                }
+              }
+              // fallback: ابحث في الرسالة كلها
+              if (!resolvedCityId) {
+                for (const c of cityCandidates) {
+                  if (c.norms.some(n => msgNorm.includes(n))) {
+                    resolvedCityId = c.id; resolvedCityName = c.name; break;
                   }
                 }
               }
             }
-            console.log('🗺️ المطابقة المحلية:', { resolvedCityName, resolvedRegionName });
+
+            if (resolvedCityId) {
+              const { data: regionsList } = await supabase
+                .from('regions_cache')
+                .select('id, name, name_ar')
+                .eq('city_id', resolvedCityId)
+                .eq('is_active', true);
+
+              if (regionsList && regionsList.length > 0) {
+                // أزل اسم المدينة من الرسالة لتسهيل البحث عن المنطقة
+                const cityNorm = normalizeAr(resolvedCityName || '');
+                const cleaned = msgNorm.replace(new RegExp(cityNorm, 'g'), ' ').replace(/\s+/g, ' ').trim();
+
+                type Match = { id: number; name: string; conf: number };
+                const matches: Match[] = [];
+                for (const r of regionsList as any[]) {
+                  const candidates = [r.name, r.name_ar].filter(Boolean).map((n: string) => normalizeAr(n));
+                  for (const cand of candidates) {
+                    if (!cand || cand.length < 2) continue;
+                    if (cleaned === cand) { matches.push({ id: r.id, name: r.name, conf: 1.0 }); break; }
+                    if (cleaned.includes(cand)) { matches.push({ id: r.id, name: r.name, conf: 0.95 }); break; }
+                    // مطابقة كلمة-كلمة
+                    const words = cleaned.split(/\s+/);
+                    if (words.some(w => w.length >= 3 && (w === cand || cand.includes(w) || w.includes(cand)))) {
+                      matches.push({ id: r.id, name: r.name, conf: 0.8 });
+                      break;
+                    }
+                  }
+                }
+
+                // إزالة التكرار + الترتيب
+                const seen = new Set<number>();
+                const unique = matches
+                  .filter(m => (seen.has(m.id) ? false : (seen.add(m.id), true)))
+                  .sort((a, b) => b.conf - a.conf);
+
+                if (unique.length > 0) {
+                  // نأخذ الأفضل، ونحتفظ بأفضل 5 كاقتراحات
+                  resolvedRegionId = unique[0].id;
+                  resolvedRegionName = unique[0].name;
+                  regionSuggestions = unique.slice(0, 5).map(u => ({ id: u.id, name: u.name }));
+                }
+              }
+            }
+
+            console.log('🗺️ المطابقة المحلية:', { resolvedCityName, resolvedRegionName, suggestionsCount: regionSuggestions.length });
           } catch (geoErr) {
             console.warn('⚠️ فشل مطابقة المدينة/المنطقة:', geoErr);
           }
 
           console.log('📞 استدعاء process_telegram_order:', { employeeCode, aiChatId, resolvedCityId, resolvedRegionId });
 
-          // ⚠️ استدعاء بـ 7 معاملات مع المدينة والمنطقة المُحَلّة محلياً
+          // ⚠️ استدعاء بـ 7 معاملات مع المدينة والمنطقة المُحَلّة محلياً + الرسالة المُطبّعة
           const { data: orderResult, error: orderError } = await supabase
             .rpc('process_telegram_order', {
               p_telegram_chat_id: aiChatId,
               p_employee_code: employeeCode,
-              p_message_text: message,
+              p_message_text: processedMessage,
               p_city_id: resolvedCityId,
               p_region_id: resolvedRegionId,
               p_city_name: resolvedCityName,
