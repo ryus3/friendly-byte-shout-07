@@ -373,25 +373,55 @@ Deno.serve(async (req) => {
         }
 
         if (statusChanged || priceChanged || accountChanged || addressChanged) {
-          // حفظ الإشعار للإدراج لاحقاً (فقط إذا كانت الإشعارات مفعلة)
+          // ✅ إنشاء إشعار بالصيغة الصحيحة (مثل: "صلاح الدين - الدور | تم التسليم للزبون 138760983")
           if (notificationsEnabled) {
+            // بناء رسالة الإشعار: مدينة - منطقة | نص الحالة بالعربي رقم_التتبع
+            const statusConfig = statusChanged ? getStatusConfig(newStatus) : null;
+            const statusText = statusConfig?.text || '';
+            const tracking = localOrder.tracking_number || localOrder.order_number || '';
+            const cityPart = localOrder.customer_province || localOrder.customer_city || '';
+            const regionPart = localOrder.customer_city && localOrder.customer_province ? localOrder.customer_city : '';
+            const locationLabel = [cityPart, regionPart].filter(Boolean).join(' - ');
+
+            let notificationMessage: string;
+            let notificationTitle: string;
+            if (statusChanged) {
+              notificationTitle = locationLabel
+                ? `${locationLabel} | ${statusText}`
+                : statusText || 'تحديث حالة الطلب';
+              notificationMessage = `${statusText} ${tracking}`.trim();
+            } else {
+              notificationTitle = 'تحديث من شركة التوصيل';
+              notificationMessage = `الطلب ${tracking}: ${changesList.join('، ')}`;
+            }
+
+            const notificationData: Record<string, unknown> = {
+              order_id: localOrder.id,
+              order_number: localOrder.order_number,
+              tracking_number: localOrder.tracking_number,
+              employee_id: localOrder.created_by,
+              customer_city: localOrder.customer_city,
+              customer_province: localOrder.customer_province,
+              account: waseetOrder._account,
+            };
+            if (statusChanged) {
+              notificationData.state_id = newStatus;
+              notificationData.delivery_status = newStatus;
+              notificationData.status_text = statusText;
+            }
+            if (priceChanged) {
+              notificationData.new_price = newFinalAmount;
+              notificationData.price_changed = true;
+            }
+
+            // إشعار للموظف صاحب الطلب
             notificationsToInsert.push({
               user_id: localOrder.created_by,
-              type: 'alwaseet_sync_update',
-              title: 'تحديث من شركة التوصيل',
-              message: `الطلب ${localOrder.tracking_number || localOrder.order_number}: ${changesList.join('، ')}`,
-              data: {
-                order_id: localOrder.id,
-                order_number: localOrder.order_number,
-                changes: {
-                  statusChanged,
-                  priceChanged,
-                  accountChanged,
-                  newStatus,
-                  newPrice: newFinalAmount,
-                  account: waseetOrder._account
-                }
-              }
+              type: 'alwaseet_status_change',
+              title: notificationTitle,
+              message: notificationMessage,
+              priority: statusChanged && (newStatus === '4' || newStatus === '17') ? 'high' : 'normal',
+              data: notificationData,
             });
           }
 

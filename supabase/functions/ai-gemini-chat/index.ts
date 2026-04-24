@@ -862,25 +862,79 @@ ${regionsBlock}
         } else {
           const aiChatId = -999999999; // معرف خاص للمساعد الذكي
 
-          console.log('📞 استدعاء process_telegram_order:', { employeeCode, aiChatId });
+          // 🗺️ مطابقة محلية للمدينة والمنطقة (لتجنب "العنوان غير محدد")
+          let resolvedCityId: number | null = null;
+          let resolvedRegionId: number | null = null;
+          let resolvedCityName: string | null = null;
+          let resolvedRegionName: string | null = null;
 
-          // ⚠️ استدعاء بـ 7 معاملات (مطابق لاستدعاء بوت التليغرام)
-          // الدالة نفسها تُدخل في ai_orders وتُرجع order_id — لا حاجة لإدخال يدوي
+          try {
+            const messageLower = message.toLowerCase();
+            const { data: citiesList } = await supabase
+              .from('cities_cache')
+              .select('id, name, name_ar')
+              .eq('is_active', true);
+
+            if (citiesList && citiesList.length > 0) {
+              const matchedCity = citiesList.find((c: any) => {
+                const candidates = [c.name, c.name_ar].filter(Boolean).map((n: string) => n.toLowerCase());
+                return candidates.some((n: string) => messageLower.includes(n));
+              });
+              if (matchedCity) {
+                resolvedCityId = matchedCity.id;
+                resolvedCityName = matchedCity.name;
+
+                // البحث عن المنطقة ضمن نفس المدينة
+                const { data: regionsList } = await supabase
+                  .from('regions_cache')
+                  .select('id, name, name_ar')
+                  .eq('city_id', matchedCity.id)
+                  .eq('is_active', true);
+
+                if (regionsList && regionsList.length > 0) {
+                  const matchedRegion = regionsList.find((r: any) => {
+                    const candidates = [r.name, r.name_ar].filter(Boolean).map((n: string) => n.toLowerCase());
+                    return candidates.some((n: string) => n.length >= 3 && messageLower.includes(n));
+                  });
+                  if (matchedRegion) {
+                    resolvedRegionId = matchedRegion.id;
+                    resolvedRegionName = matchedRegion.name;
+                  }
+                }
+              }
+            }
+            console.log('🗺️ المطابقة المحلية:', { resolvedCityName, resolvedRegionName });
+          } catch (geoErr) {
+            console.warn('⚠️ فشل مطابقة المدينة/المنطقة:', geoErr);
+          }
+
+          console.log('📞 استدعاء process_telegram_order:', { employeeCode, aiChatId, resolvedCityId, resolvedRegionId });
+
+          // ⚠️ استدعاء بـ 7 معاملات مع المدينة والمنطقة المُحَلّة محلياً
           const { data: orderResult, error: orderError } = await supabase
             .rpc('process_telegram_order', {
               p_telegram_chat_id: aiChatId,
               p_employee_code: employeeCode,
               p_message_text: message,
-              p_city_id: null,
-              p_region_id: null,
-              p_city_name: null,
-              p_region_name: null,
+              p_city_id: resolvedCityId,
+              p_region_id: resolvedRegionId,
+              p_city_name: resolvedCityName,
+              p_region_name: resolvedRegionName,
             });
 
           if (orderError) {
             console.error('❌ خطأ في process_telegram_order:', orderError);
           } else if (orderResult?.success) {
             console.log('✅ تم إنشاء الطلب الذكي:', orderResult.order_id);
+
+            // 🏷️ تحديث المصدر إلى ai_assistant (الدالة تحفظه افتراضياً كـ telegram)
+            const { error: updateSourceError } = await supabase
+              .from('ai_orders')
+              .update({ source: 'ai_assistant' })
+              .eq('id', orderResult.order_id);
+            if (updateSourceError) {
+              console.warn('⚠️ تعذر تحديث source للطلب:', updateSourceError);
+            }
 
             responseType = 'order';
             orderData = {
@@ -900,11 +954,14 @@ ${regionsBlock}
                 ? `\n📈 زيادة: ${(orderResult.price_adjustment || 0).toLocaleString()} د.ع`
                 : '';
 
+            const locationLabel = [resolvedCityName, resolvedRegionName].filter(Boolean).join(' - ');
+
             finalAiResponse = `✅ **تم تثبيت الطلب في نافذة طلبات الذكاء الاصطناعي**
 
 👤 الزبون: ${orderResult.customer_name || '-'}
 📞 الهاتف: ${orderResult.customer_phone || '-'}${orderResult.customer_phone2 ? ' / ' + orderResult.customer_phone2 : ''}
-📍 العنوان: ${orderResult.customer_address || '-'}
+📍 الموقع: ${locationLabel || 'غير محدد'}
+🏠 العنوان: ${orderResult.customer_address || '-'}
 
 📦 المنتجات:
 ${items || '• لا توجد منتجات محددة'}
