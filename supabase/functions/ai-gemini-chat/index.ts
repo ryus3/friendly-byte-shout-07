@@ -668,10 +668,11 @@ serve(async (req) => {
       .map(([city, regions]) => `${city}: ${regions.join('، ')}`)
       .join('\n');
 
-    // 📦 تنسيق مضغوط لكل المنتجات المتاحة (اسم | سعر | المتغيرات لون-حجم-متاح)
-    const productsBlock = availableProducts.map(product => {
+    // 📦 تجميع المنتجات المتاحة حسب القسم — لمنع الخلط بين رجالي ونسائي
+    const productsByDept: Record<string, string[]> = {};
+    for (const product of availableProducts as any[]) {
       const variants = product.variants?.filter((v: any) => v.stock > 0) || [];
-      const department = product.departments?.name || product.product_departments?.[0]?.departments?.name || '';
+      const dept = product.department_name || 'غير مصنف';
       const colorGroups: Record<string, string[]> = {};
       for (const v of variants as any[]) {
         const color = v.color || 'افتراضي';
@@ -682,12 +683,21 @@ serve(async (req) => {
       const variantsStr = Object.entries(colorGroups)
         .map(([color, sizes]) => `${color}:${sizes.join(',')}`)
         .join(' | ');
-      const dept = department ? ` [${department}]` : '';
-      return `• ${product.name}${dept} - ${product.base_price?.toLocaleString()} د.ع → ${variantsStr || 'لا متغيرات'}`;
-    }).join('\n');
+      const cat = product.category_name ? ` (${product.category_name})` : '';
+      const line = `• ${product.name}${cat} - ${product.base_price?.toLocaleString()} د.ع → ${variantsStr || 'لا متغيرات'}`;
+      if (!productsByDept[dept]) productsByDept[dept] = [];
+      productsByDept[dept].push(line);
+    }
+    const deptIcons: Record<string, string> = {
+      'رجالي': '👔', 'نسائي': '👗', 'أطفال': '🧒', 'اطفال': '🧒',
+      'احذية': '👟', 'أحذية': '👟', 'اكسسوارات': '👜', 'إكسسوارات': '👜',
+    };
+    const productsBlock = Object.entries(productsByDept)
+      .map(([dept, lines]) => `${deptIcons[dept] || '📦'} **${dept}** (${lines.length}):\n${lines.join('\n')}`)
+      .join('\n\n');
 
     // 📭 المنتجات نافدة المخزون (للاقتراح بدائل)
-    const outOfStockBlock = outOfStockProducts.map(p => `• ${p.name}`).join('\n') || 'لا يوجد';
+    const outOfStockBlock = outOfStockProducts.map(p => `• ${p.name} [${(p as any).department_name || 'غير مصنف'}]`).join('\n') || 'لا يوجد';
 
 const systemPrompt = `🧠 أنت مساعد RYUS الذكي الخارق - لديك وصول كامل لقاعدة البيانات الحقيقية ونظام مثالي لإنشاء الطلبات
 
