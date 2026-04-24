@@ -152,7 +152,7 @@ const SettingsPage = () => {
   const [isBackupSystemOpen, setIsBackupSystemOpen] = useState(false);
   const [isSyncNotificationOpen, setIsSyncNotificationOpen] = useState(false);
   
-  const [isDeliveryManagementOpen, setIsDeliveryManagementOpen] = useState(false);
+  // isDeliveryManagementOpen removed — Comprehensive dialog deprecated
   const [isInvoiceSyncOpen, setIsInvoiceSyncOpen] = useState(false);
   const [employeeCodes, setEmployeeCodes] = useState([]);
 
