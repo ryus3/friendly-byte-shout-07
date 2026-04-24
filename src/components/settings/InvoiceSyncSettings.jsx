@@ -391,10 +391,17 @@ const InvoiceSyncSettings = () => {
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div>
-                    <p className="text-sm">مزامنة تلقائية في صفحة متابعة الموظفين</p>
-                    <p className="text-xs text-muted-foreground">عند فتح صفحة المتابعة</p>
+                    <p className="text-sm">مزامنة متابعة الموظفين (تلقائي)</p>
+                    <p className="text-xs text-muted-foreground">سحب طلبات الموظفين عند فتح صفحة المتابعة</p>
                   </div>
-                  <Switch checked={u.frontend_employee_page_auto_sync} onCheckedChange={(v) => setU(s => ({ ...s, frontend_employee_page_auto_sync: v }))} />
+                  <Switch checked={u.frontend_employee_followup_sync} onCheckedChange={(v) => setU(s => ({ ...s, frontend_employee_followup_sync: v }))} />
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <p className="text-sm">مزامنة فواتير الموظفين</p>
+                    <p className="text-xs text-muted-foreground">جلب فواتير شركة التوصيل لكل موظف</p>
+                  </div>
+                  <Switch checked={u.employee_invoice_sync_enabled} onCheckedChange={(v) => setU(s => ({ ...s, employee_invoice_sync_enabled: v }))} />
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div>
@@ -402,6 +409,13 @@ const InvoiceSyncSettings = () => {
                     <p className="text-xs text-muted-foreground">سحب الفواتير الجديدة فور دخول الموقع</p>
                   </div>
                   <Switch checked={u.frontend_login_sync} onCheckedChange={(v) => setU(s => ({ ...s, frontend_login_sync: v }))} />
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <p className="text-sm flex items-center gap-2"><Bell className="w-3 h-3" /> الإشعارات</p>
+                    <p className="text-xs text-muted-foreground">عرض إشعارات اكتمال المزامنة</p>
+                  </div>
+                  <Switch checked={u.notifications_enabled} onCheckedChange={(v) => setU(s => ({ ...s, notifications_enabled: v }))} />
                 </div>
               </div>
               <Button onClick={saveFrontendSettings} disabled={saving} className="w-full gap-2" variant="secondary">
