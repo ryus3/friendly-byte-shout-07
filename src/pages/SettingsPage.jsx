@@ -36,7 +36,6 @@ import AppearanceDialog from '@/components/settings/AppearanceDialog';
 import UnifiedEmployeeProfitsManager from '@/components/manage-employees/UnifiedEmployeeProfitsManager';
 import BackupSystemDialog from '@/components/settings/BackupSystemDialog';
 import SyncNotificationSettings from '@/components/settings/SyncNotificationSettings';
-import AutoSyncScheduleSettings from '@/components/settings/AutoSyncScheduleSettings';
 import InvoiceSyncSettingsDialog from '@/components/settings/InvoiceSyncSettingsDialog';
 import { Badge } from '@/components/ui/badge';
 
@@ -152,7 +151,7 @@ const SettingsPage = () => {
   const [isProfitsManagerOpen, setIsProfitsManagerOpen] = useState(false);
   const [isBackupSystemOpen, setIsBackupSystemOpen] = useState(false);
   const [isSyncNotificationOpen, setIsSyncNotificationOpen] = useState(false);
-  const [isAutoSyncScheduleOpen, setIsAutoSyncScheduleOpen] = useState(false);
+  
   const [isDeliveryManagementOpen, setIsDeliveryManagementOpen] = useState(false);
   const [isInvoiceSyncOpen, setIsInvoiceSyncOpen] = useState(false);
   const [employeeCodes, setEmployeeCodes] = useState([]);
@@ -237,13 +236,6 @@ const SettingsPage = () => {
                   onClick={() => setIsSyncNotificationOpen(true)}
                 />
                 
-                <ModernCard
-                  icon={Settings}
-                  title="جدولة المزامنة التلقائية"
-                  description="تحكم بأوقات تشغيل المزامنة التلقائية اليومية (4 مرات يومياً أو حسب حاجتك)"
-                  iconColor="from-purple-500 to-indigo-500"
-                  onClick={() => setIsAutoSyncScheduleOpen(true)}
-                />
               </>
             )}
 
@@ -587,11 +579,6 @@ const SettingsPage = () => {
       <SyncNotificationSettings 
         open={isSyncNotificationOpen} 
         onOpenChange={setIsSyncNotificationOpen} 
-      />
-
-      <AutoSyncScheduleSettings 
-        open={isAutoSyncScheduleOpen} 
-        onOpenChange={setIsAutoSyncScheduleOpen} 
       />
 
       <ComprehensiveDeliveryManagementDialog 
