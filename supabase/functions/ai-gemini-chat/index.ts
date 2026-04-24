@@ -1394,6 +1394,9 @@ ${regionsBlock}
                 p_region_id: resolvedRegionExternalId,
                 p_city_name: resolvedCityName,
                 p_region_name: resolvedRegionName,
+                // 🛡️ Multi-layer phone defense: pass raw-extracted phones explicitly
+                p_customer_phone_override: originalPhones[0] || null,
+                p_customer_phone2_override: originalPhones[1] || null,
               });
 
             if (orderError) {
