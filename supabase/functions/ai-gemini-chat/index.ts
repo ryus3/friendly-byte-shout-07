@@ -1144,27 +1144,27 @@ ${regionsBlock}
                 console.warn('⚠️ تعذر تحديث source للطلب:', updateSourceError);
               }
 
-            responseType = 'order';
-            orderData = {
-              ...orderResult,
-              orderSaved: true,
-              aiOrderId: orderResult.order_id,
-            };
+              responseType = 'order';
+              orderData = {
+                ...orderResult,
+                orderSaved: true,
+                aiOrderId: orderResult.order_id,
+              };
 
-            // 📝 رسالة تأكيد واضحة
-            const items = (orderResult.items || []).map((it: any) =>
-              `• ${it.product_name || 'منتج'}${it.color ? ' - ' + it.color : ''}${it.size ? ' - ' + it.size : ''} × ${it.quantity || 1}`
-            ).join('\n');
+              // 📝 رسالة تأكيد واضحة
+              const items = (orderResult.items || []).map((it: any) =>
+                `• ${it.product_name || 'منتج'}${it.color ? ' - ' + it.color : ''}${it.size ? ' - ' + it.size : ''} × ${it.quantity || 1}`
+              ).join('\n');
 
-            const adjustmentLine = orderResult.adjustment_type === 'discount'
-              ? `\n🎁 خصم: ${Math.abs(orderResult.price_adjustment || 0).toLocaleString()} د.ع`
-              : orderResult.adjustment_type === 'markup'
-                ? `\n📈 زيادة: ${(orderResult.price_adjustment || 0).toLocaleString()} د.ع`
-                : '';
+              const adjustmentLine = orderResult.adjustment_type === 'discount'
+                ? `\n🎁 خصم: ${Math.abs(orderResult.price_adjustment || 0).toLocaleString()} د.ع`
+                : orderResult.adjustment_type === 'markup'
+                  ? `\n📈 زيادة: ${(orderResult.price_adjustment || 0).toLocaleString()} د.ع`
+                  : '';
 
-            const locationLabel = [resolvedCityName, resolvedRegionName].filter(Boolean).join(' - ');
+              const locationLabel = [resolvedCityName, resolvedRegionName].filter(Boolean).join(' - ');
 
-            finalAiResponse = `✅ **تم تثبيت الطلب في نافذة طلبات الذكاء الاصطناعي**
+              finalAiResponse = `✅ **تم تثبيت الطلب في نافذة طلبات الذكاء الاصطناعي**
 
 👤 الزبون: ${orderResult.customer_name || '-'}
 📞 الهاتف: ${orderResult.customer_phone || '-'}${orderResult.customer_phone2 ? ' / ' + orderResult.customer_phone2 : ''}
@@ -1177,16 +1177,16 @@ ${items || '• لا توجد منتجات محددة'}
 💰 المحسوب: ${(orderResult.calculated_amount || 0).toLocaleString()} د.ع
 🚚 توصيل: ${(orderResult.delivery_fee || 5000).toLocaleString()} د.ع${adjustmentLine}
 💵 **الإجمالي: ${(orderResult.total_amount || 0).toLocaleString()} د.ع**`;
-          } else {
-            // فشل (مثل: منتج غير متوفر) — أعرض رسالة الدالة
-            console.warn('⚠️ فشل process_telegram_order:', orderResult?.message);
-            if (orderResult?.message) {
-              finalAiResponse = orderResult.message;
-              responseType = 'order_failed';
-              orderData = orderResult;
+            } else {
+              // فشل (مثل: منتج غير متوفر) — أعرض رسالة الدالة
+              console.warn('⚠️ فشل process_telegram_order:', orderResult?.message);
+              if (orderResult?.message) {
+                finalAiResponse = orderResult.message;
+                responseType = 'order_failed';
+                orderData = orderResult;
+              }
             }
           }
-        }
       } catch (error) {
         console.error('Error processing smart order:', error);
       }
