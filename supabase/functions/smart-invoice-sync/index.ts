@@ -95,11 +95,15 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partn
 
     const data = await response.json();
     const ok = data?.status === true || data?.errNum === 'S000';
-    
-    if (ok && Array.isArray(data?.data)) return data.data;
-    if (ok && Array.isArray(data?.orders)) return data.orders;
+    if (!ok) return [];
+
+    // ✅ AlWaseet الواقع الفعلي: data.data.orders (مصفوفة داخل كائن)
+    if (Array.isArray(data?.data?.orders)) return data.data.orders;
+    // ✅ MODON / صيغ بديلة
+    if (Array.isArray(data?.orders)) return data.orders;
+    if (Array.isArray(data?.data)) return data.data;
     if (Array.isArray(data)) return data;
-    
+
     return [];
   } catch (error) {
     console.error(`Error fetching orders for invoice ${invoiceId} from ${partner}:`, error);
