@@ -638,16 +638,52 @@ serve(async (req) => {
       }
     };
 
-    // إعداد قوائم المدن والمناطق الحقيقية - مع التحقق من وجود البيانات
-    const cityList = (storeData.cities && storeData.cities.length > 0) 
-      ? storeData.cities.map(c => c.name).slice(0, 10).join(', ')
-      : 'لا توجد مدن متاحة';
+    // 🌍 إعداد قوائم المدن والمناطق الكاملة من الكاش (cities_cache + regions_cache)
+    const allCities = storeData.cities || [];
+    const allRegions = storeData.regions || [];
     const availableProducts = storeData.products.filter(p => (p.inventory_count || 0) > 0);
     const outOfStockProducts = storeData.products.filter(p => (p.inventory_count || 0) === 0);
 
-const systemPrompt = `🧠 أنت مساعد RYUS الذكي الخارق - الآن لديك وصول كامل لقاعدة البيانات الحقيقية ونظام مثالي لإنشاء الطلبات
+    // 🏙️ تنسيق مضغوط لكل المدن (اسم فقط، مفصول بفاصلة)
+    const citiesCompact = allCities.map(c => c.name).join(' | ');
 
-**شخصيتك:** مساعد متجر RYUS الذكي الخارق. تعرف كل شيء في النظام وتستطيع: إنشاء طلبات حقيقية، فحص المخزون، عرض الأرباح الشاملة، التعرف على جميع المدن والمناطق.
+    // 📍 تنسيق ذكي للمناطق مرتبطة بمدنها (لتمكين التفكير الجغرافي)
+    const cityIdToName = new Map(allCities.map((c: any) => [c.id, c.name]));
+    const regionsByCity: Record<string, string[]> = {};
+    for (const r of allRegions as any[]) {
+      const cityName = cityIdToName.get(r.city_id) || 'غير محدد';
+      if (!regionsByCity[cityName]) regionsByCity[cityName] = [];
+      regionsByCity[cityName].push(r.name);
+    }
+    // أهم المدن (التي تحتوي مناطق) — نعرضها كاملة للمساعد ليفكر جغرافياً
+    const regionsBlock = Object.entries(regionsByCity)
+      .map(([city, regions]) => `${city}: ${regions.join('، ')}`)
+      .join('\n');
+
+    // 📦 تنسيق مضغوط لكل المنتجات المتاحة (اسم | سعر | المتغيرات لون-حجم-متاح)
+    const productsBlock = availableProducts.map(product => {
+      const variants = product.variants?.filter((v: any) => v.stock > 0) || [];
+      const department = product.departments?.name || product.product_departments?.[0]?.departments?.name || '';
+      const colorGroups: Record<string, string[]> = {};
+      for (const v of variants as any[]) {
+        const color = v.color || 'افتراضي';
+        const available = Math.max(0, (v.stock || 0) - (v.reserved || 0));
+        if (!colorGroups[color]) colorGroups[color] = [];
+        colorGroups[color].push(`${v.size || '-'}(${available})`);
+      }
+      const variantsStr = Object.entries(colorGroups)
+        .map(([color, sizes]) => `${color}:${sizes.join(',')}`)
+        .join(' | ');
+      const dept = department ? ` [${department}]` : '';
+      return `• ${product.name}${dept} - ${product.base_price?.toLocaleString()} د.ع → ${variantsStr || 'لا متغيرات'}`;
+    }).join('\n');
+
+    // 📭 المنتجات نافدة المخزون (للاقتراح بدائل)
+    const outOfStockBlock = outOfStockProducts.map(p => `• ${p.name}`).join('\n') || 'لا يوجد';
+
+const systemPrompt = `🧠 أنت مساعد RYUS الذكي الخارق - لديك وصول كامل لقاعدة البيانات الحقيقية ونظام مثالي لإنشاء الطلبات
+
+**شخصيتك:** مساعد متجر RYUS الذكي. تعرف كل المنتجات والمتغيرات والمدن والمناطق وتستطيع: إنشاء طلبات حقيقية، فحص المخزون، عرض الأرباح الشاملة، التعرف على جميع المدن والمناطق من الكاش.
 
 **🔐 نطاق صلاحيات هذا المستخدم:** ${scopeLabel}
 - إذا سأل المستخدم عن بيانات خارج نطاقه (طلبات/أرباح موظفين آخرين)، اعتذر بلطف ووضّح أنه يرى بياناته فقط حسب صلاحياته.
@@ -658,102 +694,59 @@ const systemPrompt = `🧠 أنت مساعد RYUS الذكي الخارق - ال
 💰 إجمالي كل الأوقات: ${storeData.analytics?.allTimeStats?.totalSales?.toLocaleString() || 0} د.ع | أرباح: ${storeData.analytics?.allTimeStats?.actualProfit?.toLocaleString() || 0} د.ع
 📊 عدد الطلبات: اليوم ${storeData.analytics?.todayStats?.count || 0} | الشهر ${storeData.analytics?.monthStats?.ordersCount || 0} | الإجمالي ${storeData.analytics?.allTimeStats?.ordersCount || 0}
 
-🏪 **أقسام المتجر (${storeData.analytics.departmentsCount} قسم):**
-${storeData.departments?.map(dept => `🏷️ ${dept.name}: ${dept.description || 'قسم متنوع'}`).join('\n') || '- لا توجد أقسام متاحة حالياً'}
+🏪 **أقسام المتجر (${storeData.analytics.departmentsCount}):** ${storeData.departments?.map(d => d.name).join('، ') || '-'}
+📚 **التصنيفات (${storeData.analytics.categoriesCount}):** ${storeData.categories?.map(c => c.name).join('، ') || '-'}
+🏭 **أنواع المنتجات (${storeData.analytics.productTypesCount}):** ${storeData.productTypes?.map(t => t.name).join('، ') || '-'}
+🎭 **المواسم (${storeData.analytics.seasonsOccasionsCount}):** ${storeData.seasonsOccasions?.map(s => s.name).join('، ') || '-'}
+🎨 **كل الألوان (${storeData.analytics.colorsCount}):** ${storeData.colors?.map(c => c.name).join('، ') || '-'}
+📏 **كل الأحجام (${storeData.analytics.sizesCount}):** ${storeData.sizes?.map(s => s.name).join('، ') || '-'}
 
-📚 **التصنيفات (${storeData.analytics.categoriesCount} تصنيف):**
-${storeData.categories?.map(cat => `📋 ${cat.name} (${cat.type || 'عام'})`).join(', ') || 'لا توجد تصنيفات'}
+═══════════════════════════════════════
+📦 **كل المنتجات المتاحة (${availableProducts.length} منتج) — اسم [قسم] - سعر → لون:حجم(متاح):**
+${productsBlock || 'لا توجد منتجات متاحة'}
 
-🏭 **أنواع المنتجات (${storeData.analytics.productTypesCount} نوع):**
-${storeData.productTypes?.map(type => `📦 ${type.name}`).join(', ') || 'لا توجد أنواع'}
+📭 **منتجات نافدة المخزون (${outOfStockProducts.length}) — اقترح بدائل:**
+${outOfStockBlock}
+═══════════════════════════════════════
 
-🎭 **المواسم والمناسبات (${storeData.analytics.seasonsOccasionsCount} موسم):**
-${storeData.seasonsOccasions?.map(season => `🎉 ${season.name}`).join(', ') || 'لا توجد مواسم'}
+🌍 **نظام المدن والمناطق الكامل من الكاش (${allCities.length} مدينة، ${allRegions.length} منطقة):**
 
-🎨 **الألوان المتاحة (${storeData.analytics.colorsCount} لون):**
-${storeData.colors?.map(color => color.name).slice(0,10).join(', ') || 'لا توجد ألوان محددة'}
+🏙️ **كل المدن المتاحة:**
+${citiesCompact}
 
-📏 **الأحجام المتاحة (${storeData.analytics.sizesCount} حجم):**
-${storeData.sizes?.map(size => size.name).slice(0,10).join(', ') || 'لا توجد أحجام محددة'}
+📍 **المناطق مفصلة حسب المدينة (للتفكير الجغرافي الذكي):**
+${regionsBlock}
 
-**مخزون مفصل بالألوان والأحجام:**
-${availableProducts.slice(0,8).map(product => {
-  const variants = product.variants?.filter((v: any) => v.stock > 0) || [];
-  const department = product.departments?.name || 'غير محدد';
-  const category = product.categories?.name || 'غير محدد';
-  
-  // تجميع المتغيرات حسب اللون مع تفاصيل أكثر
-  const colorGroups = variants.reduce((acc: any, v: any) => {
-    const color = v.color || 'افتراضي';
-    if (!acc[color]) acc[color] = [];
-    
-    const available = Math.max(0, (v.stock || 0) - (v.reserved || 0));
-    acc[color].push({ 
-      size: v.size || 'افتراضي', 
-      available: available, // العدد المتاح فعلياً
-      total: v.stock || 0, // العدد الإجمالي
-      reserved: v.reserved || 0, // المحجوز
-      sold: v.sold || 0 // المباع
-    });
-    return acc;
-  }, {});
-  
-  const totalStock = variants.reduce((sum: number, v: any) => sum + (v.stock || 0), 0);
-  const totalAvailable = variants.reduce((sum: number, v: any) => sum + Math.max(0, (v.stock || 0) - (v.reserved || 0)), 0);
-  
-  let productInfo = `✅ **${product.name}** (${department}) - ${product.base_price?.toLocaleString()} د.ع - مجموع: ${totalStock}, متاح: ${totalAvailable}\n`;
-  Object.keys(colorGroups).slice(0,4).forEach(color => {
-    const sizesInfo = colorGroups[color]
-      .sort((a: any, b: any) => {
-        const sizeOrder: {[key: string]: number} = { 'XS': 1, 'S': 2, 'M': 3, 'L': 4, 'XL': 5, 'XXL': 6 };
-        return (sizeOrder[a.size as string] || 99) - (sizeOrder[b.size as string] || 99);
-      })
-      .map((s: any) => `${s.size}(${s.available}/${s.total})`)
-      .join(', ');
-    productInfo += `   🎨 ${color}: ${sizesInfo}\n`;
-  });
-  return productInfo;
-}).join('')}
-
-**نظام المدن والمناطق الحقيقي (${(storeData.cities || []).length} مدينة، ${(storeData.regions || []).length} منطقة):**
-🏙️ **المدن:** ${cityList}${(storeData.cities || []).length > 10 ? ` و${(storeData.cities || []).length - 10} مدن أخرى` : ''}
-📍 **مناطق رئيسية:** ${(storeData.regions || []).slice(0,10).map(r => r.name).join(', ')}
+═══════════════════════════════════════
 
 **قدرات إنشاء الطلبات الخارقة:**
 - 🤖 استخدام نفس منطق بوت التليغرام المتطور
-- 🔍 التعرف التلقائي على المدن والمناطق من قاعدة البيانات
+- 🔍 التعرف التلقائي على المدن والمناطق من الكاش (cities_cache + regions_cache)
 - 💰 حساب أجور التوصيل: 5000 د.ع (موحد)
-- 📦 فحص مخزون فوري واقتراح بدائل ذكية
+- 📦 فحص مخزون فوري واقتراح بدائل ذكية للمنتجات النافدة
 - 💾 حفظ تلقائي في ai_orders مع source='ai_assistant'
 - 👤 اسم افتراضي: "${userInfo?.default_customer_name || 'ريوس'}"
 
+**كيف يكتب المستخدم طلب؟**
+مثال: "طلب جديد: زبون أحمد 07701234567 بغداد كرادة داخل، يريد برشلونة أزرق M عدد 1"
+سأستخرج تلقائياً: الاسم، الهاتف، المدينة، المنطقة، المنتج، اللون، الحجم، الكمية وأحفظ الطلب في نافذة طلبات الذكاء الاصطناعي.
+
 **تعليمات الردود المختصرة والذكية:**
-- كن مختصراً جداً (سطر واحد أو اثنين)
-- لا تكرر الترحيب أو التحيات
-- اعرض المعلومات مباشرة وبذكاء
-- عند السؤال عن منتج: اعرض الألوان والأحجام والمخزون بالتفصيل
-- تنسيق المخزون: المنتج → اللون: الحجم(المتاح/الإجمالي)
-- مثال: "برشلونة → 🔵أزرق: S(40/45), M(24/30), L(20/25) | ⚪أبيض: S(151/151), M(2/5)"
-- اعرض العدد المحجوز والمباع عند الحاجة
+- كن مختصراً (1-3 أسطر)
+- لا تكرر الترحيب
+- اعرض المعلومات مباشرة
+- عند السؤال عن منتج: اعرض الألوان والأحجام والمخزون بالتفصيل من القائمة أعلاه
+- تنسيق المخزون: المنتج → اللون: الحجم(المتاح)
 - رتب الأحجام منطقياً: XS, S, M, L, XL, XXL
 
-### أسئلة الأقسام والتصنيفات:
-- عند سؤال "ما المتوفر في قسم نسائي؟" → أعرض منتجات القسم النسائي المتاحة في المخزون
-- عند سؤال "منتجات الموسم الصيفي؟" → أعرض منتجات موسم الصيف المتاحة
-- عند سؤال "ألوان متاحة؟" → أعرض قائمة الألوان من النظام
-- عند سؤال "أحجام متاحة؟" → أعرض قائمة الأحجام المتاحة
-- عند سؤال "تصنيفات المتجر؟" → أعرض التصنيفات والأقسام الموجودة
-- تأكد من عرض الأسعار والكميات المتاحة من المخزون الحقيقي
-
-### قواعد الفهم الجغرافي:
+### قواعد الفهم الجغرافي الذكي (من الكاش):
+- استخدم قائمة المدن والمناطق أعلاه كمرجع وحيد للجغرافيا
 - **الكرادة**: إذا ذُكرت بدون تحديد → اختر "كرادة داخل" (الأكثر شيوعاً)
-- **مرادفات الكرادة**: كراد، كراده، كراد داخل، كراده داخل → "كرادة داخل"
-- **مرادفات الكرادة خارج**: كراد خارج، كراده خارج → "كرادة خارج"
-- **الجادرية**: جادريه، جادري، جامعة بغداد → "الجادرية"
-- **الكاظمية**: كاظمي، كاضم → "الكاظمية"
+- **مرادفات شائعة**: كراد=كرادة، كراده=كرادة، جادريه=الجادرية، كاظمي=الكاظمية
 - **فصل العنوان**: ميز بين اسم المنطقة (للمدينة) والعنوان التفصيلي
+- إذا لم تجد المنطقة في الكاش، اقترح أقرب منطقة موجودة في نفس المدينة
 
-اعرض المخزون الحقيقي والأسعار الصحيحة. انشئ طلبات حقيقية تظهر فوراً في نظام الإدارة مع دقة جغرافية عالية.`;
+اعرض المخزون الحقيقي والأسعار الصحيحة. انشئ طلبات حقيقية تظهر فوراً في نظام الإدارة مع دقة جغرافية عالية من الكاش.`;
 
     // استخدام نظام التحويل التلقائي الذكي
     const data = await callGeminiWithFallback(systemPrompt, message);
