@@ -67,28 +67,14 @@ Deno.serve(async (req) => {
     const sourceLabel = isAiAssistant ? 'المساعد الذكي' : (record.source === 'telegram' ? 'تليغرام' : 'النظام');
     const sourceEmoji = isAiAssistant ? '🤖' : (record.source === 'telegram' ? '📨' : '📋');
 
-    // إشعار للمنشئ
-    const creatorNotification = {
-      type: 'new_ai_order',
-      title: `✅ تم إنشاء طلب ذكي جديد عبر ${sourceLabel}`,
-      message: 'تم حفظ طلبك الذكي بنجاح',
-      user_id: record.created_by,
-      data: {
-        ai_order_id: record.id,
-        customer_name: record.customer_name,
-        total_amount: record.total_amount,
-        source: record.source
-      },
-      priority: 'high',
-      is_read: false
-    };
-
-    // إشعار عام للمديرين
-    const adminNotification = {
+    // 🔔 إشعار واحد فقط لكل طلب ذكي (موحّد للمدير العام والمنشئ)
+    // العنوان يحمل اسم المنشئ والمصدر، والرسالة تحمل اسم العميل والمبلغ.
+    // الحارس الفريد في قاعدة البيانات (uniq_new_ai_order_per_user) يمنع التكرار.
+    const unifiedNotification = {
       type: 'new_ai_order',
       title: `${sourceEmoji} طلب ذكي جديد من ${creatorName} (${sourceLabel})`,
       message: `عميل: ${record.customer_name || 'غير محدد'} - المبلغ: ${record.total_amount}`,
-      user_id: null,
+      user_id: null, // إشعار عام يصل للمدير + يصل للمنشئ عبر فلترة العميل
       data: {
         ai_order_id: record.id,
         customer_name: record.customer_name,
@@ -97,21 +83,27 @@ Deno.serve(async (req) => {
         created_by: record.created_by,
         source: record.source
       },
-      priority: 'medium',
+      priority: 'high',
       is_read: false
     };
 
-    // حفظ الإشعارات
+    // upsert على أساس (ai_order_id) لمنع أي تكرار حتى لو أُعيد استدعاء الـ webhook
     const { error } = await supabase
       .from('notifications')
-      .insert([creatorNotification, adminNotification]);
+      .insert(unifiedNotification);
 
     if (error) {
-      console.error('❌ Error saving notifications:', error);
-      return new Response('Error saving notifications', { status: 500, headers: corsHeaders });
+      // لو كان الخطأ بسبب التكرار (unique violation 23505) نتجاهله بهدوء
+      const code = (error as any)?.code;
+      if (code === '23505') {
+        console.log('ℹ️ Notification already exists for this ai_order, skipped');
+      } else {
+        console.error('❌ Error saving notification:', error);
+        return new Response('Error saving notification', { status: 500, headers: corsHeaders });
+      }
     }
 
-    console.log('✅ Notifications saved successfully');
+    console.log('✅ Single unified notification saved successfully');
 
     return new Response(JSON.stringify({ 
       success: true, 
