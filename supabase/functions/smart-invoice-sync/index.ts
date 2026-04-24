@@ -461,9 +461,18 @@ serve(async (req) => {
             statusChangedCount++;
           }
 
-          // Skip if no changes at all
+          // Skip if no changes at all — لكن لا نقفز إذا الفاتورة تحتاج طلباتها بعد (dio_count = 0)
           if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
-            continue;
+            if (sync_orders) {
+              const { count: dioCount } = await supabase
+                .from('delivery_invoice_orders')
+                .select('id', { count: 'exact', head: true })
+                .eq('invoice_id', existing.id);
+              if ((dioCount ?? 0) > 0) continue;
+              // وإلا: نتابع لجلب الطلبات وربطها
+            } else {
+              continue;
+            }
           }
 
           const { data: upsertedInvoice, error: upsertError } = await supabase
