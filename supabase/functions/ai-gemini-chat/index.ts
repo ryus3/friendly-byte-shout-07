@@ -1181,19 +1181,19 @@ ${regionsBlock}
                     if (overlap > 0) {
                       const ratio = overlap / candTokens.length;
                       // اطلب على الأقل تطابق نصف كلمات اسم المنطقة لتجنب نتائج عشوائية
-                      if (ratio >= 0.5) best = Math.max(best, 0.6 + ratio * 0.3);
+                      if (ratio >= 0.4) best = Math.max(best, 0.5 + ratio * 0.35);
                     }
                   }
-                  if (best >= 0.6) matches.push({ externalId: r.alwaseet_id ?? r.id, name: r.name, conf: best });
+                  if (best >= 0.45) matches.push({ externalId: r.alwaseet_id ?? r.id, name: r.name, conf: best });
                 }
 
-                // إزالة التكرار وترتيب
+                // إزالة التكرار وترتيب تنازلياً حسب نسبة التطابق (الأعلى أولاً)
                 const seen = new Set<number>();
                 const unique = matches
                   .filter(m => (seen.has(m.externalId) ? false : (seen.add(m.externalId), true)))
                   .sort((a, b) => b.conf - a.conf);
 
-                regionSuggestions = unique.slice(0, 5);
+                regionSuggestions = unique.slice(0, 25);
 
                 if (unique.length > 0) {
                   const top = unique[0];
