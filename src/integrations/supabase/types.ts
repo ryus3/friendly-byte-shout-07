@@ -354,20 +354,28 @@ export type Database = {
       auto_sync_schedule_settings: {
         Row: {
           created_at: string
+          employee_invoice_sync_enabled: boolean | null
           enabled: boolean
+          frontend_employee_followup_sync: boolean | null
           frontend_employee_page_auto_sync: boolean
           frontend_login_sync: boolean
           frontend_orders_page_auto_sync: boolean
           id: string
           invoice_evening_time: string
           invoice_morning_time: string
+          invoice_sync_days: string[] | null
           invoice_sync_enabled: boolean
           last_run_at: string | null
           next_run_at: string | null
           notifications_enabled: boolean
+          orders_max_per_sync: number | null
           orders_sync_enabled: boolean
           orders_sync_times: string[]
+          orders_working_hours_end: string | null
           orders_working_hours_only: boolean
+          orders_working_hours_start: string | null
+          smart_sync_enabled: boolean | null
+          sync_timeout_seconds: number | null
           sync_times: string[]
           timezone: string
           tokens_auto_renew_enabled: boolean
@@ -376,20 +384,28 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          employee_invoice_sync_enabled?: boolean | null
           enabled?: boolean
+          frontend_employee_followup_sync?: boolean | null
           frontend_employee_page_auto_sync?: boolean
           frontend_login_sync?: boolean
           frontend_orders_page_auto_sync?: boolean
           id?: string
           invoice_evening_time?: string
           invoice_morning_time?: string
+          invoice_sync_days?: string[] | null
           invoice_sync_enabled?: boolean
           last_run_at?: string | null
           next_run_at?: string | null
           notifications_enabled?: boolean
+          orders_max_per_sync?: number | null
           orders_sync_enabled?: boolean
           orders_sync_times?: string[]
+          orders_working_hours_end?: string | null
           orders_working_hours_only?: boolean
+          orders_working_hours_start?: string | null
+          smart_sync_enabled?: boolean | null
+          sync_timeout_seconds?: number | null
           sync_times?: string[]
           timezone?: string
           tokens_auto_renew_enabled?: boolean
@@ -398,20 +414,28 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          employee_invoice_sync_enabled?: boolean | null
           enabled?: boolean
+          frontend_employee_followup_sync?: boolean | null
           frontend_employee_page_auto_sync?: boolean
           frontend_login_sync?: boolean
           frontend_orders_page_auto_sync?: boolean
           id?: string
           invoice_evening_time?: string
           invoice_morning_time?: string
+          invoice_sync_days?: string[] | null
           invoice_sync_enabled?: boolean
           last_run_at?: string | null
           next_run_at?: string | null
           notifications_enabled?: boolean
+          orders_max_per_sync?: number | null
           orders_sync_enabled?: boolean
           orders_sync_times?: string[]
+          orders_working_hours_end?: string | null
           orders_working_hours_only?: boolean
+          orders_working_hours_start?: string | null
+          smart_sync_enabled?: boolean | null
+          sync_timeout_seconds?: number | null
           sync_times?: string[]
           timezone?: string
           tokens_auto_renew_enabled?: boolean
@@ -8131,6 +8155,7 @@ export type Database = {
       }
       is_admin_or_deputy: { Args: never; Returns: boolean }
       is_admin_or_deputy_secure: { Args: never; Returns: boolean }
+      is_admin_or_manager: { Args: { _user_id: string }; Returns: boolean }
       is_financial_admin: { Args: never; Returns: boolean }
       is_hr_admin: { Args: never; Returns: boolean }
       is_manager_user: { Args: { user_id?: string }; Returns: boolean }
@@ -8498,14 +8523,26 @@ export type Database = {
         Args: { phone_param: string }
         Returns: undefined
       }
-      update_frontend_sync_settings: {
-        Args: {
-          p_employee_page_auto_sync?: boolean
-          p_login_sync?: boolean
-          p_orders_page_auto_sync?: boolean
-        }
-        Returns: Json
-      }
+      update_frontend_sync_settings:
+        | {
+            Args: {
+              p_employee_followup_sync?: boolean
+              p_employee_invoice_sync?: boolean
+              p_employee_page_auto_sync?: boolean
+              p_login_sync?: boolean
+              p_notifications_enabled?: boolean
+              p_orders_page_auto_sync?: boolean
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_employee_page_auto_sync?: boolean
+              p_login_sync?: boolean
+              p_orders_page_auto_sync?: boolean
+            }
+            Returns: Json
+          }
       update_invoice_sync_schedule: {
         Args: { p_evening_time?: string; p_morning_time?: string }
         Returns: Json
@@ -8519,14 +8556,27 @@ export type Database = {
         }
         Returns: Json
       }
-      update_orders_sync_schedule: {
-        Args: {
-          p_enabled?: boolean
-          p_times?: string[]
-          p_working_hours_only?: boolean
-        }
-        Returns: Json
-      }
+      update_orders_sync_schedule:
+        | {
+            Args: {
+              p_enabled?: boolean
+              p_max_per_sync?: number
+              p_smart_sync_enabled?: boolean
+              p_sync_times?: string[]
+              p_working_hours_end?: string
+              p_working_hours_only?: boolean
+              p_working_hours_start?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_enabled?: boolean
+              p_times?: string[]
+              p_working_hours_only?: boolean
+            }
+            Returns: Json
+          }
       update_reserved_stock: {
         Args: {
           p_product_id: string
@@ -8535,10 +8585,15 @@ export type Database = {
         }
         Returns: undefined
       }
-      update_tokens_renewal_settings: {
-        Args: { p_check_time?: string; p_enabled?: boolean }
-        Returns: Json
-      }
+      update_tokens_renewal_settings:
+        | {
+            Args: { p_auto_renew?: boolean; p_check_time?: string }
+            Returns: Json
+          }
+        | {
+            Args: { p_check_time?: string; p_enabled?: boolean }
+            Returns: Json
+          }
       update_variant_stock: {
         Args: {
           p_quantity_change: number

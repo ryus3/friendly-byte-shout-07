@@ -18,7 +18,7 @@ import {
    Sun, Moon, Monitor, Palette, ChevronRight, PackageX, Volume2, DollarSign,
    BarChart, TrendingUp, Activity, Settings
 } from 'lucide-react';
-import ComprehensiveDeliveryManagementDialog from '@/components/delivery/ComprehensiveDeliveryManagementDialog';
+// ComprehensiveDeliveryManagementDialog removed — features merged into Unified Sync Dashboard
 import DeliveryPartnerDialog from '@/components/DeliveryPartnerDialog';
 import TelegramManagementDialog from '@/components/settings/TelegramManagementDialog';
 import CitiesCacheManager from '@/components/cities-cache/CitiesCacheManager';
@@ -152,7 +152,7 @@ const SettingsPage = () => {
   const [isBackupSystemOpen, setIsBackupSystemOpen] = useState(false);
   const [isSyncNotificationOpen, setIsSyncNotificationOpen] = useState(false);
   
-  const [isDeliveryManagementOpen, setIsDeliveryManagementOpen] = useState(false);
+  // isDeliveryManagementOpen removed — Comprehensive dialog deprecated
   const [isInvoiceSyncOpen, setIsInvoiceSyncOpen] = useState(false);
   const [employeeCodes, setEmployeeCodes] = useState([]);
 
@@ -350,32 +350,7 @@ const SettingsPage = () => {
               </ModernCard>
             )}
 
-            {/* إدارة التوصيل المتقدمة - للمدير فقط */}
-            {isAdmin && (
-              <ModernCard
-                icon={Settings}
-                title="إدارة التوصيل المتقدمة"
-                description="مزامنة شاملة للطلبات والفواتير وإدارة إعدادات التوصيل المتقدمة"
-                iconColor="from-indigo-500 to-indigo-600"
-                onClick={() => setIsDeliveryManagementOpen(true)}
-                badge={
-                  <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300">
-                    مدير فقط
-                  </Badge>
-                }
-              >
-                <div className="space-y-3 mt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">مزامنة تلقائية</span>
-                    <span className="font-bold text-green-600">مفعلة</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">آخر مزامنة شاملة</span>
-                    <span className="font-bold text-blue-600">منذ ساعة</span>
-                  </div>
-                </div>
-            </ModernCard>
-            )}
+            {/* تم إزالة "إدارة التوصيل المتقدمة" — تم دمج كل ميزاتها داخل "جدولة مزامنة الفواتير" (لوحة المزامنة الموحّدة) أدناه */}
 
             {/* جدولة مزامنة الفواتير - للمدراء فقط */}
             {isAdmin && (
@@ -581,10 +556,7 @@ const SettingsPage = () => {
         onOpenChange={setIsSyncNotificationOpen} 
       />
 
-      <ComprehensiveDeliveryManagementDialog 
-        open={isDeliveryManagementOpen} 
-        onOpenChange={setIsDeliveryManagementOpen} 
-      />
+      {/* ComprehensiveDeliveryManagementDialog removed — replaced by Unified Sync Dashboard */}
 
       <InvoiceSyncSettingsDialog 
         open={isInvoiceSyncOpen} 

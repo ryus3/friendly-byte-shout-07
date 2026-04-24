@@ -47,11 +47,18 @@ const InvoiceSyncSettings = () => {
     orders_sync_enabled: true,
     orders_sync_times: ['02:15', '21:00'],
     orders_working_hours_only: true,
+    orders_working_hours_start: '08:00',
+    orders_working_hours_end: '20:00',
+    orders_max_per_sync: 100,
+    smart_sync_enabled: true,
     tokens_auto_renew_enabled: true,
     tokens_check_time: '03:00',
     frontend_orders_page_auto_sync: true,
     frontend_employee_page_auto_sync: true,
+    frontend_employee_followup_sync: true,
+    employee_invoice_sync_enabled: true,
     frontend_login_sync: false,
+    notifications_enabled: true,
     last_run_at: null,
     active_crons: []
   });
@@ -119,9 +126,13 @@ const InvoiceSyncSettings = () => {
     setSaving(true);
     try {
       const { error } = await supabase.rpc('update_orders_sync_schedule', {
-        p_times: u.orders_sync_times,
         p_enabled: u.orders_sync_enabled,
-        p_working_hours_only: u.orders_working_hours_only
+        p_sync_times: u.orders_sync_times,
+        p_working_hours_only: u.orders_working_hours_only,
+        p_working_hours_start: u.orders_working_hours_start,
+        p_working_hours_end: u.orders_working_hours_end,
+        p_max_per_sync: u.orders_max_per_sync,
+        p_smart_sync_enabled: u.smart_sync_enabled
       });
       if (error) throw error;
       toast({ title: '✅ تم حفظ جدولة الطلبات', description: `${u.orders_sync_times.length} مرات يومياً` });
@@ -135,7 +146,7 @@ const InvoiceSyncSettings = () => {
     setSaving(true);
     try {
       const { error } = await supabase.rpc('update_tokens_renewal_settings', {
-        p_enabled: u.tokens_auto_renew_enabled,
+        p_auto_renew: u.tokens_auto_renew_enabled,
         p_check_time: u.tokens_check_time
       });
       if (error) throw error;
@@ -150,9 +161,12 @@ const InvoiceSyncSettings = () => {
     setSaving(true);
     try {
       const { error } = await supabase.rpc('update_frontend_sync_settings', {
+        p_login_sync: u.frontend_login_sync,
         p_orders_page_auto_sync: u.frontend_orders_page_auto_sync,
         p_employee_page_auto_sync: u.frontend_employee_page_auto_sync,
-        p_login_sync: u.frontend_login_sync
+        p_employee_followup_sync: u.frontend_employee_followup_sync,
+        p_employee_invoice_sync: u.employee_invoice_sync_enabled,
+        p_notifications_enabled: u.notifications_enabled
       });
       if (error) throw error;
       toast({ title: '✅ تم حفظ إعدادات الواجهة' });
@@ -377,10 +391,17 @@ const InvoiceSyncSettings = () => {
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div>
-                    <p className="text-sm">مزامنة تلقائية في صفحة متابعة الموظفين</p>
-                    <p className="text-xs text-muted-foreground">عند فتح صفحة المتابعة</p>
+                    <p className="text-sm">مزامنة متابعة الموظفين (تلقائي)</p>
+                    <p className="text-xs text-muted-foreground">سحب طلبات الموظفين عند فتح صفحة المتابعة</p>
                   </div>
-                  <Switch checked={u.frontend_employee_page_auto_sync} onCheckedChange={(v) => setU(s => ({ ...s, frontend_employee_page_auto_sync: v }))} />
+                  <Switch checked={u.frontend_employee_followup_sync} onCheckedChange={(v) => setU(s => ({ ...s, frontend_employee_followup_sync: v }))} />
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <p className="text-sm">مزامنة فواتير الموظفين</p>
+                    <p className="text-xs text-muted-foreground">جلب فواتير شركة التوصيل لكل موظف</p>
+                  </div>
+                  <Switch checked={u.employee_invoice_sync_enabled} onCheckedChange={(v) => setU(s => ({ ...s, employee_invoice_sync_enabled: v }))} />
                 </div>
                 <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div>
@@ -388,6 +409,13 @@ const InvoiceSyncSettings = () => {
                     <p className="text-xs text-muted-foreground">سحب الفواتير الجديدة فور دخول الموقع</p>
                   </div>
                   <Switch checked={u.frontend_login_sync} onCheckedChange={(v) => setU(s => ({ ...s, frontend_login_sync: v }))} />
+                </div>
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <p className="text-sm flex items-center gap-2"><Bell className="w-3 h-3" /> الإشعارات</p>
+                    <p className="text-xs text-muted-foreground">عرض إشعارات اكتمال المزامنة</p>
+                  </div>
+                  <Switch checked={u.notifications_enabled} onCheckedChange={(v) => setU(s => ({ ...s, notifications_enabled: v }))} />
                 </div>
               </div>
               <Button onClick={saveFrontendSettings} disabled={saving} className="w-full gap-2" variant="secondary">
@@ -563,10 +591,41 @@ const InvoiceSyncSettings = () => {
                 <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div>
                     <Label className="text-sm">تقييد بساعات العمل</Label>
-                    <p className="text-xs text-muted-foreground">المزامنة فقط بين 8 صباحاً و 8 مساءً (بغداد)</p>
+                    <p className="text-xs text-muted-foreground">المزامنة فقط ضمن النافذة الزمنية المحددة (بغداد)</p>
                   </div>
                   <Switch checked={u.orders_working_hours_only}
                     onCheckedChange={(v) => setU(s => ({ ...s, orders_working_hours_only: v }))} />
+                </div>
+
+                {u.orders_working_hours_only && (
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-muted/20 rounded-lg">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">بداية ساعات العمل</Label>
+                      <Input type="time" value={u.orders_working_hours_start}
+                        onChange={(e) => setU(s => ({ ...s, orders_working_hours_start: e.target.value }))} className="h-8" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">نهاية ساعات العمل</Label>
+                      <Input type="time" value={u.orders_working_hours_end}
+                        onChange={(e) => setU(s => ({ ...s, orders_working_hours_end: e.target.value }))} className="h-8" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <Label className="text-sm flex items-center gap-2"><Zap className="w-3 h-3 text-amber-500" /> المزامنة الذكية</Label>
+                    <p className="text-xs text-muted-foreground">تخطّي الطلبات المغلقة (مُسلّمة/مُرجعة نهائياً) لتقليل الضغط</p>
+                  </div>
+                  <Switch checked={u.smart_sync_enabled}
+                    onCheckedChange={(v) => setU(s => ({ ...s, smart_sync_enabled: v }))} />
+                </div>
+
+                <div className="space-y-1 p-3 bg-muted/20 rounded-lg">
+                  <Label className="text-xs text-muted-foreground">الحد الأقصى للطلبات في كل مزامنة</Label>
+                  <Input type="number" min="10" max="500" value={u.orders_max_per_sync}
+                    onChange={(e) => setU(s => ({ ...s, orders_max_per_sync: parseInt(e.target.value) || 100 }))} className="h-8" />
+                  <p className="text-xs text-muted-foreground">يمنع تجاوز سعة API شركة التوصيل (الموصى به: 100)</p>
                 </div>
               </>
             )}
