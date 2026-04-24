@@ -11,7 +11,6 @@ import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
-import devLog from '@/lib/devLogger';
   User, 
   Mail, 
   Phone, 
@@ -33,6 +32,7 @@ import { useNotifications } from '@/contexts/NotificationsContext';
 import { toast } from '@/components/ui/use-toast.js';
 import { motion } from 'framer-motion';
 import { useEffect } from 'react';
+import devLog from '@/lib/devLogger';
 
 const ProfileSecurityDialog = ({ open, onOpenChange }) => {
   const { user, updateProfile } = useAuth();

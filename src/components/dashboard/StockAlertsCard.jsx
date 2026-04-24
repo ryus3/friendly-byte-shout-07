@@ -7,9 +7,9 @@ import { cn } from '@/lib/utils';
 import { useInventory } from '@/contexts/SuperProvider';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useFilteredStockNotifications } from '@/hooks/useFilteredStockNotifications';
-import devLog from '@/lib/devLogger';
 
 import DefaultProductImage from '@/components/ui/default-product-image';
+import devLog from '@/lib/devLogger';
 
 const StockAlertsCard = () => {
   const navigate = useNavigate();

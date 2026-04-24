@@ -8,7 +8,6 @@ import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifie
 import { useSuper } from '@/contexts/SuperProvider';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
-import devLog from '@/lib/devLogger';
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -39,6 +38,7 @@ import { supabase } from '@/integrations/supabase/client';
 import ReceiptReceiptDialog from '@/components/orders/ReceiptReceiptDialog';
 import { toast } from '@/components/ui/use-toast';
 import EmployeeReceivedProfitsCard from '@/components/shared/EmployeeReceivedProfitsCard';
+import devLog from '@/lib/devLogger';
 
 const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLabel }) => {
     const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);

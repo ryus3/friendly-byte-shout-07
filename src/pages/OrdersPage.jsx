@@ -16,7 +16,6 @@ import { AnimatePresence } from 'framer-motion';
 import { supabase } from '@/lib/customSupabaseClient';
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import devLog from '@/lib/devLogger';
 import FloatingScrollButton from '@/components/ui/FloatingScrollButton';
 import OrdersSyncProgress from '@/components/orders/OrdersSyncProgress';
 
@@ -36,6 +35,7 @@ import ReturnReceiptDialog from '@/components/orders/ReturnReceiptDialog';
 import AlWaseetInvoicesTab from '@/components/orders/AlWaseetInvoicesTab';
 import * as ModonAPI from '@/lib/modon-api';
 import { Activity } from 'lucide-react';
+import devLog from '@/lib/devLogger';
 
 
 

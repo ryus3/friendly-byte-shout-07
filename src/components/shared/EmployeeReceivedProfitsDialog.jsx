@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import {
-import devLog from '@/lib/devLogger';
   Dialog,
   DialogContent,
 } from '@/components/ui/dialog';
@@ -16,6 +15,7 @@ import { Receipt, Calendar, User, DollarSign, FileText, CheckCircle, TrendingUp,
 import { parseISO, startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear, subDays, subWeeks, subMonths, subYears, isValid } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { formatInTimeZone } from 'date-fns-tz/formatInTimeZone';
+import devLog from '@/lib/devLogger';
 
 // تعيين التوقيت المحلي العراقي
 const IRAQ_TIMEZONE = 'Asia/Baghdad';

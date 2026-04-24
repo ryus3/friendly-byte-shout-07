@@ -12,7 +12,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/components/ui/use-toast.js';
 import { 
-import devLog from '@/lib/devLogger';
   User, Store, Bot, Copy, Truck, LogIn, LogOut, Loader2, Users, Printer, 
   Settings as SettingsIcon, Home, Shield, FileText, Bell, Database, 
   Archive, Key, Download, Upload, Trash2, RefreshCw, MessageCircle, Mail,
@@ -39,6 +38,7 @@ import BackupSystemDialog from '@/components/settings/BackupSystemDialog';
 import SyncNotificationSettings from '@/components/settings/SyncNotificationSettings';
 import InvoiceSyncSettingsDialog from '@/components/settings/InvoiceSyncSettingsDialog';
 import { Badge } from '@/components/ui/badge';
+import devLog from '@/lib/devLogger';
 
 const ModernCard = ({ icon, title, description, children, footer, onClick, className, disabled = false, iconColor = "from-primary to-primary-dark", action, badge }) => {
   const Icon = icon;

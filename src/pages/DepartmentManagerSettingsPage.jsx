@@ -22,7 +22,6 @@ import { Switch } from '@/components/ui/switch';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
-import devLog from '@/lib/devLogger';
   Users, 
   DollarSign, 
   Package, 
@@ -45,6 +44,7 @@ import devLog from '@/lib/devLogger';
   ChevronDown,
   ChevronUp
 } from 'lucide-react';
+import devLog from '@/lib/devLogger';
 
 const DepartmentManagerSettingsPage = () => {
   const { user } = useAuth();

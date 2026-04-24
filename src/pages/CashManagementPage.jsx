@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { 
-import devLog from '@/lib/devLogger';
   ArrowLeft, 
   Plus, 
   Wallet, 
@@ -31,6 +30,7 @@ import SystemProfitSummary from '@/components/cash/SystemProfitSummary';
 import StatCard from '@/components/dashboard/StatCard';
 import { format, startOfMonth, endOfMonth, startOfWeek, startOfDay, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import devLog from '@/lib/devLogger';
 
 const CashManagementPage = () => {
   const navigate = useNavigate();

@@ -6,7 +6,6 @@ import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { supabase } from '@/lib/customSupabaseClient';
 import { 
-import devLog from '@/lib/devLogger';
   User, 
   Hourglass, 
   CheckCircle, 
@@ -20,6 +19,7 @@ import devLog from '@/lib/devLogger';
   HandCoins,
   FolderArchive
 } from 'lucide-react';
+import devLog from '@/lib/devLogger';
 
 /**
  * عنصر موحد لعرض بيانات الأرباح

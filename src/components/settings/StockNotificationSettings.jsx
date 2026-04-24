@@ -12,13 +12,13 @@ import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { 
-import devLog from '@/lib/devLogger';
   PackageX, Volume2, VolumeX, Clock, AlertTriangle, 
   CheckCircle, BellOff, Settings, RefreshCw 
 } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useFilteredStockNotifications } from '@/hooks/useFilteredStockNotifications';
+import devLog from '@/lib/devLogger';
 
 const StockNotificationSettings = ({ open, onOpenChange, readonly = false, showLimitedView = false }) => {
   const { isAdmin } = useAuth();

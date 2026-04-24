@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-import devLog from '@/lib/devLogger';
   Download, 
   Upload, 
   Database, 
@@ -26,6 +25,7 @@ import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import devLog from '@/lib/devLogger';
 
 const BackupSystemDialog = ({ open, onOpenChange }) => {
   // نستخدم toast مباشرة

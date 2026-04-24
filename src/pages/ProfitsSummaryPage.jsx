@@ -20,7 +20,6 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { toast } from '@/components/ui/use-toast';
 import { DollarSign, Archive, Trash2 } from 'lucide-react';
 import { 
-import devLog from '@/lib/devLogger';
   AlertDialog, 
   AlertDialogTrigger, 
   AlertDialogAction, 
@@ -46,6 +45,7 @@ import ManagerProfitsCard from '@/components/shared/ManagerProfitsCard';
 import EmployeeReceivedProfitsDialog from '@/components/shared/EmployeeReceivedProfitsDialog';
 import UnifiedProfitDisplay from '@/components/shared/UnifiedProfitDisplay';
 import { Button } from '@/components/ui/button';
+import devLog from '@/lib/devLogger';
 
 const ProfitsSummaryPage = () => {
   const { orders, calculateProfit, accounting, requestProfitSettlement, settlementInvoices, addExpense, deleteExpense, calculateManagerProfit, updateOrder, deleteOrders } = useInventory();

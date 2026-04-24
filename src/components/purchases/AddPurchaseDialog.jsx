@@ -9,7 +9,6 @@ import { useImprovedPurchases } from '@/hooks/useImprovedPurchases';
 import { useCashSources } from '@/hooks/useCashSources';
 import { toast } from '@/hooks/use-toast';
 import { 
-import devLog from '@/lib/devLogger';
     Loader2, PlusCircle, Wallet, X, Receipt, 
     Truck, CreditCard, DollarSign, Package, Sparkles, CalendarIcon 
 } from 'lucide-react';
@@ -21,6 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
+import devLog from '@/lib/devLogger';
 
 const AddPurchaseDialog = ({ open, onOpenChange, onPurchaseAdded, filterByOwnerUserId }) => {
     const { addPurchase } = useImprovedPurchases();

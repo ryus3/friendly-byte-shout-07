@@ -9,7 +9,6 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { supabase } from '@/integrations/supabase/client';
 import { 
-import devLog from '@/lib/devLogger';
   calculateFinancialMetrics,
   filterOrdersByPermissions,
   filterExpensesByPermissions,
@@ -20,6 +19,7 @@ import {
   DEFAULT_FINANCIAL_VALUES,
   FINANCIAL_ERROR_MESSAGES
 } from '@/lib/financial-constants';
+import devLog from '@/lib/devLogger';
 
 export const useFinancialSystem = (timePeriod = TIME_PERIODS.ALL, options = {}) => {
   const { orders, accounting, loading: inventoryLoading } = useInventory();

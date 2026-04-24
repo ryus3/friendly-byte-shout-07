@@ -8,11 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/components/ui/use-toast';
 import { 
-import devLog from '@/lib/devLogger';
   MessageCircle, Bot, CheckCircle, AlertTriangle, ExternalLink, Copy,
   Settings, Zap, Shield, Smartphone
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
+import devLog from '@/lib/devLogger';
 
 const TelegramBotSetup = ({ open, onOpenChange }) => {
   const [botToken, setBotToken] = useState('');

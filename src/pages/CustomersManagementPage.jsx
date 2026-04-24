@@ -19,7 +19,6 @@ import { useAuth } from "@/contexts/UnifiedAuthContext";
 import { normalizePhone, extractOrderPhone } from "@/utils/phoneUtils";
 import SmartPagination from "@/components/ui/SmartPagination";
 import { 
-import devLog from '@/lib/devLogger';
   Users, 
   Search, 
   Filter, 
@@ -44,6 +43,7 @@ import devLog from '@/lib/devLogger';
   UserPlus,
   BarChart3
 } from "lucide-react";
+import devLog from '@/lib/devLogger';
 
 const CustomersManagementPage = () => {
   const { customers, orders, products, loading } = useInventory();
