@@ -395,6 +395,22 @@ const SuperMessageBubble = ({ message, index, onSelectRegion, disabled }) => {
   const isError = message.error;
   const clarification = message.regionClarification;
   const hasResolved = !!clarification?.resolvedName;
+  const [showAllRegions, setShowAllRegions] = useState(false);
+
+  // ترتيب تنازلي حسب نسبة التطابق (الأعلى أولاً) كحماية إضافية
+  const sortedSuggestions = React.useMemo(() => {
+    if (!clarification?.suggestions?.length) return [];
+    return [...clarification.suggestions].sort(
+      (a, b) => (b.confidence || 0) - (a.confidence || 0)
+    );
+  }, [clarification?.suggestions]);
+
+  const INITIAL_VISIBLE = 5;
+  const visibleSuggestions = showAllRegions
+    ? sortedSuggestions
+    : sortedSuggestions.slice(0, INITIAL_VISIBLE);
+  const remainingCount = sortedSuggestions.length - INITIAL_VISIBLE;
+
   
   return (
      <motion.div
