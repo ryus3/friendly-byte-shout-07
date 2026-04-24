@@ -126,9 +126,13 @@ const InvoiceSyncSettings = () => {
     setSaving(true);
     try {
       const { error } = await supabase.rpc('update_orders_sync_schedule', {
-        p_times: u.orders_sync_times,
         p_enabled: u.orders_sync_enabled,
-        p_working_hours_only: u.orders_working_hours_only
+        p_sync_times: u.orders_sync_times,
+        p_working_hours_only: u.orders_working_hours_only,
+        p_working_hours_start: u.orders_working_hours_start,
+        p_working_hours_end: u.orders_working_hours_end,
+        p_max_per_sync: u.orders_max_per_sync,
+        p_smart_sync_enabled: u.smart_sync_enabled
       });
       if (error) throw error;
       toast({ title: '✅ تم حفظ جدولة الطلبات', description: `${u.orders_sync_times.length} مرات يومياً` });
@@ -142,7 +146,7 @@ const InvoiceSyncSettings = () => {
     setSaving(true);
     try {
       const { error } = await supabase.rpc('update_tokens_renewal_settings', {
-        p_enabled: u.tokens_auto_renew_enabled,
+        p_auto_renew: u.tokens_auto_renew_enabled,
         p_check_time: u.tokens_check_time
       });
       if (error) throw error;
@@ -157,9 +161,12 @@ const InvoiceSyncSettings = () => {
     setSaving(true);
     try {
       const { error } = await supabase.rpc('update_frontend_sync_settings', {
+        p_login_sync: u.frontend_login_sync,
         p_orders_page_auto_sync: u.frontend_orders_page_auto_sync,
         p_employee_page_auto_sync: u.frontend_employee_page_auto_sync,
-        p_login_sync: u.frontend_login_sync
+        p_employee_followup_sync: u.frontend_employee_followup_sync,
+        p_employee_invoice_sync: u.employee_invoice_sync_enabled,
+        p_notifications_enabled: u.notifications_enabled
       });
       if (error) throw error;
       toast({ title: '✅ تم حفظ إعدادات الواجهة' });
