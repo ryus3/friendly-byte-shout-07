@@ -49,16 +49,22 @@ Deno.serve(async (req) => {
 
     const creatorName = creator?.full_name || 'مستخدم';
 
+    // 🏷️ تمييز المصدر (ai_assistant vs telegram vs غيرها)
+    const isAiAssistant = record.source === 'ai_assistant' || record.source === 'ai_chat';
+    const sourceLabel = isAiAssistant ? 'المساعد الذكي' : (record.source === 'telegram' ? 'تليغرام' : 'النظام');
+    const sourceEmoji = isAiAssistant ? '🤖' : (record.source === 'telegram' ? '📨' : '📋');
+
     // إشعار للمنشئ
     const creatorNotification = {
       type: 'new_ai_order',
-      title: '✅ تم إنشاء طلب ذكي جديد',
+      title: `✅ تم إنشاء طلب ذكي جديد عبر ${sourceLabel}`,
       message: 'تم حفظ طلبك الذكي بنجاح',
       user_id: record.created_by,
       data: {
         ai_order_id: record.id,
         customer_name: record.customer_name,
-        total_amount: record.total_amount
+        total_amount: record.total_amount,
+        source: record.source
       },
       priority: 'high',
       is_read: false
@@ -67,7 +73,7 @@ Deno.serve(async (req) => {
     // إشعار عام للمديرين
     const adminNotification = {
       type: 'new_ai_order',
-      title: `📋 طلب ذكي جديد من ${creatorName}`,
+      title: `${sourceEmoji} طلب ذكي جديد من ${creatorName} (${sourceLabel})`,
       message: `عميل: ${record.customer_name || 'غير محدد'} - المبلغ: ${record.total_amount}`,
       user_id: null,
       data: {
@@ -75,7 +81,8 @@ Deno.serve(async (req) => {
         customer_name: record.customer_name,
         total_amount: record.total_amount,
         creator_name: creatorName,
-        created_by: record.created_by
+        created_by: record.created_by,
+        source: record.source
       },
       priority: 'medium',
       is_read: false
