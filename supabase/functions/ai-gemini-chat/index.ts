@@ -921,9 +921,14 @@ ${regionsBlock}
 
     // 🧠 كشف نية الطلب الذكي (Smart Intent Detection)
     // إشارتان قويتان من 3: 1) رقم هاتف عراقي  2) اسم مدينة من الكاش  3) سعر مكتوب
-    const phoneRegex = /\b07[3-9]\d{8}\b/;
+    // ✅ كشف الهاتف بصيغ متعددة: محلي / دولي (+964, 00964, 964) / فراغات / شرطات / أرقام عربية
+    const arabicToEnglishDigits = (s: string): string =>
+      s.replace(/[٠-٩۰-۹]/g, (d) => String('٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹'.indexOf(d) % 10));
+    const messageDigitsOnly = arabicToEnglishDigits(message).replace(/[^0-9]/g, '');
+    // محلي 11 رقم 07X... | دولي 13 (964 7...) | 14 (0964 7...) | 15 (00964 7...) | بدون 0 (10 رقم 7X...)
+    const phoneRegex = /(?:00964|0964|964)?7[0-9]{9}/;
+    const hasPhone = phoneRegex.test(messageDigitsOnly) || /\b07[0-9]{9}\b/.test(messageDigitsOnly);
     const priceRegex = /\d{2,}\s*(الف|ألف|د\.ع|دينار|الاف|آلاف|ك\b)/i;
-    const hasPhone = phoneRegex.test(message);
     const hasPrice = priceRegex.test(message);
     const lowerMsg = message.toLowerCase();
     const hasCity = (storeData.cities || []).some((city: any) =>
