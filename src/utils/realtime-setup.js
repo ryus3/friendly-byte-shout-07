@@ -40,15 +40,20 @@ export const setupRealtime = () => {
   // ملاحظة: تم إزالة ai_orders subscription من هنا لتجنب التعارض مع NotificationsHandler.jsx
   // جميع إشعارات ai_orders يتم التعامل معها في NotificationsHandler.jsx فقط
 
-  // تشغيل الإشعارات الفورية للإشعارات مع debouncing
+  // ✅ تخفيف: نكتفي بـ INSERT فقط على إشعارات جديدة، ولا نطلق dispatch لكل تغيير
+  // (NotificationsContext يستمع مباشرةً لقناته الخاصة، لا داعي لقناة موازية تطلق events للجميع)
   const notificationsChannel = supabase
-    .channel('notifications-realtime')
+    .channel('notifications-realtime-light')
     .on('postgres_changes', {
-      event: '*',
+      event: 'INSERT',
       schema: 'public',
       table: 'notifications'
     }, (payload) => {
-      debouncedDispatch('notificationCreated', payload.new, 25);
+      // dispatch خفيف فقط لأنواع تحتاج تحديث counters فوراً
+      const t = payload?.new?.type;
+      if (t === 'new_ai_order' || t === 'ai_order' || t === 'new_registration') {
+        debouncedDispatch('notificationCreated', payload.new, 60);
+      }
     })
     .subscribe();
 
