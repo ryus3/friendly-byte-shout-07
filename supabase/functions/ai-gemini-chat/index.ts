@@ -582,7 +582,15 @@ serve(async (req) => {
     console.log('🔐 طلب من المستخدم:', userInfo?.full_name || userInfo?.id);
     console.log('🎫 Token متوفر:', !!authToken);
 
-    // Get real store data with user authentication
+    // 🔐 احتساب الـ Scope مرة واحدة لاستخدامه في النص التعريفي للنموذج
+    const userScope = await resolveUserScope(authToken);
+    const scopeLabel = userScope.isAdmin
+      ? 'مدير عام (يرى كل البيانات)'
+      : userScope.isManager
+        ? `مدير قسم (يرى بياناته وبيانات ${(userScope.allowedUserIds?.length ?? 1) - 1} موظف تابع)`
+        : 'موظف (يرى بياناته فقط)';
+
+    // Get real store data with user authentication (مفلترة حسب الدور)
     const storeData = await getStoreData(userInfo, authToken);
 
     // تحليلات متقدمة للبيانات
