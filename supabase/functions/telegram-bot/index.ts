@@ -1753,8 +1753,9 @@ serve(async (req) => {
           
           let shouldUseLocalCache = false;
           let localSystemSucceeded = false; // 🔥 تتبع نجاح النظام المحلي
-          let localCityResult: { cityId: number; cityName: string; confidence: number } | null = null;
+          let localCityResult: { cityId: number; cityName: string; confidence: number; cityLine?: string; externalId?: number } | null = null;
           let localRegionMatches: Array<{ regionId: number; regionName: string; confidence: number }> = [];
+          let localRegionResult: { regionId: number; regionName: string; confidence: number } | null = null;
           let extractedLocation = ''; // 🔥 تعريف المتغير المفقود
           
           try {
