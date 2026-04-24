@@ -577,10 +577,41 @@ const InvoiceSyncSettings = () => {
                 <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
                   <div>
                     <Label className="text-sm">تقييد بساعات العمل</Label>
-                    <p className="text-xs text-muted-foreground">المزامنة فقط بين 8 صباحاً و 8 مساءً (بغداد)</p>
+                    <p className="text-xs text-muted-foreground">المزامنة فقط ضمن النافذة الزمنية المحددة (بغداد)</p>
                   </div>
                   <Switch checked={u.orders_working_hours_only}
                     onCheckedChange={(v) => setU(s => ({ ...s, orders_working_hours_only: v }))} />
+                </div>
+
+                {u.orders_working_hours_only && (
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-muted/20 rounded-lg">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">بداية ساعات العمل</Label>
+                      <Input type="time" value={u.orders_working_hours_start}
+                        onChange={(e) => setU(s => ({ ...s, orders_working_hours_start: e.target.value }))} className="h-8" />
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">نهاية ساعات العمل</Label>
+                      <Input type="time" value={u.orders_working_hours_end}
+                        onChange={(e) => setU(s => ({ ...s, orders_working_hours_end: e.target.value }))} className="h-8" />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                  <div>
+                    <Label className="text-sm flex items-center gap-2"><Zap className="w-3 h-3 text-amber-500" /> المزامنة الذكية</Label>
+                    <p className="text-xs text-muted-foreground">تخطّي الطلبات المغلقة (مُسلّمة/مُرجعة نهائياً) لتقليل الضغط</p>
+                  </div>
+                  <Switch checked={u.smart_sync_enabled}
+                    onCheckedChange={(v) => setU(s => ({ ...s, smart_sync_enabled: v }))} />
+                </div>
+
+                <div className="space-y-1 p-3 bg-muted/20 rounded-lg">
+                  <Label className="text-xs text-muted-foreground">الحد الأقصى للطلبات في كل مزامنة</Label>
+                  <Input type="number" min="10" max="500" value={u.orders_max_per_sync}
+                    onChange={(e) => setU(s => ({ ...s, orders_max_per_sync: parseInt(e.target.value) || 100 }))} className="h-8" />
+                  <p className="text-xs text-muted-foreground">يمنع تجاوز سعة API شركة التوصيل (الموصى به: 100)</p>
                 </div>
               </>
             )}
