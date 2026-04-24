@@ -304,6 +304,48 @@ serve(async (req) => {
                       if (!orderError) employeeOrdersSynced++;
                     }
                     
+                    // ✅ تحقق اكتمال snapshot + إعادة محاولات متعددة (للفواتير غير المستلمة فقط)
+                    if (!isReceived) {
+                      const expected = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
+                      let { count: dioNow } = await supabase
+                        .from('delivery_invoice_orders')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('invoice_id', upsertedInvoice.id);
+                      let haveNow = dioNow ?? 0;
+                      const delays = [5000, 10000, 20000];
+                      for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
+                        console.log(`    🔁 Snapshot incomplete for ${externalId}: have=${haveNow}, expected=${expected}. Retry ${attempt + 1}/${delays.length} after ${delays[attempt]}ms...`);
+                        await new Promise(r => setTimeout(r, delays[attempt]));
+                        const retryOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);
+                        if (retryOrders.length > 0) {
+                          for (const order of retryOrders) {
+                            const { error: rErr } = await supabase
+                              .from('delivery_invoice_orders')
+                              .upsert({
+                                invoice_id: upsertedInvoice.id,
+                                external_order_id: String(order.id),
+                                raw: order,
+                                status: order.status,
+                                amount: order.price || order.amount || 0,
+                                owner_user_id: employeeId,
+                              }, {
+                                onConflict: 'invoice_id,external_order_id',
+                                ignoreDuplicates: false,
+                              });
+                            if (!rErr) employeeOrdersSynced++;
+                          }
+                        } else {
+                          console.log(`    ⚠️ Retry ${attempt + 1} returned 0 orders for ${externalId} (API rate-limit/issue)`);
+                        }
+                        const { count: dioAfter } = await supabase
+                          .from('delivery_invoice_orders')
+                          .select('id', { count: 'exact', head: true })
+                          .eq('invoice_id', upsertedInvoice.id);
+                        haveNow = dioAfter ?? 0;
+                        console.log(`    📊 After retry ${attempt + 1} for ${externalId}: have=${haveNow}, expected=${expected}`);
+                      }
+                    }
+
                     await supabase
                       .from('delivery_invoices')
                       .update({ orders_last_synced_at: new Date().toISOString() })
@@ -462,16 +504,19 @@ serve(async (req) => {
             statusChangedCount++;
           }
 
-          // Skip if no changes at all — لكن لا نقفز إذا الفاتورة pending وتحتاج طلباتها بعد (dio_count = 0)
+          // Skip if no changes — لكن لا نقفز إذا الفاتورة pending وطلباتها ناقصة (dio_count < expected)
           // الفواتير المستلمة لا نعيد جلب طلباتها (تعمل عبر receipt_received) لتفادي rate-limit
           if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
             if (sync_orders && !isReceived) {
+              const expectedCount = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
               const { count: dioCount } = await supabase
                 .from('delivery_invoice_orders')
                 .select('id', { count: 'exact', head: true })
                 .eq('invoice_id', existing.id);
-              if ((dioCount ?? 0) > 0) continue;
-              // فاتورة pending بدون طلبات → نتابع لجلبها وربطها
+              const have = dioCount ?? 0;
+              if (expectedCount > 0 && have >= expectedCount) continue;
+              // pending بطلبات ناقصة → نتابع لإكمالها وربطها
+              console.log(`  ⚙️ Pending invoice ${externalId} needs completion: have=${have}, expected=${expectedCount}`);
             } else {
               continue;
             }
@@ -528,6 +573,48 @@ serve(async (req) => {
                     if (!orderError) totalOrdersUpdated++;
                   }
                   
+                  // ✅ تحقق اكتمال snapshot + إعادة محاولة واحدة (للفواتير غير المستلمة فقط)
+                  if (!isReceived) {
+                    const expected = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
+                    let { count: dioNow } = await supabase
+                      .from('delivery_invoice_orders')
+                      .select('id', { count: 'exact', head: true })
+                      .eq('invoice_id', upsertedInvoice.id);
+                    let haveNow = dioNow ?? 0;
+                    const delays = [5000, 10000, 20000];
+                    for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
+                      console.log(`  🔁 Snapshot incomplete for ${externalId}: have=${haveNow}, expected=${expected}. Retry ${attempt + 1}/${delays.length} after ${delays[attempt]}ms...`);
+                      await new Promise(r => setTimeout(r, delays[attempt]));
+                      const retryOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);
+                      if (retryOrders.length > 0) {
+                        for (const order of retryOrders) {
+                          const { error: rErr } = await supabase
+                            .from('delivery_invoice_orders')
+                            .upsert({
+                              invoice_id: upsertedInvoice.id,
+                              external_order_id: String(order.id),
+                              raw: order,
+                              status: order.status,
+                              amount: order.price || order.amount || 0,
+                              owner_user_id: targetEmployeeId,
+                            }, {
+                              onConflict: 'invoice_id,external_order_id',
+                              ignoreDuplicates: false,
+                            });
+                          if (!rErr) totalOrdersUpdated++;
+                        }
+                      } else {
+                        console.log(`  ⚠️ Retry ${attempt + 1} returned 0 orders for ${externalId} (API rate-limit/issue)`);
+                      }
+                      const { count: dioAfter } = await supabase
+                        .from('delivery_invoice_orders')
+                        .select('id', { count: 'exact', head: true })
+                        .eq('invoice_id', upsertedInvoice.id);
+                      haveNow = dioAfter ?? 0;
+                      console.log(`  📊 After retry ${attempt + 1} for ${externalId}: have=${haveNow}, expected=${expected}`);
+                    }
+                  }
+
                   await supabase
                     .from('delivery_invoices')
                     .update({ orders_last_synced_at: new Date().toISOString() })
