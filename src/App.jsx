@@ -18,26 +18,20 @@ import AppSplashScreen from '@/components/AppSplashScreen.jsx';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 
-// ⚡ Prefetch الصفحات الشائعة عند idle - موسع للسرعة القصوى
+// ⚡ Prefetch خفيف: صفحتان فقط الأكثر استخداماً، عند idle، بعد فترة كافية
+// (تقليل العبء على الشبكة و JS thread وقت الإقلاع)
 const prefetchCommonRoutes = () => {
   if ('requestIdleCallback' in window) {
     requestIdleCallback(() => {
-      // الصفحات الأساسية
       import('@/pages/Dashboard.jsx');
       import('@/pages/OrdersPage.jsx');
-      import('@/pages/QuickOrderPage.jsx');
-      // ⚡ صفحات إضافية شائعة
-      import('@/pages/CashManagementPage.jsx');
-      import('@/pages/AccountingPage.jsx');
-      import('@/pages/InventoryPage.jsx');
-      import('@/pages/ProductsPage.jsx');
-    });
+    }, { timeout: 5000 });
   }
 };
 
-// ⚡ تنفيذ prefetch بعد 2 ثانية بدلاً من 3
 if (typeof window !== 'undefined') {
-  setTimeout(prefetchCommonRoutes, 2000);
+  // تأخير لإعطاء الأولوية لأول رسم/تفاعل
+  setTimeout(prefetchCommonRoutes, 4000);
 }
 
 const LoginPage = lazy(() => import('@/pages/LoginPage.jsx'));
