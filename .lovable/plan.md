@@ -1,115 +1,125 @@
 
 
-# إصلاح أرشفة الكارثة + توضيح نظام المزامنة الحالي
+# تقييم صريح: المسارات الحالية فوضى — والحل التوحيد لا الإضافة
 
-## أولاً: السبب الجذري للأرشفة (مؤكد من قاعدة البيانات)
+## رأيي العالمي بصراحة
 
-الـ12 طلب الآن:
-- `status='delivered'` ✅
-- `receipt_received=false` ✅
-- `cash_movements` محذوفة ✅
-- لكن: **`isarchived=true` ❌** و **`profits.settled_at='2026-04-24 06:20:51'` ❌** (بقايا الكارثة الأولى)
+**المسارات كثيرة ومكررة وتسبب كوارث**. عندك:
 
-عند الكارثة الأصلية (06:20:51):
-1. trigger `auto_link_dio_to_order` علّم `receipt_received=true`
-2. trigger الطلبات نقل status إلى `completed`
-3. trigger الأرباح نقل profit إلى `settled` ووضع `settled_at`
-4. trigger `auto_archive_completed_orders` رأى `completed + receipt_received=true` → **`isarchived=true`**
-
-الـrollback السابق أعاد `status` و `receipt_received` و حركات النقد، لكن نسي `isarchived` و `profits.settled_at`.
-
-## ثانياً: الإصلاح (migration واحدة دقيقة)
-
-**تنظيف بقايا الكارثة فقط للفاتورة 3247172** (شروط صارمة لمنع أي تأثير جانبي):
-
-```sql
--- 1) إزالة الأرشفة الخاطئة عن الـ12 طلب
-UPDATE orders 
-SET isarchived = false, updated_at = now()
-WHERE delivery_partner_invoice_id = '3247172'
-  AND status = 'delivered'
-  AND receipt_received = false
-  AND isarchived = true;
-
--- 2) إعادة profits إلى pending (مسح settled_at الكاذب)
-UPDATE profits
-SET status = 'pending', settled_at = NULL, updated_at = now()
-WHERE order_id IN (
-  SELECT id FROM orders 
-  WHERE delivery_partner_invoice_id = '3247172'
-    AND receipt_received = false
-)
-AND settled_at = '2026-04-24 06:20:51.230773+00'::timestamptz;
-```
-
-**ضمانات**:
-- شرط `delivery_partner_invoice_id = '3247172'` يحصر التأثير على هذه الفاتورة فقط
-- شرط `receipt_received = false` يحمي أي طلب فعلاً مستلم
-- شرط `settled_at = '2026-04-24 06:20:51.230773'` يطابق بصمة الكارثة بالضبط - لا يلمس أي profit آخر
-- الـ19 طلب للفاتورة السابقة 3210286 (المستلمة فعلاً) **لن يتأثروا** لأن `receipt_received=true` لهم
-
-## ثالثاً: نظام المزامنة الحالي - شرح كامل
-
-### المسار الموحد الآن
-
-كل المزامنات (خلفية وأمامية) تمر عبر **edge function واحد**: `smart-invoice-sync`.
-
-```text
-┌─────────────────────────────────────────────────────────────┐
-│  smart-invoice-sync  (المصدر الوحيد للكتابة)              │
-├─────────────────────────────────────────────────────────────┤
-│  1. fetch invoices من AlWaseet API                          │
-│  2. upsert إلى delivery_invoices                            │
-│  3. fetch orders لكل فاتورة (مع retry حتى 3 محاولات)        │
-│  4. التحقق من اكتمال snapshot (dio_count == orders_count)   │
-│  5. upsert إلى delivery_invoice_orders                      │
-│     ↓                                                        │
-│     trigger: auto_link_dio_to_order                          │
-│       → ربط order_id (منطقي فقط)                            │
-│       → تحديث delivery_partner_invoice_id (للعرض فقط)       │
-│       → ❌ لا يلمس receipt_received إطلاقاً                 │
-│  6. استدعاء link_invoice_orders_to_orders() (ضمان إضافي)    │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### من يستدعي smart-invoice-sync؟
-
-| المسار | متى | sync_orders |
+| الجدول | الاستخدام الفعلي | المشكلة |
 |---|---|---|
-| **مزامنة خلفية تلقائية** (الموقع مغلق/مفتوح) | كل فترة عبر `useGlobalInvoiceSync` و `useAlWaseetInvoices.smartBackgroundSync` | ✅ true → تربط الطلبات تلقائياً |
-| **فتح صفحة متابعة الموظفين** | مرة واحدة عند الفتح | ✅ true |
-| **زر مزامنة يدوي** | عند الضغط | ✅ true |
-| **فتح فاتورة في الواجهة** (self-heal) | كطبقة أمان فقط لو dio_count=0 | ✅ true |
+| `auto_sync_schedule_settings` | المصدر الفعلي لـ cron (`sync_times` array) | يستخدم لمزامنة الطلبات + الفواتير معاً |
+| `invoice_sync_settings` | إعدادات قديمة + UI يقرأ منه احتياطياً | غير مرتبط بـ cron الحقيقي |
+| `useUnifiedAutoSync` (hook) | يقرأ من `invoice_sync_settings` | **مُعطّل أصلاً** (`autoSyncInvoices` returns false) |
+| `useGlobalInvoiceSync` (hook) | مزامنة خلفية في الواجهة | يستدعي `smart-invoice-sync` بشكل مكرر |
+| `AutoSyncScheduleSettings` (dialog) | يكتب على `auto_sync_schedule_settings.sync_times` | لا يحدّث cron مباشرة |
+| `InvoiceSyncSettings` (dialog مفتوح) | يستدعي `update_invoice_sync_schedule` RPC | **هذا الصحيح فعلاً** |
 
-### إجابات أسئلتك المباشرة
+**النتيجة الحقيقية**: عندك dialog واحد يعمل (`InvoiceSyncSettingsDialog` المفتوح بصورتك)، و dialog آخر (`AutoSyncScheduleSettings`) يعدّل نفس الجدول لكن لا يحدّث cron. وعندك hook معطّل (`useUnifiedAutoSync`) ما زال يُستدعى. هذه فوضى تسبب الكوارث.
 
-**س: هل أصبح الربط عالمياً بدون فتح الفاتورة؟**  
-✅ **نعم**. المزامنة الخلفية الآن تجلب الفواتير + تجلب طلبات كل فاتورة + تربطها بالطلبات المحلية تلقائياً عبر trigger `auto_link_dio_to_order`. فتح الفاتورة في الواجهة لم يعد شرطاً للربط - يبقى فقط كطبقة self-heal احتياطية.
+## الإجابة المباشرة على سؤالك
 
-**س: هل المزامنة عندما يكون الموقع مغلق تربط الطلبات المحلية؟**  
-✅ **نعم**. أي مستخدم يفتح أي صفحة → `useGlobalInvoiceSync` يستدعي `smart-invoice-sync` في الخلفية → الفواتير + الطلبات + الربط يحدث تلقائياً. لا حاجة لفتح صفحة الفواتير ولا فتح فاتورة محددة.
+**س: هل المكان موجود بالإعدادات صحيح؟**  
+✅ **نعم تماماً**. `InvoiceSyncSettings` (الذي ظهر بصورتك) هو **اللوحة الصحيحة الفعلية** — موجودة، تعمل، تستدعي `update_invoice_sync_schedule` RPC الذي يعدّل cron مباشرة. **لا داعي لبناء أي شيء جديد**.
 
-**س: ماذا عن استلام الفاتورة (receipt_received)؟**  
-- الربط (linking) = آلي وعالمي بدون أي تدخل
-- الاستلام (receipt_received=true) = **يحدث حصراً** عندما تنتقل الفاتورة في AlWaseet إلى `received=true`، عندها trigger `sync_orders_on_invoice_received` يُعلّم كل الطلبات المرتبطة كمستلمة ويبدأ سلسلة الإكمال (status=completed، cash_movements، إلخ)
+**س: لماذا اقترحت بناء جديد؟**  
+خطأ مني. لم أفحص ما هو موجود قبل اقتراح إضافة. اللوحة الموجودة بالفعل تغطي:
+- ✅ تبويب الجدولة (أوقات صباح/مساء + تفعيل) → يحدّث cron فعلياً
+- ✅ تبويب الملخص (إحصائيات + آخر مزامنة + زر مزامنة فورية)
+- ✅ تبويب الموظفين (حالة tokens)
+- ✅ تبويب التشخيص (تناقضات + إصلاح تلقائي)
+- ✅ تبويب السجلات
 
-## رابعاً: ضمانات
+**لا حاجة لبناء جديد إطلاقاً**. الخلل في **التكرار** وليس في النقص.
+
+## ما يجب فعله: تنظيف وتوحيد، لا إضافة
+
+### 1) حذف المسارات الميتة/المكررة
+
+| العنصر | الإجراء | السبب |
+|---|---|---|
+| `src/hooks/useUnifiedAutoSync.js` | **حذف** | معطّل أصلاً (`autoSyncInvoices` returns `false`) + يقرأ جدول قديم |
+| `AutoSyncScheduleSettings.jsx` (Dialog) | **حذف** | يكرر نفس الوظيفة بدون تحديث cron |
+| استدعاء `AutoSyncScheduleSettings` من `SettingsPage` | **حذف الزر** | الزر الصحيح (`InvoiceSyncSettingsDialog`) موجود |
+| `OrdersSyncSettings.jsx` | **مراجعة** — هل مستخدم؟ إذا لا → حذف | يقرأ نفس الجدول القديم |
+
+### 2) جعل اللوحة الموجودة تشمل **كل** ما يخص الفواتير (بدون بناء جديد)
+
+أضيف داخل `InvoiceSyncSettings.jsx` (الموجود بالفعل) القطع الناقصة فقط:
+
+| القطعة | الوضع الحالي | الإضافة المطلوبة |
+|---|---|---|
+| تبويب "الجدولة" | يحفظ وقتين فقط | إضافة Switch لتعطيل cron نهائياً (يستدعي `cron.alter_job` أو `cron.unschedule`) |
+| تبويب "الملخص" | يعرض cron status | إضافة بطاقة "المزامنة الواجهية" (تعرض `useGlobalInvoiceSync` ومتى آخر تشغيل) |
+| تبويب "التشخيص" | يصلح discrepancies | إضافة زر "إعادة ربط فاتورة محددة" (يستدعي `link_invoice_orders_to_orders(invoice_id)`) |
+| - | - | إضافة زر "فحص اكتمال snapshots" (يكشف فواتير `dio_count < orders_count`) |
+
+كل الإضافات داخل **نفس اللوحة الموجودة** — صفر شاشات جديدة، صفر جداول جديدة.
+
+### 3) ضمان مصدر واحد للحقيقة
+
+- **مصدر الحقيقة الوحيد للجدولة** = `auto_sync_schedule_settings.sync_times` (يُحدَّث عبر `update_invoice_sync_schedule` RPC الذي يُعدّل cron تلقائياً)
+- **مصدر الحقيقة الوحيد للمزامنة** = `smart-invoice-sync` Edge Function
+- **مسارات الاستدعاء الفعلية** = cron jobs (خلفية) + `useGlobalInvoiceSync` (واجهة) فقط
+- جدول `invoice_sync_settings` يبقى للحقول الإضافية (lookback, cleanup) فقط — لا يُستخدم للأوقات
+
+## ما يبقى دون مساس (ضمانات صارمة)
 
 | العنصر | الحالة |
 |---|---|
-| 12 طلب isarchived | true ❌ → false ✅ |
-| 12 سجل profit | settled (كاذب) → pending ✅ |
-| الفاتورة 3210286 (المستلمة فعلاً) | بدون أي تأثير ✅ |
-| أي فاتورة أخرى | بدون أي تأثير ✅ |
-| triggers | بدون تعديل (مُصلحة في الدفعة السابقة) ✅ |
-| schema | بدون تعديل ✅ |
-| **عند استلام 3247172 لاحقاً** | الـ12 طلب يكتملون تلقائياً ✅ |
+| `smart-invoice-sync` Edge Function | ✅ بدون لمس |
+| `auto_link_dio_to_order` trigger (المُصلَّح) | ✅ بدون لمس |
+| `sync_orders_on_invoice_received` trigger | ✅ بدون لمس |
+| cron jobs الحالية | ✅ بدون لمس (نفس الأسماء، نفس URL) |
+| `update_invoice_sync_schedule` RPC | ✅ بدون لمس (يعمل بشكل صحيح) |
+| الفواتير المستلمة + بيانات الطلبات | ✅ صفر تأثير |
+| useGlobalInvoiceSync (واجهة) | ✅ بدون لمس |
 
-## خامساً: الملف الوحيد المعدّل
+## الملفات المعدّلة
 
-| الملف | التغيير |
-|---|---|
-| migration جديدة | تنظيف `isarchived` و `profits.settled_at` للـ12 طلب فقط (شروط صارمة) |
+| الملف | التغيير | الحجم |
+|---|---|---|
+| `src/hooks/useUnifiedAutoSync.js` | **حذف** | ملف كامل |
+| `src/components/settings/AutoSyncScheduleSettings.jsx` | **حذف** | ملف كامل |
+| `src/components/delivery/OrdersSyncSettings.jsx` | **حذف** بعد التحقق من عدم الاستخدام | ملف كامل |
+| `src/pages/SettingsPage.jsx` | إزالة استدعاء `AutoSyncScheduleSettings` فقط | ~5 أسطر |
+| `src/components/DeliveryManagementDialog.jsx` | تحديث ليقرأ من `auto_sync_schedule_settings` بدل القديم | ~10 أسطر |
+| `src/components/SyncStatusReport.jsx` | نفس التحديث | ~5 أسطر |
+| `src/components/settings/InvoiceSyncSettings.jsx` | إضافة Switch تفعيل/تعطيل cron + بطاقة المزامنة الواجهية + زر إعادة ربط فاتورة + زر فحص اكتمال snapshots | ~80 سطر إضافة داخل اللوحة الموجودة |
 
-لا تعديل كود. لا تعديل triggers. لا تعديل edge functions. النظام الحالي للمزامنة سليم بالكامل بعد إصلاحات الدفعات السابقة.
+**صفر migrations. صفر جداول جديدة. صفر edge functions جديدة. صفر RPCs جديدة.**
+
+## النتيجة
+
+| العنصر | قبل | بعد |
+|---|---|---|
+| عدد لوحات التحكم بالفواتير | 2 (متضاربة) | 1 موحّدة ✅ |
+| عدد hooks المزامنة | 3 (واحد ميت) | 2 فاعلة ✅ |
+| مصدر جدولة cron | جدولان متنازعان | جدول واحد ✅ |
+| تحكم بالفواتير من UI | جزئي + متفرّق | كامل في لوحة واحدة ✅ |
+| خطر كوارث جديدة | عالٍ (مسارات ميتة قد تُستيقظ) | منخفض ✅ |
+| فهم النظام | معقّد | واضح ومسار واحد ✅ |
+
+## التفاصيل التقنية للتنظيف
+
+```text
+قبل:
+  Settings → زر "المزامنة التلقائية" → AutoSyncScheduleSettings
+                                       → يكتب sync_times لكن لا يحدّث cron
+  Settings → زر "مزامنة الفواتير" → InvoiceSyncSettings  
+                                    → update_invoice_sync_schedule RPC
+                                    → يعدّل cron فعلياً ✅
+  hook: useUnifiedAutoSync → معطّل، لكن يقرأ جدول قديم وينشر confusion
+
+بعد:
+  Settings → زر "مزامنة الفواتير" (الوحيد) → InvoiceSyncSettings الموسّعة
+    ├─ تبويب الملخص (إحصائيات + cron status + زر مزامنة فورية)
+    ├─ تبويب الجدولة (أوقات + Switch تفعيل/تعطيل cron)
+    ├─ تبويب الموظفين (tokens + الفواتير لكل موظف)
+    ├─ تبويب التشخيص (discrepancies + إعادة ربط + فحص snapshots)
+    └─ تبويب السجلات (آخر 10 عمليات)
+  
+  مصدر الحقيقة الوحيد: auto_sync_schedule_settings + update_invoice_sync_schedule RPC
+  المسارات الفاعلة: cron (خلفية) + useGlobalInvoiceSync (واجهة) فقط
+```
 
