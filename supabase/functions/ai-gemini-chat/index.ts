@@ -942,7 +942,7 @@ ${items || '• لا توجد منتجات محددة'}
 
     return new Response(JSON.stringify({
       success: true,
-      response: aiResponse,
+      response: finalAiResponse,
       model_used: 'gemini-2.5-flash',
       processing_time: Date.now() - Date.now(),
       confidence: 95,
