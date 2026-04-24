@@ -134,9 +134,11 @@ class NotificationService {
 
   // إشعار للطلبات الذكية
   async notifyAiOrder(orderData) {
+    const src = orderData?.source || 'ai_assistant';
+    const sourceLabel = src === 'telegram' ? 'التليغرام' : 'المساعد الذكي';
     const notificationData = {
-      title: 'طلب ذكي جديد',
-      message: `استلام طلب جديد من التليغرام يحتاج للمراجعة`,
+      title: src === 'telegram' ? 'طلب ذكي جديد' : 'طلب ذكي جديد - المساعد الذكي',
+      message: `استلام طلب جديد من ${sourceLabel} يحتاج للمراجعة`,
       type: 'new_ai_order',
       ai_order_id: orderData.id
     };
