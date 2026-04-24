@@ -1222,13 +1222,29 @@ ${regionsBlock}
             const list = regionSuggestions
               .map((s, i) => `${i + 1}. ${s.name} (${Math.round(s.conf * 100)}%)`)
               .join('\n');
-            finalAiResponse = `🤔 **هل تقصد إحدى هذه المناطق في ${resolvedCityName}؟**\n\n${list}\n\n✍️ أعد إرسال الطلب مع الاسم الكامل للمنطقة من القائمة.`;
+            finalAiResponse = `🤔 **هل تقصد إحدى هذه المناطق في ${resolvedCityName}؟**\n\nاضغط على المنطقة الصحيحة من القائمة أدناه:\n\n${list}`;
             responseType = 'region_clarification';
-            orderData = { needs_clarification: true, suggestions: regionSuggestions, city_name: resolvedCityName };
+            orderData = {
+              needs_clarification: true,
+              suggestions: regionSuggestions.map(s => ({
+                name: s.name,
+                external_id: s.externalId,
+                confidence: s.conf,
+              })),
+              city_name: resolvedCityName,
+              city_external_id: resolvedCityExternalId,
+              original_message: processedMessage,
+            };
           } else if (resolvedCityExternalId && !resolvedRegionExternalId) {
             finalAiResponse = `⚠️ لم أتمكن من تحديد المنطقة في **${resolvedCityName}**.\n\n🔍 يرجى كتابة اسم المنطقة بشكل أوضح.`;
             responseType = 'region_clarification';
-            orderData = { needs_clarification: true, suggestions: [], city_name: resolvedCityName };
+            orderData = {
+              needs_clarification: true,
+              suggestions: [],
+              city_name: resolvedCityName,
+              city_external_id: resolvedCityExternalId,
+              original_message: processedMessage,
+            };
           } else {
             console.log('📞 استدعاء process_telegram_order:', {
               employeeCode, aiChatId, resolvedCityExternalId, resolvedRegionExternalId
