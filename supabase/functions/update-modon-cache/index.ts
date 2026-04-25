@@ -136,7 +136,10 @@ async function upsertCitiesBatch(cities: { id: string; city_name: string }[]) {
   return { updatedCount, cityMasterMap };
 }
 
-// ✅ Batch upsert regions for one city: 1 SELECT for all + 1 batch INSERT for missing + 1 batch upsert mappings
+// ✅ Batch upsert regions for one city — يحفظ كل المناطق القادمة من مدن دون فقدان.
+// المعرّف الفريد الفعلي على جانبنا هو (delivery_partner, external_id) — وليس region_id.
+// السبب: مدن قد ترسل عدة external_id لمناطق تتشارك نفس الاسم → يُحلّ ذلك بإسقاط
+// قيد (region_id, delivery_partner) القديم واستخدام (delivery_partner, external_id) الجديد.
 async function upsertRegionsBatch(cityMasterId: number, regions: { id: string; region_name: string }[]) {
   const validRegions = regions.filter(r => r.region_name && r.region_name.trim().length > 0);
   if (validRegions.length === 0) return 0;
@@ -168,31 +171,26 @@ async function upsertRegionsBatch(cityMasterId: number, regions: { id: string; r
     }
   }
 
-  // Build region MODON id → master id
-  const regionMasterMap: Record<string, number> = {};
-  for (const region of validRegions) {
-    const masterId = nameToId[region.region_name];
-    if (masterId) regionMasterMap[region.id] = masterId;
-  }
-
-  // 3) Batch upsert mappings — مع deduplication حسب (region_id, delivery_partner)
-  // (مدن قد ترسل عدة external_id لنفس الاسم → ينتج عنه نفس region_id داخلي)
-  const seenRegionIds = new Set<number>();
-  const mappings = Object.entries(regionMasterMap)
-    .map(([externalId, regionId]) => {
-      const region = validRegions.find(r => r.id === externalId);
+  // 3) Build mappings keyed by external_id (هوية مدن الفريدة)
+  //    لا نحذف صفوفاً بسبب تكرار region_id — فقط نتجنب تكرار external_id داخل نفس الدفعة.
+  const seenExternalIds = new Set<string>();
+  const mappings = validRegions
+    .map(region => {
+      const masterId = nameToId[region.region_name];
+      if (!masterId) return null;
       return {
-        region_id: regionId,
+        region_id: masterId,
         delivery_partner: 'modon',
-        external_id: externalId,
-        external_name: region?.region_name || '',
+        external_id: String(region.id),
+        external_name: region.region_name,
         is_active: true,
         updated_at: timestamp,
       };
     })
+    .filter((m): m is NonNullable<typeof m> => m !== null)
     .filter(m => {
-      if (seenRegionIds.has(m.region_id)) return false;
-      seenRegionIds.add(m.region_id);
+      if (seenExternalIds.has(m.external_id)) return false;
+      seenExternalIds.add(m.external_id);
       return true;
     });
 
@@ -200,9 +198,12 @@ async function upsertRegionsBatch(cityMasterId: number, regions: { id: string; r
   if (mappings.length > 0) {
     const { error } = await supabase
       .from('region_delivery_mappings')
-      .upsert(mappings, { onConflict: 'region_id,delivery_partner' });
-    if (error) console.error('❌ region_delivery_mappings batch:', error);
-    else updatedCount = mappings.length;
+      .upsert(mappings, { onConflict: 'delivery_partner,external_id' });
+    if (error) {
+      console.error('❌ region_delivery_mappings batch:', error);
+      return 0;
+    }
+    updatedCount = mappings.length;
   }
 
   return updatedCount;
