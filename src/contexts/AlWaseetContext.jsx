@@ -358,7 +358,8 @@ export const AlWaseetProvider = ({ children }) => {
         .eq('partner_name', partner)
         .ilike('account_username', accountUsername.trim().toLowerCase());
       
-      // تحديث حالة السياق
+      // ✅ تفعيل موحّد + snapshot + رفع guard
+      sessionInvalidatedRef.current = false;
       setToken(newToken);
       setTokenExpiry(expiresAt.toISOString());
       setWaseetUser({
@@ -368,6 +369,14 @@ export const AlWaseetProvider = ({ children }) => {
       });
       setIsLoggedIn(true);
       setActivePartner(partner);
+      setDefaultAccounts(prev => ({ ...(prev || {}), [partner]: normalizeUsername(accountRecord.account_username) }));
+      writeSessionSnapshot(partner, {
+        token: newToken,
+        account_username: accountRecord.account_username,
+        merchant_id: accountRecord.merchant_id,
+        account_label: accountRecord.account_label,
+        expires_at: expiresAt.toISOString(),
+      });
       
       const partnerDisplayName = deliveryPartners[partner]?.name || partner;
       toast({
