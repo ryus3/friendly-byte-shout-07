@@ -89,8 +89,8 @@ export const NotificationsProvider = ({ children }) => {
         }));
         
         setNotifications(notificationsWithReadStatus);
-        setLastFetch(now);
-    }, [user, lastFetch]);
+        lastFetchRef.current = now;
+    }, [user]);
 
     useEffect(() => {
         fetchNotifications();
