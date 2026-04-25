@@ -1419,11 +1419,93 @@ export const SuperProvider = ({ children }) => {
       } else {
         // ⚠️ لا تستدعي release_stock_for_order أو release_stock_item هنا!
         // تحرير المخزون يتم تلقائياً عبر trigger: auto_release_stock_on_order_delete
-        // عند حذف الطلب من قاعدة البيانات، trigger يُنقص reserved_quantity فقط
-        // 🔴 الاستدعاءات اليدوية كانت تسبب تكرار التحرير وتحويل المنتجات للمباع بشكل خاطئ
-        
+
+        // 🛡️ حماية صارمة: للطلبات الخارجية، لا حذف محلي إلا بعد تأكيد قاطع من شركة التوصيل
+        // (إما أن الطلب اختفى من API، أو أن الحذف نُفّذ على الشركة).
+        // إذا كان التوكن منتهياً أو الاتصال فاشلاً → نمنع الحذف ونُبلّغ المستخدم.
+        try {
+          const { data: ordersToCheck } = await supabase
+            .from('orders')
+            .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_account_used, created_by, status, receipt_received')
+            .in('id', orderIds);
+
+          const externalOrders = (ordersToCheck || []).filter(o =>
+            o.delivery_partner && o.delivery_partner !== 'local' && (o.tracking_number || o.qr_id || o.delivery_partner_order_id)
+          );
+
+          const blockedIds = new Set();
+
+          for (const ord of externalOrders) {
+            // الفواتير المستلمة لا تُحذف
+            if (ord.receipt_received) {
+              blockedIds.add(ord.id);
+              continue;
+            }
+
+            // ✅ المسار حالياً مدعوم بالكامل للوسيط — مدن لا توفر تأكيد قاطع للحذف هنا فنمنع
+            if (ord.delivery_partner !== 'alwaseet') {
+              blockedIds.add(ord.id);
+              continue;
+            }
+
+            try {
+              const { data: tokenRow } = await supabase
+                .from('delivery_partner_tokens')
+                .select('token, expires_at, is_active')
+                .eq('user_id', ord.created_by)
+                .eq('partner_name', ord.delivery_partner)
+                .ilike('account_username', String(ord.delivery_account_used || '').trim().toLowerCase())
+                .maybeSingle();
+
+              const tokenValid = !!tokenRow?.token
+                && tokenRow.is_active
+                && (!tokenRow.expires_at || new Date(tokenRow.expires_at) > new Date());
+
+              if (!tokenValid) {
+                blockedIds.add(ord.id);
+                continue;
+              }
+
+              const { getOrderByQR } = await import('@/lib/alwaseet-api');
+              const trackingId = ord.tracking_number || ord.qr_id || ord.delivery_partner_order_id;
+              let confirmedNotFound = false;
+              try {
+                const remote = await getOrderByQR(tokenRow.token, trackingId);
+                confirmedNotFound = remote === null; // null فقط = تأكيد قاطع بعدم الوجود
+              } catch (apiErr) {
+                // أي خطأ API (شبكة/CF/توكن) = لا تأكيد → امنع الحذف
+                confirmedNotFound = false;
+              }
+
+              if (!confirmedNotFound) blockedIds.add(ord.id);
+            } catch {
+              blockedIds.add(ord.id);
+            }
+          }
+
+          if (blockedIds.size > 0) {
+            toast({
+              title: '⛔ تعذّر حذف بعض الطلبات الخارجية',
+              description: 'لا يمكن حذف طلب خارجي قبل التأكد من حذفه فعلاً لدى شركة التوصيل. تحقق من تسجيل الدخول والاتصال ثم أعد المحاولة.',
+              variant: 'destructive',
+              duration: 8000,
+            });
+            orderIds = orderIds.filter(id => !blockedIds.has(id));
+            if (orderIds.length === 0) {
+              return { success: false, error: 'تم منع الحذف لحماية الطلبات الخارجية' };
+            }
+          }
+        } catch (guardErr) {
+          console.error('⚠️ فشل فحص الحذف الخارجي - إلغاء العملية للأمان:', guardErr);
+          toast({
+            title: '⛔ تم إلغاء الحذف',
+            description: 'تعذّر التحقق من شركة التوصيل. لم يتم حذف أي طلب خارجي.',
+            variant: 'destructive',
+          });
+          return { success: false, error: 'safety_check_failed' };
+        }
+
         (orderIds || []).filter(id => id != null).forEach(id => permanentlyDeletedOrders.add(id));
-        // حفظ في localStorage للحماية الدائمة
         try {
           persistDeletedSet('permanentlyDeletedOrders', permanentlyDeletedOrders);
         } catch {}
@@ -1431,19 +1513,18 @@ export const SuperProvider = ({ children }) => {
           ...prev,
           orders: (prev.orders || []).filter(o => !orderIds.includes(o.id))
         }));
-        
+
         for (const orderId of orderIds) {
           try {
             const { data: relatedAiOrders } = await supabase
               .from('ai_orders')
               .select('id')
               .or(`id.eq.${orderId},order_data->order_id.eq.${orderId}`);
-            
+
             if (relatedAiOrders && relatedAiOrders.length > 0) {
               const aiOrderIds = relatedAiOrders.map(ai => ai.id);
               await supabase.from('ai_orders').delete().in('id', aiOrderIds);
-              
-              // تحديث الحالة المحلية أيضاً
+
               aiOrderIds.forEach(id => permanentlyDeletedAiOrders.add(id));
               setAllData(prev => ({
                 ...prev,
@@ -1454,13 +1535,11 @@ export const SuperProvider = ({ children }) => {
             console.error('فشل تنظيف ai_orders:', aiCleanupError);
           }
         }
-        
-        // ثانياً: حذف الطلبات العادية
+
         const { error } = await supabase.from('orders').delete().in('id', orderIds);
         if (error) {
           console.error('❌ فشل حذف orders:', error);
           console.error('❌ تفاصيل الخطأ:', { message: error.message, details: error.details, hint: error.hint });
-          // إعادة محاولة مرة واحدة
           setTimeout(async () => {
             try {
               await supabase.from('orders').delete().in('id', orderIds);
@@ -1470,11 +1549,10 @@ export const SuperProvider = ({ children }) => {
             }
           }, 1000);
         }
-        
-        // إشعارات Real-time فورية
+
         (orderIds || []).filter(id => id != null).forEach(id => {
-          try { 
-            window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id, confirmed: true } })); 
+          try {
+            window.dispatchEvent(new CustomEvent('orderDeleted', { detail: { id, confirmed: true } }));
           } catch {}
         });
       }
