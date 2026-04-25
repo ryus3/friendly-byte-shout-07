@@ -154,6 +154,28 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ✅ معالجة errNum:21 (توكن منتهي/غير صالح من شركة الوسيط)
+    // الوسيط يُرجع HTTP 400 + errNum:21 + msg:"ليس لديك صلاحية الوصول"
+    // نحوّلها إلى استجابة منظمة برسالة عربية واضحة + 200 لمنع crash بالواجهة
+    if (data && (data.errNum === 21 || data.errNum === '21')) {
+      console.warn(`[AlWaseet Proxy] TOKEN_EXPIRED (errNum:21) - endpoint: ${endpoint}`);
+      return new Response(
+        JSON.stringify({
+          status: false,
+          errNum: 'TOKEN_EXPIRED',
+          msg: 'انتهت صلاحية جلسة الوسيط. يرجى تسجيل الدخول مجدداً من إعدادات شركة التوصيل.',
+          error: 'DELIVERY_TOKEN_EXPIRED',
+          requireRelogin: true,
+          fallback: true,
+          details: { endpoint, originalErrNum: data.errNum, originalMsg: data.msg },
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     return new Response(
       JSON.stringify(data),
       { 
