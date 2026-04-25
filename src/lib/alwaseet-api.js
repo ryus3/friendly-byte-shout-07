@@ -73,6 +73,14 @@ const readDeliveryHint = (token) => {
 };
 
 const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 2) => {
+  // 🛑 إذا الجلسة معطّلة، لا نرسل أي طلب جديد للوسيط حتى يعاد تسجيل الدخول
+  if (sessionInvalidUntilLogin) {
+    const blocked = new Error('انتهت جلسة الوسيط. يرجى تسجيل الدخول مجدداً قبل المتابعة.');
+    blocked.isTokenExpired = true;
+    blocked.isSessionInvalid = true;
+    throw blocked;
+  }
+
   const requestKey = buildRequestKey(endpoint, method, token, payload, queryParams);
   const cachedEntry = responseCache.get(requestKey);
   if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
