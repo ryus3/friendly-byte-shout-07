@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from './UnifiedAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast.js';
