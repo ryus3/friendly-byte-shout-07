@@ -175,18 +175,26 @@ async function upsertRegionsBatch(cityMasterId: number, regions: { id: string; r
     if (masterId) regionMasterMap[region.id] = masterId;
   }
 
-  // 3) Batch upsert mappings
-  const mappings = Object.entries(regionMasterMap).map(([externalId, regionId]) => {
-    const region = validRegions.find(r => r.id === externalId);
-    return {
-      region_id: regionId,
-      delivery_partner: 'modon',
-      external_id: externalId,
-      external_name: region?.region_name || '',
-      is_active: true,
-      updated_at: timestamp,
-    };
-  });
+  // 3) Batch upsert mappings — مع deduplication حسب (region_id, delivery_partner)
+  // (مدن قد ترسل عدة external_id لنفس الاسم → ينتج عنه نفس region_id داخلي)
+  const seenRegionIds = new Set<number>();
+  const mappings = Object.entries(regionMasterMap)
+    .map(([externalId, regionId]) => {
+      const region = validRegions.find(r => r.id === externalId);
+      return {
+        region_id: regionId,
+        delivery_partner: 'modon',
+        external_id: externalId,
+        external_name: region?.region_name || '',
+        is_active: true,
+        updated_at: timestamp,
+      };
+    })
+    .filter(m => {
+      if (seenRegionIds.has(m.region_id)) return false;
+      seenRegionIds.add(m.region_id);
+      return true;
+    });
 
   let updatedCount = 0;
   if (mappings.length > 0) {
