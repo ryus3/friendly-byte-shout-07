@@ -144,6 +144,8 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         // ✅ Detect expired token (errNum:21) — dispatch event للواجهة لتطلب إعادة تسجيل الدخول
         if (data.errNum === 'TOKEN_EXPIRED' || data.error === 'DELIVERY_TOKEN_EXPIRED' || data.requireRelogin === true) {
           devLog.warn(`🔑 توكن الوسيط منتهي للـendpoint: ${endpoint}`);
+          // 🛑 رفع الـ guard فوراً لمنع موجة الطلبات اللاحقة (سبب 503)
+          sessionInvalidUntilLogin = true;
           try {
             window.dispatchEvent(new CustomEvent('alwaseet-token-expired', {
               detail: { endpoint, msg: data.msg }
