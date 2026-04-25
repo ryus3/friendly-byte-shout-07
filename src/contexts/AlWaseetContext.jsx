@@ -2306,15 +2306,26 @@ export const AlWaseetProvider = ({ children }) => {
         throw new Error('فشل في حفظ بيانات تسجيل الدخول: ' + error.message);
       }
 
+      // ✅ تفعيل الجلسة موحّداً: state + tokenExpiry + snapshot + إعادة تعيين guard
+      sessionInvalidatedRef.current = false;
       setToken(tokenData.token);
+      setTokenExpiry(expires_at.toISOString());
       setWaseetUser(partnerData);
       setIsLoggedIn(true);
       setActivePartner(partner);
-      
+      setDefaultAccounts(prev => ({ ...(prev || {}), [partner]: normalizedUsername }));
+      writeSessionSnapshot(partner, {
+        token: tokenData.token,
+        account_username: normalizedUsername,
+        merchant_id: merchantId,
+        account_label: normalizedUsername,
+        expires_at: expires_at.toISOString(),
+      });
+
       const partnerName = deliveryPartners[partner]?.name || partner;
-      toast({ 
-        title: "نجاح", 
-        description: `تم تسجيل الدخول بنجاح في ${partnerName}.` 
+      toast({
+        title: "نجاح",
+        description: `تم تسجيل الدخول بنجاح في ${partnerName}.`
       });
       
       // تشغيل مزامنة سريعة بعد 5 ثواني من تجديد التوكن
