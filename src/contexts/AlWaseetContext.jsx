@@ -2327,7 +2327,10 @@ export const AlWaseetProvider = ({ children }) => {
         title: "نجاح",
         description: `تم تسجيل الدخول بنجاح في ${partnerName}.`
       });
-      
+
+      // 🔓 إعلام طبقة API برفع guard الجلسة المعطّلة
+      try { window.dispatchEvent(new CustomEvent('alwaseet-session-restored')); } catch {}
+
       // تشغيل مزامنة سريعة بعد 5 ثواني من تجديد التوكن
       setTimeout(() => {
         devLog.log('🔄 تشغيل فحص الطلبات المحذوفة بعد تجديد التوكن...');
