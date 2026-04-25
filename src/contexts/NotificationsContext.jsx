@@ -20,8 +20,8 @@ export const NotificationsProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
     const { user } = useAuth();
   
-    // Cache management for data optimization
-    const [lastFetch, setLastFetch] = useState(0);
+    // ✅ تحسين الأداء: نقل lastFetch إلى useRef لمنع re-renders غير ضرورية
+    const lastFetchRef = useRef(0);
     const CACHE_DURATION = 30000; // 30 seconds cache
     
     const fetchNotifications = useCallback(async (force = false) => {
