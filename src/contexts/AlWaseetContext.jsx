@@ -201,11 +201,27 @@ export const AlWaseetProvider = ({ children }) => {
   }, [user?.id, cleanupExpiredTokens]);
 
   // ✅ مستمع لحدث انتهاء توكن الوسيط — يُطلق من src/lib/alwaseet-api.js عند errNum:21
-  // يُظهر توست واضح للمستخدم بدلاً من رسالة "ليس لديك صلاحية الوصول" المربكة
+  // يُظهر toast واضح ويُفرّغ الجلسة المحلية ليتوقف النظام عن إعادة استخدام التوكن المعطوب فوراً.
   useEffect(() => {
     let lastToastAt = 0;
     const handleTokenExpired = (event) => {
       const now = Date.now();
+
+      // 🧹 تنظيف فوري بغض النظر عن throttle - لا نستخدم نفس التوكن الفاسد ثانية
+      try {
+        setToken(null);
+        setTokenExpiry(null);
+        setIsLoggedIn(false);
+        setWaseetUser(null);
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem('delivery_partner_default_token');
+          window.localStorage.removeItem('alwaseet_token');
+          window.localStorage.removeItem('alwaseet_token_expiry');
+        }
+      } catch {
+        /* ignore */
+      }
+
       // throttle: لا تُظهر التوست أكثر من مرة كل 30 ثانية
       if (now - lastToastAt < 30000) return;
       lastToastAt = now;
