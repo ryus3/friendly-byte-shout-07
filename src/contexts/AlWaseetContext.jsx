@@ -428,7 +428,8 @@ export const AlWaseetProvider = ({ children }) => {
         return await reactivateExpiredAccount(accountUsername, partner);
       }
       
-      // تحديث حالة السياق
+      // ✅ تفعيل موحّد + snapshot + رفع guard
+      sessionInvalidatedRef.current = false;
       setToken(accountData.token);
       setTokenExpiry(accountData.expires_at);
       setWaseetUser({
@@ -438,6 +439,14 @@ export const AlWaseetProvider = ({ children }) => {
       });
       setIsLoggedIn(true);
       setActivePartner(partner);
+      setDefaultAccounts(prev => ({ ...(prev || {}), [partner]: normalizeUsername(accountData.account_username) }));
+      writeSessionSnapshot(partner, {
+        token: accountData.token,
+        account_username: accountData.account_username,
+        merchant_id: accountData.merchant_id,
+        account_label: accountData.account_label,
+        expires_at: accountData.expires_at,
+      });
       
       // تحديث last_used_at في قاعدة البيانات
       await supabase
