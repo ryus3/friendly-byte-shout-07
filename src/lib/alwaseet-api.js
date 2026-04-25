@@ -12,6 +12,15 @@ const responseCache = new Map();
 let requestQueue = Promise.resolve();
 let lastRequestAt = 0;
 
+// 🛑 Session-invalid guard: يُرفع عند رصد TOKEN_EXPIRED ويوقف كل الطلبات اللاحقة
+// يُعاد ضبطه عبر window event بعد إعادة تسجيل الدخول من الواجهة.
+let sessionInvalidUntilLogin = false;
+if (typeof window !== 'undefined') {
+  window.addEventListener('alwaseet-session-restored', () => {
+    sessionInvalidUntilLogin = false;
+  });
+}
+
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 const buildRequestKey = (endpoint, method, token, payload, queryParams) => JSON.stringify({
@@ -64,6 +73,14 @@ const readDeliveryHint = (token) => {
 };
 
 const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 2) => {
+  // 🛑 إذا الجلسة معطّلة، لا نرسل أي طلب جديد للوسيط حتى يعاد تسجيل الدخول
+  if (sessionInvalidUntilLogin) {
+    const blocked = new Error('انتهت جلسة الوسيط. يرجى تسجيل الدخول مجدداً قبل المتابعة.');
+    blocked.isTokenExpired = true;
+    blocked.isSessionInvalid = true;
+    throw blocked;
+  }
+
   const requestKey = buildRequestKey(endpoint, method, token, payload, queryParams);
   const cachedEntry = responseCache.get(requestKey);
   if (cachedEntry && cachedEntry.expiresAt > Date.now()) {
@@ -127,6 +144,8 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         // ✅ Detect expired token (errNum:21) — dispatch event للواجهة لتطلب إعادة تسجيل الدخول
         if (data.errNum === 'TOKEN_EXPIRED' || data.error === 'DELIVERY_TOKEN_EXPIRED' || data.requireRelogin === true) {
           devLog.warn(`🔑 توكن الوسيط منتهي للـendpoint: ${endpoint}`);
+          // 🛑 رفع الـ guard فوراً لمنع موجة الطلبات اللاحقة (سبب 503)
+          sessionInvalidUntilLogin = true;
           try {
             window.dispatchEvent(new CustomEvent('alwaseet-token-expired', {
               detail: { endpoint, msg: data.msg }

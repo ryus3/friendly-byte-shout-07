@@ -1,92 +1,126 @@
-الخلاصة من الفحص العميق:
+# Plan
 
-1. خطأ الوسيط الحالي ليس IP whitelist.
-   الطلب يمر عبر البروكسي ويعود أحياناً 200 ثم بعدها 400/errNum:21 بنفس التوكن. هذا يعني أن التوكن نفسه غير مقبول/انتهى عند الوسيط أو الحساب لا يملك صلاحية لبعض الطلبات، وليس مشكلة وصول IP.
+## What will be fixed now
 
-2. السبب الأكبر لاستمرار الخطأ في الواجهة:
-   - `alwaseet-proxy` في الكود يعالج errNum:21 ويعيد 200 منظّم، لكن اللقطة الحالية أظهرت أن الدالة المنشورة ما زالت ترجع 400 خام. إذن يلزم إعادة نشر/تثبيت نسخة البروكسي بعد تعديلها.
-   - `delivery_partner_default_token` في localStorage يحفظ التوكن بدون `expires_at` ولا يتحقق من قاعدة البيانات عند الاستعادة، فيمكن أن يستعيد توكن قديم رغم وجود توكن أحدث.
-   - عند errNum:21 لا يتم إبطال التوكن في قاعدة البيانات ولا حذف الكاش المحلي فوراً، لذلك نفس التوكن يستمر بالاستدعاءات.
+1. Repair تسجيل الدخول والاحتفاظ بالتوكن لشركات التوصيل بحيث الحساب لا يختفي بعد ثوانٍ.
+2. إصلاح خطأ الوسيط جذرياً ومنع الحلقة: TOKEN_EXPIRED ثم 503 ثم اختفاء الجلسة.
+3. جعل مدن تستخدم الكاش فعلياً للمدن والمناطق وأحجام الطرود بدل الاستدعاء كل مرة.
+4. تثبيت خريطة الترجمة الموحدة بين النظام الداخلي وشركات التوصيل.
+5. تشديد حذف الطلب الخارجي: لا حذف محلياً إلا بعد تأكيد قاطع أن الحذف تم فعلاً لدى شركة التوصيل.
 
-3. تراكم التوكنات:
-   حالياً لا توجد نسخ كثيرة ظاهرة لنفس الحساب في الجدول، لكن يوجد أكثر من حساب AlWaseet كل واحد default=true بسبب وجود unique index على `(user_id, partner_name)` فقط وليس على `(user_id, partner_name, account_username)` كمنطق عملي. كما أن التجديد يحدث بتحديث الصف غالباً، لكن لا توجد دالة مركزية واحدة تضمن: تعطيل القديم + حذف الكاش + منع default متعددة.
+## Findings confirmed from the current codebase
 
-4. مدن:
-   الكاش تحسن لكنه ليس كامل من ناحية الربط:
-   - `cities_master`: 18 مدينة.
-   - `regions_master`: 17314 منطقة إجمالاً.
-   - mappings لمدن: 7077 منطقة فقط.
-   - آخر sync لمدن سجل 2406 فقط بسبب أخطاء `ON CONFLICT DO UPDATE command cannot affect row a second time` في بعض المدن.
-   السبب: دالة `update-modon-cache` تزيل التكرار حسب `region_id`، بينما الصحيح لشركات التوصيل هو الحفظ حسب `(delivery_partner, external_id)` لأن نفس اسم المنطقة أو نفس master region يمكن أن يكون له أكثر من external_id. لذلك تضيع مناطق كثيرة أو تفشل upsert.
+- حفظ الجلسة ناقص: `login()` في `AlWaseetContext.jsx` يحفظ السجل في DB ويضبط `token` داخل الحالة، لكنه لا يحدّث `tokenExpiry` ولا يكتب `delivery_partner_default_token` بعد تسجيل الدخول مباشرة. لهذا الاسترجاع لاحقاً يعتمد على بيانات غير مكتملة أو قديمة.
+- `restoreSession()` يثق بـ `localStorage` مباشرة ويعيد الجلسة بدون التحقق أن السجل ما زال `is_active=true` وأن التوكن نفسه ما زال هو الأحدث في DB.
+- عند `errNum:21` يتم تنظيف الحالة المحلية، لكن التطبيق يطلق عدة طلبات متتالية للوسيط في نفس اللحظة؛ سجل الشبكة أظهر `200 TOKEN_EXPIRED` ثم بعدها مباشرة `503 Service temporarily unavailable` من نفس edge function.
+- لا يوجد حالياً تكرار سجلات لنفس الحساب في DB، لكن سبب التراكم البنيوي ما زال موجوداً لأن dedupe يتم في الواجهة فقط وليس بقيد قاعدة بيانات/تطبيع حاسم.
+- كاش MODON موجود فعلاً في DB الآن: 18 مدينة، 5755 ربط منطقة لـ MODON، و4 أحجام طرود. لكن الواجهة لا تستخدمه بالكامل:
+  - `QuickOrderContent.jsx` ما زال يستدعي `ModonAPI.getCities/getRegionsByCity/getPackageSizes` مباشرة.
+  - `fetchRegions()` في `AlWaseetContext.jsx` يقرأ `regions_master.city_id = cityId` بينما `cityId` الخاص بمدن في الواجهة هو `external_id`، لذلك الكاش يفشل ثم يسقط إلى API.
+  - لا يوجد أي كود يكتب إلى `package_sizes_cache`; الجدول يُقرأ فقط، لذلك أحجام الطرود ليست مضمونة التحديث.
+- خريطة الترجمة الموحدة موجودة فعلاً عبر `city_delivery_mappings` و`region_delivery_mappings` ويستخدمها `AlWaseetUnifiedOrderCreator.jsx` وbot/AI، لكن تحميل الواجهة ما زال غير موحّد معها.
+- حذف الطلبات اليدوي في `SuperProvider.jsx` خطير حالياً: يحذف من `orders` مباشرة بدون التحقق من نجاح الحذف في شركة التوصيل. هذا يخالف طلبك الصارم.
 
-5. الواجهة ما زالت تستدعي MODON مباشرة في `QuickOrderContent.jsx` للمدن والمناطق والأحجام بدلاً من الكاش، وهذا يخالف الهدف ويزيد البطء والاستدعاءات.
+## Implementation plan
 
-6. أكبر مسببات البطء:
-   - `AlWaseetContext.jsx` حوالي 5670 سطر: مزامنة + توكنات + كاش + إنشاء طلبات + UI state في ملف واحد.
-   - `SuperProvider.jsx` حوالي 3363 سطر، وقيمة context غير memoized، وهذا يسبب re-render واسع.
-   - `QuickOrderContent.jsx` حوالي 2759 سطر ويستدعي مدن مباشرة.
-   - 1091 console.* في المشروع، مع أن الإنتاج يحذفها عبر terser، لكنها تثقل التطوير وتزعج التشخيص. يجب تنظيفها تدريجياً وليس دفعة واحدة عشوائية.
+### 1) Repair delivery login persistence and token lifecycle
+- إنشاء مسار موحّد داخل `AlWaseetContext.jsx` لتفعيل الحساب بعد login/renew/restore:
+  - يضبط `token`, `tokenExpiry`, `waseetUser`, `isLoggedIn`, `activePartner`
+  - يكتب `delivery_partner_default_token` بشكل موحّد وآمن
+  - يحدّث `delivery_default_accounts`
+- تعديل `restoreSession()` ليقرأ من DB أولاً، ثم يقبل `localStorage` فقط إذا طابق سجلاً نشطاً وغير منتهي ومطابقاً للحساب الافتراضي.
+- تعديل `logout()` وحدث `alwaseet-token-expired` ليحذفا كل مفاتيح الجلسة المرتبطة بالشريك والحساب الافتراضي، لا جزءاً منها فقط.
+- منع الطلبات المتوازية للوسيط بعد انتهاء الجلسة بإضافة guard محلي يوقف أي استدعاء جديد عندما تكون الجلسة معلّمة كمنتهية حتى يعاد تسجيل الدخول.
 
-خطة التنفيذ بعد الموافقة:
+### 2) Eliminate token accumulation at the source
+- إضافة migration تنظّف وتفرض الاتساق في `delivery_partner_tokens`:
+  - توحيد `normalized_username`
+  - unique index على `(user_id, partner_name, normalized_username)`
+  - partial unique index يضمن افتراضي واحد فقط لكل `(user_id, partner_name)` عندما `is_default=true`
+- تعديل login/renew/proxy deactivation ليستخدم `normalized_username` دائماً بدل `ilike(account_username)` فقط.
+- تعديل auto-renew بحيث يحدّث السجل الصحيح بدقة باستخدام `id` أو `normalized_username + partner + user` وليس مطابقة رخوة.
 
-المرحلة 1: إصلاح الوسيط جذرياً بدون تغيير منطق الطلبات
-- إعادة تثبيت `alwaseet-proxy` ليعيد دائماً استجابة 200 منظمة عند errNum:21 بدلاً من 400 خام حتى لا تظهر شاشة Runtime Error.
-- إضافة معلومات آمنة في طلب البروكسي: `partnerName/accountUsername/userId` عند توفرها، حتى يستطيع البروكسي تحديد التوكن المعطوب.
-- عند errNum:21:
-  - تعطيل التوكن المطابق في `delivery_partner_tokens` (`is_active=false`).
-  - تفريغ `delivery_partner_default_token`, `alwaseet_token`, `alwaseet_token_expiry` في المتصفح.
-  - إظهار toast واضح فقط: “انتهت جلسة الوسيط، أعد تسجيل الدخول”.
-  - إيقاف retries فوراً وعدم تكرار نفس الطلب بنفس التوكن.
-- تعديل restore session في `AlWaseetContext` و `UnifiedAuthContext` ليقرأ من قاعدة البيانات أولاً ويتحقق من `expires_at/is_active` ولا يثق بـ localStorage وحده.
-- حفظ `expires_at` و `account_username` داخل localStorage عند الحاجة، مع فحصها قبل التفعيل.
-- جعل تجديد التوكن عملية مركزية: تحديث صف الحساب نفسه فقط، وتعطيل أي صف مكرر/قديم لنفس `(user_id, partner_name, normalized_username)`.
+### 3) Harden AlWaseet proxy against the current crash loop
+- تعديل `alwaseet-proxy` ليبقى دائماً داخل envelope JSON حتى في المسارات الفاشلة غير المتوقعة.
+- إزالة `console.*` المباشر داخل الكود التطبيقي واستبداله بنمط آمن حيث يلزم في الواجهة، وتقليل burst الطلبات بعد `TOKEN_EXPIRED`.
+- فحص سبب 503 مع نشر النسخة الجديدة ثم التحقق عبر logs أن المسار يرجع `200` منظم حتى وقت الانتهاء.
 
-المرحلة 2: تنظيف قاعدة التوكنات وقيودها
-- Migration آمنة تضيف/تثبت دالة normalize username.
-- تنظيف التكرارات إن وجدت مع الاحتفاظ بأحدث صف نشط لكل حساب.
-- تعديل قيود default بحيث لا يكون هناك إلا حساب default واحد لكل شركة ولكل مستخدم، مع عدم حذف الحسابات الأخرى.
-- لا نحذف بيانات حساسة عشوائياً؛ فقط نعطل التوكن المعطوب أو المكرر ونترك الحساب قابل لإعادة تسجيل الدخول.
+### 4) Make MODON fully cache-first in the UI
+- تعديل `QuickOrderContent.jsx` و`AlWaseetContext.jsx` لاستخدام DB cache لمدن ومناطق مدن وأحجام الطرود قبل أي API، وبصورة افتراضية دائمة.
+- تحميل مدن MODON عبر join/lookup من `city_delivery_mappings + cities_master` بحيث تعرض الأسماء الداخلية لكن تحتفظ بـ `external_id` الصحيح للإرسال.
+- تحميل مناطق MODON عبر `region_delivery_mappings + regions_master` مفلترة حسب `external city id` المختار، وليس `regions_master.city_id` مباشرة.
+- إزالة السقوط إلى API من شاشة الإنشاء السريع إلا إذا كان الكاش فارغاً فعلاً أو في مزامنة يدوية مقصودة.
 
-المرحلة 3: إصلاح كاش MODON بالكامل
-- تعديل `region_delivery_mappings` ليكون الربط الفريد الصحيح حسب `(delivery_partner, external_id)` بدلاً من `(region_id, delivery_partner)`، لأن external_id هو هوية شركة التوصيل.
-- تعديل `update-modon-cache`:
-  - dedupe حسب external_id.
-  - إدخال كل المناطق القادمة من MODON في `regions_master`.
-  - upsert mapping لكل external_id بدون إسقاط مناطق متشابهة الاسم.
-  - تسجيل `regions_fetched` و `regions_mapped` بوضوح حتى لا يظهر sync ناجح وهو ناقص.
-- مزامنة package sizes الخاصة بمدن ضمن نفس الكاش إذا لم تكن محدثة.
-- بعد التنفيذ: تشغيل sync وفحص العدادات من DB والسجلات للتأكد أن المناطق المخزنة تطابق المجلوبة من API.
+### 5) Complete MODON cache coverage
+- توسيع `update-modon-cache` ليزامن أيضاً `package_sizes_cache` مثل المدن والمناطق.
+- تحديث `useCitiesCache`/مكوّنات الإدارة كي تعرض بوضوح عدد مدن ومناطق وأحجام MODON من آخر مزامنة ناجحة.
+- الحفاظ على hub الموحّد الحالي كمرجع وحيد للترجمة وعدم إنشاء مسار موازٍ جديد.
 
-المرحلة 4: جعل واجهة مدن تعتمد على الكاش فقط
-- تعديل `QuickOrderContent.jsx`:
-  - مدن المدن من `city_delivery_mappings + cities_master`.
-  - مناطق مدن من `region_delivery_mappings + regions_master` باستخدام external_id الذي تحتاجه API.
-  - أحجام الطرود من `package_sizes_cache`.
-  - API الخارجي يصبح fallback فقط إذا الكاش فارغ، وليس المسار الأساسي.
-- تعديل `AlWaseetContext.fetchCities/fetchRegions` لإزالة `modon_cities_cache` غير الموجود والاعتماد على الجداول الموحدة.
+### 6) Enforce safe external order deletion
+- تعديل مسار الحذف اليدوي في `SuperProvider.jsx`:
+  - الطلب المحلي فقط: الحذف المباشر كما هو.
+  - الطلب الخارجي: لا حذف محلياً قبل محاولة حذف/تحقق خارجي.
+  - إذا التوكن منتهي، أو الاتصال فشل، أو لم يصل تأكيد قاطع من شركة التوصيل: يمنع الحذف المحلي وتظهر رسالة واضحة.
+- إعادة استخدام منطق الحماية الموجود في `AlWaseetContext` و`alwaseet-api.getOrderByQR()` بدلاً من وجود مسارين متناقضين.
+- توسيع المنطق ليشمل MODON أيضاً، مع نفس القاعدة: local delete only after confirmed remote success.
 
-المرحلة 5: أول خطوة تسريع آمنة وقابلة للتراجع
-- لا نبدأ بتقسيم الملفات الضخمة مباشرة لأنه أخطر.
-- نبدأ بـ `SuperProvider.jsx`:
-  - تغليف `contextValue` بـ `useMemo`.
-  - تغليف الدوال inline الثقيلة داخل `useCallback` تدريجياً.
-  - عدم تغيير شكل القيمة الخارجة حتى لا ينكسر أي مكوّن.
-- هذه خطوة قابلة للتراجع بسهولة: ملف واحد، بدون تغيير DB، ونتيجتها تقليل re-renders العام.
+## Technical details
 
-المرحلة 6: خطة هيكلية عالمية لاحقة ملفاً ملفاً
-- تقسيم `AlWaseetContext` إلى:
-  - token/session service.
-  - delivery cache service.
-  - order sync service.
-  - React provider خفيف فقط.
-- تقسيم `SuperProvider` إلى data providers حسب المجال: products/orders/accounting/customers.
-- تحويل الجلب إلى hooks متخصصة مع cache واضح بدلاً من provider واحد يحمل كل شيء.
-- تنظيف console تدريجياً: أولاً الملفات الأكثر تأثيراً (`AlWaseetContext`, `SuperProvider`, `QuickOrderContent`, `modon-api`) واستبدال الضروري بـ `devLog` أو حذفه.
+```text
+Unified delivery cache flow
+UI selection
+  -> cities_master + city_delivery_mappings(partner)
+  -> regions_master + region_delivery_mappings(partner)
+  -> package_sizes_cache(partner)
+  -> order creator translates internal IDs to partner external_id
+  -> partner API
+```
 
-معايير القبول بعد التنفيذ:
-- خطأ errNum:21 لا يظهر كشاشة Runtime Error نهائياً.
-- عند تلف التوكن، يتم تعطيله ولا يعاد استخدامه تلقائياً.
-- عند تجديد التوكن لنفس الحساب، يبقى صف واحد نشط فقط لذلك الحساب.
-- مدن تعرض المدن والمناطق والأحجام من الكاش بدون استدعاء API عند فتح الطلب.
-- sync مدن لا يسجل success إذا فشل ربط المناطق.
-- أول تحسين أداء لا يغير وظائف النظام ولا يمس المخزون أو المال أو الطلبات.
+```text
+Safe token lifecycle
+login/renew/restore
+  -> normalize username
+  -> upsert exact token row
+  -> set one default row only
+  -> write validated local session snapshot
+errNum:21
+  -> deactivate DB row
+  -> clear local session snapshot
+  -> stop further partner requests
+  -> require manual re-login
+```
+
+```text
+Safe external deletion
+Delete click
+  -> identify local vs external order
+  -> if external: validate active token
+  -> call remote delete or remote existence check
+  -> delete locally only when remote confirmed success/not-found conclusively
+  -> otherwise block delete and keep local order untouched
+```
+
+## Files likely to change
+
+- `src/contexts/AlWaseetContext.jsx`
+- `src/lib/alwaseet-api.js`
+- `src/lib/modon-api.js`
+- `src/components/quick-order/QuickOrderContent.jsx`
+- `src/contexts/SuperProvider.jsx`
+- `src/hooks/useCitiesCache.js`
+- `supabase/functions/alwaseet-proxy/index.ts`
+- `supabase/functions/update-modon-cache/index.ts`
+- `supabase/functions/refresh-delivery-partner-tokens/index.ts`
+- new Supabase migration for token uniqueness/default consistency
+
+## Validation after implementation
+
+1. تسجيل الدخول للوسيط ثم تحديث الصفحة والتأكد أن الحساب يبقى محفوظاً.
+2. افتعال `errNum:21` والتأكد أن الجلسة تُمسح مرة واحدة بلا 503 ولا overlay.
+3. فتح نموذج مدن والتأكد أن المدن/المناطق/الأحجام تُحمّل من الكاش بدون نداءات API متكررة.
+4. التحقق أن عدد مناطق MODON الظاهر يطابق المزامنة الأخيرة المخزنة.
+5. تجربة حذف طلب خارجي مع:
+   - توكن صالح
+   - توكن منتهي
+   - فشل اتصال
+   والتأكد أن الحذف المحلي لا يتم إلا عند التأكيد القاطع.

@@ -87,6 +87,40 @@ export const AlWaseetProvider = ({ children }) => {
   const normalizeUsername = useCallback((username) => {
     return String(username || '').trim().toLowerCase();
   }, []);
+
+  // ✅ Guard: عند انتهاء جلسة الوسيط نعطّل أي استدعاء جديد حتى يعيد المستخدم تسجيل الدخول
+  // هذا يمنع موجة الطلبات المتزامنة التي تسبب 503 على alwaseet-proxy
+  const sessionInvalidatedRef = useRef(false);
+
+  // ✅ كتابة snapshot موحّد للجلسة في localStorage (مفتاح واحد فقط: delivery_partner_default_token)
+  const writeSessionSnapshot = useCallback((partner, accountInfo) => {
+    if (typeof window === 'undefined' || !partner || !accountInfo?.token) return;
+    try {
+      const payload = {
+        token: accountInfo.token,
+        partner_name: partner,
+        username: accountInfo.account_username || accountInfo.username || null,
+        merchant_id: accountInfo.merchant_id || null,
+        label: accountInfo.account_label || accountInfo.label || null,
+        expires_at: accountInfo.expires_at || null,
+        saved_at: new Date().toISOString(),
+      };
+      window.localStorage.setItem('delivery_partner_default_token', JSON.stringify(payload));
+    } catch (e) {
+      console.warn('writeSessionSnapshot failed:', e);
+    }
+  }, []);
+
+  // ✅ مسح snapshot الجلسة بالكامل
+  const clearSessionSnapshot = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.removeItem('delivery_partner_default_token');
+      window.localStorage.removeItem('alwaseet_token');
+      window.localStorage.removeItem('alwaseet_token_expiry');
+      window.localStorage.removeItem('alwaseet_user');
+    } catch { /* ignore */ }
+  }, []);
   
   // دالة للحصول على توكن المستخدم من النظام الأصلي - دعم متعدد الحسابات
   // ✅ معامل strictMode: إذا كان true ولم يُمرر accountUsername، إرجاع null (بدون fallback)
@@ -207,17 +241,16 @@ export const AlWaseetProvider = ({ children }) => {
     const handleTokenExpired = (event) => {
       const now = Date.now();
 
+      // 🛑 رفع الـ guard لمنع أي استدعاء جديد للوسيط حتى يعاد تسجيل الدخول
+      sessionInvalidatedRef.current = true;
+
       // 🧹 تنظيف فوري بغض النظر عن throttle - لا نستخدم نفس التوكن الفاسد ثانية
       try {
         setToken(null);
         setTokenExpiry(null);
         setIsLoggedIn(false);
         setWaseetUser(null);
-        if (typeof window !== 'undefined') {
-          window.localStorage.removeItem('delivery_partner_default_token');
-          window.localStorage.removeItem('alwaseet_token');
-          window.localStorage.removeItem('alwaseet_token_expiry');
-        }
+        clearSessionSnapshot();
       } catch {
         /* ignore */
       }
@@ -234,7 +267,7 @@ export const AlWaseetProvider = ({ children }) => {
     };
     window.addEventListener('alwaseet-token-expired', handleTokenExpired);
     return () => window.removeEventListener('alwaseet-token-expired', handleTokenExpired);
-  }, []);
+  }, [clearSessionSnapshot]);
 
   // ✅ استعادة آخر شركة توصيل غير 'local' عند التحميل
   useEffect(() => {
@@ -325,7 +358,8 @@ export const AlWaseetProvider = ({ children }) => {
         .eq('partner_name', partner)
         .ilike('account_username', accountUsername.trim().toLowerCase());
       
-      // تحديث حالة السياق
+      // ✅ تفعيل موحّد + snapshot + رفع guard
+      sessionInvalidatedRef.current = false;
       setToken(newToken);
       setTokenExpiry(expiresAt.toISOString());
       setWaseetUser({
@@ -335,6 +369,14 @@ export const AlWaseetProvider = ({ children }) => {
       });
       setIsLoggedIn(true);
       setActivePartner(partner);
+      setDefaultAccounts(prev => ({ ...(prev || {}), [partner]: normalizeUsername(accountRecord.account_username) }));
+      writeSessionSnapshot(partner, {
+        token: newToken,
+        account_username: accountRecord.account_username,
+        merchant_id: accountRecord.merchant_id,
+        account_label: accountRecord.account_label,
+        expires_at: expiresAt.toISOString(),
+      });
       
       const partnerDisplayName = deliveryPartners[partner]?.name || partner;
       toast({
@@ -386,7 +428,8 @@ export const AlWaseetProvider = ({ children }) => {
         return await reactivateExpiredAccount(accountUsername, partner);
       }
       
-      // تحديث حالة السياق
+      // ✅ تفعيل موحّد + snapshot + رفع guard
+      sessionInvalidatedRef.current = false;
       setToken(accountData.token);
       setTokenExpiry(accountData.expires_at);
       setWaseetUser({
@@ -396,6 +439,14 @@ export const AlWaseetProvider = ({ children }) => {
       });
       setIsLoggedIn(true);
       setActivePartner(partner);
+      setDefaultAccounts(prev => ({ ...(prev || {}), [partner]: normalizeUsername(accountData.account_username) }));
+      writeSessionSnapshot(partner, {
+        token: accountData.token,
+        account_username: accountData.account_username,
+        merchant_id: accountData.merchant_id,
+        account_label: accountData.account_label,
+        expires_at: accountData.expires_at,
+      });
       
       // تحديث last_used_at في قاعدة البيانات
       await supabase
@@ -1897,104 +1948,86 @@ export const AlWaseetProvider = ({ children }) => {
   }, []);
 
   // 🔐 Auto-Login: استعادة الجلسة تلقائياً عند بدء التطبيق
+  // ✅ مصدر الحقيقة هو DB: snapshot من localStorage يُقبل فقط إذا طابق سجلاً نشطاً وغير منتهٍ
   useEffect(() => {
     const restoreSession = async () => {
       if (!user?.id || isLoggedIn) return;
-      
+
       try {
-        devLog.log('🔍 محاولة استعادة جلسة شركة التوصيل...');
-        
-        // ✅ الطريقة الأولى: localStorage
-        const savedDefaultToken = localStorage.getItem('delivery_partner_default_token');
-        if (savedDefaultToken) {
-          try {
-            const defaultData = JSON.parse(savedDefaultToken);
-            
-            
-            // ✅ تفعيل الجلسة مباشرة
-            setToken(defaultData.token);
-            setActivePartner(defaultData.partner_name);
-            setIsLoggedIn(true);
-            setWaseetUser({
-              username: defaultData.username,
-              merchantId: defaultData.merchant_id,
-              label: defaultData.label
-            });
-            
-            // ✅ استخدام setActivePartner للحفظ الصحيح
-            // بدلاً من localStorage.setItem مباشرة
-            
-            // ✅ تحديث last_used_at
-            await supabase
-              .from('delivery_partner_tokens')
-              .update({ last_used_at: new Date().toISOString() })
-              .eq('user_id', user.id)
-              .eq('partner_name', defaultData.partner_name)
-              .eq('is_default', true);
-            
-            return; // ✅ انتهى
-          } catch (err) {
-            console.error('❌ خطأ في استخدام الجلسة المحفوظة:', err);
-            localStorage.removeItem('delivery_partner_default_token');
-          }
+        devLog.log('🔍 محاولة استعادة جلسة شركة التوصيل (DB-first)...');
+
+        // 1) قراءة snapshot كتلميح فقط (للأولوية بين عدة حسابات)
+        let snapshot = null;
+        try {
+          const raw = localStorage.getItem('delivery_partner_default_token');
+          if (raw) snapshot = JSON.parse(raw);
+        } catch {
+          localStorage.removeItem('delivery_partner_default_token');
         }
-        
-        // ✅ الطريقة الثانية: قاعدة البيانات
-        
-        
-        let tokenData = await supabase
+
+        // 2) جلب أحدث توكن صالح + افتراضي + نشط من DB
+        let query = supabase
           .from('delivery_partner_tokens')
-          .select('*')
+          .select('id, partner_name, account_username, account_label, merchant_id, token, expires_at, is_active, is_default')
           .eq('user_id', user.id)
-          .eq('is_default', true)
+          .eq('is_active', true)
           .gt('expires_at', new Date().toISOString())
+          .order('is_default', { ascending: false })
           .order('last_used_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        
-        if (tokenData.data) {
-          
-          
-          // ✅ حفظ في localStorage للمرات القادمة
-          localStorage.setItem('delivery_partner_default_token', JSON.stringify({
-            token: tokenData.data.token,
-            partner_name: tokenData.data.partner_name,
-            username: tokenData.data.account_username,
-            merchant_id: tokenData.data.merchant_id,
-            label: tokenData.data.account_label
-          }));
-          
-          // ✅ سيتم حفظ اسم الشريك عبر setActivePartner أدناه
-          
-          // ✅ تفعيل الجلسة
-          setToken(tokenData.data.token);
-          setActivePartner(tokenData.data.partner_name);
-          setIsLoggedIn(true);
-          setWaseetUser({
-            username: tokenData.data.account_username,
-            merchantId: tokenData.data.merchant_id,
-            label: tokenData.data.account_label
-          });
-        } else {
-          
-          
-          // ✅ Fallback: تحديد الشريك الافتراضي بناءً على order_creation_mode
+          .limit(1);
+
+        if (snapshot?.partner_name) {
+          query = query.eq('partner_name', snapshot.partner_name);
+        }
+
+        const { data: tokenRow } = await query.maybeSingle();
+
+        if (!tokenRow) {
+          // لا توكن صالح — امسح snapshot قديم وحدّد شريك افتراضي حسب وضع المستخدم
+          clearSessionSnapshot();
+
           const { data: profile } = await supabase
             .from('profiles')
             .select('order_creation_mode')
             .eq('user_id', user.id)
             .maybeSingle();
-          
+
           const creationMode = profile?.order_creation_mode || 'choice';
-          
-          // ✅ منع 'local' من أن يكون افتراضي أبداً
           if (creationMode === 'partner_only' || creationMode === 'local_only') {
             const firstPartner = Object.keys(deliveryPartners).find(k => k !== 'local') || 'alwaseet';
             setActivePartner(firstPartner);
-          
           }
-          // في وضع 'choice'، لا نفعل شيء ونترك المستخدم يختار
+          return;
         }
+
+        // 3) تفعيل الجلسة موحّداً
+        sessionInvalidatedRef.current = false;
+        setToken(tokenRow.token);
+        setTokenExpiry(tokenRow.expires_at);
+        setActivePartner(tokenRow.partner_name);
+        setIsLoggedIn(true);
+        setWaseetUser({
+          username: tokenRow.account_username,
+          merchantId: tokenRow.merchant_id,
+          label: tokenRow.account_label
+        });
+        setDefaultAccounts(prev => ({
+          ...(prev || {}),
+          [tokenRow.partner_name]: normalizeUsername(tokenRow.account_username)
+        }));
+        writeSessionSnapshot(tokenRow.partner_name, {
+          token: tokenRow.token,
+          account_username: tokenRow.account_username,
+          merchant_id: tokenRow.merchant_id,
+          account_label: tokenRow.account_label,
+          expires_at: tokenRow.expires_at,
+        });
+
+        // تحديث last_used_at بدقة عبر id
+        await supabase
+          .from('delivery_partner_tokens')
+          .update({ last_used_at: new Date().toISOString() })
+          .eq('id', tokenRow.id);
       } catch (error) {
         console.error('❌ خطأ في استعادة الجلسة:', error);
       }
@@ -2273,17 +2306,31 @@ export const AlWaseetProvider = ({ children }) => {
         throw new Error('فشل في حفظ بيانات تسجيل الدخول: ' + error.message);
       }
 
+      // ✅ تفعيل الجلسة موحّداً: state + tokenExpiry + snapshot + إعادة تعيين guard
+      sessionInvalidatedRef.current = false;
       setToken(tokenData.token);
+      setTokenExpiry(expires_at.toISOString());
       setWaseetUser(partnerData);
       setIsLoggedIn(true);
       setActivePartner(partner);
-      
-      const partnerName = deliveryPartners[partner]?.name || partner;
-      toast({ 
-        title: "نجاح", 
-        description: `تم تسجيل الدخول بنجاح في ${partnerName}.` 
+      setDefaultAccounts(prev => ({ ...(prev || {}), [partner]: normalizedUsername }));
+      writeSessionSnapshot(partner, {
+        token: tokenData.token,
+        account_username: normalizedUsername,
+        merchant_id: merchantId,
+        account_label: normalizedUsername,
+        expires_at: expires_at.toISOString(),
       });
-      
+
+      const partnerName = deliveryPartners[partner]?.name || partner;
+      toast({
+        title: "نجاح",
+        description: `تم تسجيل الدخول بنجاح في ${partnerName}.`
+      });
+
+      // 🔓 إعلام طبقة API برفع guard الجلسة المعطّلة
+      try { window.dispatchEvent(new CustomEvent('alwaseet-session-restored')); } catch {}
+
       // تشغيل مزامنة سريعة بعد 5 ثواني من تجديد التوكن
       setTimeout(() => {
         devLog.log('🔄 تشغيل فحص الطلبات المحذوفة بعد تجديد التوكن...');
