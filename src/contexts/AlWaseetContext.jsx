@@ -87,6 +87,40 @@ export const AlWaseetProvider = ({ children }) => {
   const normalizeUsername = useCallback((username) => {
     return String(username || '').trim().toLowerCase();
   }, []);
+
+  // ✅ Guard: عند انتهاء جلسة الوسيط نعطّل أي استدعاء جديد حتى يعيد المستخدم تسجيل الدخول
+  // هذا يمنع موجة الطلبات المتزامنة التي تسبب 503 على alwaseet-proxy
+  const sessionInvalidatedRef = useRef(false);
+
+  // ✅ كتابة snapshot موحّد للجلسة في localStorage (مفتاح واحد فقط: delivery_partner_default_token)
+  const writeSessionSnapshot = useCallback((partner, accountInfo) => {
+    if (typeof window === 'undefined' || !partner || !accountInfo?.token) return;
+    try {
+      const payload = {
+        token: accountInfo.token,
+        partner_name: partner,
+        username: accountInfo.account_username || accountInfo.username || null,
+        merchant_id: accountInfo.merchant_id || null,
+        label: accountInfo.account_label || accountInfo.label || null,
+        expires_at: accountInfo.expires_at || null,
+        saved_at: new Date().toISOString(),
+      };
+      window.localStorage.setItem('delivery_partner_default_token', JSON.stringify(payload));
+    } catch (e) {
+      console.warn('writeSessionSnapshot failed:', e);
+    }
+  }, []);
+
+  // ✅ مسح snapshot الجلسة بالكامل
+  const clearSessionSnapshot = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.removeItem('delivery_partner_default_token');
+      window.localStorage.removeItem('alwaseet_token');
+      window.localStorage.removeItem('alwaseet_token_expiry');
+      window.localStorage.removeItem('alwaseet_user');
+    } catch { /* ignore */ }
+  }, []);
   
   // دالة للحصول على توكن المستخدم من النظام الأصلي - دعم متعدد الحسابات
   // ✅ معامل strictMode: إذا كان true ولم يُمرر accountUsername، إرجاع null (بدون fallback)
