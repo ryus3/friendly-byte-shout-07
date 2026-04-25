@@ -468,9 +468,16 @@ export const NotificationsProvider = ({ children }) => {
     // حذف الإشعار التجريبي - النظام جاهز للإنتاج
     const sendTestNotification = null;
 
-    const value = {
+    // ✅ تحسين الأداء: useMemo لمنع إعادة إنشاء object عند كل render
+    // هذا يقلل re-renders للمستهلكين بنسبة كبيرة
+    const unreadCount = useMemo(
+        () => notifications.filter(n => !n.is_read).length,
+        [notifications]
+    );
+
+    const value = useMemo(() => ({
         notifications,
-        unreadCount: notifications.filter(n => !n.is_read).length,
+        unreadCount,
         addNotification,
         markAsRead,
         markAllAsRead,
@@ -478,7 +485,16 @@ export const NotificationsProvider = ({ children }) => {
         deleteNotification,
         deleteNotificationByTypeAndData,
         sendTestNotification
-    };
+    }), [
+        notifications,
+        unreadCount,
+        addNotification,
+        markAsRead,
+        markAllAsRead,
+        clearAll,
+        deleteNotification,
+        deleteNotificationByTypeAndData
+    ]);
 
     return (
         <NotificationsContext.Provider value={value}>
