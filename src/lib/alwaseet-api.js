@@ -47,6 +47,22 @@ const runQueuedRequest = async (requestFactory) => {
   return scheduled;
 };
 
+// ✅ Best-effort context: helps the edge function deactivate the right token row when errNum:21 happens.
+const readDeliveryHint = (token) => {
+  try {
+    const raw = typeof window !== 'undefined' ? window.localStorage.getItem('delivery_partner_default_token') : null;
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed?.token && token && parsed.token !== token) return { partnerName: parsed.partner_name };
+    return {
+      partnerName: parsed?.partner_name,
+      accountUsername: parsed?.username,
+    };
+  } catch {
+    return {};
+  }
+};
+
 const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 2) => {
   const requestKey = buildRequestKey(endpoint, method, token, payload, queryParams);
   const cachedEntry = responseCache.get(requestKey);
@@ -58,11 +74,21 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
     return inflightRequests.get(requestKey);
   }
 
+  const hint = readDeliveryHint(token);
+
   const requestPromise = (async () => {
     for (let attempt = 1; attempt <= retries; attempt++) {
       try {
         const { data, error } = await runQueuedRequest(() => supabase.functions.invoke('alwaseet-proxy', {
-          body: { endpoint, method, token, payload, queryParams }
+          body: {
+            endpoint,
+            method,
+            token,
+            payload,
+            queryParams,
+            partnerName: hint.partnerName || 'alwaseet',
+            accountUsername: hint.accountUsername || null,
+          }
         }));
 
         if (error) {
