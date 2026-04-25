@@ -91,11 +91,24 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         }
 
         // ✅ Detect structured Cloudflare block from proxy (returned as 200 with fallback flag)
-        if (data.errNum === 'CF_BLOCKED' || data.error === 'DELIVERY_SERVICE_BLOCKED' || data.fallback === true) {
+        if (data.errNum === 'CF_BLOCKED' || data.error === 'DELIVERY_SERVICE_BLOCKED') {
           const cfErr = new Error(data.msg || 'مزود التوصيل حظر الطلب مؤقتاً');
           cfErr.isCloudflareBlock = true;
           cfErr.rayId = data.details?.rayId;
           throw cfErr;
+        }
+
+        // ✅ Detect expired token (errNum:21) — dispatch event للواجهة لتطلب إعادة تسجيل الدخول
+        if (data.errNum === 'TOKEN_EXPIRED' || data.error === 'DELIVERY_TOKEN_EXPIRED' || data.requireRelogin === true) {
+          devLog.warn(`🔑 توكن الوسيط منتهي للـendpoint: ${endpoint}`);
+          try {
+            window.dispatchEvent(new CustomEvent('alwaseet-token-expired', {
+              detail: { endpoint, msg: data.msg }
+            }));
+          } catch { /* SSR-safe */ }
+          const tokErr = new Error(data.msg || 'انتهت صلاحية جلسة الوسيط');
+          tokErr.isTokenExpired = true;
+          throw tokErr;
         }
         
         // معالجة خاصة لـ edit-order
@@ -129,6 +142,11 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         // ✅ Cloudflare block: NO retries - fail fast
         if (error.isCloudflareBlock) {
           devLog.warn(`⛔ Cloudflare حظر ${endpoint} - rayId: ${error.rayId || 'N/A'}`);
+          throw error;
+        }
+
+        // ✅ Token expired: NO retries - fail fast (المستخدم يحتاج إعادة تسجيل دخول)
+        if (error.isTokenExpired) {
           throw error;
         }
 

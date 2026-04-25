@@ -1,5 +1,5 @@
 
-import React, { createContext, useState, useContext, useCallback, useEffect } from 'react';
+import React, { createContext, useState, useContext, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useAuth } from './UnifiedAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast.js';
@@ -20,8 +20,8 @@ export const NotificationsProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
     const { user } = useAuth();
   
-    // Cache management for data optimization
-    const [lastFetch, setLastFetch] = useState(0);
+    // ✅ تحسين الأداء: نقل lastFetch إلى useRef لمنع re-renders غير ضرورية
+    const lastFetchRef = useRef(0);
     const CACHE_DURATION = 30000; // 30 seconds cache
     
     const fetchNotifications = useCallback(async (force = false) => {
@@ -29,7 +29,7 @@ export const NotificationsProvider = ({ children }) => {
         
         // Use cache to reduce data usage
         const now = Date.now();
-        if (!force && (now - lastFetch) < CACHE_DURATION) {
+        if (!force && (now - lastFetchRef.current) < CACHE_DURATION) {
             return;
         }
         
@@ -89,8 +89,8 @@ export const NotificationsProvider = ({ children }) => {
         }));
         
         setNotifications(notificationsWithReadStatus);
-        setLastFetch(now);
-    }, [user, lastFetch]);
+        lastFetchRef.current = now;
+    }, [user]);
 
     useEffect(() => {
         fetchNotifications();
@@ -468,9 +468,16 @@ export const NotificationsProvider = ({ children }) => {
     // حذف الإشعار التجريبي - النظام جاهز للإنتاج
     const sendTestNotification = null;
 
-    const value = {
+    // ✅ تحسين الأداء: useMemo لمنع إعادة إنشاء object عند كل render
+    // هذا يقلل re-renders للمستهلكين بنسبة كبيرة
+    const unreadCount = useMemo(
+        () => notifications.filter(n => !n.is_read).length,
+        [notifications]
+    );
+
+    const value = useMemo(() => ({
         notifications,
-        unreadCount: notifications.filter(n => !n.is_read).length,
+        unreadCount,
         addNotification,
         markAsRead,
         markAllAsRead,
@@ -478,7 +485,16 @@ export const NotificationsProvider = ({ children }) => {
         deleteNotification,
         deleteNotificationByTypeAndData,
         sendTestNotification
-    };
+    }), [
+        notifications,
+        unreadCount,
+        addNotification,
+        markAsRead,
+        markAllAsRead,
+        clearAll,
+        deleteNotification,
+        deleteNotificationByTypeAndData
+    ]);
 
     return (
         <NotificationsContext.Provider value={value}>
