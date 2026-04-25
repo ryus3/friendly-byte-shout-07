@@ -729,7 +729,7 @@ export type Database = {
       }
       cities_master: {
         Row: {
-          alwaseet_id: number
+          alwaseet_id: number | null
           created_at: string | null
           id: number
           is_active: boolean | null
@@ -739,9 +739,9 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          alwaseet_id: number
+          alwaseet_id?: number | null
           created_at?: string | null
-          id: number
+          id?: number
           is_active?: boolean | null
           name: string
           name_ar?: string | null
@@ -749,7 +749,7 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          alwaseet_id?: number
+          alwaseet_id?: number | null
           created_at?: string | null
           id?: number
           is_active?: boolean | null
@@ -5775,7 +5775,7 @@ export type Database = {
       }
       regions_master: {
         Row: {
-          alwaseet_id: number
+          alwaseet_id: number | null
           city_id: number
           created_at: string | null
           id: number
@@ -5784,16 +5784,16 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          alwaseet_id: number
+          alwaseet_id?: number | null
           city_id: number
           created_at?: string | null
-          id: number
+          id?: number
           is_active?: boolean | null
           name: string
           updated_at?: string | null
         }
         Update: {
-          alwaseet_id?: number
+          alwaseet_id?: number | null
           city_id?: number
           created_at?: string | null
           id?: number
