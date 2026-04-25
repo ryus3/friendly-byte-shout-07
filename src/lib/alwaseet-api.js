@@ -145,6 +145,11 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
           throw error;
         }
 
+        // ✅ Token expired: NO retries - fail fast (المستخدم يحتاج إعادة تسجيل دخول)
+        if (error.isTokenExpired) {
+          throw error;
+        }
+
         const isRateLimitError = 
           error.message?.includes('تجاوزت الحد المسموح به') || 
           error.message?.includes('rate limit') ||
