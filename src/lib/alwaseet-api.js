@@ -21,6 +21,8 @@ if (typeof window !== 'undefined') {
   });
 }
 
+const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const buildRequestKey = (endpoint, method, token, payload, queryParams) => JSON.stringify({
   endpoint,
   method,
