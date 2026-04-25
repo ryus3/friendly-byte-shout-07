@@ -12,7 +12,14 @@ const responseCache = new Map();
 let requestQueue = Promise.resolve();
 let lastRequestAt = 0;
 
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+// 🛑 Session-invalid guard: يُرفع عند رصد TOKEN_EXPIRED ويوقف كل الطلبات اللاحقة
+// يُعاد ضبطه عبر window event بعد إعادة تسجيل الدخول من الواجهة.
+let sessionInvalidUntilLogin = false;
+if (typeof window !== 'undefined') {
+  window.addEventListener('alwaseet-session-restored', () => {
+    sessionInvalidUntilLogin = false;
+  });
+}
 
 const buildRequestKey = (endpoint, method, token, payload, queryParams) => JSON.stringify({
   endpoint,
