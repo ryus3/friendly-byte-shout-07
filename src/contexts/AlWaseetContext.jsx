@@ -200,6 +200,26 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [user?.id, cleanupExpiredTokens]);
 
+  // ✅ مستمع لحدث انتهاء توكن الوسيط — يُطلق من src/lib/alwaseet-api.js عند errNum:21
+  // يُظهر توست واضح للمستخدم بدلاً من رسالة "ليس لديك صلاحية الوصول" المربكة
+  useEffect(() => {
+    let lastToastAt = 0;
+    const handleTokenExpired = (event) => {
+      const now = Date.now();
+      // throttle: لا تُظهر التوست أكثر من مرة كل 30 ثانية
+      if (now - lastToastAt < 30000) return;
+      lastToastAt = now;
+      toast({
+        title: '🔑 انتهت جلسة الوسيط',
+        description: event?.detail?.msg || 'يرجى تسجيل الدخول مجدداً من إعدادات شركة التوصيل.',
+        variant: 'destructive',
+        duration: 8000,
+      });
+    };
+    window.addEventListener('alwaseet-token-expired', handleTokenExpired);
+    return () => window.removeEventListener('alwaseet-token-expired', handleTokenExpired);
+  }, []);
+
   // ✅ استعادة آخر شركة توصيل غير 'local' عند التحميل
   useEffect(() => {
     if (!activePartner || activePartner === 'local') {
