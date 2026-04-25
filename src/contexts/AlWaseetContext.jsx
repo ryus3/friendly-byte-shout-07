@@ -241,17 +241,16 @@ export const AlWaseetProvider = ({ children }) => {
     const handleTokenExpired = (event) => {
       const now = Date.now();
 
+      // 🛑 رفع الـ guard لمنع أي استدعاء جديد للوسيط حتى يعاد تسجيل الدخول
+      sessionInvalidatedRef.current = true;
+
       // 🧹 تنظيف فوري بغض النظر عن throttle - لا نستخدم نفس التوكن الفاسد ثانية
       try {
         setToken(null);
         setTokenExpiry(null);
         setIsLoggedIn(false);
         setWaseetUser(null);
-        if (typeof window !== 'undefined') {
-          window.localStorage.removeItem('delivery_partner_default_token');
-          window.localStorage.removeItem('alwaseet_token');
-          window.localStorage.removeItem('alwaseet_token_expiry');
-        }
+        clearSessionSnapshot();
       } catch {
         /* ignore */
       }
@@ -268,7 +267,7 @@ export const AlWaseetProvider = ({ children }) => {
     };
     window.addEventListener('alwaseet-token-expired', handleTokenExpired);
     return () => window.removeEventListener('alwaseet-token-expired', handleTokenExpired);
-  }, []);
+  }, [clearSessionSnapshot]);
 
   // ✅ استعادة آخر شركة توصيل غير 'local' عند التحميل
   useEffect(() => {
