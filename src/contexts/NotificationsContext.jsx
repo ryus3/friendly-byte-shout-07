@@ -29,7 +29,7 @@ export const NotificationsProvider = ({ children }) => {
         
         // Use cache to reduce data usage
         const now = Date.now();
-        if (!force && (now - lastFetch) < CACHE_DURATION) {
+        if (!force && (now - lastFetchRef.current) < CACHE_DURATION) {
             return;
         }
         
