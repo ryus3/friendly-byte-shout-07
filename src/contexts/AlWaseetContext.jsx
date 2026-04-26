@@ -1730,6 +1730,8 @@ export const AlWaseetProvider = ({ children }) => {
   }, [user?.id, getTokenForUser]);
   
   // دالة جلب التوكن وتحديث حالة السياق
+  // 🛡️ مهمة: لا تمسح isLoggedIn/token إذا لم تجد سجلاً — هذا يمنع تسجيل خروج كاذب
+  // عند بدء التطبيق أو عند سباق مع restoreSession.
   const fetchToken = useCallback(async () => {
     if (!user?.id) return;
     
@@ -1745,20 +1747,15 @@ export const AlWaseetProvider = ({ children }) => {
         });
         setIsLoggedIn(true);
         
-        // فقط إذا لم يكن هناك شريك نشط محدد
         if (activePartner === 'local') {
           setActivePartner('alwaseet');
         }
-      } else {
-        setToken(null);
-        setWaseetUser(null);
-        setIsLoggedIn(false);
       }
+      // ⚠️ مقصود: إن لم نجد توكناً هنا، لا نُسجّل خروج. تترك الحالة كما هي،
+      //     لأن restoreSession() هو المصدر الموثوق ويتعامل مع غياب التوكن.
     } catch (error) {
       console.error('خطأ في جلب التوكن:', error);
-      setToken(null);
-      setWaseetUser(null);
-      setIsLoggedIn(false);
+      // ⚠️ مقصود: لا نُفرغ الجلسة على مجرد خطأ شبكي/RLS عابر.
     }
   }, [user?.id, getTokenForUser, activePartner, setActivePartner]);
   const [syncInterval, setSyncInterval] = useLocalStorage('sync_interval', 600000); // Default to 10 minutes
