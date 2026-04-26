@@ -69,10 +69,10 @@ async function deactivateBadToken(token: string | null | undefined, hint?: {
   userId?: string;
 }) {
   if (!token) return;
-  // Without a user/account hint we cannot tell whose row this is; do nothing to avoid corrupting
-  // shared accounts used by multiple employees.
-  if (!hint?.userId && !hint?.accountUsername) {
-    console.warn('[AlWaseet Proxy] deactivateBadToken skipped: no user/account hint');
+  // Without user_id we cannot tell whose shared delivery-account row this is; do nothing to avoid
+  // deactivating the same AlWaseet account for multiple employees/admins.
+  if (!hint?.userId) {
+    console.warn('[AlWaseet Proxy] deactivateBadToken skipped: no user_id hint');
     return;
   }
   try {
@@ -224,6 +224,13 @@ Deno.serve(async (req) => {
       } catch {
         data = { raw: responseText.substring(0, 500) };
       }
+    }
+
+    // `statuses` is treated as static/cacheable in the frontend. Some AlWaseet accounts return errNum:21
+    // for this endpoint even while order endpoints still work, so never invalidate a login because of it.
+    if (endpoint === 'statuses' && data && (data.errNum === 21 || data.errNum === '21')) {
+      console.warn('[AlWaseet Proxy] Ignored TOKEN_EXPIRED from statuses endpoint; returning empty status cache');
+      return json({ status: true, ok: true, errNum: 'S000', data: [], fallback: true });
     }
 
     // errNum 21 = invalid/expired/forbidden token. Deactivate it in DB and return a clean envelope.

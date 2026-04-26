@@ -20,7 +20,7 @@ import { getCities, getRegionsByCity } from '@/lib/alwaseet-api';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 import devLog from '@/lib/devLogger';
 
-const SuperContext = createContext();
+export const SuperContext = createContext();
 
 export const useSuper = () => {
   const context = useContext(SuperContext);
