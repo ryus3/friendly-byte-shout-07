@@ -100,6 +100,7 @@ export const AlWaseetProvider = ({ children }) => {
         token: accountInfo.token,
         partner_name: partner,
         username: accountInfo.account_username || accountInfo.username || null,
+        user_id: user?.id || accountInfo.user_id || null,
         merchant_id: accountInfo.merchant_id || null,
         label: accountInfo.account_label || accountInfo.label || null,
         expires_at: accountInfo.expires_at || null,
@@ -133,9 +134,10 @@ export const AlWaseetProvider = ({ children }) => {
     try {
       let query = supabase
         .from('delivery_partner_tokens')
-        .select('token, expires_at, account_username, merchant_id, account_label, is_default, partner_name')
+        .select('id, token, expires_at, account_username, merchant_id, account_label, is_default, partner_name, is_active')
         .eq('user_id', userId)
-        .eq('partner_name', partner);
+        .eq('partner_name', partner)
+        .eq('is_active', true);
       
       if (accountUsername) {
         // تطبيع اسم الحساب: lowercase + trim + إزالة المسافات وتحويلها لشرطات
@@ -173,7 +175,7 @@ export const AlWaseetProvider = ({ children }) => {
     } catch (error) {
       return null;
     }
-  }, [activePartner, defaultAccounts]);
+  }, [activePartner, defaultAccounts, user?.id]);
 
   // 🧹 تنظيف التوكنات المنتهية تلقائياً
   const cleanupExpiredTokens = useCallback(async () => {
