@@ -2250,22 +2250,13 @@ export const AlWaseetProvider = ({ children }) => {
           .ilike('account_username', normalizedUsername)
           .order('created_at', { ascending: false });
 
-        // إذا وُجدت حسابات متعددة، احذف الزائدة واحتفظ بالأحدث
-        if (existingAccounts && existingAccounts.length > 1) {
-          const accountsToDelete = existingAccounts.slice(1); // احتفظ بالأول (الأحدث)
-          for (const account of accountsToDelete) {
-            await supabase
-              .from('delivery_partner_tokens')
-              .delete()
-              .eq('id', account.id);
-          }
-          devLog.log(`🧹 تم حذف ${accountsToDelete.length} حساب مكرر`);
-        }
+        // 🛡️ لا نحذف أي حسابات هنا. السماح بتعدد الحسابات لنفس المستخدم
+        //     ولنفس اسم المستخدم على الشركة، حفاظاً على البيانات القديمة.
 
         const existingAccount = existingAccounts?.[0];
 
         if (existingAccount) {
-          // تحديث الحساب الموجود
+          // تحديث الحساب الموجود — وتفعيل auto_renew حتى يبقى التوكن أسبوعاً ويتجدد تلقائياً
           const { error } = await supabase
             .from('delivery_partner_tokens')
             .update({
@@ -2276,14 +2267,14 @@ export const AlWaseetProvider = ({ children }) => {
               account_username: normalizedUsername,
               last_used_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
-              is_active: true, // ✅ تفعيل التوكن عند تسجيل الدخول
+              is_active: true,
+              auto_renew_enabled: true,
             })
             .eq('id', existingAccount.id);
             
           if (error) throw error;
         } else {
           // إنشاء حساب جديد
-          // التحقق من وجود حساب افتراضي
           const { data: defaultAccount } = await supabase
             .from('delivery_partner_tokens')
             .select('id')
@@ -2306,6 +2297,8 @@ export const AlWaseetProvider = ({ children }) => {
               merchant_id: merchantId,
               is_default: isNewDefault,
               last_used_at: new Date().toISOString(),
+              is_active: true,
+              auto_renew_enabled: true,
             });
             
           if (error) throw error;
