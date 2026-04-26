@@ -69,10 +69,10 @@ async function deactivateBadToken(token: string | null | undefined, hint?: {
   userId?: string;
 }) {
   if (!token) return;
-  // Without a user/account hint we cannot tell whose row this is; do nothing to avoid corrupting
-  // shared accounts used by multiple employees.
-  if (!hint?.userId && !hint?.accountUsername) {
-    console.warn('[AlWaseet Proxy] deactivateBadToken skipped: no user/account hint');
+  // Without user_id we cannot tell whose shared delivery-account row this is; do nothing to avoid
+  // deactivating the same AlWaseet account for multiple employees/admins.
+  if (!hint?.userId) {
+    console.warn('[AlWaseet Proxy] deactivateBadToken skipped: no user_id hint');
     return;
   }
   try {
