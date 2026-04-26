@@ -235,16 +235,29 @@ export const AlWaseetProvider = ({ children }) => {
   }, [user?.id, cleanupExpiredTokens]);
 
   // ✅ مستمع لحدث انتهاء توكن الوسيط — يُطلق من src/lib/alwaseet-api.js عند errNum:21
-  // يُظهر toast واضح ويُفرّغ الجلسة المحلية ليتوقف النظام عن إعادة استخدام التوكن المعطوب فوراً.
+  // 🛡️ لا نمسح الجلسة الحالية إلا إذا كان التوكن المنتهي هو نفس التوكن النشط ونفس الشريك.
+  //     هذا يحمي الحساب النشط من مسح خاطئ بسبب طلب خلفي قديم أو حساب آخر/شريك آخر،
+  //     ويسمح بأن يستخدم نفس الحساب أكثر من موظف بدون تأثير على بعضهم.
   useEffect(() => {
     let lastToastAt = 0;
     const handleTokenExpired = (event) => {
-      const now = Date.now();
+      const detail = event?.detail || {};
+      const expiredToken = detail.expiredToken || null;
+      const eventPartner = detail.partnerName || null;
 
-      // 🛑 رفع الـ guard لمنع أي استدعاء جديد للوسيط حتى يعاد تسجيل الدخول
+      const isSameSession =
+        !!expiredToken && !!token && expiredToken === token &&
+        (!eventPartner || eventPartner === activePartner);
+
+      if (!isSameSession) {
+        devLog.log('ℹ️ TOKEN_EXPIRED لحساب/شريك آخر — تجاهل ولا نمسح الجلسة الحالية');
+        return; // لا UI ولا مسح
+      }
+
+      // 🛑 رفع guard طبقة الـ API — نمنع تكرار طلبات الجلسة الحالية فقط
       sessionInvalidatedRef.current = true;
+      try { window.dispatchEvent(new CustomEvent('alwaseet-session-invalidated')); } catch {}
 
-      // 🧹 تنظيف فوري بغض النظر عن throttle - لا نستخدم نفس التوكن الفاسد ثانية
       try {
         setToken(null);
         setTokenExpiry(null);
@@ -255,19 +268,19 @@ export const AlWaseetProvider = ({ children }) => {
         /* ignore */
       }
 
-      // throttle: لا تُظهر التوست أكثر من مرة كل 30 ثانية
+      const now = Date.now();
       if (now - lastToastAt < 30000) return;
       lastToastAt = now;
       toast({
         title: '🔑 انتهت جلسة الوسيط',
-        description: event?.detail?.msg || 'يرجى تسجيل الدخول مجدداً من إعدادات شركة التوصيل.',
+        description: detail.msg || 'يرجى تسجيل الدخول مجدداً من إعدادات شركة التوصيل.',
         variant: 'destructive',
         duration: 8000,
       });
     };
     window.addEventListener('alwaseet-token-expired', handleTokenExpired);
     return () => window.removeEventListener('alwaseet-token-expired', handleTokenExpired);
-  }, [clearSessionSnapshot]);
+  }, [clearSessionSnapshot, token, activePartner]);
 
   // ✅ استعادة آخر شركة توصيل غير 'local' عند التحميل
   useEffect(() => {
