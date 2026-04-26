@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
-import { useSuper } from '@/contexts/SuperProvider';
+import { SuperContext } from '@/contexts/SuperProvider';
 import devLog from '@/lib/devLogger';
 
 const VariantsContext = createContext();
@@ -33,7 +33,7 @@ export const VariantsProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // بيانات موحّدة من النظام إن توفرت
-  const superData = useSuper?.() || {};
+  const superData = useContext(SuperContext) || {};
   const ctxCategories = superData.categories;
   const ctxColors = superData.colors;
   const ctxSizes = superData.sizes;
