@@ -3,6 +3,7 @@
 
 import { supabase } from './customSupabaseClient';
 import devLog from '@/lib/devLogger';
+import { ALWASEET_STATUS_DEFINITIONS } from '@/lib/alwaseet-statuses';
 
 const REQUEST_GAP_MS = 450;
 const SHORT_CACHE_TTL_MS = 60 * 1000;
@@ -70,6 +71,7 @@ const readDeliveryHint = (token) => {
     return {
       partnerName: parsed?.partner_name,
       accountUsername: parsed?.username,
+      userId: parsed?.user_id,
     };
   } catch {
     return {};
@@ -109,6 +111,7 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
             queryParams,
             partnerName: hint.partnerName || 'alwaseet',
             accountUsername: hint.accountUsername || null,
+            userId: hint.userId || null,
           }
         }));
 
@@ -511,7 +514,12 @@ export const getOrderById = async (token, orderId) => {
 };
 
 export const getOrderStatuses = async (token) => {
-  return handleApiCall('statuses', 'GET', token, null, { token });
+  // ✅ حالات الوسيط ثابتة ومعتمدة محلياً؛ لا نستدعي endpoint=statuses حتى لا يُفسَّر خطأه كأن التوكن انتهى.
+  return Object.entries(ALWASEET_STATUS_DEFINITIONS).map(([id, config]) => ({
+    id,
+    state_id: id,
+    status: config.text,
+  }));
 };
 
 // New: Retrieve orders by IDs in bulk (max 25 per request)
