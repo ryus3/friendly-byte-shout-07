@@ -12,12 +12,16 @@ const responseCache = new Map();
 let requestQueue = Promise.resolve();
 let lastRequestAt = 0;
 
-// 🛑 Session-invalid guard: يُرفع عند رصد TOKEN_EXPIRED ويوقف كل الطلبات اللاحقة
+// 🛑 Session-invalid guard: يُرفع فقط عندما تتأكد الواجهة أن الجلسة الحالية فعلاً انتهت
+// (المسؤولية على AlWaseetContext، وليس على كل خطأ TOKEN_EXPIRED قد يخص حساباً آخر).
 // يُعاد ضبطه عبر window event بعد إعادة تسجيل الدخول من الواجهة.
 let sessionInvalidUntilLogin = false;
 if (typeof window !== 'undefined') {
   window.addEventListener('alwaseet-session-restored', () => {
     sessionInvalidUntilLogin = false;
+  });
+  window.addEventListener('alwaseet-session-invalidated', () => {
+    sessionInvalidUntilLogin = true;
   });
 }
 
