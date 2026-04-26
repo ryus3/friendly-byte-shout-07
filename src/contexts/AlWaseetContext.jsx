@@ -86,7 +86,7 @@ export const AlWaseetProvider = ({ children }) => {
   // Helper function to normalize username (declared early to avoid TDZ)
   const normalizeUsername = useCallback((username) => {
     return String(username || '').trim().toLowerCase();
-  }, []);
+  }, [user?.id]);
 
   // ✅ Guard: عند انتهاء جلسة الوسيط نعطّل أي استدعاء جديد حتى يعيد المستخدم تسجيل الدخول
   // هذا يمنع موجة الطلبات المتزامنة التي تسبب 503 على alwaseet-proxy
