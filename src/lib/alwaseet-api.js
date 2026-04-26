@@ -111,21 +111,46 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         if (error) {
           let errorMessage = `فشل الاتصال بالخادم الوكيل: ${error.message}`;
           let retryAfter = null;
+          let parsedBody = null;
           const isNetworkError = error.message?.includes('Failed to fetch') || 
                                 error.message?.includes('Network') ||
                                 error.message?.includes('ECONNREFUSED');
+          const is503 = error.message?.includes('503') || error.context?.status === 503;
           
           try {
-            const errorBody = await error.context.json();
-            errorMessage = errorBody.msg || errorBody.raw || errorMessage;
-            retryAfter = errorBody.retryAfter;
+            parsedBody = await error.context.json();
+            errorMessage = parsedBody.msg || parsedBody.raw || errorMessage;
+            retryAfter = parsedBody.retryAfter;
           } catch {
             // can't parse error body
+          }
+
+          // ✅ TOKEN_EXPIRED قد يصل ضمن error.context (status != 2xx) — نعالجه فوراً
+          if (parsedBody && (parsedBody.errNum === 'TOKEN_EXPIRED' || parsedBody.error === 'DELIVERY_TOKEN_EXPIRED' || parsedBody.requireRelogin === true)) {
+            devLog.warn(`🔑 توكن الوسيط منتهي (من error.context) endpoint: ${endpoint}`);
+            sessionInvalidUntilLogin = true;
+            try {
+              window.dispatchEvent(new CustomEvent('alwaseet-token-expired', {
+                detail: { endpoint, msg: parsedBody.msg }
+              }));
+            } catch { /* SSR-safe */ }
+            const tokErr = new Error(parsedBody.msg || 'انتهت صلاحية جلسة الوسيط');
+            tokErr.isTokenExpired = true;
+            throw tokErr;
+          }
+
+          // 🛑 إذا حصلنا 503 (edge runtime overload) ولدينا أي إشارة لانتهاء التوكن سابقاً، أوقف الموجة
+          if (is503 && sessionInvalidUntilLogin) {
+            const blocked = new Error('انتهت جلسة الوسيط. يرجى تسجيل الدخول مجدداً.');
+            blocked.isTokenExpired = true;
+            blocked.isSessionInvalid = true;
+            throw blocked;
           }
           
           const err = new Error(errorMessage);
           err.retryAfter = retryAfter;
           err.isNetworkError = isNetworkError;
+          err.is503 = is503;
           throw err;
         }
         
