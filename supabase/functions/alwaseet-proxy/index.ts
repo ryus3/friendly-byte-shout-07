@@ -226,6 +226,13 @@ Deno.serve(async (req) => {
       }
     }
 
+    // `statuses` is treated as static/cacheable in the frontend. Some AlWaseet accounts return errNum:21
+    // for this endpoint even while order endpoints still work, so never invalidate a login because of it.
+    if (endpoint === 'statuses' && data && (data.errNum === 21 || data.errNum === '21')) {
+      console.warn('[AlWaseet Proxy] Ignored TOKEN_EXPIRED from statuses endpoint; returning empty status cache');
+      return json({ status: true, ok: true, errNum: 'S000', data: [], fallback: true });
+    }
+
     // errNum 21 = invalid/expired/forbidden token. Deactivate it in DB and return a clean envelope.
     if (data && (data.errNum === 21 || data.errNum === '21')) {
       console.warn(
