@@ -129,21 +129,28 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
             // can't parse error body
           }
 
-          // ✅ TOKEN_EXPIRED قد يصل ضمن error.context (status != 2xx) — نعالجه فوراً
+          // ✅ TOKEN_EXPIRED قد يصل ضمن error.context (status != 2xx) — أبلّغ الواجهة بدون مسح أعمى
           if (parsedBody && (parsedBody.errNum === 'TOKEN_EXPIRED' || parsedBody.error === 'DELIVERY_TOKEN_EXPIRED' || parsedBody.requireRelogin === true)) {
             devLog.warn(`🔑 توكن الوسيط منتهي (من error.context) endpoint: ${endpoint}`);
-            sessionInvalidUntilLogin = true;
             try {
               window.dispatchEvent(new CustomEvent('alwaseet-token-expired', {
-                detail: { endpoint, msg: parsedBody.msg }
+                detail: {
+                  endpoint,
+                  msg: parsedBody.msg,
+                  expiredToken: token || null,
+                  partnerName: hint.partnerName || 'alwaseet',
+                  accountUsername: hint.accountUsername || null,
+                }
               }));
             } catch { /* SSR-safe */ }
             const tokErr = new Error(parsedBody.msg || 'انتهت صلاحية جلسة الوسيط');
             tokErr.isTokenExpired = true;
+            tokErr.expiredToken = token || null;
+            tokErr.partnerName = hint.partnerName || 'alwaseet';
             throw tokErr;
           }
 
-          // 🛑 إذا حصلنا 503 (edge runtime overload) ولدينا أي إشارة لانتهاء التوكن سابقاً، أوقف الموجة
+          // 🛑 إذا حصلنا 503 (edge runtime overload) ولدينا حظر فعّال على الجلسة، أوقف الموجة
           if (is503 && sessionInvalidUntilLogin) {
             const blocked = new Error('انتهت جلسة الوسيط. يرجى تسجيل الدخول مجدداً.');
             blocked.isTokenExpired = true;
