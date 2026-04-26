@@ -12,12 +12,16 @@ const responseCache = new Map();
 let requestQueue = Promise.resolve();
 let lastRequestAt = 0;
 
-// 🛑 Session-invalid guard: يُرفع عند رصد TOKEN_EXPIRED ويوقف كل الطلبات اللاحقة
+// 🛑 Session-invalid guard: يُرفع فقط عندما تتأكد الواجهة أن الجلسة الحالية فعلاً انتهت
+// (المسؤولية على AlWaseetContext، وليس على كل خطأ TOKEN_EXPIRED قد يخص حساباً آخر).
 // يُعاد ضبطه عبر window event بعد إعادة تسجيل الدخول من الواجهة.
 let sessionInvalidUntilLogin = false;
 if (typeof window !== 'undefined') {
   window.addEventListener('alwaseet-session-restored', () => {
     sessionInvalidUntilLogin = false;
+  });
+  window.addEventListener('alwaseet-session-invalidated', () => {
+    sessionInvalidUntilLogin = true;
   });
 }
 
@@ -125,21 +129,28 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
             // can't parse error body
           }
 
-          // ✅ TOKEN_EXPIRED قد يصل ضمن error.context (status != 2xx) — نعالجه فوراً
+          // ✅ TOKEN_EXPIRED قد يصل ضمن error.context (status != 2xx) — أبلّغ الواجهة بدون مسح أعمى
           if (parsedBody && (parsedBody.errNum === 'TOKEN_EXPIRED' || parsedBody.error === 'DELIVERY_TOKEN_EXPIRED' || parsedBody.requireRelogin === true)) {
             devLog.warn(`🔑 توكن الوسيط منتهي (من error.context) endpoint: ${endpoint}`);
-            sessionInvalidUntilLogin = true;
             try {
               window.dispatchEvent(new CustomEvent('alwaseet-token-expired', {
-                detail: { endpoint, msg: parsedBody.msg }
+                detail: {
+                  endpoint,
+                  msg: parsedBody.msg,
+                  expiredToken: token || null,
+                  partnerName: hint.partnerName || 'alwaseet',
+                  accountUsername: hint.accountUsername || null,
+                }
               }));
             } catch { /* SSR-safe */ }
             const tokErr = new Error(parsedBody.msg || 'انتهت صلاحية جلسة الوسيط');
             tokErr.isTokenExpired = true;
+            tokErr.expiredToken = token || null;
+            tokErr.partnerName = hint.partnerName || 'alwaseet';
             throw tokErr;
           }
 
-          // 🛑 إذا حصلنا 503 (edge runtime overload) ولدينا أي إشارة لانتهاء التوكن سابقاً، أوقف الموجة
+          // 🛑 إذا حصلنا 503 (edge runtime overload) ولدينا حظر فعّال على الجلسة، أوقف الموجة
           if (is503 && sessionInvalidUntilLogin) {
             const blocked = new Error('انتهت جلسة الوسيط. يرجى تسجيل الدخول مجدداً.');
             blocked.isTokenExpired = true;
@@ -166,18 +177,24 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
           throw cfErr;
         }
 
-        // ✅ Detect expired token (errNum:21) — dispatch event للواجهة لتطلب إعادة تسجيل الدخول
+        // ✅ Detect expired token (errNum:21) — أبلّغ الواجهة لتقرر هل هذا التوكن النشط أم لا
         if (data.errNum === 'TOKEN_EXPIRED' || data.error === 'DELIVERY_TOKEN_EXPIRED' || data.requireRelogin === true) {
           devLog.warn(`🔑 توكن الوسيط منتهي للـendpoint: ${endpoint}`);
-          // 🛑 رفع الـ guard فوراً لمنع موجة الطلبات اللاحقة (سبب 503)
-          sessionInvalidUntilLogin = true;
           try {
             window.dispatchEvent(new CustomEvent('alwaseet-token-expired', {
-              detail: { endpoint, msg: data.msg }
+              detail: {
+                endpoint,
+                msg: data.msg,
+                expiredToken: token || null,
+                partnerName: hint.partnerName || 'alwaseet',
+                accountUsername: hint.accountUsername || null,
+              }
             }));
           } catch { /* SSR-safe */ }
           const tokErr = new Error(data.msg || 'انتهت صلاحية جلسة الوسيط');
           tokErr.isTokenExpired = true;
+          tokErr.expiredToken = token || null;
+          tokErr.partnerName = hint.partnerName || 'alwaseet';
           throw tokErr;
         }
         

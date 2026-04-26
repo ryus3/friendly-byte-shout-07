@@ -60,27 +60,39 @@ const buildFetchOptions = (
   return fetchOptions;
 };
 
-// Best-effort: deactivate the offending token in DB so the frontend stops reusing it.
+// Best-effort: deactivate the offending token row in DB so the frontend stops reusing it.
+// IMPORTANT: deactivate ONLY the row that owns this exact (token, partner, user, account_username).
+// Different users may share the same delivery account, so we must not flip is_active for everyone.
 async function deactivateBadToken(token: string | null | undefined, hint?: {
   partnerName?: string;
   accountUsername?: string;
   userId?: string;
 }) {
   if (!token) return;
+  // Without a user/account hint we cannot tell whose row this is; do nothing to avoid corrupting
+  // shared accounts used by multiple employees.
+  if (!hint?.userId && !hint?.accountUsername) {
+    console.warn('[AlWaseet Proxy] deactivateBadToken skipped: no user/account hint');
+    return;
+  }
   try {
     let query = supabase
       .from('delivery_partner_tokens')
       .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq('token', token);
+      .eq('token', token)
+      .eq('partner_name', hint?.partnerName || 'alwaseet');
 
-    if (hint?.partnerName) query = query.eq('partner_name', hint.partnerName);
     if (hint?.userId) query = query.eq('user_id', hint.userId);
+    if (hint?.accountUsername) {
+      const norm = String(hint.accountUsername).trim().toLowerCase();
+      query = query.eq('normalized_username', norm);
+    }
 
     const { error } = await query;
     if (error) {
       console.warn('[AlWaseet Proxy] deactivateBadToken warning:', error.message);
     } else {
-      console.warn(`[AlWaseet Proxy] Deactivated expired token (len=${token.length})`);
+      console.warn(`[AlWaseet Proxy] Deactivated expired token (scoped, len=${token.length})`);
     }
   } catch (err) {
     console.warn('[AlWaseet Proxy] deactivateBadToken failed:', getErrorMessage(err));
