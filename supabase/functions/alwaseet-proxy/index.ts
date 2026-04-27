@@ -3,8 +3,6 @@
 // Frontend (alwaseet-api.js) interprets `errNum` and `requireRelogin` flags to decide what to do.
 // Returning non-200 makes Lovable show a runtime error overlay even though the issue is logical.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.30.0';
-
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
@@ -14,9 +12,11 @@ const corsHeaders = {
 const ALWASEET_PROXY_URL = 'https://api.ryusbrand.com/alwaseet/v1/merchant';
 const ALWASEET_DIRECT_URL = 'https://api.alwaseet-iq.net/v1/merchant';
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+// NOTE: We intentionally do NOT initialize a Supabase client at module top-level.
+// The proxy does not perform any DB operations (deactivateBadToken is a no-op).
+// Importing the Supabase SDK at boot was causing intermittent 503 cold-boot failures
+// ("Service temporarily unavailable") in the Edge Runtime. Keeping this function
+// dependency-free makes boots fast and reliable.
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
