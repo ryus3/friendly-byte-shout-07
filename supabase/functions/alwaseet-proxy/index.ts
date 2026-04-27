@@ -214,12 +214,12 @@ Deno.serve(async (req) => {
         `[AlWaseet Proxy] TOKEN_EXPIRED (errNum:21) endpoint=${endpoint} partner=${partnerName || 'alwaseet'}`,
       );
 
-      // Fire-and-forget: do not block the response on DB write.
+      // 🛡️ NO-OP: never deactivate token rows from the proxy. The frontend decides recovery.
       deactivateBadToken(token, {
         partnerName: partnerName || 'alwaseet',
         accountUsername,
         userId,
-      }).catch(() => undefined);
+      });
 
       return json({
         status: false,
