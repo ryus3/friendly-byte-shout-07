@@ -238,7 +238,21 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         
         // المعالجة العادية
         if (data.errNum !== "S000" || !data.status) {
-          throw new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
+          // 🛡️ "لا صلاحية" على endpoints الفواتير = لا فواتير (ليس انتهاء توكن، ليس خطأ شبكة).
+          // نعلّم الخطأ كي لا نعيد المحاولة وكي يتعامل معه getMerchantInvoices/getInvoiceOrders بهدوء.
+          const noInvoicesEndpoints = new Set([
+            'get_merchant_invoices',
+            'get_merchant_invoice_orders',
+            'receive_merchant_invoice',
+          ]);
+          const noInvErr = new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
+          if (
+            noInvoicesEndpoints.has(endpoint) &&
+            (data.errNum === 21 || data.errNum === '21' || data.fallback === true)
+          ) {
+            noInvErr.isNoInvoicesError = true;
+          }
+          throw noInvErr;
         }
 
         const result = data.data;
