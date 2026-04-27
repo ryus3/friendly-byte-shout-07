@@ -201,14 +201,45 @@ Deno.serve(async (req) => {
       }
     }
 
-    // `statuses` is treated as static/cacheable in the frontend. Some AlWaseet accounts return errNum:21
-    // for this endpoint even while order endpoints still work, so never invalidate a login because of it.
-    if (endpoint === 'statuses' && data && (data.errNum === 21 || data.errNum === '21')) {
-      console.warn('[AlWaseet Proxy] Ignored TOKEN_EXPIRED from statuses endpoint; returning empty status cache');
-      return json({ status: true, ok: true, errNum: 'S000', data: [], fallback: true });
+    // 🛡️ CRITICAL: لا نحول errNum:21 إلى TOKEN_EXPIRED للـ endpoints التالية:
+    //   - statuses : ثابت ومخزن في الواجهة، خطؤه لا يعني انتهاء توكن
+    //   - get_merchant_invoices / get_merchant_invoice_orders / receive_merchant_invoice :
+    //     واجهات الفواتير في توثيق الوسيط الرسمي تقبل Merchant token فقط؛ غير ذلك يرجع errNum:21
+    //     كـ "ليس لديك صلاحية"، وهذا لا يعني انتهاء التوكن. سابقاً عاملناه كانتهاء جلسة فأصبحت
+    //     الفواتير لا تُجلب أبداً وحسابات صحيحة تظهر بدون فواتير.
+    //   نُعيد الاستجابة الأصلية كما هي ليفسرها العميل (alwaseet-api.js) كـ "لا فواتير" بهدوء.
+    const PASSTHROUGH_21_ENDPOINTS = new Set([
+      'statuses',
+      'get_merchant_invoices',
+      'get_merchant_invoice_orders',
+      'receive_merchant_invoice',
+    ]);
+
+    if (
+      data &&
+      (data.errNum === 21 || data.errNum === '21') &&
+      PASSTHROUGH_21_ENDPOINTS.has(endpoint)
+    ) {
+      console.warn(
+        `[AlWaseet Proxy] Pass-through errNum:21 for endpoint=${endpoint} (treated as no-data / no-permission, NOT token expiry)`,
+      );
+      // statuses يُتوقع منه مصفوفة عند الواجهة، فنرجعها فارغة بشكل ناجح
+      if (endpoint === 'statuses') {
+        return json({ status: true, ok: true, errNum: 'S000', data: [], fallback: true });
+      }
+      // باقي endpoints الفواتير: نمرر الاستجابة الأصلية مع status=false ليتعامل معها العميل
+      // كـ "لا فواتير" (يرجع [] بهدوء)، تماماً كما كان السلوك قبل اسبوع.
+      return json({
+        status: false,
+        ok: false,
+        errNum: 21,
+        msg: data.msg || 'ليس لديك صلاحية الوصول.',
+        data: [],
+        fallback: true,
+      });
     }
 
-    // errNum 21 = invalid/expired/forbidden token. Deactivate it in DB and return a clean envelope.
+    // errNum 21 = invalid/expired token (للـ endpoints الأخرى فقط مثل create-order/edit-order/login).
     if (data && (data.errNum === 21 || data.errNum === '21')) {
       console.warn(
         `[AlWaseet Proxy] TOKEN_EXPIRED (errNum:21) endpoint=${endpoint} partner=${partnerName || 'alwaseet'}`,

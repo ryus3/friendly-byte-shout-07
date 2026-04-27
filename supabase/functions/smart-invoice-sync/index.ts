@@ -42,11 +42,13 @@ interface InvoiceOrder {
 }
 
 // ✅ Fetch ALL invoices from API (supports both AlWaseet and MODON)
+// 🛡️ ملاحظة: واجهات الفواتير في توثيق الوسيط تقبل Merchant token فقط؛ Merchant user token يرجع errNum:21
+// ("ليس لديك صلاحية الوصول.") ـ وهذا ليس خطأ، بل يعني ببساطة لا فواتير لهذا الحساب. نتعامل معه كـ [].
 async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet'): Promise<Invoice[]> {
   try {
     const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
     console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API...`);
-    
+
     const response = await fetch(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, {
       method: 'GET',
       headers: {
@@ -55,14 +57,27 @@ async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet')
       },
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`API Error: ${response.status} ${response.statusText} - ${errorText}`);
+    // قد يرجع API HTTP 400 مع errNum:21 ("لا صلاحية" / "لا فواتير")، لذلك نحلل الجسم قبل أن نعتبره خطأ.
+    let data: any = null;
+    try {
+      data = await response.json();
+    } catch {
+      const errorText = await response.text().catch(() => '');
+      console.error(`API non-JSON ${response.status}: ${errorText.substring(0, 200)}`);
       return [];
     }
 
-    const data = await response.json();
-    const ok = data?.status === true || data?.errNum === 'S000';
+    // ✅ errNum:21 = لا فواتير (ليس خطأ توكن). نُعيد قائمة فارغة بهدوء.
+    if (data?.errNum === 21 || data?.errNum === '21') {
+      console.log(`ℹ️ ${partner.toUpperCase()}: errNum:21 على get_merchant_invoices = لا فواتير لهذا الحساب`);
+      return [];
+    }
+
+    if (!response.ok && data?.errNum !== 'S000') {
+      console.error(`API Error: ${response.status} ${response.statusText} - ${JSON.stringify(data).substring(0, 200)}`);
+      return [];
+    }
+
     const invoices = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
     console.log(`📥 ${partner.toUpperCase()} API Response: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}`);
 

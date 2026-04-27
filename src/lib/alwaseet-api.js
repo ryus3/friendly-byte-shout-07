@@ -238,7 +238,21 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
         
         // المعالجة العادية
         if (data.errNum !== "S000" || !data.status) {
-          throw new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
+          // 🛡️ "لا صلاحية" على endpoints الفواتير = لا فواتير (ليس انتهاء توكن، ليس خطأ شبكة).
+          // نعلّم الخطأ كي لا نعيد المحاولة وكي يتعامل معه getMerchantInvoices/getInvoiceOrders بهدوء.
+          const noInvoicesEndpoints = new Set([
+            'get_merchant_invoices',
+            'get_merchant_invoice_orders',
+            'receive_merchant_invoice',
+          ]);
+          const noInvErr = new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
+          if (
+            noInvoicesEndpoints.has(endpoint) &&
+            (data.errNum === 21 || data.errNum === '21' || data.fallback === true)
+          ) {
+            noInvErr.isNoInvoicesError = true;
+          }
+          throw noInvErr;
         }
 
         const result = data.data;
@@ -260,6 +274,11 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
 
         // ✅ Token expired: NO retries - fail fast (المستخدم يحتاج إعادة تسجيل دخول)
         if (error.isTokenExpired) {
+          throw error;
+        }
+
+        // ✅ "لا فواتير / لا صلاحية" على endpoints الفواتير: NO retries (ليس خطأ تجديد)
+        if (error.isNoInvoicesError) {
           throw error;
         }
 
@@ -556,15 +575,37 @@ export const getOrdersByIdsBulk = async (token, ids) => {
 };
 
 // ===== Invoice Management APIs =====
+// 🛡️ ملاحظة: واجهات الفواتير في توثيق الوسيط تقبل Merchant token فقط؛ Merchant user token يرجع errNum:21
+// مع "ليس لديك صلاحية الوصول." وهذا ليس انتهاء توكن. لذلك نعالج errNum:21 محلياً كـ "لا فواتير"
+// بدلاً من رمي خطأ token-expired (الذي يسجل خروج كاذب). هذا يعيد السلوك الذي كان يعمل سابقاً.
 
 // Get all merchant invoices
 export const getMerchantInvoices = async (token) => {
-  return handleApiCall('get_merchant_invoices', 'GET', token, null, { token });
+  try {
+    return await handleApiCall('get_merchant_invoices', 'GET', token, null, { token });
+  } catch (error) {
+    // إذا رجع endpoint الفواتير "لا صلاحية" أو "لا فواتير"، نتعامل معه كنتيجة فارغة بدون رمي خطأ
+    const msg = String(error?.message || '');
+    if (msg.includes('ليس لديك صلاحية') || msg.includes('لا توجد فواتير') || error?.isNoInvoicesError) {
+      devLog.log('ℹ️ getMerchantInvoices: لا توجد فواتير للحساب الحالي (errNum:21 محلياً)');
+      return [];
+    }
+    throw error;
+  }
 };
 
 // Get orders for a specific invoice
 export const getInvoiceOrders = async (token, invoiceId) => {
-  return handleApiCall('get_merchant_invoice_orders', 'GET', token, null, { token, invoice_id: invoiceId });
+  try {
+    return await handleApiCall('get_merchant_invoice_orders', 'GET', token, null, { token, invoice_id: invoiceId });
+  } catch (error) {
+    const msg = String(error?.message || '');
+    if (msg.includes('ليس لديك صلاحية') || error?.isNoInvoicesError) {
+      devLog.log(`ℹ️ getInvoiceOrders(${invoiceId}): لا صلاحية - إرجاع فارغ`);
+      return { orders: [] };
+    }
+    throw error;
+  }
 };
 
 // Receive (confirm) an invoice
