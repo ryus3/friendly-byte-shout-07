@@ -699,58 +699,74 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   useEffect(() => {
     const fetchInitialData = async () => {
       if ((activePartner === 'alwaseet' || activePartner === 'modon') && waseetToken) {
-        // ✅ انتظار تحميل الـ cache للوسيط
-        if (activePartner === 'alwaseet' && !isCacheLoaded) {
-          devLog.log('⏳ انتظار تحميل الـ Cache للوسيط...');
+        // ✅ ننتظر تحميل الـ cache لكلا الشريكين (الكاش يخدم الوسيط ومدن من نفس الجداول الموحّدة)
+        if (!isCacheLoaded) {
+          devLog.log('⏳ انتظار تحميل الـ Cache...');
           return;
         }
-        
+
         setLoadingCities(true);
         setLoadingPackageSizes(true);
         setInitialDataLoaded(false);
         setDataFetchError(false);
         try {
-          let citiesData, packageSizesData;
-          
+          let citiesData = [];
+          let packageSizesData = [];
+
           if (activePartner === 'modon') {
-            const ModonAPI = await import('@/lib/modon-api');
-            packageSizesData = await ModonAPI.getPackageSizes(waseetToken);
-            
-            packageSizesData = packageSizesData.map(size => ({
-              id: size.id,
-              size: size.size
-            }));
-            
-            // ✅ للوسيط مدن: جلب من API مباشرة
-            const modonCitiesData = await ModonAPI.getCities(waseetToken);
-            citiesData = modonCitiesData.map(city => ({
-              id: city.id,
-              name: city.city_name
-            }));
+            // ✅ مدن: cache-first من city_delivery_mappings (external_id = MODON id)
+            const { data: modonCityMaps } = await supabase
+              .from('city_delivery_mappings')
+              .select('external_id, external_name, city_id, cities_master:city_id(name)')
+              .eq('delivery_partner', 'modon')
+              .eq('is_active', true);
+
+            if (modonCityMaps && modonCityMaps.length > 0) {
+              citiesData = modonCityMaps.map(m => ({
+                id: m.external_id,
+                name: m.cities_master?.name || m.external_name
+              }));
+              devLog.log(`✅ مدن: تم جلب ${citiesData.length} مدينة من الكاش`);
+            } else {
+              // fallback إلى API فقط إن كان الكاش فارغاً
+              const ModonAPI = await import('@/lib/modon-api');
+              const modonCitiesData = await ModonAPI.getCities(waseetToken);
+              citiesData = (modonCitiesData || []).map(city => ({ id: city.id, name: city.city_name }));
+            }
+
+            // أحجام الطرود من الكاش
+            const { data: modonSizes } = await supabase
+              .from('package_sizes_cache')
+              .select('external_id, size_name')
+              .eq('partner_name', 'modon')
+              .eq('is_active', true);
+            if (modonSizes && modonSizes.length > 0) {
+              packageSizesData = modonSizes.map(s => ({ id: s.external_id, size: s.size_name }));
+            } else {
+              const ModonAPI = await import('@/lib/modon-api');
+              packageSizesData = await ModonAPI.getPackageSizes(waseetToken);
+              packageSizesData = (packageSizesData || []).map(size => ({ id: size.id, size: size.size }));
+            }
           } else {
-            // ✅ للوسيط: استخدام المدن من الـ Cache فقط
-            if (isCacheLoaded && cachedCities.length > 0) {
+            // ✅ الوسيط: cache من cachedCities (موجود)
+            if (cachedCities.length > 0) {
               citiesData = cachedCities.map(city => ({
-                id: city.alwaseet_id,
+                id: city.alwaseet_id || city.id,
                 name: city.name
               }));
-              // ✅ أحجام الطرود من الكاش المحلي أيضاً
-              const { data: cachedSizes } = await supabase
-                .from('package_sizes_cache')
-                .select('external_id, size_name')
-                .eq('partner_name', 'alwaseet')
-                .eq('is_active', true);
-              
-              if (cachedSizes && cachedSizes.length > 0) {
-                packageSizesData = cachedSizes.map(s => ({ id: s.external_id, size: s.size_name }));
-                devLog.log(`✅ تم جلب ${packageSizesData.length} حجم طرد من الكاش المحلي`);
-              } else {
-                packageSizesData = [{ id: '1', size: 'Normal' }, { id: '2', size: 'Medium' }, { id: '3', size: 'Large' }, { id: '4', size: 'X-Large' }];
-              }
-            } else if (!isCacheLoaded) {
-              return;
             } else {
               citiesData = [];
+            }
+
+            const { data: cachedSizes } = await supabase
+              .from('package_sizes_cache')
+              .select('external_id, size_name')
+              .eq('partner_name', 'alwaseet')
+              .eq('is_active', true);
+
+            if (cachedSizes && cachedSizes.length > 0) {
+              packageSizesData = cachedSizes.map(s => ({ id: s.external_id, size: s.size_name }));
+            } else {
               packageSizesData = [{ id: '1', size: 'Normal' }, { id: '2', size: 'Medium' }, { id: '3', size: 'Large' }, { id: '4', size: 'X-Large' }];
             }
           }
