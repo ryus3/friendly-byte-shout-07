@@ -236,53 +236,39 @@ export const AlWaseetProvider = ({ children }) => {
     }
   }, [user?.id, cleanupExpiredTokens]);
 
-  // ✅ مستمع لحدث انتهاء توكن الوسيط — يُطلق من src/lib/alwaseet-api.js عند errNum:21
-  // 🛡️ لا نمسح الجلسة الحالية إلا إذا كان التوكن المنتهي هو نفس التوكن النشط ونفس الشريك.
-  //     هذا يحمي الحساب النشط من مسح خاطئ بسبب طلب خلفي قديم أو حساب آخر/شريك آخر،
-  //     ويسمح بأن يستخدم نفس الحساب أكثر من موظف بدون تأثير على بعضهم.
+  // ✅ مستمع لحدث انتهاء توكن الوسيط — يُطلق فقط من العمليات المباشرة (login/renew/create/edit).
+  // 🛡️ السلوك المعتمد: لا نمسح الجلسة المحلية، ولا نُلغي الحساب في DB، ولا نرفع guard عام.
+  //     فقط نعرض تنبيه واحداً مهذباً (مع throttle) لكي يقرر المستخدم تجديد التوكن يدوياً.
+  //     هذا يحفظ:
+  //       - حساب admin "alshmry94" من الاختفاء بسبب خطأ على endpoint جانبي.
+  //       - مشاركة نفس حساب شركة التوصيل بين أكثر من موظف.
+  //       - تعدد حسابات الموظف الواحد.
   useEffect(() => {
     let lastToastAt = 0;
     const handleTokenExpired = (event) => {
       const detail = event?.detail || {};
       const expiredToken = detail.expiredToken || null;
-      const eventPartner = detail.partnerName || null;
 
-      const isSameSession =
-        !!expiredToken && !!token && expiredToken === token &&
-        (!eventPartner || eventPartner === activePartner);
-
-      if (!isSameSession) {
-        devLog.log('ℹ️ TOKEN_EXPIRED لحساب/شريك آخر — تجاهل ولا نمسح الجلسة الحالية');
-        return; // لا UI ولا مسح
-      }
-
-      // 🛑 رفع guard طبقة الـ API — نمنع تكرار طلبات الجلسة الحالية فقط
-      sessionInvalidatedRef.current = true;
-      try { window.dispatchEvent(new CustomEvent('alwaseet-session-invalidated')); } catch {}
-
-      try {
-        setToken(null);
-        setTokenExpiry(null);
-        setIsLoggedIn(false);
-        setWaseetUser(null);
-        clearSessionSnapshot();
-      } catch {
-        /* ignore */
+      // فقط نظهر التنبيه إذا كان التوكن المنتهي هو التوكن النشط لهذا المتصفح؛
+      // وإلا فالخطأ يخص حساباً آخر/شريكاً آخر ولا يهم المستخدم الحالي.
+      if (!expiredToken || !token || expiredToken !== token) {
+        devLog.log('ℹ️ TOKEN_EXPIRED لتوكن غير نشط — تجاهل صامت');
+        return;
       }
 
       const now = Date.now();
-      if (now - lastToastAt < 30000) return;
+      if (now - lastToastAt < 60000) return;
       lastToastAt = now;
       toast({
-        title: '🔑 انتهت جلسة الوسيط',
-        description: detail.msg || 'يرجى تسجيل الدخول مجدداً من إعدادات شركة التوصيل.',
-        variant: 'destructive',
-        duration: 8000,
+        title: '🔑 تنبيه جلسة الوسيط',
+        description: detail.msg || 'قد تكون جلسة الوسيط بحاجة لتجديد. اضغط "تجديد التوكن" من إعدادات شركة التوصيل عند الحاجة.',
+        variant: 'default',
+        duration: 6000,
       });
     };
     window.addEventListener('alwaseet-token-expired', handleTokenExpired);
     return () => window.removeEventListener('alwaseet-token-expired', handleTokenExpired);
-  }, [clearSessionSnapshot, token, activePartner]);
+  }, [token]);
 
   // ✅ استعادة آخر شركة توصيل غير 'local' عند التحميل
   useEffect(() => {
