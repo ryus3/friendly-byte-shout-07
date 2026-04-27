@@ -43,8 +43,22 @@ const getCacheTtl = (endpoint) => {
 };
 
 const shouldNotifyTokenExpired = (endpoint) => {
-  // مزامنات الخلفية لا يجب أن تسجل خروج المستخدم؛ تسجيل الخروج/التجديد يعالج عند العمليات المباشرة فقط.
-  return !['statuses', 'get-orders-by-ids-bulk', 'merchant-orders'].includes(endpoint);
+  // 🛡️ النقطة الحرجة: لا نُطلق حدث انتهاء الجلسة من المزامنات/جلب القوائم/الفواتير/الحالات/البحث الفردي.
+  // هذه العمليات قد تُرجع errNum:21 لسبب جانبي (صلاحية endpoint، مشاركة حساب، طلب لشخص آخر…)
+  // وإطلاق حدث logout عام كان يسبب اختفاء حساب alshmry94 ومسح الجلسة فوراً.
+  // التنبيه فقط من العمليات المباشرة الصريحة (تسجيل دخول/تجديد/إنشاء/تعديل طلب).
+  const backgroundEndpoints = new Set([
+    'statuses',
+    'get-orders-by-ids-bulk',
+    'merchant-orders',
+    'citys',
+    'regions',
+    'package-sizes',
+    'get_merchant_invoices',
+    'get_merchant_invoice_orders',
+    'receive_merchant_invoice',
+  ]);
+  return !backgroundEndpoints.has(endpoint);
 };
 
 const runQueuedRequest = async (requestFactory) => {
