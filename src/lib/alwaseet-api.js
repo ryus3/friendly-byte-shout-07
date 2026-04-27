@@ -277,6 +277,11 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
           throw error;
         }
 
+        // ✅ "لا فواتير / لا صلاحية" على endpoints الفواتير: NO retries (ليس خطأ تجديد)
+        if (error.isNoInvoicesError) {
+          throw error;
+        }
+
         const isRateLimitError = 
           error.message?.includes('تجاوزت الحد المسموح به') || 
           error.message?.includes('rate limit') ||
