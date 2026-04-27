@@ -133,12 +133,15 @@ async function upsertRegionsBatch(regions: { id: number; city_id: number; name: 
   const { error: me } = await supabase.from('regions_master').upsert(masterRecords, { onConflict: 'id' });
   if (me) { console.error('❌ regions_master batch:', me); return 0; }
 
+  // ✅ القيد الفريد الفعلي على region_delivery_mappings أصبح (delivery_partner, external_id)
+  // وليس (region_id, delivery_partner). استخدام المفتاح القديم كان يسجل المزامنة بنجاح
+  // لكن regions_count=0 لأن upsert يفشل صامتاً عند تكرار region_id.
   const mappingRecords = regions.map(r => ({
     region_id: r.id, delivery_partner: 'alwaseet',
     external_id: String(r.id), external_name: r.name,
     is_active: true, updated_at: timestamp
   }));
-  const { error: mpe } = await supabase.from('region_delivery_mappings').upsert(mappingRecords, { onConflict: 'region_id,delivery_partner' });
+  const { error: mpe } = await supabase.from('region_delivery_mappings').upsert(mappingRecords, { onConflict: 'delivery_partner,external_id' });
   if (mpe) { console.error('❌ region_delivery_mappings batch:', mpe); return 0; }
 
   return regions.length;

@@ -160,7 +160,7 @@ async function updateRegionsCache(regions: AlWaseetRegion[]): Promise<number> {
         external_name: region.name,
         is_active: true,
         updated_at: new Date().toISOString()
-      }, { onConflict: 'region_id,delivery_partner' })
+      }, { onConflict: 'delivery_partner,external_id' })
 
       updated++
     } catch (error) {

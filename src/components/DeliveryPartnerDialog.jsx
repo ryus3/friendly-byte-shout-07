@@ -270,34 +270,35 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
 
     const handleAccountLogout = async () => {
         if (!selectedAccount || !user?.id) return;
-        
-        // تسجيل خروج الحساب (إلغاء تفعيل مؤقت)
-        const { error } = await supabase
-            .from('delivery_partner_tokens')
-            .update({
-                token: null,
-                is_active: false,
-                last_used_at: new Date().toISOString()
-            })
-            .eq('user_id', user.id)
-            .eq('partner_name', selectedPartner)
-            .eq('account_username', selectedAccount.account_username);
 
-        if (!error) {
+        // ✅ تسجيل خروج محلي فقط: لا نلمس DB، ولا نمسح التوكن، ولا نعطل الحساب.
+        // الحساب يبقى محفوظاً ويمكن التبديل إليه لاحقاً. الحذف الفعلي يتم فقط من زر "حذف الحساب".
+        try {
+            // إذا كان الحساب المختار هو الجلسة النشطة، أفرغ الجلسة المحلية فقط
+            const isActiveSession = isLoggedIn && (
+                waseetUser?.username === selectedAccount.account_username ||
+                String(waseetUser?.label || '').toLowerCase() === String(selectedAccount.account_username || '').toLowerCase()
+            );
+
+            if (isActiveSession) {
+                waseetLogout(false); // false = logout محلي فقط، بدون تعطيل
+            }
+
             toast({
                 title: "تم تسجيل الخروج",
-                description: "تم تسجيل الخروج من الحساب بنجاح",
+                description: "تم تسجيل الخروج من الحساب محلياً. الحساب لا يزال محفوظاً ويمكن التبديل إليه لاحقاً.",
                 variant: 'default'
             });
-            // إعادة تحميل الحسابات
+
+            // إعادة تحميل الحسابات (يبقى الحساب ظاهراً)
             const accounts = await getUserDeliveryAccounts(user.id, selectedPartner);
             setUserAccounts(accounts);
-            setSelectedAccount(accounts[0] || null);
-        } else {
+        } catch (e) {
+            console.error('logout error:', e);
             toast({
-                title: "خطأ",
-                description: "فشل في تسجيل الخروج",
-                variant: 'destructive'
+                title: "تنبيه",
+                description: "تم تسجيل الخروج محلياً.",
+                variant: 'default'
             });
         }
     }

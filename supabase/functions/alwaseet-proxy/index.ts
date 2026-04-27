@@ -60,43 +60,18 @@ const buildFetchOptions = (
   return fetchOptions;
 };
 
-// Best-effort: deactivate the offending token row in DB so the frontend stops reusing it.
-// IMPORTANT: deactivate ONLY the row that owns this exact (token, partner, user, account_username).
-// Different users may share the same delivery account, so we must not flip is_active for everyone.
-async function deactivateBadToken(token: string | null | undefined, hint?: {
+// 🛡️ SAFETY: Proxy must NEVER deactivate token rows.
+// Past behavior of flipping is_active=false on errNum:21 caused account "alshmry94" to disappear
+// from the UI even when its token/expires_at were still valid for other endpoints.
+// errNum:21 can be returned for a specific endpoint or transient permission issue,
+// not a definitive sign the whole session expired. Frontend decides what to do.
+// We keep this no-op for backward compatibility but do nothing in DB.
+function deactivateBadToken(_token: string | null | undefined, _hint?: {
   partnerName?: string;
   accountUsername?: string;
   userId?: string;
 }) {
-  if (!token) return;
-  // Without user_id we cannot tell whose shared delivery-account row this is; do nothing to avoid
-  // deactivating the same AlWaseet account for multiple employees/admins.
-  if (!hint?.userId) {
-    console.warn('[AlWaseet Proxy] deactivateBadToken skipped: no user_id hint');
-    return;
-  }
-  try {
-    let query = supabase
-      .from('delivery_partner_tokens')
-      .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq('token', token)
-      .eq('partner_name', hint?.partnerName || 'alwaseet');
-
-    if (hint?.userId) query = query.eq('user_id', hint.userId);
-    if (hint?.accountUsername) {
-      const norm = String(hint.accountUsername).trim().toLowerCase();
-      query = query.eq('normalized_username', norm);
-    }
-
-    const { error } = await query;
-    if (error) {
-      console.warn('[AlWaseet Proxy] deactivateBadToken warning:', error.message);
-    } else {
-      console.warn(`[AlWaseet Proxy] Deactivated expired token (scoped, len=${token.length})`);
-    }
-  } catch (err) {
-    console.warn('[AlWaseet Proxy] deactivateBadToken failed:', getErrorMessage(err));
-  }
+  return;
 }
 
 Deno.serve(async (req) => {
@@ -239,12 +214,12 @@ Deno.serve(async (req) => {
         `[AlWaseet Proxy] TOKEN_EXPIRED (errNum:21) endpoint=${endpoint} partner=${partnerName || 'alwaseet'}`,
       );
 
-      // Fire-and-forget: do not block the response on DB write.
+      // 🛡️ NO-OP: never deactivate token rows from the proxy. The frontend decides recovery.
       deactivateBadToken(token, {
         partnerName: partnerName || 'alwaseet',
         accountUsername,
         userId,
-      }).catch(() => undefined);
+      });
 
       return json({
         status: false,
