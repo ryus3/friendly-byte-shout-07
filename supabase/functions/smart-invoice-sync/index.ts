@@ -244,10 +244,19 @@ serve(async (req) => {
               .eq('partner', partnerName)
               .maybeSingle();
 
-            // ✅ إذا موجودة ومستلمة في DB ولم نطلب force = تخطي
-            // (الفواتير المستلمة لا تحتاج إعادة جلب طلباتها — تعمل عبر receipt_received)
+            // ✅ إذا موجودة ومستلمة في DB ولم نطلب force = نتأكد أولاً أن delivery_invoice_orders ممتلئة
+            // قبل التخطي. كان السلوك السابق يتخطى دائماً مما يترك الفواتير المستلمة بدون طلبات في الكاش.
             if (existingInvoice?.received === true && !force_refresh) {
-              continue;
+              const { count: existingDioCount } = await supabase
+                .from('delivery_invoice_orders')
+                .select('id', { count: 'exact', head: true })
+                .eq('invoice_id', existingInvoice.id);
+              const expectedDio = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
+              if ((existingDioCount ?? 0) >= expectedDio && expectedDio > 0) {
+                continue;
+              }
+              // وإلا نتابع لجلب الطلبات وتعبئة الكاش (self-healing)
+              console.log(`  🩹 Received invoice ${externalId} cache incomplete (have=${existingDioCount ?? 0}, expected=${expectedDio}) — re-fetching orders`);
             }
 
             // ✅ تحقق من تغيير الحالة
