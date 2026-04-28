@@ -593,7 +593,8 @@ serve(async (req) => {
           if (!upsertError) {
             totalInvoicesSynced++;
             
-            if (sync_orders && upsertedInvoice?.id) {
+            const shouldSyncOrders = sync_orders && upsertedInvoice?.id && expectedCount > 0 && (cachedOrdersCount < expectedCount);
+            if (shouldSyncOrders) {
               try {
                 const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);  // ✅ تمرير partnerName
                 
@@ -697,6 +698,8 @@ serve(async (req) => {
               } catch (ordersError) {
                 console.error(`Error syncing orders for invoice ${externalId}:`, ordersError);
               }
+            } else if (sync_orders && upsertedInvoice?.id && expectedCount > 0) {
+              console.log(`  ✅ Invoice ${externalId} orders cache already complete: have=${cachedOrdersCount}, expected=${expectedCount}`);
             }
           }
         }
