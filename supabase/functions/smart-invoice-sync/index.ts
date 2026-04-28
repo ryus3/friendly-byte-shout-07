@@ -766,10 +766,11 @@ serve(async (req) => {
   } catch (error) {
     console.error('❌ Smart Invoice Sync Error:', error);
 
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Unknown error' 
+        error: message 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
