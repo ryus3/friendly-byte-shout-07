@@ -7,7 +7,8 @@ const corsHeaders = {
 };
 
 // ✅ API Base URLs for both delivery partners
-const ALWASEET_API_BASE = 'https://api.alwaseet-iq.net/v1/merchant';
+const ALWASEET_API_BASE = 'https://api.ryusbrand.com/alwaseet/v1/merchant';
+const ALWASEET_DIRECT_API_BASE = 'https://api.alwaseet-iq.net/v1/merchant';
 const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
 
 interface SyncRequest {
@@ -41,6 +42,35 @@ interface InvoiceOrder {
   [key: string]: unknown;
 }
 
+const isAlWaseet = (partner: string) => partner === 'alwaseet';
+
+async function fetchDeliveryJson(url: string, token: string): Promise<{ response: Response; data: any }> {
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  let data: any = null;
+  try {
+    data = await response.json();
+  } catch {
+    const errorText = await response.text().catch(() => '');
+    data = { raw: errorText.substring(0, 500) };
+  }
+
+  return { response, data };
+}
+
+function extractInvoiceOrders(data: any): InvoiceOrder[] {
+  if (Array.isArray(data?.data?.orders)) return data.data.orders;
+  if (Array.isArray(data?.orders)) return data.orders;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data)) return data;
+  return [];
+}
+
 // ✅ Fetch ALL invoices from API (supports both AlWaseet and MODON)
 // 🛡️ ملاحظة: واجهات الفواتير في توثيق الوسيط تقبل Merchant token فقط؛ Merchant user token يرجع errNum:21
 // ("ليس لديك صلاحية الوصول.") ـ وهذا ليس خطأ، بل يعني ببساطة لا فواتير لهذا الحساب. نتعامل معه كـ [].
@@ -49,21 +79,16 @@ async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet')
     const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
     console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API...`);
 
-    const response = await fetch(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    let { response, data } = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, token);
+
+    if (isAlWaseet(partner) && response.status >= 500) {
+      console.warn(`ALWASEET proxy returned ${response.status}; falling back to direct invoice API`);
+      ({ response, data } = await fetchDeliveryJson(`${ALWASEET_DIRECT_API_BASE}/get_merchant_invoices?token=${encodeURIComponent(token)}`, token));
+    }
 
     // قد يرجع API HTTP 400 مع errNum:21 ("لا صلاحية" / "لا فواتير")، لذلك نحلل الجسم قبل أن نعتبره خطأ.
-    let data: any = null;
-    try {
-      data = await response.json();
-    } catch {
-      const errorText = await response.text().catch(() => '');
-      console.error(`API non-JSON ${response.status}: ${errorText.substring(0, 200)}`);
+    if (data?.raw && !response.ok) {
+      console.error(`API non-JSON ${response.status}: ${String(data.raw).substring(0, 200)}`);
       return [];
     }
 
@@ -94,32 +119,22 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partn
     const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
     console.log(`📡 Fetching orders for invoice ${invoiceId} from ${partner.toUpperCase()}...`);
     
-    const response = await fetch(`${baseUrl}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${invoiceId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    let { response, data } = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${encodeURIComponent(invoiceId)}`, token);
+
+    if (isAlWaseet(partner) && response.status >= 500) {
+      console.warn(`ALWASEET proxy returned ${response.status}; falling back to direct invoice orders API for ${invoiceId}`);
+      ({ response, data } = await fetchDeliveryJson(`${ALWASEET_DIRECT_API_BASE}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${encodeURIComponent(invoiceId)}`, token));
+    }
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`API Error fetching orders for invoice ${invoiceId} from ${partner}: ${response.status} - ${errorText}`);
+      console.error(`API Error fetching orders for invoice ${invoiceId} from ${partner}: ${response.status} - ${JSON.stringify(data).substring(0, 200)}`);
       return [];
     }
 
-    const data = await response.json();
     const ok = data?.status === true || data?.errNum === 'S000';
     if (!ok) return [];
 
-    // ✅ AlWaseet الواقع الفعلي: data.data.orders (مصفوفة داخل كائن)
-    if (Array.isArray(data?.data?.orders)) return data.data.orders;
-    // ✅ MODON / صيغ بديلة
-    if (Array.isArray(data?.orders)) return data.orders;
-    if (Array.isArray(data?.data)) return data.data;
-    if (Array.isArray(data)) return data;
-
-    return [];
+    return extractInvoiceOrders(data);
   } catch (error) {
     console.error(`Error fetching orders for invoice ${invoiceId} from ${partner}:`, error);
     return [];
@@ -507,14 +522,27 @@ serve(async (req) => {
           // Check existing - ✅ استخدام partnerName بدلاً من 'alwaseet' الثابت
           const { data: existing } = await supabase
             .from('delivery_invoices')
-            .select('id, status_normalized, received, received_at')
+            .select('id, status_normalized, received, received_at, orders_count')
             .eq('external_id', externalId)
             .eq('partner', partnerName)
             .maybeSingle();
 
-          // ✅ Skip if already received in DB and not forcing
+          const expectedCount = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || existing?.orders_count || 0);
+          let cachedOrdersCount = 0;
+          if (existing?.id && sync_orders && expectedCount > 0) {
+            const { count } = await supabase
+              .from('delivery_invoice_orders')
+              .select('id', { count: 'exact', head: true })
+              .eq('invoice_id', existing.id);
+            cachedOrdersCount = count ?? 0;
+          }
+
+          // ✅ Skip if already received in DB and cache is complete. If orders are missing, self-heal.
           if (existing?.received === true && !force_refresh) {
-            continue;
+            if (!sync_orders || expectedCount === 0 || cachedOrdersCount >= expectedCount) {
+              continue;
+            }
+            console.log(`  🩹 Received invoice ${externalId} cache incomplete: have=${cachedOrdersCount}, expected=${expectedCount}`);
           }
 
           const isNew = !existing;
@@ -528,19 +556,10 @@ serve(async (req) => {
             statusChangedCount++;
           }
 
-          // Skip if no changes — لكن لا نقفز إذا الفاتورة pending وطلباتها ناقصة (dio_count < expected)
-          // الفواتير المستلمة لا نعيد جلب طلباتها (تعمل عبر receipt_received) لتفادي rate-limit
+          // Skip if no changes — لكن لا نقفز إذا طلبات الفاتورة ناقصة (received أو pending)
           if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
-            if (sync_orders && !isReceived) {
-              const expectedCount = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
-              const { count: dioCount } = await supabase
-                .from('delivery_invoice_orders')
-                .select('id', { count: 'exact', head: true })
-                .eq('invoice_id', existing.id);
-              const have = dioCount ?? 0;
-              if (expectedCount > 0 && have >= expectedCount) continue;
-              // pending بطلبات ناقصة → نتابع لإكمالها وربطها
-              console.log(`  ⚙️ Pending invoice ${externalId} needs completion: have=${have}, expected=${expectedCount}`);
+            if (sync_orders && expectedCount > 0 && cachedOrdersCount < expectedCount) {
+              console.log(`  ⚙️ Invoice ${externalId} needs order completion: have=${cachedOrdersCount}, expected=${expectedCount}`);
             } else {
               continue;
             }
@@ -574,7 +593,8 @@ serve(async (req) => {
           if (!upsertError) {
             totalInvoicesSynced++;
             
-            if (sync_orders && upsertedInvoice?.id) {
+            const shouldSyncOrders = sync_orders && upsertedInvoice?.id && expectedCount > 0 && (cachedOrdersCount < expectedCount);
+            if (shouldSyncOrders) {
               try {
                 const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);  // ✅ تمرير partnerName
                 
@@ -678,6 +698,8 @@ serve(async (req) => {
               } catch (ordersError) {
                 console.error(`Error syncing orders for invoice ${externalId}:`, ordersError);
               }
+            } else if (sync_orders && upsertedInvoice?.id && expectedCount > 0) {
+              console.log(`  ✅ Invoice ${externalId} orders cache already complete: have=${cachedOrdersCount}, expected=${expectedCount}`);
             }
           }
         }
@@ -747,10 +769,11 @@ serve(async (req) => {
   } catch (error) {
     console.error('❌ Smart Invoice Sync Error:', error);
 
+    const message = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message || 'Unknown error' 
+        error: message 
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -51,10 +51,11 @@ const AlWaseetInvoiceDetailsDialog = ({
       const invoiceId = invoice.external_id || invoice.id;
       
       if (invoiceId) {
-        // ✅ الفواتير المستلمة: من قاعدة البيانات فقط، لا استدعاء API
-        fetchInvoiceOrders(invoiceId, { preferCache: isReceived }).then(result => {
+        // لا نفرض الكاش للفواتير المستلمة؛ الهوك نفسه يتحقق هل الكاش مكتمل.
+        // إذا كان orders_count > 0 والكاش فارغاً، يسمح بالجلب من شركة التوصيل لإصلاح الفجوة.
+        fetchInvoiceOrders(invoiceId).then(result => {
           if (result?.dataSource) {
-            setDataSource(isReceived ? 'database' : result.dataSource);
+            setDataSource(result.dataSource);
           }
         });
         loadLinkedOrders();
