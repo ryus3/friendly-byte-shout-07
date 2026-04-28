@@ -399,6 +399,31 @@ export const useAlWaseetInvoices = () => {
             invoiceData = await AlWaseetAPI.getInvoiceOrders(selectedToken, invoiceId);
           }
           dataSource = 'api';
+
+          // ✅ نحفظ طلبات الفاتورة في الكاش فوراً (delivery_invoice_orders) ونشغّل الربط مع الطلبات المحلية
+          if (invoiceRecord?.id && Array.isArray(invoiceData?.orders) && invoiceData.orders.length > 0) {
+            try {
+              const ordersToInsert = invoiceData.orders.map(o => ({
+                invoice_id: invoiceRecord.id,
+                external_order_id: String(o.id),
+                raw: o,
+                status: o.status,
+                amount: o.price || o.amount || 0,
+                owner_user_id: invoiceRecord.owner_user_id || null,
+              }));
+              await supabase
+                .from('delivery_invoice_orders')
+                .upsert(ordersToInsert, { onConflict: 'invoice_id,external_order_id' });
+              await supabase
+                .from('delivery_invoices')
+                .update({ orders_last_synced_at: new Date().toISOString() })
+                .eq('id', invoiceRecord.id);
+              // ربط الطلبات المحلية تلقائياً
+              await supabase.rpc('link_invoice_orders_to_orders');
+            } catch (saveErr) {
+              devLog.warn('⚠️ فشل حفظ طلبات الفاتورة في الكاش:', saveErr?.message);
+            }
+          }
         } catch (apiError) {
           devLog.warn(`⚠️ getInvoiceOrders(${invoiceId}) فشل من API، سنرجع للقاعدة:`, apiError?.message);
         }
