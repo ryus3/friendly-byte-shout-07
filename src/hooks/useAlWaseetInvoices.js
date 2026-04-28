@@ -433,7 +433,7 @@ export const useAlWaseetInvoices = () => {
               devLog.warn('⚠️ الفاتورة موجودة لكن الطلبات فارغة - إجبار المزامنة');
               
               // محاولة جلب من API مرة أخرى مع retry
-              if (selectedToken && isLoggedIn) {
+              if (selectedToken) {
                 try {
                   let apiOrders;
                   if (invoiceRecord?.partner === 'modon') {
