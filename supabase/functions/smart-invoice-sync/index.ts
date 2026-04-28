@@ -42,6 +42,35 @@ interface InvoiceOrder {
   [key: string]: unknown;
 }
 
+const isAlWaseet = (partner: string) => partner === 'alwaseet';
+
+async function fetchDeliveryJson(url: string, token: string): Promise<{ response: Response; data: any }> {
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Accept: 'application/json',
+    },
+  });
+
+  let data: any = null;
+  try {
+    data = await response.json();
+  } catch {
+    const errorText = await response.text().catch(() => '');
+    data = { raw: errorText.substring(0, 500) };
+  }
+
+  return { response, data };
+}
+
+function extractInvoiceOrders(data: any): InvoiceOrder[] {
+  if (Array.isArray(data?.data?.orders)) return data.data.orders;
+  if (Array.isArray(data?.orders)) return data.orders;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data)) return data;
+  return [];
+}
+
 // ✅ Fetch ALL invoices from API (supports both AlWaseet and MODON)
 // 🛡️ ملاحظة: واجهات الفواتير في توثيق الوسيط تقبل Merchant token فقط؛ Merchant user token يرجع errNum:21
 // ("ليس لديك صلاحية الوصول.") ـ وهذا ليس خطأ، بل يعني ببساطة لا فواتير لهذا الحساب. نتعامل معه كـ [].
