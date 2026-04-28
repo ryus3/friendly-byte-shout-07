@@ -27,11 +27,14 @@ const useInventoryStats = () => {
 
   const computeReservedFallback = () => {
     try {
-      const reservedOrders = (orders || []).filter(o => 
-        ['pending', 'shipped', 'delivery', 'returned'].includes(o.status) &&
-        o.status !== 'returned_in_stock' &&
-        o.status !== 'completed'
-      );
+      const reservedOrders = (orders || []).filter(o => {
+        // ✅ القاعدة الذهبية للمخزون: delivery_status 4 (مُسلَّم) و 17 (تم الإرجاع للتاجر) لا يُحجز أبداً
+        const ds = String(o.delivery_status || '');
+        if (ds === '4' || ds === '17') return false;
+        return ['pending', 'shipped', 'delivery', 'returned'].includes(o.status) &&
+          o.status !== 'returned_in_stock' &&
+          o.status !== 'completed';
+      });
       
       const totalReservedQuantity = reservedOrders.reduce((total, order) => {
         const orderReserved = (order.items || []).reduce((sum, item) => {
@@ -80,6 +83,8 @@ const useInventoryStats = () => {
         devLog.log('✅ [InventoryStats] البيانات المستلمة:', statsData);
         
         const reservedFallback = computeReservedFallback();
+        // ✅ مصدر الحقيقة: inventory.reserved_quantity من القاعدة. الـ fallback فقط إن كانت القاعدة 0 وهناك طلبات تستحق الحجز
+        const dbReserved = parseInt(statsData.reserved_stock_count) || 0;
         const newStats = {
           totalProducts: parseInt(statsData.total_products) || (products?.length || 0),
           totalVariants: parseInt(statsData.total_variants) || 0,
@@ -87,7 +92,7 @@ const useInventoryStats = () => {
           mediumStockCount: parseInt(statsData.medium_stock_count) || 0,
           lowStockCount: parseInt(statsData.low_stock_count) || 0,
           outOfStockCount: parseInt(statsData.out_of_stock_count) || 0,
-          reservedStockCount: reservedFallback,
+          reservedStockCount: dbReserved > 0 ? dbReserved : reservedFallback,
           archivedProductsCount: parseInt(statsData.archived_products_count) || 0,
           totalInventoryValue: parseFloat(statsData.total_inventory_value) || 0,
           departments: statsData.departments_data || []

@@ -340,30 +340,46 @@ export const useAlWaseetInvoices = () => {
       let dataSource = 'database';
       let selectedToken = token;
 
-      // ✅ جلب معلومات الفاتورة + حالة الاستلام من القاعدة
+      // ✅ جلب معلومات الفاتورة + حالة الاستلام + عدد روابط الطلبات الموجودة
       const { data: invoiceRecord } = await supabase
         .from('delivery_invoices')
-        .select('owner_user_id, partner, account_username, external_id, orders_count, orders_last_synced_at, received, received_flag, status, status_normalized')
+        .select('id, owner_user_id, partner, account_username, external_id, orders_count, orders_last_synced_at, received, received_flag, status, status_normalized')
         .eq('external_id', invoiceId)
         .single();
 
-      // ✅ تحديد ما إذا كانت الفاتورة مستلمة (لا تحتاج جلب مباشر)
+      // ✅ تحديد ما إذا كانت الفاتورة مستلمة
       const isReceivedInvoice = !!invoiceRecord && (
         invoiceRecord.received === true ||
         invoiceRecord.received_flag === true ||
         invoiceRecord.status === 'تم الاستلام من قبل التاجر' ||
         (invoiceRecord.status_normalized || '').toLowerCase() === 'received'
       );
-      const cacheOnly = preferCache || isReceivedInvoice;
+
+      // ✅ تحقّق هل الكاش يحتوي طلبات فعلاً
+      let cachedRowsCount = 0;
+      if (invoiceRecord?.id) {
+        const { count } = await supabase
+          .from('delivery_invoice_orders')
+          .select('id', { count: 'exact', head: true })
+          .eq('invoice_id', invoiceRecord.id);
+        cachedRowsCount = count || 0;
+      }
+
+      // ✅ نعتمد الكاش فقط إذا كان فعلاً ممتلئاً. إذا الفاتورة مستلمة لكن الكاش فارغ والعداد > 0
+      //   نسمح بمحاولة الجلب من API لإصلاح الفجوة (السلوك الذي كان يعمل سابقاً).
+      const expectedOrders = invoiceRecord?.orders_count || 0;
+      const cacheLooksComplete = cachedRowsCount > 0 && (expectedOrders === 0 || cachedRowsCount >= expectedOrders);
+      const cacheOnly = preferCache || (isReceivedInvoice && cacheLooksComplete);
 
       if (invoiceRecord?.owner_user_id && invoiceRecord?.partner && !cacheOnly) {
-        // جلب التوكن الصحيح للمستخدم والشركة المحددة
+        // جلب التوكن الصحيح لصاحب الفاتورة (المدير أو الموظف)
         const { data: tokenData } = await supabase
           .from('delivery_partner_tokens')
           .select('token, partner_name')
           .eq('user_id', invoiceRecord.owner_user_id)
           .eq('partner_name', invoiceRecord.partner)
           .eq('is_active', true)
+          .gt('expires_at', new Date().toISOString())
           .order('last_used_at', { ascending: false })
           .limit(1)
           .maybeSingle();
@@ -373,8 +389,8 @@ export const useAlWaseetInvoices = () => {
         }
       }
 
-      // محاولة API أولاً إذا كان التوكن متاحاً - يتم تخطيها للفواتير المستلمة
-      if (selectedToken && isLoggedIn && !cacheOnly) {
+      // محاولة API أولاً إذا كان التوكن متاحاً ولم نكن في وضع cacheOnly
+      if (selectedToken && !cacheOnly) {
         try {
           if (invoiceRecord?.partner === 'modon') {
             const ModonAPI = await import('@/lib/modon-api');
@@ -383,8 +399,33 @@ export const useAlWaseetInvoices = () => {
             invoiceData = await AlWaseetAPI.getInvoiceOrders(selectedToken, invoiceId);
           }
           dataSource = 'api';
+
+          // ✅ نحفظ طلبات الفاتورة في الكاش فوراً (delivery_invoice_orders) ونشغّل الربط مع الطلبات المحلية
+          if (invoiceRecord?.id && Array.isArray(invoiceData?.orders) && invoiceData.orders.length > 0) {
+            try {
+              const ordersToInsert = invoiceData.orders.map(o => ({
+                invoice_id: invoiceRecord.id,
+                external_order_id: String(o.id),
+                raw: o,
+                status: o.status,
+                amount: o.price || o.amount || 0,
+                owner_user_id: invoiceRecord.owner_user_id || null,
+              }));
+              await supabase
+                .from('delivery_invoice_orders')
+                .upsert(ordersToInsert, { onConflict: 'invoice_id,external_order_id' });
+              await supabase
+                .from('delivery_invoices')
+                .update({ orders_last_synced_at: new Date().toISOString() })
+                .eq('id', invoiceRecord.id);
+              // ربط الطلبات المحلية تلقائياً
+              await supabase.rpc('link_invoice_orders_to_orders');
+            } catch (saveErr) {
+              devLog.warn('⚠️ فشل حفظ طلبات الفاتورة في الكاش:', saveErr?.message);
+            }
+          }
         } catch (apiError) {
-          // Fallback to database
+          devLog.warn(`⚠️ getInvoiceOrders(${invoiceId}) فشل من API، سنرجع للقاعدة:`, apiError?.message);
         }
       }
 
@@ -417,7 +458,7 @@ export const useAlWaseetInvoices = () => {
               devLog.warn('⚠️ الفاتورة موجودة لكن الطلبات فارغة - إجبار المزامنة');
               
               // محاولة جلب من API مرة أخرى مع retry
-              if (selectedToken && isLoggedIn) {
+              if (selectedToken) {
                 try {
                   let apiOrders;
                   if (invoiceRecord?.partner === 'modon') {

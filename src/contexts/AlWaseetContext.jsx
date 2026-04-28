@@ -884,14 +884,11 @@ export const AlWaseetProvider = ({ children }) => {
             
             devLog.log(`⚠️ لم يتم الحصول على طلبات صالحة من ${partnerName} للموظف: ${employeeId}`);
             
-            toast({
-              title: `تحذير: فشل مزامنة ${partnerName}`,
-                description: `تعذر الحصول على طلبات الموظف من ${partnerName}. تحقق من تسجيل الدخول.`,
-                variant: 'destructive',
-                duration: 5000
-              });
-              continue;
-            }
+            // ⚠️ صامت: عدم وجود طلبات لا يعني فشل تسجيل دخول.
+            // كان هذا التوست يظهر تحذير "فشل مزامنة الوسيط" حتى لحسابات نشطة بالكامل.
+            devLog.warn(`⚠️ ${partnerName}: لا توجد طلبات للموظف ${employeeId} (سلوك طبيعي إن لم تكن لديه طلبات حديثة)`);
+            continue;
+          }
           } catch (apiError) {
             console.error(`❌ ===== [${partnerName}] خطأ في getMerchantOrders =====`);
             console.error('الخطأ:', apiError.message);
