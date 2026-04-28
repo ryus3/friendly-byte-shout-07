@@ -27,11 +27,14 @@ const useInventoryStats = () => {
 
   const computeReservedFallback = () => {
     try {
-      const reservedOrders = (orders || []).filter(o => 
-        ['pending', 'shipped', 'delivery', 'returned'].includes(o.status) &&
-        o.status !== 'returned_in_stock' &&
-        o.status !== 'completed'
-      );
+      const reservedOrders = (orders || []).filter(o => {
+        // ✅ القاعدة الذهبية للمخزون: delivery_status 4 (مُسلَّم) و 17 (تم الإرجاع للتاجر) لا يُحجز أبداً
+        const ds = String(o.delivery_status || '');
+        if (ds === '4' || ds === '17') return false;
+        return ['pending', 'shipped', 'delivery', 'returned'].includes(o.status) &&
+          o.status !== 'returned_in_stock' &&
+          o.status !== 'completed';
+      });
       
       const totalReservedQuantity = reservedOrders.reduce((total, order) => {
         const orderReserved = (order.items || []).reduce((sum, item) => {
