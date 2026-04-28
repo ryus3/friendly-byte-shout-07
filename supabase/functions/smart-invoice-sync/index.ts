@@ -522,14 +522,27 @@ serve(async (req) => {
           // Check existing - ✅ استخدام partnerName بدلاً من 'alwaseet' الثابت
           const { data: existing } = await supabase
             .from('delivery_invoices')
-            .select('id, status_normalized, received, received_at')
+            .select('id, status_normalized, received, received_at, orders_count')
             .eq('external_id', externalId)
             .eq('partner', partnerName)
             .maybeSingle();
 
-          // ✅ Skip if already received in DB and not forcing
+          const expectedCount = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || existing?.orders_count || 0);
+          let cachedOrdersCount = 0;
+          if (existing?.id && sync_orders && expectedCount > 0) {
+            const { count } = await supabase
+              .from('delivery_invoice_orders')
+              .select('id', { count: 'exact', head: true })
+              .eq('invoice_id', existing.id);
+            cachedOrdersCount = count ?? 0;
+          }
+
+          // ✅ Skip if already received in DB and cache is complete. If orders are missing, self-heal.
           if (existing?.received === true && !force_refresh) {
-            continue;
+            if (!sync_orders || expectedCount === 0 || cachedOrdersCount >= expectedCount) {
+              continue;
+            }
+            console.log(`  🩹 Received invoice ${externalId} cache incomplete: have=${cachedOrdersCount}, expected=${expectedCount}`);
           }
 
           const isNew = !existing;
@@ -543,19 +556,10 @@ serve(async (req) => {
             statusChangedCount++;
           }
 
-          // Skip if no changes — لكن لا نقفز إذا الفاتورة pending وطلباتها ناقصة (dio_count < expected)
-          // الفواتير المستلمة لا نعيد جلب طلباتها (تعمل عبر receipt_received) لتفادي rate-limit
+          // Skip if no changes — لكن لا نقفز إذا طلبات الفاتورة ناقصة (received أو pending)
           if (!force_refresh && existing && !statusChanged && existing.received === isReceived) {
-            if (sync_orders && !isReceived) {
-              const expectedCount = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
-              const { count: dioCount } = await supabase
-                .from('delivery_invoice_orders')
-                .select('id', { count: 'exact', head: true })
-                .eq('invoice_id', existing.id);
-              const have = dioCount ?? 0;
-              if (expectedCount > 0 && have >= expectedCount) continue;
-              // pending بطلبات ناقصة → نتابع لإكمالها وربطها
-              console.log(`  ⚙️ Pending invoice ${externalId} needs completion: have=${have}, expected=${expectedCount}`);
+            if (sync_orders && expectedCount > 0 && cachedOrdersCount < expectedCount) {
+              console.log(`  ⚙️ Invoice ${externalId} needs order completion: have=${cachedOrdersCount}, expected=${expectedCount}`);
             } else {
               continue;
             }
