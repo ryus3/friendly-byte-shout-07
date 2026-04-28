@@ -79,21 +79,16 @@ async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet')
     const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
     console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API...`);
 
-    const response = await fetch(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    let { response, data } = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, token);
+
+    if (isAlWaseet(partner) && response.status >= 500) {
+      console.warn(`ALWASEET proxy returned ${response.status}; falling back to direct invoice API`);
+      ({ response, data } = await fetchDeliveryJson(`${ALWASEET_DIRECT_API_BASE}/get_merchant_invoices?token=${encodeURIComponent(token)}`, token));
+    }
 
     // قد يرجع API HTTP 400 مع errNum:21 ("لا صلاحية" / "لا فواتير")، لذلك نحلل الجسم قبل أن نعتبره خطأ.
-    let data: any = null;
-    try {
-      data = await response.json();
-    } catch {
-      const errorText = await response.text().catch(() => '');
-      console.error(`API non-JSON ${response.status}: ${errorText.substring(0, 200)}`);
+    if (data?.raw && !response.ok) {
+      console.error(`API non-JSON ${response.status}: ${String(data.raw).substring(0, 200)}`);
       return [];
     }
 
@@ -124,32 +119,22 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partn
     const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
     console.log(`📡 Fetching orders for invoice ${invoiceId} from ${partner.toUpperCase()}...`);
     
-    const response = await fetch(`${baseUrl}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${invoiceId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    let { response, data } = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${encodeURIComponent(invoiceId)}`, token);
+
+    if (isAlWaseet(partner) && response.status >= 500) {
+      console.warn(`ALWASEET proxy returned ${response.status}; falling back to direct invoice orders API for ${invoiceId}`);
+      ({ response, data } = await fetchDeliveryJson(`${ALWASEET_DIRECT_API_BASE}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${encodeURIComponent(invoiceId)}`, token));
+    }
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`API Error fetching orders for invoice ${invoiceId} from ${partner}: ${response.status} - ${errorText}`);
+      console.error(`API Error fetching orders for invoice ${invoiceId} from ${partner}: ${response.status} - ${JSON.stringify(data).substring(0, 200)}`);
       return [];
     }
 
-    const data = await response.json();
     const ok = data?.status === true || data?.errNum === 'S000';
     if (!ok) return [];
 
-    // ✅ AlWaseet الواقع الفعلي: data.data.orders (مصفوفة داخل كائن)
-    if (Array.isArray(data?.data?.orders)) return data.data.orders;
-    // ✅ MODON / صيغ بديلة
-    if (Array.isArray(data?.orders)) return data.orders;
-    if (Array.isArray(data?.data)) return data.data;
-    if (Array.isArray(data)) return data;
-
-    return [];
+    return extractInvoiceOrders(data);
   } catch (error) {
     console.error(`Error fetching orders for invoice ${invoiceId} from ${partner}:`, error);
     return [];
