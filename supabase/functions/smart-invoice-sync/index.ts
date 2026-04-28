@@ -7,7 +7,8 @@ const corsHeaders = {
 };
 
 // ✅ API Base URLs for both delivery partners
-const ALWASEET_API_BASE = 'https://api.alwaseet-iq.net/v1/merchant';
+const ALWASEET_API_BASE = 'https://api.ryusbrand.com/alwaseet/v1/merchant';
+const ALWASEET_DIRECT_API_BASE = 'https://api.alwaseet-iq.net/v1/merchant';
 const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
 
 interface SyncRequest {
