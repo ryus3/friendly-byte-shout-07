@@ -83,6 +83,8 @@ const useInventoryStats = () => {
         devLog.log('✅ [InventoryStats] البيانات المستلمة:', statsData);
         
         const reservedFallback = computeReservedFallback();
+        // ✅ مصدر الحقيقة: inventory.reserved_quantity من القاعدة. الـ fallback فقط إن كانت القاعدة 0 وهناك طلبات تستحق الحجز
+        const dbReserved = parseInt(statsData.reserved_stock_count) || 0;
         const newStats = {
           totalProducts: parseInt(statsData.total_products) || (products?.length || 0),
           totalVariants: parseInt(statsData.total_variants) || 0,
@@ -90,7 +92,7 @@ const useInventoryStats = () => {
           mediumStockCount: parseInt(statsData.medium_stock_count) || 0,
           lowStockCount: parseInt(statsData.low_stock_count) || 0,
           outOfStockCount: parseInt(statsData.out_of_stock_count) || 0,
-          reservedStockCount: reservedFallback,
+          reservedStockCount: dbReserved > 0 ? dbReserved : reservedFallback,
           archivedProductsCount: parseInt(statsData.archived_products_count) || 0,
           totalInventoryValue: parseFloat(statsData.total_inventory_value) || 0,
           departments: statsData.departments_data || []
