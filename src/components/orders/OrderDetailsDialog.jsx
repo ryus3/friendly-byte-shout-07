@@ -293,6 +293,11 @@ const OrderDetailsDialog = ({
                     آخر تحديث: {format(parseISO(order.updated_at), 'd/M/yyyy h:mm a', { locale: ar })}
                   </div>
                 )}
+                {order.last_synced_at && ['alwaseet','modon'].includes(order.delivery_partner) && (
+                  <div className="text-xs text-muted-foreground">
+                    آخر مزامنة: {format(parseISO(order.last_synced_at), 'd/M/yyyy h:mm a', { locale: ar })}
+                  </div>
+                )}
               </div>
             </div>
             <div className="p-4 bg-secondary rounded-lg border border-border">

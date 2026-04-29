@@ -1,0 +1,2 @@
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS last_synced_at timestamptz;
+CREATE INDEX IF NOT EXISTS idx_orders_last_synced_at ON public.orders(last_synced_at) WHERE delivery_partner IN ('alwaseet','modon');

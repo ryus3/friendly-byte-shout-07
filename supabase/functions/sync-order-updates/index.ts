@@ -81,11 +81,26 @@ Deno.serve(async (req) => {
     const notificationsEnabled = scheduleSettings?.notifications_enabled ?? false;
     console.log(`📢 الإشعارات ${notificationsEnabled ? 'مفعّلة' : 'معطلة'}`);
 
-    // 1️⃣ جلب جميع التوكنات النشطة لكل الشركات
+    // 0️⃣ قراءة الشركاء النشطين ديناميكياً من السجل (يدعم أي شركة جديدة تلقائياً)
+    const { data: registry } = await supabase
+      .from('delivery_partners_registry')
+      .select('partner_key, base_url')
+      .eq('is_active', true);
+    const partnerBaseMap: Record<string, string> = {};
+    (registry || []).forEach((r: any) => {
+      if (r?.partner_key && r?.base_url) partnerBaseMap[r.partner_key] = r.base_url;
+    });
+    // ضمان وجود الافتراضيات حتى لو سجل التسجيل فارغ
+    if (!partnerBaseMap['alwaseet']) partnerBaseMap['alwaseet'] = 'https://api.alwaseet-iq.net/v1/merchant';
+    if (!partnerBaseMap['modon']) partnerBaseMap['modon'] = 'https://mcht.modon-express.net/v1/merchant';
+    const activePartnerKeys = Object.keys(partnerBaseMap);
+    console.log(`🌐 الشركاء النشطون: ${activePartnerKeys.join(', ')}`);
+
+    // 1️⃣ جلب جميع التوكنات النشطة لكل الشركات النشطة في السجل
     const { data: allTokens, error: tokensError } = await supabase
       .from('delivery_partner_tokens')
       .select('user_id, token, account_username, partner_name')
-      .in('partner_name', ['alwaseet', 'modon'])
+      .in('partner_name', activePartnerKeys)
       .eq('is_active', true);
 
     if (tokensError || !allTokens || allTokens.length === 0) {
@@ -109,11 +124,10 @@ Deno.serve(async (req) => {
       try {
         const partnerName = tokenRecord.partner_name || 'alwaseet';
         console.log(`📡 جلب طلبات ${partnerName} للحساب: ${tokenRecord.account_username}`);
-        
-        // تحديد API URL بناءً على الشركة
-        const apiUrl = partnerName === 'modon'
-          ? `https://mcht.modon-express.net/v1/merchant/merchant-orders?token=${tokenRecord.token}`
-          : `https://api.alwaseet-iq.net/v1/merchant/merchant-orders?token=${tokenRecord.token}`;
+
+        // ✅ تحديد API URL ديناميكياً من سجل الشركاء
+        const baseUrl = partnerBaseMap[partnerName] || 'https://api.alwaseet-iq.net/v1/merchant';
+        const apiUrl = `${baseUrl.replace(/\/$/, '')}/merchant-orders?token=${tokenRecord.token}`;
         
         const response = await fetch(apiUrl, {
           headers: { 'Accept': 'application/json' }
@@ -152,11 +166,11 @@ Deno.serve(async (req) => {
 
     console.log(`🗺️ تم بناء خريطة بـ ${waseetOrdersMap.size} مدخل للبحث`);
 
-    // 4️⃣ جلب الطلبات المحلية النشطة من كلا الشركتين
+    // 4️⃣ جلب الطلبات المحلية النشطة من كل الشركاء النشطين
     const { data: activeOrders, error: ordersError } = await supabase
       .from('orders')
       .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner, customer_city, customer_province, customer_address, partner_missed_count, receipt_received')
-      .in('delivery_partner', ['alwaseet', 'modon'])
+      .in('delivery_partner', activePartnerKeys)
       .not('delivery_status', 'in', '(17,31,32)')
       .not('status', 'in', '(completed,returned_in_stock)')
       .order('created_at', { ascending: false })
@@ -436,45 +450,34 @@ Deno.serve(async (req) => {
         const currentFinalAmount = parseInt(String(localOrder.final_amount || 0));
         const newFinalAmount = parseInt(String(waseetOrder.price || 0));
         const currentDeliveryFee = parseInt(String(localOrder.delivery_fee || 0));
-        const currentDiscount = parseInt(String((localOrder as any).discount || 0));
-        const currentPriceChangeType = (localOrder as any).price_change_type;
 
-        // ✅ إعادة حساب الخصم حتى لو السعر لم يتغير (للطلبات التي تم تحديثها قبل الإصلاح)
-        const priceNeedsRecalculation = 
-          !isPartialDelivery && 
-          newFinalAmount > 0 && 
-          currentDiscount === 0 &&
-          currentPriceChangeType === null;
-
-        // تحديث السعر للطلبات العادية فقط
+        // ✅ تحديث السعر فقط عند تغيّر فعلي من الشريك (لا تخمين خصم وهمي)
         // ⚠️ هام: الـ triggers تحسب final_amount = total_amount + delivery_fee
         // لذلك يجب تحديث total_amount بدلاً من final_amount مباشرة
-        if (!isPartialDelivery && newFinalAmount > 0 && (currentFinalAmount !== newFinalAmount || priceNeedsRecalculation)) {
+        if (!isPartialDelivery && newFinalAmount > 0 && currentFinalAmount !== newFinalAmount) {
           // حساب total_amount الجديد (السعر الكلي - رسوم التوصيل)
           const newTotalAmount = Math.max(0, newFinalAmount - currentDeliveryFee);
-          
+
           // ✅ جلب السعر الأصلي للمنتجات من order_items
           const { data: orderItems } = await supabase
             .from('order_items')
             .select('unit_price, quantity')
             .eq('order_id', localOrder.id);
-          
+
           const originalProductsTotal = (orderItems || []).reduce(
             (sum: number, item: any) => sum + (parseInt(String(item.unit_price || 0)) * parseInt(String(item.quantity || 1))),
             0
           );
-          
-          // ✅ حساب الخصم/الزيادة (مثل AlWaseetContext.jsx)
+
+          // ✅ حساب الخصم/الزيادة (فقط عند تغير حقيقي للسعر من الشريك)
           const priceDiff = originalProductsTotal - newTotalAmount;
-          
+
           if (priceDiff > 0) {
-            // خصم
             updates.discount = priceDiff;
             updates.price_increase = 0;
             updates.price_change_type = 'discount';
             console.log(`🔻 خصم: ${priceDiff.toLocaleString()} د.ع (أصلي: ${originalProductsTotal}, جديد: ${newTotalAmount})`);
           } else if (priceDiff < 0) {
-            // زيادة
             updates.discount = 0;
             updates.price_increase = Math.abs(priceDiff);
             updates.price_change_type = 'increase';
@@ -484,9 +487,9 @@ Deno.serve(async (req) => {
             updates.price_increase = 0;
             updates.price_change_type = null;
           }
-          
+
           updates.total_amount = newTotalAmount;
-          updates.sales_amount = newTotalAmount; // ✅ تحديث sales_amount أيضاً
+          updates.sales_amount = newTotalAmount;
           priceChanged = true;
 
           console.log(`💵 تحديث السعر: original=${originalProductsTotal}, new=${newTotalAmount}, diff=${priceDiff}, delivery_fee=${currentDeliveryFee}`);
@@ -591,10 +594,13 @@ Deno.serve(async (req) => {
           console.log(`✅ تم تحديث ${localOrder.tracking_number} (${waseetOrder._account}): ${changesList.join('، ')}`);
         }
 
-        // تحديث الطلب فقط إذا كانت هناك تغييرات
+        // ✅ تحديث الطلب: نُحدّث last_synced_at دائماً (نجح فحص الشريك)
+        // ولا نُحدّث updated_at إلا عند تغيّر فعلي
+        const nowIso = new Date().toISOString();
         if (Object.keys(updates).length > 0) {
-          updates.updated_at = new Date().toISOString();
-          
+          updates.updated_at = nowIso;
+          updates.last_synced_at = nowIso;
+
           const { error: updateError } = await supabase
             .from('orders')
             .update(updates)
@@ -605,10 +611,16 @@ Deno.serve(async (req) => {
           } else if (statusChanged || priceChanged || accountChanged || addressChanged) {
             console.log(`✅ تم حفظ التغييرات للطلب ${localOrder.tracking_number}`);
           }
+        } else {
+          // لا تغييرات: نُحدّث last_synced_at فقط (ختم زمني لآخر فحص ناجح)
+          await supabase
+            .from('orders')
+            .update({ last_synced_at: nowIso })
+            .eq('id', localOrder.id);
         }
 
         if (!statusChanged && !priceChanged && !accountChanged && !addressChanged) {
-          console.log(`⏰ الطلب ${localOrder.tracking_number} لا توجد تغييرات`);
+          console.log(`⏰ الطلب ${localOrder.tracking_number} لا توجد تغييرات (last_synced_at محدّث)`);
         }
       } catch (orderError: any) {
         console.error(`❌ خطأ في معالجة الطلب ${localOrder.order_number}:`, orderError.message);
