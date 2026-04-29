@@ -81,10 +81,12 @@ export const canDeleteOrder = (order) => {
  * @returns {boolean}
  */
 export const isBeforePickup = (order) => {
-  if (!order || !order.external_id) return false;
-  
+  if (!order) return false;
+  const hasPartnerId = !!(order.delivery_partner_order_id || order.tracking_number || order.external_id || order.qr_id);
+  if (!hasPartnerId) return false;
+
   const deliveryStatus = (order.delivery_status || '').toLowerCase().trim();
-  return DELETABLE_DELIVERY_STATUSES.some(status => 
+  return DELETABLE_DELIVERY_STATUSES.some(status =>
     deliveryStatus.includes(status.toLowerCase())
   );
 };
