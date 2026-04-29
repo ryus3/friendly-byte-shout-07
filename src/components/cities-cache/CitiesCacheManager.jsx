@@ -14,6 +14,7 @@ import TelegramBotDeliveryPartnerSelector from './TelegramBotDeliveryPartnerSele
 
 const CitiesCacheManager = () => {
   const [updateProgress, setUpdateProgress] = useState({ current: 0, total: 0, message: '' });
+  const [partnerCounts, setPartnerCounts] = useState({ cities: 0, regions: 0 });
   
   const { 
     cities, 
@@ -158,6 +159,34 @@ const CitiesCacheManager = () => {
     fetchSyncInfo(activePartner);
   }, [activePartner, cities?.length, allRegions?.length]);
 
+  // ✅ جلب أعداد المدن والمناطق المفلترة حسب الشريك النشط (عالمي ودقيق)
+  useEffect(() => {
+    const loadPartnerCounts = async () => {
+      if (!activePartner || activePartner === 'local') {
+        setPartnerCounts({ cities: 0, regions: 0 });
+        return;
+      }
+      try {
+        const [{ count: citiesCount }, { count: regionsCount }] = await Promise.all([
+          supabase
+            .from('city_delivery_mappings')
+            .select('*', { count: 'exact', head: true })
+            .eq('delivery_partner', activePartner)
+            .eq('is_active', true),
+          supabase
+            .from('region_delivery_mappings')
+            .select('*', { count: 'exact', head: true })
+            .eq('delivery_partner', activePartner)
+            .eq('is_active', true),
+        ]);
+        setPartnerCounts({ cities: citiesCount || 0, regions: regionsCount || 0 });
+      } catch (e) {
+        console.error('فشل جلب أعداد الكاش حسب الشريك:', e);
+      }
+    };
+    loadPartnerCounts();
+  }, [activePartner, syncInfo?.last_sync_at]);
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -213,7 +242,7 @@ const CitiesCacheManager = () => {
             <MapPin className="h-4 w-4 text-blue-500" />
             <span className="text-sm text-muted-foreground">عدد المدن:</span>
             <Badge variant="secondary">
-              {cities?.length || syncInfo?.cities_count || 0}
+              {partnerCounts.cities || 0}
             </Badge>
           </div>
           
@@ -221,7 +250,7 @@ const CitiesCacheManager = () => {
             <Building2 className="h-4 w-4 text-orange-500" />
             <span className="text-sm text-muted-foreground">عدد المناطق:</span>
             <Badge variant="secondary">
-              {allRegions?.length || syncInfo?.regions_count || 0}
+              {partnerCounts.regions || 0}
             </Badge>
           </div>
           
@@ -237,8 +266,8 @@ const CitiesCacheManager = () => {
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-purple-500" />
             <span className="text-sm text-muted-foreground">الحالة:</span>
-            <Badge variant={isCacheEmpty() ? "destructive" : "default"}>
-              {isCacheEmpty() ? "فارغ" : cities.length > 0 && allRegions.length > 0 ? "محدث" : "يحتاج تحديث"}
+            <Badge variant={partnerCounts.cities === 0 ? "destructive" : "default"}>
+              {partnerCounts.cities === 0 ? "فارغ" : (partnerCounts.cities > 0 && partnerCounts.regions > 0 ? "محدث" : "يحتاج تحديث")}
             </Badge>
           </div>
         </div>
