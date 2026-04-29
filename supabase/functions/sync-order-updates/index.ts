@@ -558,6 +558,19 @@ Deno.serve(async (req) => {
       })
       .eq('id', scheduleSettings?.id);
 
+    // ✅ تسجيل تشغيل ناجح في background_sync_logs ليظهر في لوحة المزامنة
+    try {
+      const partnersTouched = Array.from(new Set(allTokens.map(t => t.partner_name || 'alwaseet'))).join(',');
+      await supabase.from('background_sync_logs').insert({
+        sync_type: `sync-order-updates [${partnersTouched}]`,
+        invoices_synced: 0,
+        orders_updated: updatedCount,
+        success: true,
+      });
+    } catch (logErr) {
+      console.warn('⚠️ تعذّر كتابة background_sync_logs:', (logErr as any)?.message);
+    }
+
     console.log(`✅ انتهت المزامنة: فُحص ${activeOrders?.length || 0} طلب، حُدّث ${updatedCount} طلب بتغييرات`);
 
     return new Response(
