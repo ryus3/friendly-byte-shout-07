@@ -127,12 +127,18 @@ serve(async (req) => {
     // معالجة أخطاء HTTP الشائعة
     if (response.status === 400) {
       console.error('❌ HTTP 400: Bad Request');
-      
-      // ✅ فحص errNum: 21 (لا توجد فواتير) - ليس خطأ حقيقي!
-      if (data.errNum === 21 || data.errNum === '21') {
-        console.log('ℹ️ HTTP 400 مع errNum:21 = لا توجد فواتير (حالة طبيعية)');
+
+      // 🛡️ تمييز errNum:21 حسب الـ endpoint
+      // - endpoints الفواتير: errNum:21 = "لا توجد فواتير" (حالة طبيعية)
+      // - أي endpoint آخر (create-order/edit-order/...): errNum:21 = خطأ حقيقي
+      const isInvoicesEndpoint =
+        typeof endpoint === 'string' &&
+        (endpoint.includes('merchant-invoices') || endpoint.includes('invoices'));
+
+      if ((data.errNum === 21 || data.errNum === '21') && isInvoicesEndpoint) {
+        console.log('ℹ️ HTTP 400 + errNum:21 على endpoint الفواتير = لا توجد فواتير (طبيعي)');
         return new Response(JSON.stringify({
-          status: true, // ✅ تغيير إلى true
+          status: true,
           errNum: '21',
           msg: data.msg || 'لا توجد فواتير',
           data: []
@@ -141,7 +147,22 @@ serve(async (req) => {
           status: 200
         });
       }
-      
+
+      // errNum:21 على endpoints أخرى = خطأ حقيقي (غالباً city/region غير صالح أو طلب مرفوض)
+      if (data.errNum === 21 || data.errNum === '21') {
+        console.error(`❌ MODON رفض الطلب على endpoint=${endpoint} مع errNum:21 (${data.msg})`);
+        return new Response(JSON.stringify({
+          status: false,
+          errNum: '21',
+          msg: `مدن رفضت الطلب على ${endpoint}: ${data.msg || 'غير معروف'}. تحقّق من المحافظة/المنطقة وكاش مدن، أو من صلاحية الحساب.`,
+          originalMsg: data.msg,
+          httpStatus: 400
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200
+        });
+      }
+
       // ❌ أخطاء HTTP 400 الأخرى
       return new Response(JSON.stringify({
         status: false,

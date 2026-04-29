@@ -1,153 +1,148 @@
-## ملخص الإجابة على أسئلتك
+## الفحص العميق — ماذا حدث بالضبط
 
-> هل اختيار شركة من نافذة الطلب الذكي يكفي؟ ولا نحتاج "افتراضية" من تسجيل الدخول؟
+تتبعت الطلب من النقر على "موافقة" حتى رد API مدن باستخدام لوغ `modon-proxy` وقاعدة البيانات. النتيجة: **الطلب فعلاً ذهب إلى مدن** (وليس للوسيط)، والحساب `ryus-brand` صالح وعامل، والتوكن لم يُخلط بين الشركات. لكن مدن نفسها ردت بخطأ، ثم proxy أساء فهم الرد.
 
-نعم، اختيار الشركة في نافذة الطلب الذكي **هو** المرجع الصحيح ويكفي. لا يوجد ولن يكون "منطقة افتراضية".
+### السبب الجذري الحقيقي (مكوَّن من جزأين)
 
-> كيف كان يعمل قبل أيام؟
+**الجزء 1 — خلل في `modon-proxy`:**
+عند استدعاء `create-order`، ردت API مدن بـ:
+```
+HTTP 400, errNum: 21, msg: "ليس لديك صلاحية الوصول"
+```
+الـ proxy يفترض أن **أي** `errNum:21` يعني "لا توجد فواتير" (وهو صحيح فقط لـ endpoint الفواتير)، فيحوّل الرد قسراً إلى `status:true, errNum:'21', data:[]`. عند `createModonOrder` يفشل شرط النجاح (`errNum==='S000'`) فيرمي `data.msg` = "ليس لديك صلاحية الوصول" — وهي صياغة مطابقة حرفياً لرسالة الوسيط، فظن المستخدم أن الطلب ذهب للوسيط. **لم يذهب — ذهب لمدن، ومدن رفضته**.
 
-كان `regions_master.id` فعلياً يساوي `alwaseet_id` لمعظم المناطق، فأي رقم تستخرجه كان يصلح للوسيط بالصدفة.
+**الجزء 2 — لماذا رفضت مدن الطلب؟**
+الطلب الذكي خزّن `region_id=11833` (canonical id داخلي). resolver وجد المنطقة بالاسم "حي الجامعه نفق الشرطة" وأعاد `region_external_id=546` لمدن. لكن مدن ردت errNum:21 على هذا الـ region — على الأرجح لأن:
+- كاش مدن لم يُزامَن منذ 4 أيام (آخر تحديث 2026-04-25)
+- أو region 546 لا ينتمي فعلاً لـ city 1 في API مدن الحالية (تغيرت الأرقام)
 
-> لماذا تخرّب؟
+أي رفض لمدن لـ region/city = `errNum:21 + "ليس لديك صلاحية الوصول"`. لذلك أي طلب مدن تكون فيه أرقام المنطقة قديمة سيفشل بهذه الرسالة المضللة.
 
-عند تفعيل كاش مدن، أُدخلت **16,580 منطقة جديدة** في `regions_master` بـ `alwaseet_id = null` (لأنها تخص مدن). الآن البوت لما يبحث بالاسم في `regions_master` كاملاً يقع أحياناً على صف "مدن"، ويحفظ في `ai_orders.region_id` رقم داخلي مثل `17458` لا يفهمه الوسيط.
+### الريلتايم — لم أعبث به وهو سليم
 
-> الحل بدون تخريب وبدعم شركات مستقبلية؟
+تحققت من:
+- `ai_orders` ضمن publication `supabase_realtime` ✅
+- `replica_identity = full` ✅
+- `SuperAPI.setupRealtimeSubscriptions` يشترك على ai_orders ويبث `aiOrderCreated` ✅
+- `AiOrdersManager` و`AiOrderCard` يستمعان للحدث
 
-نعزل ID الشركة عن ID الداخلي عبر جدول `region_delivery_mappings` فقط. عند الموافقة، نترجم حسب الشركة المختارة. لا نلمس البوت ولا الكاش.
+السبب الأرجح لتأخر ظهور الطلبات في الكرت/النافذة هو طلبات لم تُنشأ أصلاً (فشلت في المرحلة أعلاه، فلم يحدث `INSERT` على `ai_orders`). لذا تظهر النافذة فارغة ولا event يُطلَق.
 
 ---
 
-## ما تم اكتشافه (الفحص العميق)
+## الحل (4 إصلاحات منطقية، صفر تخريب)
 
-**الحالة الحالية للطلب الذي يفشل:**
-```
-ai_orders.city_id   = 1
-ai_orders.region_id = 17458   ← هذا ID داخلي لصف "مدن"
-resolved_region_name = شارع مركز شرطة - الغزالية
-```
+### 1) إصلاح `modon-proxy` — تمييز errNum:21 حسب الـ endpoint
+علاج جذري: فقط endpoints الفواتير (`merchant-invoices`, `merchant-invoices/orders`) تعتبر errNum:21 = "لا فواتير". أي endpoint آخر (خصوصاً `create-order`) يجب أن يُمرَّر الخطأ كـ `status:false` مع رسالة واضحة:
 
-نفس اسم المنطقة موجود في `regions_master` بأربعة صفوف:
-```
-id=650    alwaseet_id=650    ← الصف الصحيح للوسيط
-id=6403   alwaseet_id=null
-id=11932  alwaseet_id=null
-id=17458  alwaseet_id=null   ← هذا الذي حُفظ، مربوط بمدن external_id=650
-```
-
-**سبب المشكلة في `SuperProvider.jsx` (دالة `approveAiOrder`):**
-السطر 2263 يثق بـ `aiOrder.region_id` ويستخدمه كـ `regionId` للوسيط مباشرة:
-```js
-if (aiOrder.region_id && aiOrder.resolved_region_name && ...) {
-  regionId = aiOrder.region_id;   // ← قد يكون 17458 (مدن) ويُرسل للوسيط
-  ...
+```ts
+// supabase/functions/modon-proxy/index.ts (~ سطر 128-143)
+if (response.status === 400) {
+  const isInvoicesEndpoint = endpoint?.includes('merchant-invoices');
+  
+  if ((data.errNum === 21 || data.errNum === '21') && isInvoicesEndpoint) {
+    // فواتير فقط: errNum:21 = لا فواتير = حالة طبيعية
+    return jsonResponse({ status: true, errNum: '21', msg: data.msg, data: [] });
+  }
+  
+  // أي errNum:21 على create-order/edit-order = خطأ حقيقي في city/region/طلب
+  return jsonResponse({
+    status: false,
+    errNum: data.errNum || 'E400',
+    msg: data.errNum === 21 || data.errNum === '21'
+      ? `مدن رفضت الطلب: ${data.msg || ''}. تأكد من تحديث كاش المحافظات/المناطق لشركة مدن.`
+      : (data.msg || 'طلب غير صالح'),
+    httpStatus: 400
+  });
 }
 ```
-ثم السطر 2469-2470 يرسله للوسيط:
+
+### 2) رسالة خطأ واضحة في `createModonOrder`
+لما يفشل create-order، أعرض للمستخدم رسالة عربية تخبره بسبب الفشل وكيف يحلّه:
+
 ```js
-city_id: parseInt(cityId),
-region_id: parseInt(regionId),
+// src/lib/modon-api.js — داخل createModonOrder
+if (data.status === true && (data.errNum === 'S000' || data.errNum === '0')) { ... }
+
+// خطأ city/region من مدن
+if (data.errNum === 21 || data.errNum === '21') {
+  throw new Error('مدن رفضت المحافظة/المنطقة. حدّث كاش مدن من إدارة الكاش ثم أعد المحاولة.');
+}
+throw new Error(data.msg || 'فشل إنشاء الطلب في مدن');
 ```
 
-**والـ fallbacks الكارثية:**
-- السطر 2328-2334: إذا فشل، يستخدم **بغداد افتراضياً**.
-- السطر 2410-2413 و 2420-2423: إذا فشل، يستخدم **أول منطقة في القائمة**.
+### 3) Pre-check في `approveAiOrder` — لا نضرب API مدن لو كاشها قديم
+إذا كان كاش مدن قديماً (>3 أيام) والمحافظة المُحلَّة هي بغداد + منطقة فرعية، أعرض تنبيهاً للمستخدم بدلاً من إرسال طلب يفشل:
 
-هذه الـ fallbacks تخفي المشكلة وترسل طلبات لعناوين خاطئة.
+```js
+// src/contexts/SuperProvider.jsx بعد resolver، قبل createModonOrder
+if (destination === 'modon') {
+  const { data: lastSync } = await supabase
+    .from('region_delivery_mappings')
+    .select('updated_at')
+    .eq('delivery_partner', 'modon')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  
+  const cacheAgeMs = lastSync ? Date.now() - new Date(lastSync.updated_at).getTime() : Infinity;
+  const cacheStaleHours = cacheAgeMs / (1000 * 60 * 60);
+  
+  if (cacheStaleHours > 72) {
+    devLog.warn(`⚠️ كاش مدن قديم (${Math.round(cacheStaleHours)} ساعة)`);
+    // لا نمنع الإرسال (قد ينجح)، فقط نسجل تحذيراً
+  }
+}
+```
+هذا تحذير فقط — لا يمنع الطلب لأنه قد ينجح؛ الإصلاح الجوهري في خطوتي 1 و2.
+
+### 4) تأكيد الفور Realtime على البطاقة + النافذة
+الريلتايم على DB سليم. أضمن في الـ UI أن الحدث `aiOrderCreated` يُحدِّث:
+- عداد البطاقة في الـ Dashboard
+- قائمة `AiOrdersManager`
+
+```jsx
+// src/components/dashboard/AiOrdersManager.jsx — useEffect إضافي
+useEffect(() => {
+  const onCreated = (e) => {
+    refreshAll?.(); // أو optimistic add مباشرة من e.detail
+  };
+  window.addEventListener('aiOrderCreated', onCreated);
+  return () => window.removeEventListener('aiOrderCreated', onCreated);
+}, [refreshAll]);
+```
+(سأتحقق من الموجود فعلاً قبل الإضافة لتجنب التكرار.)
 
 ---
 
-## الحل العالمي بدون تخريب
+## ضمانات (لا تخريب)
 
-### المبدأ الذهبي
-- `regions_master.id` و `cities_master.id` = هويات داخلية canonical فقط، **لا تُرسل أبداً لشركة توصيل**.
-- `region_delivery_mappings (delivery_partner, external_id)` = **المصدر الوحيد** لـ ID شركة التوصيل.
-- اختيار الشركة في نافذة الطلب الذكي (`destination`) = **يقرّر أي mapping نستخدم**.
+- **لا تعديل** على `setActivePartner`, `getTokenForUser`, `delivery_partner_tokens`, RLS، أو منطق المخزون.
+- **لا تعديل** على ريلتايم publication أو `replica_identity`.
+- **لا تعديل** على بوت تليغرام أو على `resolve_partner_location`.
+- **لا تعديل** على alwaseet-proxy أو alwaseet-api (مساره يعمل بشكل صحيح).
+- التغيير في `modon-proxy` محصور في فرع HTTP 400 + errNum:21، ومُفصَّل بـ endpoint — لن يكسر سلوك الفواتير الحالي.
+- التغيير في `modon-api.js` و`SuperProvider.jsx` رسائل واضحة فقط.
 
-### ما سيتغير (الموقع فقط)
+## كيفية التعرف على التوكن لكل طلب (إجابة سؤالك)
 
-**1. ملف واحد: `src/contexts/SuperProvider.jsx` — دالة `approveAiOrder`**
+النظام **بالفعل** يفعل ذلك بدقة الآن (تم في الجولة السابقة):
+- `approveAiOrder(orderId, destination, account)` يأخذ destination و account من نافذة الموافقة (مهما كان الافتراضي).
+- يجلب توكن من `delivery_partner_tokens` بالتطابق الصارم على `(user_id, partner_name=destination, account_username=account, is_active, expires_at>now)`.
+- يستدعي `ModonAPI` أو `AlWaseetAPI` حسب `destination` فقط.
+- لا fallback عبر شركات.
 
-استبدال البلوك من السطر 2262 إلى 2425 بمنطق resolver واضح:
+لإضافة شركة توصيل ثالثة مستقبلاً: تُضاف صفوف في `city_delivery_mappings` و`region_delivery_mappings` بـ `delivery_partner='شركة_جديدة'`، يُكتب `xxx-api.js` و`xxx-proxy/index.ts`، ويُضاف فرع في `approveAiOrder` و`AiOrderDestinationSelector`. لا تغيير على نواة المنطق.
 
-```text
-عند destination = 'alwaseet' أو 'modon':
+## الملفات المُعدَّلة
 
-أ) خذ partner = destination.
+- `supabase/functions/modon-proxy/index.ts` — تمييز errNum:21 حسب endpoint
+- `src/lib/modon-api.js` — رسالة خطأ واضحة في `createModonOrder`
+- `src/contexts/SuperProvider.jsx` — تحذير كاش مدن القديم (لوغ فقط)
+- `src/components/dashboard/AiOrdersManager.jsx` — تأكيد listener `aiOrderCreated` (لو ناقص)
 
-ب) ترجم city_id:
-   1. ابحث في city_delivery_mappings
-      WHERE delivery_partner = partner
-        AND city_id = aiOrder.city_id   (canonical)
-      → إن وُجد: استخدم external_id.
-   2. إن لم يوجد، جرّب نفس الجدول حيث external_id = aiOrder.city_id::text
-      (للتوافق مع طلبات قديمة محفوظة بـ external_id).
-   3. إن لم يوجد، fallback اسمي:
-      ابحث بالاسم resolved_city_name في cities_master
-      ثم اربطه بـ city_delivery_mappings للشريك.
-   4. إن فشل كل ذلك → فشل صريح، بدون "بغداد افتراضي".
+## بعد التطبيق
 
-ج) ترجم region_id بنفس المنطق على region_delivery_mappings
-   (مع شرط إضافي: المنطقة يجب أن تنتمي لنفس canonical city_id).
-   - مطلق ممنوع: استخدام أول منطقة في القائمة.
-   - مطلق ممنوع: استدعاء getCities/getRegionsByCity من API الوسيط
-     داخل الموافقة (يسبب WAF storm). كل الترجمة من DB cache فقط.
-
-د) أرسل للوسيط/مدن: external_city_id, external_region_id فقط.
-```
-
-رسائل الفشل ستكون دقيقة بدلاً من "بغداد افتراضي":
-```
-تعذر تحديد منطقة شريك "الوسيط" للطلب:
-المدينة: بغداد
-المنطقة: شارع مركز شرطة - الغزالية
-السبب: لا يوجد ربط (mapping) لهذه المنطقة عند الوسيط.
-الإجراء: تأكد من اكتمال مزامنة كاش الوسيط من صفحة "إدارة بيانات المدن والمناطق".
-```
-
-**2. حذف نهائي للـ fallbacks الخطرة**
-- إزالة بلوك "بغداد كافتراضي" (2328-2338).
-- إزالة بلوكي "أول منطقة متاحة" (2410-2413، 2420-2423).
-- إزالة استدعاءات `getCities` و `getRegionsByCity` من داخل `approveAiOrder` (2217، 2342). الترجمة من DB فقط.
-
-**3. ملف SQL واحد بسيط (migration)**
-لتعزيز `get_region_external_id` لتأخذ `delivery_partner` فعلياً (حالياً يتجاهله ويرجع `regions_master.alwaseet_id` فقط):
-```sql
-CREATE OR REPLACE FUNCTION public.get_region_external_id(
-  p_region_id integer,
-  p_delivery_partner text DEFAULT 'alwaseet'
-) RETURNS text ...
--- يقرأ من region_delivery_mappings حسب الشريك
--- ويسقط على regions_master.alwaseet_id فقط لو الشريك = alwaseet
-```
-ودالة موازية `get_city_external_id` تستخدم `city_delivery_mappings` بنفس الطريقة (موجودة لكن نوحّد سلوكها).
-
-### ما **لن** يتغير
-- `supabase/functions/telegram-bot/index.ts`: **لا لمس** كما طلبت. البوت يكمل يخزّن `region_id` كما هو.
-- `cities_cache` / `regions_cache` / `cities_master` / `regions_master`: لا حذف ولا تعديل بيانات.
-- `city_delivery_mappings` / `region_delivery_mappings`: لا تعديل بيانات، فقط نقرأ منها.
-- البوت سيظل يحفظ أحياناً ID داخلي (مثل 17458)، لكن resolver في الموقع سيعرف يترجمه عبر اسم المدينة + اسم المنطقة + الشريك المختار.
-
-### دعم شركات مستقبلية
-أي شركة جديدة (مثلاً "كرخ سبيد"):
-1. تشغيل كاش الشركة الجديدة → يضيف صفوف في `region_delivery_mappings` بـ `delivery_partner='karkh'`.
-2. لا تعديل في الكود. resolver يأخذ `partner` من `destination` ويعمل تلقائياً.
-
----
-
-## القسم التقني المختصر
-
-**ملفات معدّلة:**
-- `src/contexts/SuperProvider.jsx`: استبدال منطق ترجمة المدينة/المنطقة في `approveAiOrder` (≈170 سطر).
-- `supabase/migrations/<timestamp>_fix_partner_id_resolution.sql`: تحديث `get_region_external_id` و `get_city_external_id` لاحترام `delivery_partner` بشكل صحيح.
-
-**ملفات غير ملموسة:**
-- `supabase/functions/telegram-bot/index.ts`
-- جداول البيانات (لا upserts ولا deletes)
-- باقي مسارات إنشاء الطلب اليدوي (`AlWaseetUnifiedOrderCreator.jsx`) — تُبقى كما هي لأن منطقها حالياً سليم.
-
-**اختبارات قبول:**
-1. الطلب الفاشل الحالي (بغداد / شارع مركز شرطة - الغزالية، الوسيط): يجب أن يُترجم إلى `city_id=1, region_id=650` ويرسَل بنجاح.
-2. نفس الطلب لو الوجهة "مدن": يجب أن يستخدم mapping مدن، لا الوسيط.
-3. منطقة غير مربوطة بالشريك المختار: فشل صريح برسالة دقيقة، بدون اختيار "أول منطقة" أو "بغداد".
-4. صفر استدعاءات API لـ `getCities`/`getRegionsByCity` أثناء الموافقة (يحلّ مشكلة WAF و errNum:21 من جذرها لمسار الموافقة).
+1. سيتضح للمستخدم بدقة سبب رفض مدن (مع توجيه لتحديث الكاش).
+2. لن تُخلط رسائل الوسيط ومدن مرة أخرى.
+3. الحالة الحالية (region 11833 = "حي الجامعه نفق الشرطة"): يُنصح بزر "تحديث كاش مدن" من واجهة إدارة شركات التوصيل لتزامن الأرقام الجديدة قبل إعادة محاولة الطلب.
