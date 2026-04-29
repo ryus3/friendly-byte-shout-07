@@ -594,10 +594,13 @@ Deno.serve(async (req) => {
           console.log(`✅ تم تحديث ${localOrder.tracking_number} (${waseetOrder._account}): ${changesList.join('، ')}`);
         }
 
-        // تحديث الطلب فقط إذا كانت هناك تغييرات
+        // ✅ تحديث الطلب: نُحدّث last_synced_at دائماً (نجح فحص الشريك)
+        // ولا نُحدّث updated_at إلا عند تغيّر فعلي
+        const nowIso = new Date().toISOString();
         if (Object.keys(updates).length > 0) {
-          updates.updated_at = new Date().toISOString();
-          
+          updates.updated_at = nowIso;
+          updates.last_synced_at = nowIso;
+
           const { error: updateError } = await supabase
             .from('orders')
             .update(updates)
@@ -608,10 +611,16 @@ Deno.serve(async (req) => {
           } else if (statusChanged || priceChanged || accountChanged || addressChanged) {
             console.log(`✅ تم حفظ التغييرات للطلب ${localOrder.tracking_number}`);
           }
+        } else {
+          // لا تغييرات: نُحدّث last_synced_at فقط (ختم زمني لآخر فحص ناجح)
+          await supabase
+            .from('orders')
+            .update({ last_synced_at: nowIso })
+            .eq('id', localOrder.id);
         }
 
         if (!statusChanged && !priceChanged && !accountChanged && !addressChanged) {
-          console.log(`⏰ الطلب ${localOrder.tracking_number} لا توجد تغييرات`);
+          console.log(`⏰ الطلب ${localOrder.tracking_number} لا توجد تغييرات (last_synced_at محدّث)`);
         }
       } catch (orderError: any) {
         console.error(`❌ خطأ في معالجة الطلب ${localOrder.order_number}:`, orderError.message);
