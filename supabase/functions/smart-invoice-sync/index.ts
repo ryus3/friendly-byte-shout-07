@@ -239,7 +239,9 @@ serve(async (req) => {
           let employeeOrdersSynced = 0;
           let employeeNewInvoices = 0;
 
-          // ✅ معالجة كل الفواتير من API
+          let orderDetailsFetchedForToken = 0;
+
+          // ✅ معالجة أحدث الفواتير فقط؛ تفاصيل الطلبات لها ميزانية محدودة لمنع errNum:2 من الوسيط
           for (const invoice of apiInvoices) {
             const externalId = String(invoice.id);
             const statusNormalized = normalizeStatus(invoice.status);
@@ -314,9 +316,12 @@ serve(async (req) => {
             } else {
               employeeInvoicesSynced++;
               
-              // ✅ مزامنة طلبات الفاتورة - استخدام partnerName
-              if (sync_orders && upsertedInvoice?.id) {
+              // ✅ مزامنة طلبات الفاتورة - استخدام partnerName وبهدوء شديد لمنع rate limit
+              const expectedForOrders = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
+              if (sync_orders && upsertedInvoice?.id && expectedForOrders > 0 && orderDetailsFetchedForToken < MAX_ORDER_DETAILS_PER_TOKEN) {
                 try {
+                  if (orderDetailsFetchedForToken > 0) await new Promise(r => setTimeout(r, ORDER_DETAILS_GAP_MS));
+                  orderDetailsFetchedForToken++;
                   const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);
                   
                   if (invoiceOrders.length > 0) {
@@ -338,8 +343,8 @@ serve(async (req) => {
                       if (!orderError) employeeOrdersSynced++;
                     }
                     
-                    // ✅ تحقق اكتمال snapshot + إعادة محاولات متعددة (للفواتير غير المستلمة فقط)
-                    if (!isReceived) {
+                    // ✅ لا نعمل retry داخل نفس التشغيل؛ cron/UI سيعيد المحاولة لاحقاً بدون عاصفة طلبات.
+                    if (false && !isReceived) {
                       const expected = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
                       let { count: dioNow } = await supabase
                         .from('delivery_invoice_orders')
@@ -420,6 +425,8 @@ serve(async (req) => {
                 } catch (ordersError) {
                   console.error(`    ❌ Error syncing orders for invoice ${externalId}:`, ordersError);
                 }
+              } else if (sync_orders && upsertedInvoice?.id && expectedForOrders > 0) {
+                console.log(`    ⏭️ Invoice ${externalId} order details deferred to next sync (budget ${orderDetailsFetchedForToken}/${MAX_ORDER_DETAILS_PER_TOKEN})`);
               }
             }
           }
