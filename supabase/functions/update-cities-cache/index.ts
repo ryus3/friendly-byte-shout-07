@@ -6,7 +6,6 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-const ALWASEET_BASE_URL = 'https://api.alwaseet-iq.net/v1/merchant';
 const RATE_LIMIT_DELAY = 200;
 
 const corsHeaders = {
@@ -16,35 +15,25 @@ const corsHeaders = {
 
 const delay = (ms: number) => new Promise(r => setTimeout(r, ms));
 
+// ✅ Route through alwaseet-proxy (whitelisted static proxy api.ryusbrand.com)
+// Direct calls from Supabase IPs are blocked by Cloudflare (403).
 async function directFetch(endpoint: string, token: string, queryParams?: Record<string, unknown>): Promise<unknown> {
-  let url = `${ALWASEET_BASE_URL}/${endpoint}?token=${token}`;
-  if (queryParams) {
-    for (const [k, v] of Object.entries(queryParams)) {
-      url += `&${k}=${v}`;
-    }
-  }
-
-  const resp = await fetch(url, {
-    method: 'GET',
-    headers: { 'Accept': 'application/json' },
+  const { data, error } = await supabase.functions.invoke('alwaseet-proxy', {
+    body: {
+      endpoint,
+      method: 'GET',
+      token,
+      queryParams: queryParams || undefined,
+    },
   });
 
-  const text = await resp.text();
-
-  if ((resp.status === 403 || resp.status === 503) && 
-      (text.includes('Cloudflare') || text.includes('cf-error'))) {
-    throw new Error(`CF_BLOCKED: Cloudflare حظر الطلب (${resp.status}) للـ ${endpoint}`);
+  if (error) {
+    const msg = error.message || String(error);
+    throw new Error(`Proxy error for ${endpoint}: ${msg}`);
   }
 
-  if (!resp.ok) {
-    throw new Error(`API error ${resp.status}: ${text.substring(0, 200)}`);
-  }
-
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`Invalid JSON from ${endpoint}: ${text.substring(0, 100)}`);
-  }
+  // alwaseet-proxy returns the upstream JSON directly, or { data: [...] }
+  return data;
 }
 
 async function fetchCities(token: string) {
