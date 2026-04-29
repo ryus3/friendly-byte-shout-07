@@ -96,34 +96,41 @@ function extractInvoiceOrders(data: any): InvoiceOrder[] {
 const invoiceTime = (invoice: Invoice) => new Date(String(invoice.updated_at || invoice.created_at || 0)).getTime() || 0;
 
 async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet', limit: number = MAX_INVOICES_PER_TOKEN): Promise<Invoice[]> {
+  const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
+  console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API (static proxy only for whitelist)...`);
+
+  let response: Response;
+  let data: any;
   try {
-    const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
-    console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API (static proxy only for whitelist)...`);
-
-    const { response, data } = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, token);
-
-    if (data?.raw && !response.ok) {
-      console.error(`API non-JSON ${response.status}: ${String(data.raw).substring(0, 200)}`);
-      return [];
-    }
-
-    if (data?.errNum === 21 || data?.errNum === '21') {
-      throw new InvoiceAuthError(`${partner.toUpperCase()}: get_merchant_invoices requires a valid Merchant token`);
-    }
-
-    if (!response.ok && data?.errNum !== 'S000') {
-      console.error(`API Error: ${response.status} ${response.statusText} - ${JSON.stringify(data).substring(0, 200)}`);
-      return [];
-    }
-
-    const invoices = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    const limitedInvoices = [...invoices].sort((a, b) => invoiceTime(b) - invoiceTime(a)).slice(0, limit);
-    console.log(`📥 ${partner.toUpperCase()} API: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}, processing=${limitedInvoices.length}`);
-    return limitedInvoices;
+    const r = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, token);
+    response = r.response;
+    data = r.data;
   } catch (error) {
-    console.error(`Error fetching invoices from ${partner}:`, error);
+    // فشل شبكي/تحليلي حقيقي — نرجع فارغ لكي لا يُمسح الكاش، ولا نُسجّل auth error.
+    console.error(`Network error fetching invoices from ${partner}:`, error);
     return [];
   }
+
+  // 🛡️ errNum:21 على واجهة الفواتير = "ليس لديك صلاحية / توكن غير مناسب لـ endpoint الفواتير"
+  // نُترجمها إلى InvoiceAuthError ليلتقطها fetchInvoicesWithTokenRecovery ويحاول تجديد توكن مرّة واحدة.
+  if (data?.errNum === 21 || data?.errNum === '21') {
+    throw new InvoiceAuthError(`${partner.toUpperCase()}: get_merchant_invoices errNum:21`);
+  }
+
+  if (data?.raw && !response.ok) {
+    console.error(`API non-JSON ${response.status}: ${String(data.raw).substring(0, 200)}`);
+    return [];
+  }
+
+  if (!response.ok && data?.errNum !== 'S000') {
+    console.error(`API Error: ${response.status} ${response.statusText} - ${JSON.stringify(data).substring(0, 200)}`);
+    return [];
+  }
+
+  const invoices = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+  const limitedInvoices = [...invoices].sort((a, b) => invoiceTime(b) - invoiceTime(a)).slice(0, limit);
+  console.log(`📥 ${partner.toUpperCase()} API: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}, processing=${limitedInvoices.length}`);
+  return limitedInvoices;
 }
 
 async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partner: string = 'alwaseet'): Promise<InvoiceOrder[]> {
