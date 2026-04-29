@@ -68,14 +68,14 @@ const AllEmployeesInvoicesView = () => {
       }
       setEmployees(filteredEmployees);
 
-      // جلب الفواتير المحفوظة - استخدام created_at كبديل عندما issued_at غير موجود
+      // جلب الفواتير المحفوظة — الترتيب حسب تاريخ الفاتورة من شركة التوصيل (issued_at)
       const threshold = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
       const { data: invoicesData, error: invError } = await supabase
         .from('delivery_invoices')
         .select('*')
         .in('partner', ['alwaseet', 'modon'])
         .or(`issued_at.gte.${threshold},and(issued_at.is.null,created_at.gte.${threshold})`)
-        .order('created_at', { ascending: false })
+        .order('issued_at', { ascending: false, nullsFirst: false })
         .limit(300);
 
       if (invError) return;

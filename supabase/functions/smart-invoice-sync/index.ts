@@ -513,7 +513,8 @@ serve(async (req) => {
                 received: isReceived,
                 received_flag: isReceived,
                 received_at: isReceived ? (existingInvoice?.received_at || receivedAt) : null,
-                issued_at: invoice.created_at || new Date().toISOString(),  // ✅ ضمان ملء issued_at
+                // ✅ تاريخ الفاتورة الفعلي من شركة التوصيل (updated_at من API)، ليس وقت المزامنة
+                issued_at: invoice.updated_at || invoice.created_at || new Date().toISOString(),
                 raw: invoice,
                 last_synced_at: new Date().toISOString(),
                 last_api_updated_at: invoice.updated_at || new Date().toISOString(),
@@ -840,7 +841,8 @@ serve(async (req) => {
               received: isReceived,
               received_flag: isReceived,
               received_at: isReceived ? (existing?.received_at || receivedAt) : null,
-              issued_at: invoice.created_at || new Date().toISOString(),  // ✅ ضمان ملء issued_at
+              // ✅ تاريخ الفاتورة الفعلي من شركة التوصيل (updated_at من API)، ليس وقت المزامنة
+              issued_at: invoice.updated_at || invoice.created_at || new Date().toISOString(),
               raw: invoice,
               last_synced_at: new Date().toISOString(),
             }, {

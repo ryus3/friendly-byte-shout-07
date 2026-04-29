@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Eye, Package, DollarSign, Calendar, Database, Wifi, WifiOff, User, Building } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
+import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -255,14 +255,19 @@ const InvoiceCard = ({ invoice, onView, showEmployeeName = false }) => {
             </div>
           )}
 
-          {/* Date */}
+          {/* Date — تاريخ ووقت الفاتورة من شركة التوصيل */}
           <div className="flex items-center justify-start gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">
-              {(invoice.issued_at || invoice.updated_at || invoice.created_at) && formatDistanceToNow(
-                new Date(invoice.issued_at || invoice.updated_at || invoice.created_at), 
-                { addSuffix: true, locale: ar }
-              )}
+            <span className="text-sm text-muted-foreground" dir="ltr">
+              {(() => {
+                const dateValue = invoice.issued_at || invoice.updated_at || invoice.created_at;
+                if (!dateValue) return '—';
+                try {
+                  return format(new Date(dateValue), 'yyyy/MM/dd - hh:mm a', { locale: ar });
+                } catch {
+                  return '—';
+                }
+              })()}
             </span>
           </div>
 

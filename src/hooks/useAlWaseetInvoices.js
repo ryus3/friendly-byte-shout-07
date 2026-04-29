@@ -46,8 +46,10 @@ export const useAlWaseetInvoices = () => {
           orders_count: inv.orders_count,
           status: inv.status,
           merchant_id: inv.merchant_id,
-          updated_at: inv.issued_at || inv.updated_at,
-          created_at: inv.created_at,
+          // ✅ updated_at = تاريخ الفاتورة الفعلي من شركة التوصيل (issued_at في DB)
+          updated_at: inv.issued_at,
+          issued_at: inv.issued_at,
+          created_at: inv.issued_at,
           raw: inv.raw,
           account_username: inv.account_username,
           partner: inv.partner,
@@ -58,6 +60,19 @@ export const useAlWaseetInvoices = () => {
         }));
       }
     } catch {/* silent */}
+
+    // ✅ عرض فوري للكاش (لا تفريغ شاشة) — ثم نحاول API بهدوء بالخلفية
+    if (cachedFromDb.length > 0) {
+      const sortedCache = [...cachedFromDb].sort((a, b) => {
+        const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
+        const bIsPending = b.status !== 'تم الاستلام من قبل التاجر';
+        if (aIsPending && !bIsPending) return -1;
+        if (!aIsPending && bIsPending) return 1;
+        return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
+      });
+      setInvoices(sortedCache);
+      setLoading(false);
+    }
 
     try {
       // 2) محاولة الجلب من توكنات المستخدم النشطة
