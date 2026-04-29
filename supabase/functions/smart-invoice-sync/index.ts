@@ -8,8 +8,10 @@ const corsHeaders = {
 
 // ✅ API Base URLs for both delivery partners
 const ALWASEET_API_BASE = 'https://api.ryusbrand.com/alwaseet/v1/merchant';
-const ALWASEET_DIRECT_API_BASE = 'https://api.alwaseet-iq.net/v1/merchant';
 const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
+const MAX_INVOICES_PER_TOKEN = 5;
+const MAX_ORDER_DETAILS_PER_TOKEN = 2;
+const ORDER_DETAILS_GAP_MS = 1200;
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
@@ -74,7 +76,9 @@ function extractInvoiceOrders(data: any): InvoiceOrder[] {
 // ✅ Fetch ALL invoices from API (supports both AlWaseet and MODON)
 // 🛡️ ملاحظة: واجهات الفواتير في توثيق الوسيط تقبل Merchant token فقط؛ Merchant user token يرجع errNum:21
 // ("ليس لديك صلاحية الوصول.") ـ وهذا ليس خطأ، بل يعني ببساطة لا فواتير لهذا الحساب. نتعامل معه كـ [].
-async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet'): Promise<Invoice[]> {
+const invoiceTime = (invoice: Invoice) => new Date(String(invoice.updated_at || invoice.created_at || 0)).getTime() || 0;
+
+async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet', limit: number = MAX_INVOICES_PER_TOKEN): Promise<Invoice[]> {
   try {
     const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
     console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API (static proxy only for whitelist)...`);
@@ -97,8 +101,9 @@ async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet')
     }
 
     const invoices = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    console.log(`📥 ${partner.toUpperCase()} API: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}`);
-    return invoices;
+    const limitedInvoices = [...invoices].sort((a, b) => invoiceTime(b) - invoiceTime(a)).slice(0, limit);
+    console.log(`📥 ${partner.toUpperCase()} API: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}, processing=${limitedInvoices.length}`);
+    return limitedInvoices;
   } catch (error) {
     console.error(`Error fetching invoices from ${partner}:`, error);
     return [];
