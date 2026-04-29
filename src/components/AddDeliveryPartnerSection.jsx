@@ -240,6 +240,73 @@ const AddDeliveryPartnerSection = () => {
                 </ul>
               </div>
 
+              <div>
+                <p className="font-semibold text-foreground mb-1">مثال عملي: تحويل وثيقة الشركة إلى حقول النموذج</p>
+                <p className="mb-2">لنفترض الوثيقة تذكر:</p>
+                <pre className="bg-muted/50 rounded p-2 text-[10px] overflow-x-auto whitespace-pre-wrap leading-relaxed">{`Login Endpoint:
+URL: https://api.example-iq.net/v1/merchant/login
+Method: POST   Content-Type: multipart/form-data
+Body: username, password
+Response: { status:true, errNum:"S000", data:{ token:"..." } }`}</pre>
+                <div className="overflow-x-auto mt-2">
+                  <table className="w-full text-[10px] border border-border">
+                    <thead className="bg-muted/40">
+                      <tr>
+                        <th className="border border-border p-1 text-right">في وثيقة الشركة</th>
+                        <th className="border border-border p-1 text-right">الحقل في نموذجنا</th>
+                        <th className="border border-border p-1 text-right">القيمة</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="border border-border p-1"><code>{`.../v1/merchant/login`}</code></td>
+                        <td className="border border-border p-1">Base URL</td>
+                        <td className="border border-border p-1"><code>{`https://api.example-iq.net/v1/merchant`}</code></td>
+                      </tr>
+                      <tr>
+                        <td className="border border-border p-1">المقطع <code>login</code> بعد Base</td>
+                        <td className="border border-border p-1">Endpoints → login</td>
+                        <td className="border border-border p-1"><code>login</code></td>
+                      </tr>
+                      <tr>
+                        <td className="border border-border p-1">Order Creation: <code>create-order</code></td>
+                        <td className="border border-border p-1">Endpoints → createOrder</td>
+                        <td className="border border-border p-1"><code>create-order</code></td>
+                      </tr>
+                      <tr>
+                        <td className="border border-border p-1">Method / Body / Response</td>
+                        <td className="border border-border p-1" colSpan={2}>ثابت داخلياً — لا يحتاج إدخال</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-border p-1">جدول حالات الشركة</td>
+                        <td className="border border-border p-1">Status Mapping</td>
+                        <td className="border border-border p-1">اربط كل رقم بحالة داخلية</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div>
+                <p className="font-semibold text-foreground mb-1">ما هو "مفتاح الشركة"؟</p>
+                <p>
+                  معرّف برمجي إنجليزي فريد (أحرف صغيرة + أرقام + <code>_</code> فقط).
+                  أمثلة: <code>alwaseet</code>، <code>modon</code>، <code>aramex</code>.
+                  لا يتغير بعد الإنشاء — يربط داخلياً الطلبات والتوكنات بالشركة.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-foreground mb-1">هل تعمل كاملة كالوسيط/مدن؟</p>
+                <ul className="list-disc pr-5 space-y-0.5">
+                  <li>✅ تظهر في "إدارة شركة التوصيل" مع تسجيل دخول.</li>
+                  <li>✅ مزامنة مدن/مناطق/أحجام.</li>
+                  <li>✅ إنشاء طلبات من "طلب سريع".</li>
+                  <li>✅ مزامنة خلفية تلقائية (ديناميكية — تكتشف الشركة الجديدة بدون كود).</li>
+                  <li>✅ زر "تحقق الآن" في تفاصيل الطلب يعمل لكل شريك.</li>
+                </ul>
+              </div>
+
               <div className="bg-amber-500/10 border border-amber-500/30 rounded p-2 flex gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                 <div>
