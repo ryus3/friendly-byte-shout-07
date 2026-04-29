@@ -142,6 +142,32 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partn
   }
 }
 
+async function renewAlWaseetTokenIfNeeded(supabase: any, tokenData: any): Promise<string | null> {
+  if ((tokenData.partner_name || 'alwaseet') !== 'alwaseet') return null;
+  const username = tokenData.account_username || tokenData.partner_data?.username;
+  const password = tokenData.partner_data?.password;
+  if (!username || !password) return null;
+
+  const formData = new FormData();
+  formData.append('username', username);
+  formData.append('password', password);
+  const response = await fetch(`${ALWASEET_API_BASE}/login`, { method: 'POST', body: formData, headers: { Accept: 'application/json' } });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data?.status || !data?.data?.token) {
+    console.warn(`⚠️ Could not renew AlWaseet merchant token for ${username}: ${data?.msg || response.status}`);
+    return null;
+  }
+
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7);
+  await supabase
+    .from('delivery_partner_tokens')
+    .update({ token: data.data.token, expires_at: expiresAt.toISOString(), last_used_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', tokenData.id);
+  console.log(`🔑 Renewed AlWaseet merchant token for ${username}`);
+  return data.data.token;
+}
+
 /**
  * ✅ تطبيع حالة الفاتورة مع التفريق بين المندوب والتاجر
  * - "تم الاستلام من قبل المندوب" = pending (معلقة - لم تصل للتاجر بعد)
