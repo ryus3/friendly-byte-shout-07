@@ -4174,6 +4174,7 @@ export type Database = {
           order_number: string
           order_type: string | null
           original_order_id: string | null
+          partner_missed_count: number
           payment_received_source_id: string | null
           payment_status: string
           price_change_type: string | null
@@ -4230,6 +4231,7 @@ export type Database = {
           order_number: string
           order_type?: string | null
           original_order_id?: string | null
+          partner_missed_count?: number
           payment_received_source_id?: string | null
           payment_status?: string
           price_change_type?: string | null
@@ -4286,6 +4288,7 @@ export type Database = {
           order_number?: string
           order_type?: string | null
           original_order_id?: string | null
+          partner_missed_count?: number
           payment_received_source_id?: string | null
           payment_status?: string
           price_change_type?: string | null
