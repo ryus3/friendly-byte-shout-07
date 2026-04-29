@@ -81,11 +81,26 @@ Deno.serve(async (req) => {
     const notificationsEnabled = scheduleSettings?.notifications_enabled ?? false;
     console.log(`📢 الإشعارات ${notificationsEnabled ? 'مفعّلة' : 'معطلة'}`);
 
-    // 1️⃣ جلب جميع التوكنات النشطة لكل الشركات
+    // 0️⃣ قراءة الشركاء النشطين ديناميكياً من السجل (يدعم أي شركة جديدة تلقائياً)
+    const { data: registry } = await supabase
+      .from('delivery_partners_registry')
+      .select('partner_key, base_url')
+      .eq('is_active', true);
+    const partnerBaseMap: Record<string, string> = {};
+    (registry || []).forEach((r: any) => {
+      if (r?.partner_key && r?.base_url) partnerBaseMap[r.partner_key] = r.base_url;
+    });
+    // ضمان وجود الافتراضيات حتى لو سجل التسجيل فارغ
+    if (!partnerBaseMap['alwaseet']) partnerBaseMap['alwaseet'] = 'https://api.alwaseet-iq.net/v1/merchant';
+    if (!partnerBaseMap['modon']) partnerBaseMap['modon'] = 'https://mcht.modon-express.net/v1/merchant';
+    const activePartnerKeys = Object.keys(partnerBaseMap);
+    console.log(`🌐 الشركاء النشطون: ${activePartnerKeys.join(', ')}`);
+
+    // 1️⃣ جلب جميع التوكنات النشطة لكل الشركات النشطة في السجل
     const { data: allTokens, error: tokensError } = await supabase
       .from('delivery_partner_tokens')
       .select('user_id, token, account_username, partner_name')
-      .in('partner_name', ['alwaseet', 'modon'])
+      .in('partner_name', activePartnerKeys)
       .eq('is_active', true);
 
     if (tokensError || !allTokens || allTokens.length === 0) {
