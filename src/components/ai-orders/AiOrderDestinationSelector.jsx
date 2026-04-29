@@ -165,7 +165,19 @@ const AiOrderDestinationSelector = ({ value, onChange, className, hideLocal = fa
         setSelectedAccount(defaultAccount.account_username);
         await savePreferences(newDestination, defaultAccount.account_username);
       } else {
-        await savePreferences(newDestination, '');
+        // ⚠️ لا يوجد حساب نشط لهذه الشركة - لا نحفظ حساباً فارغاً
+        // فقط نُعلِم النظام بالوجهة المختارة دون حفظ حساب
+        toast({
+          title: "تنبيه",
+          description: `لا يوجد حساب نشط لشركة ${deliveryPartners[newDestination]?.name}. سجّل دخول من إدارة شركات التوصيل أولاً.`,
+          variant: "warning",
+          duration: 6000
+        });
+        onChange?.({
+          destination: newDestination,
+          account: '',
+          partnerName: newDestination
+        });
       }
     } else {
       await savePreferences(newDestination, '');

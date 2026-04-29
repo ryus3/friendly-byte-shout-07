@@ -2027,21 +2027,45 @@ export const SuperProvider = ({ children }) => {
         let actualAccount = selectedAccount;
         let profile = null; // تعريف profile خارج try-catch
         
+        // ✅ إذا لم يُحدَّد حساب، نحاول جلب الحساب الافتراضي للشريك المختار حصراً
+        // (لا نقبل حساب شريك مختلف من profiles)
         if (!actualAccount) {
-          devLog.log('⚠️ لا يوجد حساب محدد، محاولة جلبه من التفضيلات...');
+          devLog.log('⚠️ لا يوجد حساب محدد، محاولة جلب الحساب الافتراضي للشريك:', destination);
           try {
+            // 1) أولاً نجرب من profiles لكن نتحقق أنه يطابق الشريك
             const { data: profileData } = await supabase
               .from('profiles')
-              .select('selected_delivery_account, default_customer_name')
+              .select('selected_delivery_account, selected_delivery_partner, default_customer_name, default_ai_order_destination')
               .eq('user_id', createdBy)
               .single();
-            
             profile = profileData;
-            actualAccount = profile?.selected_delivery_account;
-            devLog.log('📋 تم جلب الحساب من التفضيلات:', actualAccount);
-            devLog.log('👤 اسم الزبون الافتراضي:', profile?.default_customer_name);
+
+            const profilePartner = profileData?.selected_delivery_partner || profileData?.default_ai_order_destination;
+            if (profileData?.selected_delivery_account && profilePartner === destination) {
+              actualAccount = profileData.selected_delivery_account;
+              devLog.log('📋 استُخدم الحساب من التفضيلات (مطابق للشريك):', actualAccount);
+            }
+
+            // 2) إذا لم يطابق التفضيل، نختار الحساب الافتراضي/الأحدث للشريك المختار
+            if (!actualAccount) {
+              const { data: tokenRow } = await supabase
+                .from('delivery_partner_tokens')
+                .select('account_username')
+                .eq('user_id', createdBy)
+                .eq('partner_name', destination)
+                .eq('is_active', true)
+                .gt('expires_at', new Date().toISOString())
+                .order('is_default', { ascending: false })
+                .order('last_used_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (tokenRow?.account_username) {
+                actualAccount = tokenRow.account_username;
+                devLog.log('📋 استُخدم الحساب الافتراضي للشريك المختار:', actualAccount);
+              }
+            }
           } catch (error) {
-            console.error('❌ فشل في جلب الحساب من التفضيلات:', error);
+            console.error('❌ فشل في جلب الحساب للشريك المختار:', error);
           }
         }
 
@@ -2056,9 +2080,10 @@ export const SuperProvider = ({ children }) => {
         }
 
         if (!actualAccount) {
+          const partnerLabel = destination === 'modon' ? 'مدن' : 'الوسيط';
           return { 
             success: false, 
-            error: `لا يوجد حساب محدد لشركة التوصيل ${destination}. يرجى تحديد حساب في إعدادات وجهة الطلب.` 
+            error: `لا يوجد حساب نشط لشركة ${partnerLabel}. سجّل دخول لها من إدارة شركات التوصيل أولاً.` 
           };
         }
         
@@ -2071,7 +2096,27 @@ export const SuperProvider = ({ children }) => {
           normalized: actualAccount,
           destination: destination
         });
-        
+
+        // 🛡️ تحقق نهائي: يجب أن يوجد توكن صالح لهذا الحساب لهذا الشريك تحديداً
+        // (يمنع إرسال طلب مدن بتوكن وسيط أو العكس)
+        const { data: tokenCheck } = await supabase
+          .from('delivery_partner_tokens')
+          .select('id, expires_at')
+          .eq('user_id', createdBy)
+          .eq('partner_name', destination)
+          .ilike('account_username', actualAccount)
+          .eq('is_active', true)
+          .gt('expires_at', new Date().toISOString())
+          .maybeSingle();
+
+        if (!tokenCheck) {
+          const partnerLabel = destination === 'modon' ? 'مدن' : 'الوسيط';
+          return {
+            success: false,
+            error: `لا يوجد توكن صالح للحساب "${rawAccount}" في شركة ${partnerLabel}. سجّل دخول من إدارة شركات التوصيل ثم أعد المحاولة.`
+          };
+        }
+
         // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات
         try {
           devLog.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
