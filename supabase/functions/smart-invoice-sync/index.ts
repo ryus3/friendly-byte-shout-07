@@ -722,8 +722,51 @@ serve(async (req) => {
 
         let orderDetailsFetchedForToken = 0;
 
-        // ✅ معالجة أحدث الفواتير فقط؛ لا نعيد فحص التاريخ كله عند كل دخول للصفحة
-        for (const invoice of apiInvoices) {
+        // 🆕 ترتيب الفواتير: الناقصة أولاً (orders_count > 0 وكاش delivery_invoice_orders أقل من المتوقع)،
+        // ثم الباقي بالأحدث. هذا يضمن إصلاح الفواتير الجديدة الكبيرة قبل الفواتير القديمة المكتملة.
+        const sortedApi = [...apiInvoices].sort((a, b) => invoiceTime(b) - invoiceTime(a));
+        const externalIdsSmart = sortedApi.map(inv => String(inv.id));
+        const dbStateMapSmart = new Map<string, { id: string; cached: number; expected: number; received: boolean }>();
+        if (externalIdsSmart.length > 0) {
+          const { data: existingRows } = await supabase
+            .from('delivery_invoices')
+            .select('id, external_id, received, orders_count')
+            .eq('partner', partnerName)
+            .in('external_id', externalIdsSmart);
+          if (existingRows && existingRows.length > 0) {
+            const ids = existingRows.map(r => r.id);
+            const counts = new Map<string, number>();
+            if (ids.length > 0) {
+              const { data: dioRows } = await supabase
+                .from('delivery_invoice_orders')
+                .select('invoice_id')
+                .in('invoice_id', ids);
+              (dioRows || []).forEach(r => counts.set(r.invoice_id, (counts.get(r.invoice_id) || 0) + 1));
+            }
+            existingRows.forEach(r => {
+              dbStateMapSmart.set(String(r.external_id), {
+                id: r.id,
+                received: r.received === true,
+                cached: counts.get(r.id) || 0,
+                expected: Number(r.orders_count || 0),
+              });
+            });
+          }
+        }
+        const incompleteFirstSmart = [...sortedApi].sort((a, b) => {
+          const expA = Number((a as any).delivered_orders_count || (a as any).orders_count || (a as any).ordersCount || 0);
+          const expB = Number((b as any).delivered_orders_count || (b as any).orders_count || (b as any).ordersCount || 0);
+          const sa = dbStateMapSmart.get(String(a.id));
+          const sb = dbStateMapSmart.get(String(b.id));
+          const incA = expA > 0 && (!sa || sa.cached < expA) ? 1 : 0;
+          const incB = expB > 0 && (!sb || sb.cached < expB) ? 1 : 0;
+          if (incA !== incB) return incB - incA;
+          return invoiceTime(b) - invoiceTime(a);
+        });
+        const queueSmart = incompleteFirstSmart.slice(0, MAX_INVOICES_PER_TOKEN);
+
+        // ✅ معالجة الفواتير حسب الأولوية
+        for (const invoice of queueSmart) {
           const externalId = String(invoice.id);
           const statusNormalized = normalizeStatus(invoice.status);
           const isReceived = statusNormalized === 'received' || invoice.received === true;
