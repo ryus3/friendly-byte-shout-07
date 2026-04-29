@@ -435,12 +435,13 @@ const AddDeliveryPartnerSection = () => {
             </AccordionItem>
           </Accordion>
 
-          <Button onClick={handleSubmit} disabled={saving} size="sm" className="w-full mt-3">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Plus className="w-4 h-4 ml-2" />}
-            إضافة الشركة
-          </Button>
-        </CardContent>
-      </Card>
+            <Button onClick={handleSubmit} disabled={saving} size="sm" className="w-full mt-3">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Plus className="w-4 h-4 ml-2" />}
+              إضافة الشركة
+            </Button>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       {/* ========== الشركات المسجلة ========== */}
       <Card>
