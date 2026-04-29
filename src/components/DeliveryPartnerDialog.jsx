@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Switch } from '@/components/ui/switch';
+import AddDeliveryPartnerSection from './AddDeliveryPartnerSection';
 
 const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
     const { 
