@@ -45,64 +45,76 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           throw new Error(`يجب تسجيل الدخول إلى ${partnerName} أولاً`);
         }
         
-        // 🆕 الترجمة الآمنة للمعرفات قبل الإرسال للوسيط/مدن:
-        //   1) إذا كانت المعرفات قادمة بالفعل كمعرفات خارجية للشريك (alwaseet_city_id/region_id من البوت أو AI)،
-        //      نستخدمها مباشرة. AlWaseet/MODON لا يفهم سوى external_id لديهم.
-        //   2) إن لم تتوفر، نحاول الترجمة عبر mappings: نُجرّب كـ city_id/region_id داخلي،
-        //      وإن فشل نُجرّبها كـ external_id (في حال جاءت من تخزين قديم).
-        //   3) إن فشل كل ذلك، نمنع الإرسال برسالة دقيقة.
-        let finalCityId = customerInfo.alwaseet_city_id || null;
-        let finalRegionId = customerInfo.alwaseet_region_id || null;
+        // 🌐 الترجمة العالمية للمعرفات قبل الإرسال (تدعم cross-partner):
+        //   نستخدم regions_master/cities_master كجسر مركزي للترجمة بين الشركاء.
+        //   - إذا تم تمرير alwaseet_city_id/region_id، نستخدمها فقط للوسيط.
+        //   - لمدن: نترجم دائماً عبر الجدول الرئيسي → external_id لمدن.
+        //   - لا نُمرر أبداً external_id لشريك آخر إلى الشريك الحالي.
+        let finalCityId = null;
+        let finalRegionId = null;
+
+        // المعرفات الخام القادمة (قد تكون internal master id أو external id لأي شريك)
+        const rawCityId = customerInfo.alwaseet_city_id || customerInfo.city_id || customerInfo.customer_city_id || null;
+        const rawRegionId = customerInfo.alwaseet_region_id || customerInfo.region_id || customerInfo.customer_region_id || null;
+
+        // دالة مساعدة: ترجمة معرف مدينة/منطقة إلى external_id للشريك المستهدف
+        const resolveExternalId = async (rawId, kind /* 'city' | 'region' */, targetPartner) => {
+          if (!rawId) return null;
+          const tableName = kind === 'city' ? 'city_delivery_mappings' : 'region_delivery_mappings';
+          const fkColumn = kind === 'city' ? 'city_id' : 'region_id';
+
+          // 1) محاولة مباشرة: rawId يطابق external_id للشريك المستهدف
+          const { data: direct } = await supabase
+            .from(tableName)
+            .select('external_id')
+            .eq('external_id', String(rawId))
+            .eq('delivery_partner', targetPartner)
+            .eq('is_active', true)
+            .maybeSingle();
+          if (direct?.external_id) return direct.external_id;
+
+          // 2) محاولة: rawId هو internal master id → ابحث عن external_id للشريك المستهدف
+          const { data: byInternal } = await supabase
+            .from(tableName)
+            .select('external_id')
+            .eq(fkColumn, parseInt(rawId))
+            .eq('delivery_partner', targetPartner)
+            .eq('is_active', true)
+            .maybeSingle();
+          if (byInternal?.external_id) return byInternal.external_id;
+
+          // 3) Cross-partner: rawId هو external_id لشريك آخر → جسر عبر master id
+          const otherPartner = targetPartner === 'modon' ? 'alwaseet' : 'modon';
+          const { data: bridge } = await supabase
+            .from(tableName)
+            .select(fkColumn)
+            .eq('external_id', String(rawId))
+            .eq('delivery_partner', otherPartner)
+            .eq('is_active', true)
+            .maybeSingle();
+          if (bridge?.[fkColumn]) {
+            const { data: viaMaster } = await supabase
+              .from(tableName)
+              .select('external_id')
+              .eq(fkColumn, bridge[fkColumn])
+              .eq('delivery_partner', targetPartner)
+              .eq('is_active', true)
+              .maybeSingle();
+            if (viaMaster?.external_id) return viaMaster.external_id;
+          }
+          return null;
+        };
+
+        finalCityId = await resolveExternalId(rawCityId, 'city', activePartner);
+        finalRegionId = await resolveExternalId(rawRegionId, 'region', activePartner);
 
         if (!finalCityId || !finalRegionId) {
-          const unifiedCityId = customerInfo.city_id || customerInfo.customer_city_id;
-          const unifiedRegionId = customerInfo.region_id || customerInfo.customer_region_id;
-
-          if (unifiedCityId && !finalCityId) {
-            // محاولة كـ city_id داخلي
-            const { data: cityByInternal } = await supabase
-              .from('city_delivery_mappings')
-              .select('external_id')
-              .eq('city_id', unifiedCityId)
-              .eq('delivery_partner', activePartner)
-              .maybeSingle();
-            if (cityByInternal?.external_id) {
-              finalCityId = cityByInternal.external_id;
-            } else {
-              // محاولة كـ external_id
-              const { data: cityByExternal } = await supabase
-                .from('city_delivery_mappings')
-                .select('external_id')
-                .eq('external_id', String(unifiedCityId))
-                .eq('delivery_partner', activePartner)
-                .maybeSingle();
-              if (cityByExternal?.external_id) finalCityId = cityByExternal.external_id;
-            }
-          }
-
-          if (unifiedRegionId && !finalRegionId) {
-            const { data: regionByInternal } = await supabase
-              .from('region_delivery_mappings')
-              .select('external_id')
-              .eq('region_id', unifiedRegionId)
-              .eq('delivery_partner', activePartner)
-              .maybeSingle();
-            if (regionByInternal?.external_id) {
-              finalRegionId = regionByInternal.external_id;
-            } else {
-              const { data: regionByExternal } = await supabase
-                .from('region_delivery_mappings')
-                .select('external_id')
-                .eq('external_id', String(unifiedRegionId))
-                .eq('delivery_partner', activePartner)
-                .maybeSingle();
-              if (regionByExternal?.external_id) finalRegionId = regionByExternal.external_id;
-            }
-          }
-        }
-
-        if (!finalCityId || !finalRegionId) {
-          throw new Error(`لا يمكن التعرف على المحافظة/المنطقة لشريك ${activePartner}. يرجى اختيار المدينة والمنطقة من القائمة.`);
+          const partnerNameAr = activePartner === 'modon' ? 'مدن' : 'الوسيط';
+          throw new Error(
+            `لا يمكن التعرف على المحافظة/المنطقة في حساب ${partnerNameAr}. ` +
+            `قد تكون المنطقة غير مُعرّفة في كاش ${partnerNameAr}. ` +
+            `يرجى تحديث كاش ${partnerNameAr} من إدارة شركات التوصيل، أو تعديل الطلب واختيار المدينة والمنطقة يدوياً.`
+          );
         }
 
         try {
