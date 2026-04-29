@@ -936,16 +936,45 @@ export const SuperProvider = ({ children }) => {
       persistDeletedSet('permanentlyDeletedOrders', permanentlyDeletedOrders);
     };
 
+    // ✅ معالج فوري لإضافة الطلب الجديد إلى الـ state بدون انتظار refetch
+    const handleOrderCreatedFast = (event) => {
+      const newOrder = event.detail;
+      if (!newOrder || !newOrder.id) return;
+      setAllData(prev => ({
+        ...prev,
+        orders: [
+          newOrder,
+          ...((prev.orders || []).filter(o => o.id !== newOrder.id))
+        ]
+      }));
+    };
+
+    // ✅ معالج فوري لتحديث طلب موجود في الـ state
+    const handleOrderUpdatedFast = (event) => {
+      const updated = event.detail;
+      if (!updated || !updated.id) return;
+      setAllData(prev => ({
+        ...prev,
+        orders: (prev.orders || []).map(o =>
+          o.id === updated.id ? { ...o, ...updated } : o
+        )
+      }));
+    };
+
     window.addEventListener('aiOrderCreated', handleAiOrderCreated);
     window.addEventListener('aiOrderUpdated', handleAiOrderUpdated);
     window.addEventListener('aiOrderDeleted', handleAiOrderDeleted);
     window.addEventListener('orderDeleted', handleOrderDeleted);
+    window.addEventListener('orderCreated', handleOrderCreatedFast);
+    window.addEventListener('orderUpdated', handleOrderUpdatedFast);
 
     return () => {
       window.removeEventListener('aiOrderCreated', handleAiOrderCreated);
       window.removeEventListener('aiOrderUpdated', handleAiOrderUpdated);
       window.removeEventListener('aiOrderDeleted', handleAiOrderDeleted);
       window.removeEventListener('orderDeleted', handleOrderDeleted);
+      window.removeEventListener('orderCreated', handleOrderCreatedFast);
+      window.removeEventListener('orderUpdated', handleOrderUpdatedFast);
     };
   }, [normalizeOrder]);
 

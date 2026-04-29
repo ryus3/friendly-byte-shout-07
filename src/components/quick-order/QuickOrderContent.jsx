@@ -734,18 +734,24 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               citiesData = (modonCitiesData || []).map(city => ({ id: city.id, name: city.city_name }));
             }
 
-            // أحجام الطرود من الكاش
+            // أحجام الطرود من الكاش (مع ترجمة عربية للأحجام الإنجليزية)
+            const MODON_SIZE_AR = { small:'صغير', medium:'وسط', middle:'وسط', large:'كبير', xlarge:'كبير جداً', xl:'كبير جداً', 'extra large':'كبير جداً', 'extra-large':'كبير جداً' };
+            const trSize = (n) => {
+              if (!n) return n;
+              const k = String(n).trim().toLowerCase();
+              return MODON_SIZE_AR[k] || n;
+            };
             const { data: modonSizes } = await supabase
               .from('package_sizes_cache')
               .select('external_id, size_name')
               .eq('partner_name', 'modon')
               .eq('is_active', true);
             if (modonSizes && modonSizes.length > 0) {
-              packageSizesData = modonSizes.map(s => ({ id: s.external_id, size: s.size_name }));
+              packageSizesData = modonSizes.map(s => ({ id: s.external_id, size: trSize(s.size_name) }));
             } else {
               const ModonAPI = await import('@/lib/modon-api');
               packageSizesData = await ModonAPI.getPackageSizes(waseetToken);
-              packageSizesData = (packageSizesData || []).map(size => ({ id: size.id, size: size.size }));
+              packageSizesData = (packageSizesData || []).map(size => ({ id: size.id, size: trSize(size.size) }));
             }
           } else {
             // ✅ الوسيط: cache من cachedCities (موجود)
@@ -1588,8 +1594,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const handleCreateOrder = async () => {
     try {
       const deliveryFeeAmount = settings?.deliveryFee || 5000;
-      // ✅ إصلاح: إضافة أجور التوصيل دائماً لشركة الوسيط
-      let finalTotal = subtotal - discount + (activePartner === 'alwaseet' ? deliveryFeeAmount : 0);
+      // ✅ إضافة رسوم التوصيل لكل شركاء التوصيل (الوسيط ومدن)، وليس للطلبات المحلية فقط
+      let finalTotal = subtotal - discount + (activePartner === 'local' ? 0 : deliveryFeeAmount);
       let orderNotes = formData.notes || '';
       let actualOrderType = formData.type === 'exchange' ? 'replacement' : 
                            formData.type === 'return' ? 'return' : 'regular';
@@ -1940,6 +1946,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               quantity: orderItems.length > 0 ? orderItems.length : 1,
               // ✅ إرسال السعر كما هو (سالب للإرجاع، موجب للطلبات العادية)
               price: Math.round(finalTotal),
+              // ✅ حقول صريحة لمدن لضمان السعر الكلي شامل التوصيل
+              total_amount: Math.round(subtotal - discount),
+              delivery_fee: deliveryFeeAmount,
+              final_amount: Math.round(finalTotal),
               package_size: formData.size,
               size: formData.size,
               // ✅ استخدام merchantNotes المبسطة للوسيط في حالة الاستبدال

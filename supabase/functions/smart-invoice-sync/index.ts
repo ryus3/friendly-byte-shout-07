@@ -111,10 +111,11 @@ async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet',
     return [];
   }
 
-  // 🛡️ errNum:21 على واجهة الفواتير = "ليس لديك صلاحية / توكن غير مناسب لـ endpoint الفواتير"
-  // نُترجمها إلى InvoiceAuthError ليلتقطها fetchInvoicesWithTokenRecovery ويحاول تجديد توكن مرّة واحدة.
+  // ✅ errNum:21 على endpoint الفواتير = "لا يوجد فواتير" (طبيعي تماماً، ليس خطأ صلاحية).
+  // proxy logs تؤكد: msg = "لا يوجد فواتير" — نرجع [] بهدوء بدون تجديد توكن.
   if (data?.errNum === 21 || data?.errNum === '21') {
-    throw new InvoiceAuthError(`${partner.toUpperCase()}: get_merchant_invoices errNum:21`);
+    console.log(`ℹ️ ${partner.toUpperCase()}: لا توجد فواتير حالياً (errNum:21 طبيعي)`);
+    return [];
   }
 
   if (data?.raw && !response.ok) {
