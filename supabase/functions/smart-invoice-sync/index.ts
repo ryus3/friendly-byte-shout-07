@@ -77,24 +77,17 @@ function extractInvoiceOrders(data: any): InvoiceOrder[] {
 async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet'): Promise<Invoice[]> {
   try {
     const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
-    console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API...`);
+    console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API (static proxy only for whitelist)...`);
 
-    let { response, data } = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, token);
+    const { response, data } = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, token);
 
-    if (isAlWaseet(partner) && response.status >= 500) {
-      console.warn(`ALWASEET proxy returned ${response.status}; falling back to direct invoice API`);
-      ({ response, data } = await fetchDeliveryJson(`${ALWASEET_DIRECT_API_BASE}/get_merchant_invoices?token=${encodeURIComponent(token)}`, token));
-    }
-
-    // قد يرجع API HTTP 400 مع errNum:21 ("لا صلاحية" / "لا فواتير")، لذلك نحلل الجسم قبل أن نعتبره خطأ.
     if (data?.raw && !response.ok) {
       console.error(`API non-JSON ${response.status}: ${String(data.raw).substring(0, 200)}`);
       return [];
     }
 
-    // ✅ errNum:21 = لا فواتير (ليس خطأ توكن). نُعيد قائمة فارغة بهدوء.
     if (data?.errNum === 21 || data?.errNum === '21') {
-      console.log(`ℹ️ ${partner.toUpperCase()}: errNum:21 على get_merchant_invoices = لا فواتير لهذا الحساب`);
+      console.warn(`⚠️ ${partner.toUpperCase()}: errNum:21 على get_merchant_invoices - الوسيط رفض endpoint للحساب (لا تفريغ DB).`);
       return [];
     }
 
@@ -104,8 +97,7 @@ async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet')
     }
 
     const invoices = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    console.log(`📥 ${partner.toUpperCase()} API Response: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}`);
-
+    console.log(`📥 ${partner.toUpperCase()} API: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}`);
     return invoices;
   } catch (error) {
     console.error(`Error fetching invoices from ${partner}:`, error);
@@ -113,30 +105,28 @@ async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet')
   }
 }
 
-// ✅ Fetch invoice orders from API (supports both AlWaseet and MODON)
 async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partner: string = 'alwaseet'): Promise<InvoiceOrder[]> {
   try {
     const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
-    console.log(`📡 Fetching orders for invoice ${invoiceId} from ${partner.toUpperCase()}...`);
-    
-    let { response, data } = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${encodeURIComponent(invoiceId)}`, token);
+    console.log(`📡 Fetching orders for invoice ${invoiceId} from ${partner.toUpperCase()} (static proxy only)...`);
 
-    if (isAlWaseet(partner) && response.status >= 500) {
-      console.warn(`ALWASEET proxy returned ${response.status}; falling back to direct invoice orders API for ${invoiceId}`);
-      ({ response, data } = await fetchDeliveryJson(`${ALWASEET_DIRECT_API_BASE}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${encodeURIComponent(invoiceId)}`, token));
+    const { response, data } = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoice_orders?token=${encodeURIComponent(token)}&invoice_id=${encodeURIComponent(invoiceId)}`, token);
+
+    if (data?.errNum === 21 || data?.errNum === '21') {
+      console.warn(`⚠️ ${partner.toUpperCase()} invoice_orders ${invoiceId}: errNum:21 (لا صلاحية على endpoint).`);
+      return [];
     }
 
     if (!response.ok) {
-      console.error(`API Error fetching orders for invoice ${invoiceId} from ${partner}: ${response.status} - ${JSON.stringify(data).substring(0, 200)}`);
+      console.error(`API Error fetching orders for invoice ${invoiceId}: ${response.status} - ${JSON.stringify(data).substring(0, 200)}`);
       return [];
     }
 
     const ok = data?.status === true || data?.errNum === 'S000';
     if (!ok) return [];
-
     return extractInvoiceOrders(data);
   } catch (error) {
-    console.error(`Error fetching orders for invoice ${invoiceId} from ${partner}:`, error);
+    console.error(`Error fetching orders for invoice ${invoiceId}:`, error);
     return [];
   }
 }
