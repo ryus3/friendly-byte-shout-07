@@ -2812,39 +2812,52 @@ export const AlWaseetProvider = ({ children }) => {
       const alwaseetOrders = pendingOrders.filter(o => o.delivery_partner === 'alwaseet');
       const modonOrdersLocal = pendingOrders.filter(o => o.delivery_partner === 'modon');
 
-      // 2) جلب طلبات الوسيط + مدن من API
+      // 2) جلب طلبات الوسيط + مدن من API — كل شريك بتوكنه الخاص فقط
+      // ✅ تتبع حالة كل شريك بشكل مستقل: success | api_error | no_token
       let waseetOrders = [];
       let modonOrdersRemote = [];
+      let waseetStatus = alwaseetOrders.length > 0 ? 'pending' : 'skip';
+      let modonStatus = modonOrdersLocal.length > 0 ? 'pending' : 'skip';
 
-      // جلب طلبات الوسيط
+      // ✅ جلب طلبات الوسيط — حصراً بتوكن الوسيط (ليس بالمتغير المشترك token)
       if (alwaseetOrders.length > 0) {
         try {
-          waseetOrders = await AlWaseetAPI.getMerchantOrders(token);
-          devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
-        } catch (apiError) {
-          console.error('❌ فشل جلب قائمة الطلبات من الوسيط:', apiError.message);
-          if (apiError.message?.includes('تجاوزت الحد المسموح به') || apiError.message?.includes('rate limit')) {
-            devLog.warn('⚠️ Rate Limit الوسيط: تم تخطي مزامنة الوسيط');
+          const waseetTokenData = await getTokenForUser(user?.id, null, 'alwaseet');
+          if (!waseetTokenData?.token) {
+            waseetStatus = 'no_token';
+            devLog.warn('⚠️ لا يوجد توكن صالح للوسيط - تخطي مزامنة طلبات الوسيط');
+          } else {
+            waseetOrders = await AlWaseetAPI.getMerchantOrders(waseetTokenData.token);
+            waseetStatus = 'success';
+            devLog.log(`📦 تم جلب ${waseetOrders.length} طلب من الوسيط للمزامنة السريعة`);
           }
+        } catch (apiError) {
+          waseetStatus = 'api_error';
+          console.error('❌ فشل جلب قائمة الطلبات من الوسيط:', apiError.message);
         }
       }
 
-      // ✅ جلب طلبات مدن
+      // ✅ جلب طلبات مدن — حصراً بتوكن مدن
       if (modonOrdersLocal.length > 0) {
         try {
           const modonTokenData = await getTokenForUser(user?.id, null, 'modon');
-          if (modonTokenData?.token) {
+          if (!modonTokenData?.token) {
+            modonStatus = 'no_token';
+            devLog.warn('⚠️ لا يوجد توكن صالح لمدن - تخطي مزامنة طلبات مدن');
+          } else {
             modonOrdersRemote = await ModonAPI.getMerchantOrders(modonTokenData.token);
+            modonStatus = 'success';
             devLog.log(`📦 تم جلب ${modonOrdersRemote.length} طلب من مدن للمزامنة السريعة`);
           }
         } catch (apiError) {
+          modonStatus = 'api_error';
           console.error('❌ فشل جلب قائمة الطلبات من مدن:', apiError.message);
         }
       }
 
       // ✅ فحص إضافي: إذا كانت القوائم فارغة بشكل غير طبيعي
-      if (waseetOrders.length === 0 && modonOrdersRemote.length === 0) {
-        devLog.warn('⚠️ تحذير: قوائم الطلبات فارغة - قد يكون هناك خطأ في APIs');
+      if (waseetOrders.length === 0 && modonOrdersRemote.length === 0 && waseetStatus !== 'success' && modonStatus !== 'success') {
+        devLog.warn('⚠️ تحذير: لم تنجح أي مزامنة لأي شريك - تخطي الدورة بالكامل');
         setLoading(false);
         return { updated: 0, checked: 0, emptyList: true };
       }
