@@ -251,10 +251,115 @@ serve(async (req) => {
       sync_invoices = true, 
       sync_orders = true,  // ✅ تفعيل افتراضي - مهم للربط التلقائي
       force_refresh = false,
-      run_reconciliation = true
+      run_reconciliation = true,
+      target_invoice_external_id,
+      target_invoice_partner,
     } = body;
 
-    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, ForceRefresh: ${force_refresh}`);
+    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, ForceRefresh: ${force_refresh}, Target: ${target_invoice_external_id || '-'}`);
+
+    // 🆕 وضع الجلب الموجه لفاتورة واحدة فقط (يُستدعى من واجهة فتح تفاصيل الفاتورة).
+    // لا يلمس باقي الفواتير، ولا يعيد المزامنة العامة، ولا يُعدّ "موجة طلبات".
+    if (target_invoice_external_id) {
+      const partnerName = target_invoice_partner || 'alwaseet';
+      const { data: invRow, error: invErr } = await supabase
+        .from('delivery_invoices')
+        .select('id, owner_user_id, partner, external_id, orders_count, raw, account_username, merchant_id')
+        .eq('external_id', String(target_invoice_external_id))
+        .eq('partner', partnerName)
+        .maybeSingle();
+
+      if (invErr || !invRow) {
+        return new Response(
+          JSON.stringify({ success: false, mode: 'targeted', error: 'invoice_not_found' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // عدد الطلبات المخزنة حالياً
+      const { count: cachedCount } = await supabase
+        .from('delivery_invoice_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('invoice_id', invRow.id);
+
+      const expected = Number(invRow.orders_count || 0);
+      const haveNow = cachedCount ?? 0;
+
+      // إن كانت كاملة، لا حاجة للمزامنة الموجهة
+      if (expected > 0 && haveNow >= expected) {
+        return new Response(
+          JSON.stringify({ success: true, mode: 'targeted', invoices_synced: 0, orders_updated: 0, already_complete: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // اختيار توكن مالك الفاتورة بنفس الشريك
+      const { data: tokenRow } = await supabase
+        .from('delivery_partner_tokens')
+        .select('id, token, account_username, partner_data, partner_name, user_id')
+        .eq('user_id', invRow.owner_user_id)
+        .eq('partner_name', partnerName)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString())
+        .order('last_used_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!tokenRow?.token) {
+        return new Response(
+          JSON.stringify({ success: false, mode: 'targeted', error: 'no_active_token' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      let ordersFromApi = await fetchInvoiceOrdersFromAPI(tokenRow.token, String(invRow.external_id), partnerName);
+
+      // محاولة تجديد توكن الوسيط لمرة واحدة عند فشل الجلب وإعادة المحاولة
+      if (ordersFromApi.length === 0 && partnerName === 'alwaseet') {
+        const renewed = await renewAlWaseetTokenIfNeeded(supabase, tokenRow);
+        if (renewed) {
+          ordersFromApi = await fetchInvoiceOrdersFromAPI(renewed, String(invRow.external_id), partnerName);
+        }
+      }
+
+      let writtenOrders = 0;
+      if (ordersFromApi.length > 0) {
+        for (const order of ordersFromApi) {
+          const { error: orderError } = await supabase
+            .from('delivery_invoice_orders')
+            .upsert({
+              invoice_id: invRow.id,
+              external_order_id: String(order.id),
+              raw: order,
+              status: order.status,
+              amount: order.price || order.amount || 0,
+              owner_user_id: invRow.owner_user_id,
+            }, { onConflict: 'invoice_id,external_order_id', ignoreDuplicates: false });
+          if (!orderError) writtenOrders++;
+        }
+        await supabase
+          .from('delivery_invoices')
+          .update({ orders_last_synced_at: new Date().toISOString() })
+          .eq('id', invRow.id);
+
+        try {
+          await supabase.rpc('link_invoice_orders_to_orders');
+        } catch { /* silent */ }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          mode: 'targeted',
+          target_invoice: invRow.external_id,
+          expected_orders: expected,
+          cached_before: haveNow,
+          orders_updated: writtenOrders,
+          orders_returned_from_api: ordersFromApi.length,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let totalInvoicesSynced = 0;
     let totalOrdersUpdated = 0;
