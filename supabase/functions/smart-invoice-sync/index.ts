@@ -168,6 +168,19 @@ async function renewAlWaseetTokenIfNeeded(supabase: any, tokenData: any): Promis
   return data.data.token;
 }
 
+async function fetchInvoicesWithTokenRecovery(supabase: any, tokenData: any, partnerName: string): Promise<Invoice[]> {
+  try {
+    return await fetchInvoicesFromAPI(tokenData.token, partnerName, MAX_INVOICES_PER_TOKEN);
+  } catch (error) {
+    if (error instanceof InvoiceAuthError) {
+      console.warn(`🔑 Invoice API rejected stored token for ${tokenData.account_username}; renewing once from saved merchant credentials.`);
+      const renewedToken = await renewAlWaseetTokenIfNeeded(supabase, tokenData);
+      if (renewedToken) return await fetchInvoicesFromAPI(renewedToken, partnerName, MAX_INVOICES_PER_TOKEN);
+    }
+    throw error;
+  }
+}
+
 /**
  * ✅ تطبيع حالة الفاتورة مع التفريق بين المندوب والتاجر
  * - "تم الاستلام من قبل المندوب" = pending (معلقة - لم تصل للتاجر بعد)
