@@ -6,12 +6,15 @@ import devLog from '@/lib/devLogger';
 // قائمة حالات التسليم المسموح حذفها للطلبات الخارجية
 const DELETABLE_DELIVERY_STATUSES = [
   'فعال',
-  'active', 
+  'active',
   'في انتظار استلام المندوب',
   'waiting for pickup',
   'pending pickup',
+  'pending',
+  'قيد الانتظار',
   'جديد',
   'new',
+  '1', // الوسيط: نشط
   'معطل',
   'غير فعال',
   'disabled',
