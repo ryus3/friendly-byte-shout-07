@@ -45,31 +45,65 @@ export const UnifiedOrderCreatorProvider = ({ children }) => {
           throw new Error(`يجب تسجيل الدخول إلى ${partnerName} أولاً`);
         }
         
-        // ✅ جلب المعرفات الخارجية من الـ mappings
-        const unifiedCityId = customerInfo.city_id || customerInfo.customer_city_id;
-        const unifiedRegionId = customerInfo.region_id || customerInfo.customer_region_id;
-        
-        // ترجمة المعرفات الموحدة إلى معرفات خارجية
-        const { data: cityMapping } = await supabase
-          .from('city_delivery_mappings')
-          .select('external_id, external_name')
-          .eq('city_id', unifiedCityId)
-          .eq('delivery_partner', activePartner)
-          .maybeSingle();
-        
-        const { data: regionMapping } = await supabase
-          .from('region_delivery_mappings')
-          .select('external_id, external_name')
-          .eq('region_id', unifiedRegionId)
-          .eq('delivery_partner', activePartner)
-          .maybeSingle();
-        
-        if (!cityMapping || !regionMapping) {
-          throw new Error(`لم يتم العثور على تطابق المدينة/المنطقة لشريك ${activePartner}`);
+        // 🆕 الترجمة الآمنة للمعرفات قبل الإرسال للوسيط/مدن:
+        //   1) إذا كانت المعرفات قادمة بالفعل كمعرفات خارجية للشريك (alwaseet_city_id/region_id من البوت أو AI)،
+        //      نستخدمها مباشرة. AlWaseet/MODON لا يفهم سوى external_id لديهم.
+        //   2) إن لم تتوفر، نحاول الترجمة عبر mappings: نُجرّب كـ city_id/region_id داخلي،
+        //      وإن فشل نُجرّبها كـ external_id (في حال جاءت من تخزين قديم).
+        //   3) إن فشل كل ذلك، نمنع الإرسال برسالة دقيقة.
+        let finalCityId = customerInfo.alwaseet_city_id || null;
+        let finalRegionId = customerInfo.alwaseet_region_id || null;
+
+        if (!finalCityId || !finalRegionId) {
+          const unifiedCityId = customerInfo.city_id || customerInfo.customer_city_id;
+          const unifiedRegionId = customerInfo.region_id || customerInfo.customer_region_id;
+
+          if (unifiedCityId && !finalCityId) {
+            // محاولة كـ city_id داخلي
+            const { data: cityByInternal } = await supabase
+              .from('city_delivery_mappings')
+              .select('external_id')
+              .eq('city_id', unifiedCityId)
+              .eq('delivery_partner', activePartner)
+              .maybeSingle();
+            if (cityByInternal?.external_id) {
+              finalCityId = cityByInternal.external_id;
+            } else {
+              // محاولة كـ external_id
+              const { data: cityByExternal } = await supabase
+                .from('city_delivery_mappings')
+                .select('external_id')
+                .eq('external_id', String(unifiedCityId))
+                .eq('delivery_partner', activePartner)
+                .maybeSingle();
+              if (cityByExternal?.external_id) finalCityId = cityByExternal.external_id;
+            }
+          }
+
+          if (unifiedRegionId && !finalRegionId) {
+            const { data: regionByInternal } = await supabase
+              .from('region_delivery_mappings')
+              .select('external_id')
+              .eq('region_id', unifiedRegionId)
+              .eq('delivery_partner', activePartner)
+              .maybeSingle();
+            if (regionByInternal?.external_id) {
+              finalRegionId = regionByInternal.external_id;
+            } else {
+              const { data: regionByExternal } = await supabase
+                .from('region_delivery_mappings')
+                .select('external_id')
+                .eq('external_id', String(unifiedRegionId))
+                .eq('delivery_partner', activePartner)
+                .maybeSingle();
+              if (regionByExternal?.external_id) finalRegionId = regionByExternal.external_id;
+            }
+          }
         }
-        
-        const finalCityId = cityMapping.external_id;
-        const finalRegionId = regionMapping.external_id;
+
+        if (!finalCityId || !finalRegionId) {
+          throw new Error(`لا يمكن التعرف على المحافظة/المنطقة لشريك ${activePartner}. يرجى اختيار المدينة والمنطقة من القائمة.`);
+        }
 
         try {
           const partnerPayload = {

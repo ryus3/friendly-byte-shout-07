@@ -439,17 +439,29 @@ export const useAlWaseetInvoices = () => {
 
           const finalInvoiceId = invoiceRecord?.id || invoiceId;
           
-          // ✅ إذا الفاتورة موجودة لكن delivery_invoice_orders فارغة لا نعمل retry مباشر هنا.
-          // الجلب من API تمت محاولته مرة واحدة أعلاه؛ التكرار الفوري كان يسبب errNum:2 من الوسيط.
-          if (invoiceRecord?.orders_count > 0) {
+          // 🆕 Self-heal موجّه: إذا الفاتورة موجودة لكن delivery_invoice_orders فارغة، ننفذ مزامنة موجهة
+          // للـ external_id فقط عبر smart-invoice-sync (target_invoice_external_id). هذا لا يسبب
+          // موجة طلبات لأن edge function تجلب فقط طلبات هذه الفاتورة وتكتفي.
+          if (invoiceRecord?.orders_count > 0 && !cacheOnly) {
             const { data: existingOrders, error: checkError } = await supabase
               .from('delivery_invoice_orders')
               .select('id')
               .eq('invoice_id', finalInvoiceId)
               .limit(1);
-            
-            if (!checkError && (!existingOrders || existingOrders.length === 0) && !cacheOnly) {
-              devLog.warn('⚠️ الفاتورة موجودة لكن كاش الطلبات فارغ؛ سيتم عرض المحفوظ وإكمالها بالمزامنة التالية بدون تكرار فوري.');
+
+            if (!checkError && (!existingOrders || existingOrders.length === 0)) {
+              devLog.warn(`🩹 self-heal موجّه للفاتورة ${invoiceId}: استدعاء smart-invoice-sync لجلب طلباتها فقط`);
+              try {
+                await supabase.functions.invoke('smart-invoice-sync', {
+                  body: {
+                    mode: 'smart',
+                    target_invoice_external_id: String(invoiceId),
+                    target_invoice_partner: invoiceRecord?.partner || 'alwaseet',
+                  }
+                });
+              } catch (selfHealErr) {
+                devLog.warn('⚠️ self-heal الموجه فشل:', selfHealErr?.message);
+              }
             }
           }
 

@@ -9,9 +9,15 @@ const corsHeaders = {
 // ✅ API Base URLs for both delivery partners
 const ALWASEET_API_BASE = 'https://api.ryusbrand.com/alwaseet/v1/merchant';
 const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
-const MAX_INVOICES_PER_TOKEN = 5;
-const MAX_ORDER_DETAILS_PER_TOKEN = 2;
-const ORDER_DETAILS_GAP_MS = 1200;
+// 🛡️ ميزانيات آمنة:
+// - عدد الفواتير المعالجة في كل دورة (أحدث أولاً + الناقصة).
+// - عدد جلب تفاصيل طلبات الفاتورة في الدورة الواحدة (لتجنب rate limit).
+// - الفجوة الزمنية بين كل استدعاء تفاصيل وآخر.
+// المنطق الجديد يعطي أولوية للفواتير التي orders_count > 0 وعدد طلباتها المخزن أقل من المتوقع
+// (سواء جديدة أو مستلمة لكن طلباتها لم تُجلب بعد).
+const MAX_INVOICES_PER_TOKEN = 25;
+const MAX_ORDER_DETAILS_PER_TOKEN = 8;
+const ORDER_DETAILS_GAP_MS = 900;
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
@@ -20,6 +26,10 @@ interface SyncRequest {
   sync_orders?: boolean;
   force_refresh?: boolean;
   run_reconciliation?: boolean;
+  // 🆕 وضع موجه: عند فتح فاتورة من الواجهة وكانت طلباتها ناقصة، نمرر external_id الخاص بها
+  // لتُعالج فوراً بدون انتظار الميزانية، بدون تأثير على باقي الفواتير.
+  target_invoice_external_id?: string;
+  target_invoice_partner?: 'alwaseet' | 'modon';
 }
 
 interface Invoice {
@@ -86,34 +96,41 @@ function extractInvoiceOrders(data: any): InvoiceOrder[] {
 const invoiceTime = (invoice: Invoice) => new Date(String(invoice.updated_at || invoice.created_at || 0)).getTime() || 0;
 
 async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet', limit: number = MAX_INVOICES_PER_TOKEN): Promise<Invoice[]> {
+  const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
+  console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API (static proxy only for whitelist)...`);
+
+  let response: Response;
+  let data: any;
   try {
-    const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
-    console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API (static proxy only for whitelist)...`);
-
-    const { response, data } = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, token);
-
-    if (data?.raw && !response.ok) {
-      console.error(`API non-JSON ${response.status}: ${String(data.raw).substring(0, 200)}`);
-      return [];
-    }
-
-    if (data?.errNum === 21 || data?.errNum === '21') {
-      throw new InvoiceAuthError(`${partner.toUpperCase()}: get_merchant_invoices requires a valid Merchant token`);
-    }
-
-    if (!response.ok && data?.errNum !== 'S000') {
-      console.error(`API Error: ${response.status} ${response.statusText} - ${JSON.stringify(data).substring(0, 200)}`);
-      return [];
-    }
-
-    const invoices = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    const limitedInvoices = [...invoices].sort((a, b) => invoiceTime(b) - invoiceTime(a)).slice(0, limit);
-    console.log(`📥 ${partner.toUpperCase()} API: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}, processing=${limitedInvoices.length}`);
-    return limitedInvoices;
+    const r = await fetchDeliveryJson(`${baseUrl}/get_merchant_invoices?token=${encodeURIComponent(token)}`, token);
+    response = r.response;
+    data = r.data;
   } catch (error) {
-    console.error(`Error fetching invoices from ${partner}:`, error);
+    // فشل شبكي/تحليلي حقيقي — نرجع فارغ لكي لا يُمسح الكاش، ولا نُسجّل auth error.
+    console.error(`Network error fetching invoices from ${partner}:`, error);
     return [];
   }
+
+  // 🛡️ errNum:21 على واجهة الفواتير = "ليس لديك صلاحية / توكن غير مناسب لـ endpoint الفواتير"
+  // نُترجمها إلى InvoiceAuthError ليلتقطها fetchInvoicesWithTokenRecovery ويحاول تجديد توكن مرّة واحدة.
+  if (data?.errNum === 21 || data?.errNum === '21') {
+    throw new InvoiceAuthError(`${partner.toUpperCase()}: get_merchant_invoices errNum:21`);
+  }
+
+  if (data?.raw && !response.ok) {
+    console.error(`API non-JSON ${response.status}: ${String(data.raw).substring(0, 200)}`);
+    return [];
+  }
+
+  if (!response.ok && data?.errNum !== 'S000') {
+    console.error(`API Error: ${response.status} ${response.statusText} - ${JSON.stringify(data).substring(0, 200)}`);
+    return [];
+  }
+
+  const invoices = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+  const limitedInvoices = [...invoices].sort((a, b) => invoiceTime(b) - invoiceTime(a)).slice(0, limit);
+  console.log(`📥 ${partner.toUpperCase()} API: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}, processing=${limitedInvoices.length}`);
+  return limitedInvoices;
 }
 
 async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partner: string = 'alwaseet'): Promise<InvoiceOrder[]> {
@@ -241,10 +258,115 @@ serve(async (req) => {
       sync_invoices = true, 
       sync_orders = true,  // ✅ تفعيل افتراضي - مهم للربط التلقائي
       force_refresh = false,
-      run_reconciliation = true
+      run_reconciliation = true,
+      target_invoice_external_id,
+      target_invoice_partner,
     } = body;
 
-    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, ForceRefresh: ${force_refresh}`);
+    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, ForceRefresh: ${force_refresh}, Target: ${target_invoice_external_id || '-'}`);
+
+    // 🆕 وضع الجلب الموجه لفاتورة واحدة فقط (يُستدعى من واجهة فتح تفاصيل الفاتورة).
+    // لا يلمس باقي الفواتير، ولا يعيد المزامنة العامة، ولا يُعدّ "موجة طلبات".
+    if (target_invoice_external_id) {
+      const partnerName = target_invoice_partner || 'alwaseet';
+      const { data: invRow, error: invErr } = await supabase
+        .from('delivery_invoices')
+        .select('id, owner_user_id, partner, external_id, orders_count, raw, account_username, merchant_id')
+        .eq('external_id', String(target_invoice_external_id))
+        .eq('partner', partnerName)
+        .maybeSingle();
+
+      if (invErr || !invRow) {
+        return new Response(
+          JSON.stringify({ success: false, mode: 'targeted', error: 'invoice_not_found' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // عدد الطلبات المخزنة حالياً
+      const { count: cachedCount } = await supabase
+        .from('delivery_invoice_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('invoice_id', invRow.id);
+
+      const expected = Number(invRow.orders_count || 0);
+      const haveNow = cachedCount ?? 0;
+
+      // إن كانت كاملة، لا حاجة للمزامنة الموجهة
+      if (expected > 0 && haveNow >= expected) {
+        return new Response(
+          JSON.stringify({ success: true, mode: 'targeted', invoices_synced: 0, orders_updated: 0, already_complete: true }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // اختيار توكن مالك الفاتورة بنفس الشريك
+      const { data: tokenRow } = await supabase
+        .from('delivery_partner_tokens')
+        .select('id, token, account_username, partner_data, partner_name, user_id')
+        .eq('user_id', invRow.owner_user_id)
+        .eq('partner_name', partnerName)
+        .eq('is_active', true)
+        .gt('expires_at', new Date().toISOString())
+        .order('last_used_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!tokenRow?.token) {
+        return new Response(
+          JSON.stringify({ success: false, mode: 'targeted', error: 'no_active_token' }),
+          { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      let ordersFromApi = await fetchInvoiceOrdersFromAPI(tokenRow.token, String(invRow.external_id), partnerName);
+
+      // محاولة تجديد توكن الوسيط لمرة واحدة عند فشل الجلب وإعادة المحاولة
+      if (ordersFromApi.length === 0 && partnerName === 'alwaseet') {
+        const renewed = await renewAlWaseetTokenIfNeeded(supabase, tokenRow);
+        if (renewed) {
+          ordersFromApi = await fetchInvoiceOrdersFromAPI(renewed, String(invRow.external_id), partnerName);
+        }
+      }
+
+      let writtenOrders = 0;
+      if (ordersFromApi.length > 0) {
+        for (const order of ordersFromApi) {
+          const { error: orderError } = await supabase
+            .from('delivery_invoice_orders')
+            .upsert({
+              invoice_id: invRow.id,
+              external_order_id: String(order.id),
+              raw: order,
+              status: order.status,
+              amount: order.price || order.amount || 0,
+              owner_user_id: invRow.owner_user_id,
+            }, { onConflict: 'invoice_id,external_order_id', ignoreDuplicates: false });
+          if (!orderError) writtenOrders++;
+        }
+        await supabase
+          .from('delivery_invoices')
+          .update({ orders_last_synced_at: new Date().toISOString() })
+          .eq('id', invRow.id);
+
+        try {
+          await supabase.rpc('link_invoice_orders_to_orders');
+        } catch { /* silent */ }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          mode: 'targeted',
+          target_invoice: invRow.external_id,
+          expected_orders: expected,
+          cached_before: haveNow,
+          orders_updated: writtenOrders,
+          orders_returned_from_api: ordersFromApi.length,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let totalInvoicesSynced = 0;
     let totalOrdersUpdated = 0;
@@ -286,8 +408,54 @@ serve(async (req) => {
 
           let orderDetailsFetchedForToken = 0;
 
-          // ✅ معالجة أحدث الفواتير فقط؛ تفاصيل الطلبات لها ميزانية محدودة لمنع errNum:2 من الوسيط
-          for (const invoice of apiInvoices) {
+          // 🆕 منطق "الفواتير الناقصة أولاً":
+          // 1) نرتب فواتير API بالأحدث أولاً.
+          // 2) نقرأ من DB حالة الكاش (cachedOrdersCount مقابل expectedOrders) لجميع الفواتير دفعة واحدة.
+          // 3) نقدم الفواتير التي expectedOrders > 0 وكاشها أقل من المتوقع.
+          // النتيجة: الفواتير الجديدة الكبيرة (مثل 223 طلب) لا تبقى فارغة.
+          const sortedApi = [...apiInvoices].sort((a, b) => invoiceTime(b) - invoiceTime(a));
+          const externalIds = sortedApi.map(inv => String(inv.id));
+          const dbStateMap = new Map<string, { id: string; received: boolean; cached: number; expected: number }>();
+          if (externalIds.length > 0) {
+            const { data: existingRows } = await supabase
+              .from('delivery_invoices')
+              .select('id, external_id, received, orders_count')
+              .eq('partner', partnerName)
+              .in('external_id', externalIds);
+            if (existingRows && existingRows.length > 0) {
+              const ids = existingRows.map(r => r.id);
+              const counts = new Map<string, number>();
+              if (ids.length > 0) {
+                const { data: dioRows } = await supabase
+                  .from('delivery_invoice_orders')
+                  .select('invoice_id')
+                  .in('invoice_id', ids);
+                (dioRows || []).forEach(r => counts.set(r.invoice_id, (counts.get(r.invoice_id) || 0) + 1));
+              }
+              existingRows.forEach(r => {
+                dbStateMap.set(String(r.external_id), {
+                  id: r.id,
+                  received: r.received === true,
+                  cached: counts.get(r.id) || 0,
+                  expected: Number(r.orders_count || 0),
+                });
+              });
+            }
+          }
+          const incompleteFirst = [...sortedApi].sort((a, b) => {
+            const sa = dbStateMap.get(String(a.id));
+            const sb = dbStateMap.get(String(b.id));
+            const expA = Number((a as any).delivered_orders_count || (a as any).orders_count || (a as any).ordersCount || 0);
+            const expB = Number((b as any).delivered_orders_count || (b as any).orders_count || (b as any).ordersCount || 0);
+            const incA = expA > 0 && (!sa || sa.cached < expA) ? 1 : 0;
+            const incB = expB > 0 && (!sb || sb.cached < expB) ? 1 : 0;
+            if (incA !== incB) return incB - incA; // الناقصة أولاً
+            return invoiceTime(b) - invoiceTime(a);
+          });
+          const queue = incompleteFirst.slice(0, MAX_INVOICES_PER_TOKEN);
+
+          // ✅ معالجة الفواتير حسب الأولوية؛ تفاصيل الطلبات لها ميزانية محدودة لمنع rate limit
+          for (const invoice of queue) {
             const externalId = String(invoice.id);
             const statusNormalized = normalizeStatus(invoice.status);
             const isReceived = statusNormalized === 'received' || invoice.received === true;
@@ -561,8 +729,51 @@ serve(async (req) => {
 
         let orderDetailsFetchedForToken = 0;
 
-        // ✅ معالجة أحدث الفواتير فقط؛ لا نعيد فحص التاريخ كله عند كل دخول للصفحة
-        for (const invoice of apiInvoices) {
+        // 🆕 ترتيب الفواتير: الناقصة أولاً (orders_count > 0 وكاش delivery_invoice_orders أقل من المتوقع)،
+        // ثم الباقي بالأحدث. هذا يضمن إصلاح الفواتير الجديدة الكبيرة قبل الفواتير القديمة المكتملة.
+        const sortedApi = [...apiInvoices].sort((a, b) => invoiceTime(b) - invoiceTime(a));
+        const externalIdsSmart = sortedApi.map(inv => String(inv.id));
+        const dbStateMapSmart = new Map<string, { id: string; cached: number; expected: number; received: boolean }>();
+        if (externalIdsSmart.length > 0) {
+          const { data: existingRows } = await supabase
+            .from('delivery_invoices')
+            .select('id, external_id, received, orders_count')
+            .eq('partner', partnerName)
+            .in('external_id', externalIdsSmart);
+          if (existingRows && existingRows.length > 0) {
+            const ids = existingRows.map(r => r.id);
+            const counts = new Map<string, number>();
+            if (ids.length > 0) {
+              const { data: dioRows } = await supabase
+                .from('delivery_invoice_orders')
+                .select('invoice_id')
+                .in('invoice_id', ids);
+              (dioRows || []).forEach(r => counts.set(r.invoice_id, (counts.get(r.invoice_id) || 0) + 1));
+            }
+            existingRows.forEach(r => {
+              dbStateMapSmart.set(String(r.external_id), {
+                id: r.id,
+                received: r.received === true,
+                cached: counts.get(r.id) || 0,
+                expected: Number(r.orders_count || 0),
+              });
+            });
+          }
+        }
+        const incompleteFirstSmart = [...sortedApi].sort((a, b) => {
+          const expA = Number((a as any).delivered_orders_count || (a as any).orders_count || (a as any).ordersCount || 0);
+          const expB = Number((b as any).delivered_orders_count || (b as any).orders_count || (b as any).ordersCount || 0);
+          const sa = dbStateMapSmart.get(String(a.id));
+          const sb = dbStateMapSmart.get(String(b.id));
+          const incA = expA > 0 && (!sa || sa.cached < expA) ? 1 : 0;
+          const incB = expB > 0 && (!sb || sb.cached < expB) ? 1 : 0;
+          if (incA !== incB) return incB - incA;
+          return invoiceTime(b) - invoiceTime(a);
+        });
+        const queueSmart = incompleteFirstSmart.slice(0, MAX_INVOICES_PER_TOKEN);
+
+        // ✅ معالجة الفواتير حسب الأولوية
+        for (const invoice of queueSmart) {
           const externalId = String(invoice.id);
           const statusNormalized = normalizeStatus(invoice.status);
           const isReceived = statusNormalized === 'received' || invoice.received === true;
