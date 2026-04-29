@@ -266,8 +266,8 @@ const CitiesCacheManager = () => {
           <div className="flex items-center gap-2">
             <Database className="h-4 w-4 text-purple-500" />
             <span className="text-sm text-muted-foreground">الحالة:</span>
-            <Badge variant={isCacheEmpty() ? "destructive" : "default"}>
-              {isCacheEmpty() ? "فارغ" : cities.length > 0 && allRegions.length > 0 ? "محدث" : "يحتاج تحديث"}
+            <Badge variant={partnerCounts.cities === 0 ? "destructive" : "default"}>
+              {partnerCounts.cities === 0 ? "فارغ" : (partnerCounts.cities > 0 && partnerCounts.regions > 0 ? "محدث" : "يحتاج تحديث")}
             </Badge>
           </div>
         </div>
