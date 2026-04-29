@@ -38,6 +38,7 @@ const AlWaseetInvoiceDetailsDialog = ({
   const [linkedOrders, setLinkedOrders] = useState([]);
   const [loadingLinked, setLoadingLinked] = useState(false);
   const [dataSource, setDataSource] = useState('database');
+  const [fetchNotice, setFetchNotice] = useState(null);
 
   const isReceived = !!invoice && (
     invoice.received === true ||
@@ -51,12 +52,19 @@ const AlWaseetInvoiceDetailsDialog = ({
       const invoiceId = invoice.external_id || invoice.id;
       
       if (invoiceId) {
-        // لا نفرض الكاش للفواتير المستلمة؛ الهوك نفسه يتحقق هل الكاش مكتمل.
-        // إذا كان orders_count > 0 والكاش فارغاً، يسمح بالجلب من شركة التوصيل لإصلاح الفجوة.
+        setFetchNotice(null);
         fetchInvoiceOrders(invoiceId).then(result => {
           if (result?.dataSource) {
             setDataSource(result.dataSource);
           }
+          // إذا الفاتورة فيها orders_count > 0 لكن لم نحصل على أي طلبات نُظهر سبباً واضحاً
+          const expected = parseInt(invoice.linked_orders_count || invoice.orders_count || invoice.delivered_orders_count) || 0;
+          const got = (result?.orders || []).length;
+          if (expected > 0 && got === 0) {
+            setFetchNotice('تعذّر جلب تفاصيل الطلبات من شركة التوصيل الآن. الفاتورة محفوظة وسيُعاد المحاولة تلقائياً عند المزامنة التالية.');
+          }
+        }).catch(() => {
+          setFetchNotice('تعذّر الاتصال بشركة التوصيل لجلب تفاصيل الطلبات. الفاتورة محفوظة.');
         });
         loadLinkedOrders();
       }
