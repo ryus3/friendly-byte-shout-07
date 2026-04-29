@@ -127,6 +127,24 @@ const OrdersPage = () => {
         });
       }
     }
+    // ✅ تشغيل sync-order-updates للكشف عن الطلبات المحذوفة من الشركاء (الوسيط/مدن)
+    //    هذا يستخدم عداد 2-strike لتجنب الحذف الخاطئ بسبب فشل API.
+    //    تأخير 5 ثوان حتى لا يضغط API مع المزامنة المرئية.
+    const deletionPassTimer = setTimeout(() => {
+      import('@/integrations/supabase/client').then(({ supabase }) => {
+        supabase.functions.invoke('sync-order-updates', { body: {} })
+          .then(({ data, error }) => {
+            if (error) {
+              return;
+            }
+            if (data?.updated > 0) {
+              // الإشعارات تُرسل تلقائياً من الـ edge function
+            }
+          })
+          .catch(() => { /* صامت */ });
+      });
+    }, 5000);
+    return () => clearTimeout(deletionPassTimer);
   }, []); // مرة واحدة عند دخول الصفحة
 
   // ❌ تعطيل Fast Sync مؤقتاً للاختبار - الاعتماد فقط على Smart Sync

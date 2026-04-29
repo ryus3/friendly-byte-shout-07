@@ -5237,15 +5237,16 @@ export const AlWaseetProvider = ({ children }) => {
       
       // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات - فقط طلبات المستخدم الحالي
       // ✅ الحماية الأمنية: حتى المدير يحصل على طلباته فقط للحذف
-      // ✅ فقط الطلبات pending تُفحص للحذف التلقائي
+      // ✅ نفحص جميع الشركاء (alwaseet + modon) وحالات pending/delivery (ليست نهائية)
       const { data: localOrders, error } = await scopeOrdersQuery(
         supabase
           .from('orders')
           .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received, customer_name, created_by, created_at, order_items(*)')
-          .eq('delivery_partner', 'alwaseet')
+          .in('delivery_partner', ['alwaseet', 'modon'])
           .eq('receipt_received', false)
-          .eq('status', 'pending')
-          .or('tracking_number.not.is.null,qr_id.not.is.null'),
+          .in('status', ['pending', 'delivery', 'shipped'])
+          .not('delivery_status', 'in', '(4,17,31,32)')
+          .or('tracking_number.not.is.null,qr_id.not.is.null,delivery_partner_order_id.not.is.null'),
         true // restrictToOwnOrders = true لضمان حذف المستخدم لطلباته فقط
       ).limit(50);
       
