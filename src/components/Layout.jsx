@@ -331,7 +331,18 @@ const Layout = ({ children }) => {
         className="flex-1 flex flex-col lg:mr-72"
         onPan={handlePan}
       >
-        <header className="bg-card/80 backdrop-blur-lg border-b border-border p-3 sm:p-4 sticky top-0 z-30">
+        <header
+          className="bg-card/80 backdrop-blur-lg border-b border-border p-3 sm:p-4 sticky top-0 z-30 cursor-pointer"
+          onClick={(e) => {
+            // ✅ تجاهل النقر على الأزرار/الروابط داخل الهيدر — فقط نقر المنطقة الفارغة يصعد للأعلى
+            const t = e.target;
+            if (t.closest && t.closest('button, a, [role="button"], input')) return;
+            try { window.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); } catch { window.scrollTo(0, 0); }
+            document.querySelectorAll('main, [data-scroll-container], .overflow-y-auto, .overflow-auto').forEach((el) => {
+              try { el.scrollTo({ top: 0, left: 0, behavior: 'smooth' }); } catch { el.scrollTop = 0; }
+            });
+          }}
+        >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               {location.pathname !== (user?.default_page || '/') && (
