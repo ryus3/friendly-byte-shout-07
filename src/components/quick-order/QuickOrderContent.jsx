@@ -734,18 +734,24 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               citiesData = (modonCitiesData || []).map(city => ({ id: city.id, name: city.city_name }));
             }
 
-            // أحجام الطرود من الكاش
+            // أحجام الطرود من الكاش (مع ترجمة عربية للأحجام الإنجليزية)
+            const MODON_SIZE_AR = { small:'صغير', medium:'وسط', middle:'وسط', large:'كبير', xlarge:'كبير جداً', xl:'كبير جداً', 'extra large':'كبير جداً', 'extra-large':'كبير جداً' };
+            const trSize = (n) => {
+              if (!n) return n;
+              const k = String(n).trim().toLowerCase();
+              return MODON_SIZE_AR[k] || n;
+            };
             const { data: modonSizes } = await supabase
               .from('package_sizes_cache')
               .select('external_id, size_name')
               .eq('partner_name', 'modon')
               .eq('is_active', true);
             if (modonSizes && modonSizes.length > 0) {
-              packageSizesData = modonSizes.map(s => ({ id: s.external_id, size: s.size_name }));
+              packageSizesData = modonSizes.map(s => ({ id: s.external_id, size: trSize(s.size_name) }));
             } else {
               const ModonAPI = await import('@/lib/modon-api');
               packageSizesData = await ModonAPI.getPackageSizes(waseetToken);
-              packageSizesData = (packageSizesData || []).map(size => ({ id: size.id, size: size.size }));
+              packageSizesData = (packageSizesData || []).map(size => ({ id: size.id, size: trSize(size.size) }));
             }
           } else {
             // ✅ الوسيط: cache من cachedCities (موجود)
