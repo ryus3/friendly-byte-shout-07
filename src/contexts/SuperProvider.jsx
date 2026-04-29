@@ -2210,219 +2210,68 @@ export const SuperProvider = ({ children }) => {
           total_amount: enrichedItems.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
         };
 
-        devLog.log('📦 إرسال طلب للوسيط:', alwaseetPayload);
-        
-        // جلب المدن والمناطق - تماماً كما في صفحة الطلب السريع
-        devLog.log('🌆 جلب المدن من الوسيط...');
-        const citiesData = await getCities(accountData.token);
-        const cities = Array.isArray(citiesData?.data) ? citiesData.data : (Array.isArray(citiesData) ? citiesData : []);
-        
-        if (!cities.length) {
-          throw new Error('لم يتم جلب قائمة المدن من شركة التوصيل');
-        }
-        
-        // تطبيع النصوص العربية للبحث - نفس الطريقة الدقيقة من QuickOrderContent
-        const normalizeArabic = (text) => {
-          if (!text) return '';
-          return text.toString().trim()
-            .replace(/[أإآ]/g, 'ا')
-            .replace(/[ة]/g, 'ه')
-            .replace(/[ي]/g, 'ى')
-            .toLowerCase()
-            // إزالة كلمات التوقف
-            .replace(/\b(حي|منطقة|محلة|شارع|زقاق|مقاطعة)\s*/g, '');
-        };
-        
-        // دالة لتوليد مرشحات متعددة الكلمات للمناطق
-        const generateRegionCandidates = (text) => {
-          if (!text) return [];
-          const words = text.split(/\s+/).filter(Boolean);
-          const candidates = [];
-          
-          // مرشحات بأطوال مختلفة (2-3 كلمات)
-          for (let len = 1; len <= Math.min(3, words.length); len++) {
-            for (let start = 0; start <= words.length - len; start++) {
-              const candidate = words.slice(start, start + len).join(' ');
-              if (candidate.length >= 2) {
-                candidates.push(candidate);
-              }
-            }
-          }
-          
-        return candidates;
-      };
-      
-      // تعريف المتغيرات مسبقاً
-      let cityId = null;
-      let foundCityName = null;
-      let regionId = null;
-      let foundRegionName = null;
-      let nearestPoint = '';
-      
-      // ✅ إذا كان aiOrder يحتوي على region_id و resolved_region_name صحيحة، استخدمها مباشرة
-      if (aiOrder.region_id && aiOrder.resolved_region_name && aiOrder.city_id && aiOrder.resolved_city_name) {
-          devLog.log('✅ استخدام بيانات ai_orders مباشرة (صحيحة 100%):', {
-            city_id: aiOrder.city_id,
-            city_name: aiOrder.resolved_city_name,
-            region_id: aiOrder.region_id,
-            region_name: aiOrder.resolved_region_name
+        devLog.log('📦 إرسال طلب للشريك:', alwaseetPayload);
+
+        // ✅ منطق موحد: ترجمة معرّفات المدينة/المنطقة عبر resolver خاص بالشريك المختار.
+        //   - يقرأ من city_delivery_mappings و region_delivery_mappings فقط (cache محلي).
+        //   - لا استدعاءات لـ getCities/getRegionsByCity من API الشريك.
+        //   - لا "بغداد افتراضي"، لا "أول منطقة في القائمة".
+        //   - يدعم أي شركة مستقبلية بمجرد إضافة صفوف في جدولَي الربط.
+        let cityId = null;
+        let regionId = null;
+        let foundCityName = aiOrder.resolved_city_name || aiOrder.customer_city || '';
+        let foundRegionName = aiOrder.resolved_region_name || '';
+        let nearestPoint = '';
+
+        try {
+          const { data: resolveData, error: resolveErr } = await supabase.rpc('resolve_partner_location', {
+            p_partner: destination,
+            p_city_id: aiOrder.city_id ? Number(aiOrder.city_id) : null,
+            p_region_id: aiOrder.region_id ? Number(aiOrder.region_id) : null,
+            p_city_name: aiOrder.resolved_city_name || aiOrder.customer_city || null,
+            p_region_name: aiOrder.resolved_region_name || null,
           });
-          
-          // تخطي كل المعالجة والبحث - استخدام القيم مباشرة
-          cityId = aiOrder.city_id;
-          foundCityName = aiOrder.resolved_city_name;
-          regionId = aiOrder.region_id;
-          foundRegionName = aiOrder.resolved_region_name;
-          nearestPoint = extractedData.landmark || aiOrder.customer_address?.match(/قرب.*/)?.[0] || '';
-          
-          // الانتقال مباشرة لمرحلة تطبيع الهاتف
-        } else {
-          // المعالجة القديمة فقط إذا لم تكن البيانات موجودة في aiOrder
-          let cityToSearch = extractedData.city || aiOrder.customer_city || '';
-          let regionToSearch = extractedData.region || '';
-          
-          // استخراج المنطقة من customer_address إذا لم نجدها في extractedData
-          if (!regionToSearch && aiOrder.customer_address) {
-            // إزالة اسم المدينة من customer_address للحصول على المنطقة
-            let addressWithoutCity = aiOrder.customer_address;
-            if (cityToSearch) {
-              addressWithoutCity = addressWithoutCity.replace(cityToSearch, '').trim();
-            }
-            // تنظيف المنطقة من الفواصل والشرطات
-            regionToSearch = addressWithoutCity.replace(/^[-\s,]+|[-\s,]+$/g, '').trim();
-          }
-        
-          nearestPoint = extractedData.landmark || '';
-          
-          devLog.log('📊 استخدام البيانات المستخرجة مباشرة:', {
-            city: cityToSearch,
-            region: regionToSearch,
-            landmark: nearestPoint,
-          full_address: extractedData.full_address
-        });
-        
-        // البحث عن المدينة - تطبيق نفس المنطق من QuickOrderContent
-        if (cityToSearch) {
-            const searchCity = normalizeArabic(cityToSearch);
-            devLog.log('🏙️ البحث عن المدينة:', { original: cityToSearch, normalized: searchCity });
-            
-            // مطابقة دقيقة أولاً
-            let cityMatch = cities.find(city => normalizeArabic(city.name) === searchCity);
-            
-            // مطابقة جزئية إذا لم نجد مطابقة دقيقة
-            if (!cityMatch) {
-              cityMatch = cities.find(city => 
-                normalizeArabic(city.name).includes(searchCity) ||
-                searchCity.includes(normalizeArabic(city.name))
-              );
-            }
-            
-            if (cityMatch) {
-              cityId = cityMatch.id;
-              foundCityName = cityMatch.name;
-              devLog.log('✅ تم العثور على المدينة:', { id: cityId, name: foundCityName });
-            }
-          }
-          
-          // إذا لم نجد المدينة، استخدم بغداد كافتراضي (نفس منطق QuickOrderContent)
-          if (!cityId) {
-            devLog.log('⚠️ لم يتم العثور على المدينة، البحث عن بغداد...');
-            const baghdadCity = cities.find(city => normalizeArabic(city.name).includes('بغداد'));
-            if (baghdadCity) {
-              cityId = baghdadCity.id;
-              foundCityName = baghdadCity.name;
-              devLog.log('✅ استخدام بغداد كافتراضي:', foundCityName);
-            } else {
-              throw new Error(`لم يتم العثور على مدينة مطابقة أو بغداد. المدن المتاحة: ${cities.slice(0, 10).map(c => c.name).join(', ')}`);
-            }
+
+          if (resolveErr) {
+            throw new Error(`فشل في ترجمة معرفات الموقع: ${resolveErr.message}`);
           }
 
-          // جلب المناطق للمدينة المحددة
-          devLog.log('🗺️ جلب المناطق للمدينة:', foundCityName);
-          const regionsData = await getRegionsByCity(accountData.token, cityId);
-          const regions = Array.isArray(regionsData?.data) ? regionsData.data : (Array.isArray(regionsData) ? regionsData : []);
-          
-          regionId = null;
-          foundRegionName = '';
-          
-          if (regions.length > 0) {
-            if (regionToSearch) {
-              devLog.log('🔍 البحث عن المنطقة:', regionToSearch);
-              
-              // توليد جميع المرشحات المحتملة من النص
-              const allCandidates = generateRegionCandidates(regionToSearch);
-              let bestMatch = null;
-              let bestScore = 0;
-              let matchedText = '';
-              
-              // البحث عن أفضل مطابقة
-              for (const candidate of allCandidates) {
-                const normalizedCandidate = normalizeArabic(candidate);
-                
-                // البحث في جميع المناطق
-                for (const region of regions) {
-                  const normalizedRegion = normalizeArabic(region.name);
-                  let score = 0;
-                  
-                  // مطابقة دقيقة (أعلى درجة)
-                  if (normalizedRegion === normalizedCandidate) {
-                    score = 100;
-                  } 
-                  // مطابقة تحتوي على النص كاملاً
-                  else if (normalizedRegion.includes(normalizedCandidate) && normalizedCandidate.length >= 3) {
-                    score = 80;
-                  }
-                  // مطابقة جزئية
-                  else if (normalizedCandidate.includes(normalizedRegion) && normalizedRegion.length >= 3) {
-                    score = 60;
-                  }
-                  
-                  if (score > bestScore) {
-                    bestScore = score;
-                    bestMatch = region;
-                    matchedText = candidate;
-                  }
-                }
-              }
-              
-              if (bestMatch && bestScore >= 60) {
-                regionId = bestMatch.id;
-                foundRegionName = bestMatch.name;
-                devLog.log('✅ تم العثور على المنطقة:', { 
-                  id: regionId, 
-                  name: foundRegionName, 
-                  score: bestScore,
-                  matchedText 
-                });
-                
-                // حساب نقطة الدلالة المتبقية
-                const remainingText = regionToSearch.replace(matchedText, '').trim();
-                if (remainingText.length >= 3) {
-                  nearestPoint = remainingText;
-                  devLog.log('📍 نقطة الدلالة:', nearestPoint);
-                }
-              } else {
-                devLog.log('⚠️ لم يتم العثور على مطابقة جيدة للمنطقة');
-              }
-            }
-            
-            // إذا لم نجد المنطقة، استخدم أول منطقة متاحة فقط إذا لم يكن هناك نص منطقة محدد
-            if (!regionId && !regionToSearch) {
-              regionId = regions[0].id;
-              foundRegionName = regions[0].name;
-              devLog.log('⚠️ استخدام أول منطقة متاحة (لعدم وجود نص منطقة):', foundRegionName);
-            } else if (!regionId && regionToSearch) {
-              devLog.log('⚠️ لم يتم العثور على مطابقة للمنطقة، ترك المنطقة غير محددة لتجنب الخطأ');
-            }
+          if (!resolveData?.success) {
+            const partnerLabel = destination === 'modon' ? 'مدن' : 'الوسيط';
+            const msg = resolveData?.message
+              || `تعذر تحديد المحافظة/المنطقة لشريك ${partnerLabel}.`;
+            console.error('❌ resolve_partner_location فشل:', resolveData);
+            return { success: false, error: msg };
           }
-          
-          // لا نفشل العملية إذا لم نجد منطقة، بدلاً من ذلك نستخدم المدينة فقط
-          if (!regionId && regions.length > 0) {
-            regionId = regions[0].id;
-            foundRegionName = regions[0].name;
-            devLog.log('⚠️ فشل تحديد المنطقة، استخدام المنطقة الافتراضية:', foundRegionName);
-          }
-        } // نهاية else للمعالجة القديمة
+
+          // external IDs الخاصة بالشريك المختار — هي ما يُرسل للوسيط/مدن.
+          cityId = resolveData.city_external_id;
+          regionId = resolveData.region_external_id;
+          foundCityName = resolveData.city_name || foundCityName;
+          foundRegionName = resolveData.region_name || foundRegionName;
+
+          // أقرب نقطة دالة من العنوان (اختياري، للعرض)
+          nearestPoint = aiOrder.customer_address?.match(/قرب.*/)?.[0] || '';
+
+          devLog.log('✅ تمت ترجمة الموقع للشريك:', {
+            partner: destination,
+            city_external_id: cityId,
+            region_external_id: regionId,
+            city_name: foundCityName,
+            region_name: foundRegionName,
+          });
+        } catch (resolverErr) {
+          console.error('❌ خطأ في resolver:', resolverErr);
+          return { success: false, error: resolverErr.message };
+        }
+
+        if (!cityId || !regionId) {
+          const partnerLabel = destination === 'modon' ? 'مدن' : 'الوسيط';
+          return {
+            success: false,
+            error: `تعذر تحديد المحافظة/المنطقة لشريك ${partnerLabel}. تأكد من اكتمال مزامنة كاش هذه الشركة.`,
+          };
+        }
 
         // تطبيع رقم الهاتف - نفس الطريقة من QuickOrderContent
         const { normalizePhone } = await import('../utils/phoneUtils.js');
