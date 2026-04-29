@@ -195,36 +195,9 @@ export const useEmployeeInvoices = (employeeId) => {
     }
   }, [employeeId]);
 
-  // Scheduled daily sync based on settings
-  useEffect(() => {
-    if (!syncSettings.enabled || syncSettings.frequency !== 'daily') return;
-    
-    const checkDailySync = () => {
-      const now = new Date();
-      const [hour, minute] = syncSettings.dailyTime.split(':');
-      const syncTime = new Date();
-      syncTime.setHours(parseInt(hour), parseInt(minute), 0, 0);
-      
-      // Check if it's sync time and we haven't synced today
-      const lastSyncDate = lastAutoSync ? new Date(lastAutoSync).toDateString() : null;
-      const today = now.toDateString();
-      
-      if (
-        now >= syncTime && 
-        lastSyncDate !== today &&
-        Math.abs(now - syncTime) < 60000 // Within 1 minute of sync time
-      ) {
-        devLog.log('🕘 تشغيل المزامنة اليومية المجدولة');
-        smartSync();
-      }
-    };
-
-    // Check every minute for scheduled sync
-    const syncInterval = setInterval(checkDailySync, 60000);
-    checkDailySync(); // Check immediately
-
-    return () => clearInterval(syncInterval);
-  }, [syncSettings, lastAutoSync, token]);
+  // ✅ المزامنة الخلفية تتم عبر pg_cron + smart-invoice-sync فقط
+  // أي interval هنا يضاعف الاستدعاءات ويسبب فرط طلبات على شركة التوصيل (WAF risk).
+  // المستخدم يحدّث يدوياً عبر زر التحديث، أو ينتظر الدورة الخلفية.
 
   // إحصائيات الفواتير المحسنة مع فلترة زمنية
   const getFilteredStats = (filteredInvoices) => {
