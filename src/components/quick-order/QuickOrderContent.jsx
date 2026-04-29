@@ -881,15 +881,34 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               let regionsData;
               
               if (activePartner === 'modon') {
-                // مدن: جلب من API (لأن الـ cache لا يحتوي على modon_id للمناطق حالياً)
-                const ModonAPI = await import('@/lib/modon-api');
-                regionsData = await ModonAPI.getRegionsByCity(waseetToken, cityIdForRegions);
-                
-                regionsData = regionsData.map(region => ({
-                  id: region.id,
-                  name: region.region_name,
-                  city_id: region.city_id
-                }));
+                // ✅ مدن: cache-first من region_delivery_mappings (5700+ منطقة محلياً)
+                //    external_id = MODON region id, ونربط عبر regions_master.city_id (= MODON city_id)
+                devLog.log(`🔍 [مدن] جلب المناطق للمدينة ${cityIdForRegions} من الكاش...`);
+                const { data: modonRegions, error: modonRegErr } = await supabase
+                  .from('region_delivery_mappings')
+                  .select('external_id, external_name, regions_master:region_id!inner(city_id)')
+                  .eq('delivery_partner', 'modon')
+                  .eq('is_active', true)
+                  .eq('regions_master.city_id', parseInt(cityIdForRegions));
+
+                if (!modonRegErr && modonRegions && modonRegions.length > 0) {
+                  regionsData = modonRegions.map(r => ({
+                    id: r.external_id,
+                    name: r.external_name,
+                    city_id: cityIdForRegions
+                  }));
+                  devLog.log(`✅ [مدن] تم جلب ${regionsData.length} منطقة من الكاش (فوري)`);
+                } else {
+                  // fallback إلى API فقط إن كان الكاش فارغاً للمدينة
+                  devLog.warn('⚠️ [مدن] الكاش فارغ للمدينة، جلب من API...');
+                  const ModonAPI = await import('@/lib/modon-api');
+                  regionsData = await ModonAPI.getRegionsByCity(waseetToken, cityIdForRegions);
+                  regionsData = (regionsData || []).map(region => ({
+                    id: region.id,
+                    name: region.region_name,
+                    city_id: region.city_id
+                  }));
+                }
               } else {
                 // ✅ الوسيط: فلترة المناطق من الـ Cache فوراً
                 devLog.log(`🔍 فلترة المناطق للمدينة ${cityIdForRegions} (cache: ${globalRegionsCache.length} منطقة)...`);
