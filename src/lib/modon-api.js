@@ -333,9 +333,17 @@ function mapToModonFields(orderData) {
   // ✅ استخدام customer_address أو location مباشرة
   const cleanedLocation = orderData.customer_address || orderData.address || orderData.client_address || orderData.location || '';
   
-  // ✅ نفس معالجة السعر كالوسيط - دعم الإرجاع والاستبدال
-  const finalPrice = orderData.final_amount || orderData.price || orderData.final_total || orderData.total_amount || 0;
-  const merchantPrice = Math.round(Number(finalPrice));
+  // ✅ السعر المُرسَل لمدن يجب أن يكون السعر الكلي شامل التوصيل
+  // (مدن لا تُضيف رسوم التوصيل تلقائياً، عكس بعض الشركات)
+  // الأولوية: final_amount (الكلي) → ثم total_amount + delivery_fee → ثم fallbacks
+  const totalAmt = Number(orderData.total_amount || 0);
+  const deliveryFee = Number(orderData.delivery_fee || 0);
+  const finalAmt = Number(orderData.final_amount || 0);
+  const fallbackPrice = Number(orderData.price || orderData.final_total || 0);
+  const computedFinal = finalAmt > 0
+    ? finalAmt
+    : (totalAmt + deliveryFee > 0 ? totalAmt + deliveryFee : fallbackPrice);
+  const merchantPrice = Math.round(Number(computedFinal));
   
   return {
     client_name: orderData.customer_name || orderData.name || orderData.client_name || '',
