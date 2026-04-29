@@ -1416,6 +1416,10 @@ export const SuperProvider = ({ children }) => {
           } catch {}
         });
         
+      } else {
+        // ⚠️ لا تستدعي release_stock_for_order أو release_stock_item هنا!
+        // تحرير المخزون يتم تلقائياً عبر trigger: auto_release_stock_on_order_delete
+
         // 🛡️ حماية ذكية للطلبات الخارجية:
         //    - الفواتير المستلمة: ممنوع الحذف نهائياً.
         //    - باقي الحالات: نحاول التأكد من اختفاء الطلب لدى الشركة (الوسيط/مدن).
