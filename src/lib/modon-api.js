@@ -396,19 +396,26 @@ export async function createModonOrder(orderData, token) {
     
     if (data.status === true && (data.errNum === 'S000' || data.errNum === '0')) {
       devLog.log('✅ تم إنشاء الطلب بنجاح في مدن');
+      // ✅ مدن قد ترجع data كـ Array (حسب التوثيق الرسمي) أو كـ Object.
+      //    نضمن استخراج qr_id/id من كلتا الحالتين بدون افتراض شكل واحد.
+      const orderObj = Array.isArray(data.data) ? data.data[0] : data.data;
       return {
         success: true,
-        data: data.data,
-        qr_id: data.data?.qr_id || data.data?.id,
-        id: data.data?.id
+        data: orderObj,
+        qr_id: orderObj?.qr_id || orderObj?.id,
+        id: orderObj?.id || orderObj?.qr_id
       };
     }
 
-    // ✅ خطأ city/region من مدن (errNum:21 على create-order)
+    // ✅ أخطاء مدن الشائعة على create-order:
+    //   - errNum:21 + msg "ليس لديك صلاحية الوصول":
+    //     لا تتعلق غالباً بكاش المدينة/المنطقة، بل بطريقة تمرير التوكن أو
+    //     بصلاحية الحساب نفسه. الحل: تأكد من تسجيل الدخول لمدن مجدداً.
     if (data.errNum === 21 || data.errNum === '21') {
       throw new Error(
-        'مدن رفضت إنشاء الطلب: المحافظة/المنطقة غير صالحة في حساب مدن، أو الحساب لا يملك صلاحية الإنشاء. ' +
-        'حدّث كاش مدن من إدارة شركات التوصيل ثم أعد المحاولة.'
+        data.msg
+          ? `مدن: ${data.msg}. تأكد من تسجيل الدخول إلى مدن من إدارة شركات التوصيل، ومن أن الحساب لديه صلاحية إنشاء الطلبات.`
+          : 'مدن رفضت إنشاء الطلب. تأكد من تسجيل الدخول إلى مدن مجدداً ومن صلاحية الحساب.'
       );
     }
 
