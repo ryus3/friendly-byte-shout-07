@@ -401,8 +401,54 @@ serve(async (req) => {
 
           let orderDetailsFetchedForToken = 0;
 
-          // ✅ معالجة أحدث الفواتير فقط؛ تفاصيل الطلبات لها ميزانية محدودة لمنع errNum:2 من الوسيط
-          for (const invoice of apiInvoices) {
+          // 🆕 منطق "الفواتير الناقصة أولاً":
+          // 1) نرتب فواتير API بالأحدث أولاً.
+          // 2) نقرأ من DB حالة الكاش (cachedOrdersCount مقابل expectedOrders) لجميع الفواتير دفعة واحدة.
+          // 3) نقدم الفواتير التي expectedOrders > 0 وكاشها أقل من المتوقع.
+          // النتيجة: الفواتير الجديدة الكبيرة (مثل 223 طلب) لا تبقى فارغة.
+          const sortedApi = [...apiInvoices].sort((a, b) => invoiceTime(b) - invoiceTime(a));
+          const externalIds = sortedApi.map(inv => String(inv.id));
+          const dbStateMap = new Map<string, { id: string; received: boolean; cached: number; expected: number }>();
+          if (externalIds.length > 0) {
+            const { data: existingRows } = await supabase
+              .from('delivery_invoices')
+              .select('id, external_id, received, orders_count')
+              .eq('partner', partnerName)
+              .in('external_id', externalIds);
+            if (existingRows && existingRows.length > 0) {
+              const ids = existingRows.map(r => r.id);
+              const counts = new Map<string, number>();
+              if (ids.length > 0) {
+                const { data: dioRows } = await supabase
+                  .from('delivery_invoice_orders')
+                  .select('invoice_id')
+                  .in('invoice_id', ids);
+                (dioRows || []).forEach(r => counts.set(r.invoice_id, (counts.get(r.invoice_id) || 0) + 1));
+              }
+              existingRows.forEach(r => {
+                dbStateMap.set(String(r.external_id), {
+                  id: r.id,
+                  received: r.received === true,
+                  cached: counts.get(r.id) || 0,
+                  expected: Number(r.orders_count || 0),
+                });
+              });
+            }
+          }
+          const incompleteFirst = [...sortedApi].sort((a, b) => {
+            const sa = dbStateMap.get(String(a.id));
+            const sb = dbStateMap.get(String(b.id));
+            const expA = Number((a as any).delivered_orders_count || (a as any).orders_count || (a as any).ordersCount || 0);
+            const expB = Number((b as any).delivered_orders_count || (b as any).orders_count || (b as any).ordersCount || 0);
+            const incA = expA > 0 && (!sa || sa.cached < expA) ? 1 : 0;
+            const incB = expB > 0 && (!sb || sb.cached < expB) ? 1 : 0;
+            if (incA !== incB) return incB - incA; // الناقصة أولاً
+            return invoiceTime(b) - invoiceTime(a);
+          });
+          const queue = incompleteFirst.slice(0, MAX_INVOICES_PER_TOKEN);
+
+          // ✅ معالجة الفواتير حسب الأولوية؛ تفاصيل الطلبات لها ميزانية محدودة لمنع rate limit
+          for (const invoice of queue) {
             const externalId = String(invoice.id);
             const statusNormalized = normalizeStatus(invoice.status);
             const isReceived = statusNormalized === 'received' || invoice.received === true;
