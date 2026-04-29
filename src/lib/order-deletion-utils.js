@@ -38,8 +38,13 @@ export const canDeleteOrder = (order) => {
     isExternal: !!order.external_id
   });
 
-  const isLocalOrder = !order.external_id;
-  
+  // ✅ كشف الطلب الخارجي عبر الحقول الفعلية في DB:
+  //    delivery_partner_order_id أو tracking_number أو delivery_partner != 'محلي'
+  const partner = (order.delivery_partner || '').toString().toLowerCase().trim();
+  const hasPartnerId = !!(order.delivery_partner_order_id || order.tracking_number || order.external_id || order.qr_id);
+  const isExternalPartner = partner && partner !== 'محلي' && partner !== 'local';
+  const isLocalOrder = !hasPartnerId && !isExternalPartner;
+
   if (isLocalOrder) {
     // الطلبات المحلية: فقط إذا كانت في انتظار
     const canDelete = order.status === 'pending';
