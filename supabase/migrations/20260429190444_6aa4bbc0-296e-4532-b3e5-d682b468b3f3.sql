@@ -1,0 +1,1 @@
+DELETE FROM public.orders WHERE tracking_number = '3246226' AND delivery_partner = 'modon' AND delivery_status = '32' AND receipt_received = false;
