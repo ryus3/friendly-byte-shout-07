@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
     // 4️⃣ جلب الطلبات المحلية النشطة من كلا الشركتين
     const { data: activeOrders, error: ordersError } = await supabase
       .from('orders')
-      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner, customer_city, customer_province, customer_address')
+      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner, customer_city, customer_province, customer_address, partner_missed_count')
       .in('delivery_partner', ['alwaseet', 'modon'])
       .not('delivery_status', 'in', '(17,31,32)')
       .not('status', 'in', '(completed,returned_in_stock)')
