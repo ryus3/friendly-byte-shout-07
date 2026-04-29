@@ -1588,8 +1588,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const handleCreateOrder = async () => {
     try {
       const deliveryFeeAmount = settings?.deliveryFee || 5000;
-      // ✅ إصلاح: إضافة أجور التوصيل دائماً لشركة الوسيط
-      let finalTotal = subtotal - discount + (activePartner === 'alwaseet' ? deliveryFeeAmount : 0);
+      // ✅ إضافة رسوم التوصيل لكل شركاء التوصيل (الوسيط ومدن)، وليس للطلبات المحلية فقط
+      let finalTotal = subtotal - discount + (activePartner === 'local' ? 0 : deliveryFeeAmount);
       let orderNotes = formData.notes || '';
       let actualOrderType = formData.type === 'exchange' ? 'replacement' : 
                            formData.type === 'return' ? 'return' : 'regular';
