@@ -226,9 +226,16 @@ const AlWaseetInvoiceDetailsDialog = ({
                       ))}
                     </div>
                   ) : invoiceOrders.length === 0 ? (
-                    <p className="text-muted-foreground text-center py-4">
-                      لا توجد طلبات في هذه الفاتورة
-                    </p>
+                    <div className="text-center py-4 space-y-1">
+                      <p className="text-muted-foreground">
+                        {fetchNotice || 'لا توجد طلبات في هذه الفاتورة'}
+                      </p>
+                      {fetchNotice && (
+                        <p className="text-xs text-muted-foreground/70">
+                          عدد الطلبات المتوقع: {ordersCount}
+                        </p>
+                      )}
+                    </div>
                   ) : (
                     <div className="space-y-3">
                       {invoiceOrders.map((order) => (
