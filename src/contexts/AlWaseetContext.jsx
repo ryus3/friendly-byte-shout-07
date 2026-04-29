@@ -2953,6 +2953,14 @@ export const AlWaseetProvider = ({ children }) => {
           // ✅ جلب توكن الحساب المحدد المرتبط بالطلب
           const orderAccount = localOrder.delivery_account_used;
           const orderPartner = localOrder.delivery_partner;
+
+          // 🛡️ حماية حاسمة: إذا فشلت مزامنة شريك هذا الطلب (api_error/no_token) فلا نحذف
+          // الحذف يتم فقط عندما تعود قائمة الشريك بنجاح ولا يكون الطلب فيها
+          const partnerStatus = orderPartner === 'modon' ? modonStatus : waseetStatus;
+          if (partnerStatus !== 'success') {
+            devLog.warn(`⛔ تخطي حذف ${confirmKey} - مزامنة ${orderPartner} لم تنجح هذه الدورة (${partnerStatus})`);
+            continue;
+          }
           
           const specificToken = await getTokenForUser(
             localOrder.created_by, 
@@ -2973,37 +2981,49 @@ export const AlWaseetProvider = ({ children }) => {
             continue; // ✅ تخطي هذا الطلب - لا تحذفه!
           }
           
-          // ✅ فحص 3 مرات بتوكن الحساب المحدد فقط
+          // ✅ فحص 3 مرات بتوكن الحساب المحدد فقط — حسب شريك الطلب
           let foundOrder = false;
+          let verifyHadError = false; // 🛡️ تتبع ما إذا كانت هناك أخطاء API أثناء التحقق
           const RETRY_DELAYS = [0, 2000, 4000]; // تأخير بين المحاولات
           
           for (let attempt = 1; attempt <= 3; attempt++) {
             if (attempt > 1) await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt-1]));
             
-            devLog.log(`🔍 محاولة ${attempt}/3: فحص ${confirmKey} بحساب "${orderAccount || 'افتراضي'}"`);
+            devLog.log(`🔍 محاولة ${attempt}/3: فحص ${confirmKey} بحساب "${orderAccount || 'افتراضي'}" في ${orderPartner}`);
             
             try {
-              // طريقة 1: بـ QR
-              let found = await AlWaseetAPI.getOrderByQR(specificToken.token, confirmKey);
-              
-              // طريقة 2: بـ ID (fallback)
-              if (!found && localOrder.delivery_partner_order_id) {
-                found = await AlWaseetAPI.getOrderById(specificToken.token, localOrder.delivery_partner_order_id);
+              let found = null;
+              if (orderPartner === 'modon') {
+                // 🟣 طلب مدن — يُتحقق منه حصراً عبر API مدن
+                found = await ModonAPI.getOrderByQR(specificToken.token, confirmKey);
+              } else {
+                // 🟠 طلب الوسيط — يُتحقق منه حصراً عبر API الوسيط
+                found = await AlWaseetAPI.getOrderByQR(specificToken.token, confirmKey);
+                if (!found && localOrder.delivery_partner_order_id) {
+                  found = await AlWaseetAPI.getOrderById(specificToken.token, localOrder.delivery_partner_order_id);
+                }
               }
               
               if (found) {
                 foundOrder = true;
-                devLog.log(`✅ محاولة ${attempt}: الطلب ${confirmKey} موجود - لن يُحذف`);
+                devLog.log(`✅ محاولة ${attempt}: الطلب ${confirmKey} موجود في ${orderPartner} - لن يُحذف`);
                 break;
               }
             } catch (e) {
-              devLog.warn(`⚠️ محاولة ${attempt} فشلت: ${e.message}`);
+              verifyHadError = true;
+              devLog.warn(`⚠️ محاولة ${attempt} فشلت في ${orderPartner}: ${e.message}`);
             }
           }
           
-          // ✅ حذف فقط بعد 3 محاولات فاشلة
+          // 🛡️ حماية إضافية: إذا حدث أي خطأ API أثناء التحقق، لا نحذف
+          if (!foundOrder && verifyHadError) {
+            devLog.warn(`⛔ تخطي حذف ${confirmKey} - واجهت محاولات التحقق أخطاء (لا نضمن أن الطلب فعلاً محذوف)`);
+            continue;
+          }
+          
+          // ✅ حذف فقط بعد 3 محاولات بدون أخطاء وبدون عثور على الطلب
           if (!foundOrder) {
-            devLog.log(`🗑️ الطلب ${confirmKey} غير موجود في حساب "${orderAccount || 'افتراضي'}" بعد 3 محاولات`);
+            devLog.log(`🗑️ الطلب ${confirmKey} غير موجود في حساب "${orderAccount || 'افتراضي'}" (${orderPartner}) بعد 3 محاولات`);
             
             toast({
               title: "🗑️ طلب محذوف من شركة التوصيل",
