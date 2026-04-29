@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ✅ تحديث last_synced_at على مستوى التوكن لكل (شريك+حساب) نجح جلبه
+    // ✅ تحديث last_sync_at على مستوى التوكن لكل (شريك+حساب) نجح جلبه
     // هذا يضمن أن وقت "آخر مزامنة" يتحدّث حتى لو لا توجد طلبات نشطة
     try {
       const nowSyncIso = new Date().toISOString();
@@ -164,14 +164,14 @@ Deno.serve(async (req) => {
         if (successfulFetches.has(fetchKey)) {
           await supabase
             .from('delivery_partner_tokens')
-            .update({ last_synced_at: nowSyncIso })
+            .update({ last_sync_at: nowSyncIso })
             .eq('user_id', tokenRecord.user_id)
             .eq('partner_name', partnerName)
             .eq('account_username', tokenRecord.account_username);
         }
       }
     } catch (tokenStampErr) {
-      console.warn('⚠️ تعذر تحديث last_synced_at للتوكنات:', tokenStampErr);
+      console.warn('⚠️ تعذر تحديث last_sync_at للتوكنات:', tokenStampErr);
     }
 
     console.log(`📦 إجمالي الطلبات من الوسيط: ${allWaseetOrders.length}`);
