@@ -8343,6 +8343,16 @@ export type Database = {
         Args: { p_product_id: string; p_quantity: number; p_variant_id: string }
         Returns: Json
       }
+      resolve_partner_location: {
+        Args: {
+          p_city_id?: number
+          p_city_name?: string
+          p_partner: string
+          p_region_id?: number
+          p_region_name?: string
+        }
+        Returns: Json
+      }
       restore_manager_orders: { Args: never; Returns: Json }
       return_item_to_stock: {
         Args: { p_quantity: number; p_user_id: string; p_variant_id: string }
