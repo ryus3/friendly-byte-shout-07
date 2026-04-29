@@ -1940,6 +1940,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               quantity: orderItems.length > 0 ? orderItems.length : 1,
               // ✅ إرسال السعر كما هو (سالب للإرجاع، موجب للطلبات العادية)
               price: Math.round(finalTotal),
+              // ✅ حقول صريحة لمدن لضمان السعر الكلي شامل التوصيل
+              total_amount: Math.round(subtotal - discount),
+              delivery_fee: deliveryFeeAmount,
+              final_amount: Math.round(finalTotal),
               package_size: formData.size,
               size: formData.size,
               // ✅ استخدام merchantNotes المبسطة للوسيط في حالة الاستبدال
