@@ -166,11 +166,11 @@ Deno.serve(async (req) => {
 
     console.log(`🗺️ تم بناء خريطة بـ ${waseetOrdersMap.size} مدخل للبحث`);
 
-    // 4️⃣ جلب الطلبات المحلية النشطة من كلا الشركتين
+    // 4️⃣ جلب الطلبات المحلية النشطة من كل الشركاء النشطين
     const { data: activeOrders, error: ordersError } = await supabase
       .from('orders')
       .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner, customer_city, customer_province, customer_address, partner_missed_count, receipt_received')
-      .in('delivery_partner', ['alwaseet', 'modon'])
+      .in('delivery_partner', activePartnerKeys)
       .not('delivery_status', 'in', '(17,31,32)')
       .not('status', 'in', '(completed,returned_in_stock)')
       .order('created_at', { ascending: false })
