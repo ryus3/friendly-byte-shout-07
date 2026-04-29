@@ -201,15 +201,37 @@ export async function getRegionsByCity(token, cityId) {
 }
 
 /**
- * Get package sizes from MODON
+ * Get package sizes from MODON (مع ترجمة الأحجام للعربية)
  */
+const MODON_SIZE_TRANSLATIONS = {
+  'small': 'صغير',
+  'medium': 'وسط',
+  'middle': 'وسط',
+  'large': 'كبير',
+  'xlarge': 'كبير جداً',
+  'extra large': 'كبير جداً',
+  'extra-large': 'كبير جداً',
+  'xl': 'كبير جداً',
+};
+
+function translateModonSize(name) {
+  if (!name) return name;
+  const key = String(name).trim().toLowerCase();
+  return MODON_SIZE_TRANSLATIONS[key] || name;
+}
+
 export async function getPackageSizes(token) {
   try {
     const data = await handleModonApiCall('package-sizes', 'GET', token);
     
     if (data.status === true && data.errNum === 'S000') {
-      devLog.log(`✅ تم جلب ${data.data?.length || 0} حجم طرد من مدن`);
-      return data.data || [];
+      const sizes = (data.data || []).map(s => ({
+        ...s,
+        size: translateModonSize(s.size || s.size_name || s.name),
+        size_name: translateModonSize(s.size_name || s.size || s.name),
+      }));
+      devLog.log(`✅ تم جلب ${sizes.length} حجم طرد من مدن (مترجم)`);
+      return sizes;
     }
     
     throw new Error(data.msg || 'فشل جلب أحجام الطرود من مدن');
