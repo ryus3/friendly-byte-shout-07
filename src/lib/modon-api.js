@@ -204,11 +204,16 @@ export async function getRegionsByCity(token, cityId) {
  * Get package sizes from MODON (مع ترجمة الأحجام للعربية)
  */
 const MODON_SIZE_TRANSLATIONS = {
+  'normal': 'عادي',
+  'regular': 'عادي',
+  'standard': 'عادي',
   'small': 'صغير',
   'medium': 'وسط',
   'middle': 'وسط',
   'large': 'كبير',
   'xlarge': 'كبير جداً',
+  'x-large': 'كبير جداً',
+  'x large': 'كبير جداً',
   'extra large': 'كبير جداً',
   'extra-large': 'كبير جداً',
   'xl': 'كبير جداً',

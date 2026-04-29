@@ -711,16 +711,30 @@ export const AlWaseetProvider = ({ children }) => {
             }
           }
           
-          // ✅ إذا لم يوجد توكن: تحذير وتخطي
+          // ✅ Last-resort silent fallback: استخدم أي توكن فعّال للمستخدم الحالي لنفس الشركة
+          if (!employeeTokenData && user?.id) {
+            try {
+              const { data: anyActive } = await supabase
+                .from('delivery_partner_tokens')
+                .select('id, token, expires_at, account_username, merchant_id, account_label, is_default, partner_name, is_active')
+                .eq('user_id', user.id)
+                .eq('partner_name', orderPartner)
+                .eq('is_active', true)
+                .gt('expires_at', new Date().toISOString())
+                .order('is_default', { ascending: false })
+                .order('last_used_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              if (anyActive) {
+                employeeTokenData = anyActive;
+                devLog.log(`✅ [SYNC-BATCH] silent fallback: استخدام توكن فعّال للمستخدم الحالي (${anyActive.account_username}) لـ ${orderPartner}`);
+              }
+            } catch (e) { /* ignore */ }
+          }
+
+          // ✅ إذا لم يوجد توكن: تخطي بصمت بدون إشعار مزعج (الإشعار كان يظهر زوراً)
           if (!employeeTokenData) {
-            devLog.warn(`❌ [SYNC-BATCH] لا يوجد توكن للحساب "${orderAccount}" في ${orderPartner} - تخطي ${groupOrders.length} طلب`);
-            
-            toast({
-              title: "⚠️ تحذير: حساب غير متصل",
-              description: `${groupOrders.length} طلب من ${orderPartner} (${orderAccount}) لم تتم مزامنتها - يرجى تسجيل الدخول لهذا الحساب`,
-              variant: "destructive"
-            });
-            
+            devLog.warn(`❌ [SYNC-BATCH] لا يوجد توكن للحساب "${orderAccount}" في ${orderPartner} - تخطي ${groupOrders.length} طلب (صامت)`);
             continue;
           }
 
