@@ -46,6 +46,13 @@ interface InvoiceOrder {
 
 const isAlWaseet = (partner: string) => partner === 'alwaseet';
 
+class InvoiceAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvoiceAuthError';
+  }
+}
+
 async function fetchDeliveryJson(url: string, token: string): Promise<{ response: Response; data: any }> {
   const response = await fetch(url, {
     method: 'GET',
@@ -91,8 +98,7 @@ async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet',
     }
 
     if (data?.errNum === 21 || data?.errNum === '21') {
-      console.warn(`⚠️ ${partner.toUpperCase()}: errNum:21 على get_merchant_invoices - الوسيط رفض endpoint للحساب (لا تفريغ DB).`);
-      return [];
+      throw new InvoiceAuthError(`${partner.toUpperCase()}: get_merchant_invoices requires a valid Merchant token`);
     }
 
     if (!response.ok && data?.errNum !== 'S000') {
