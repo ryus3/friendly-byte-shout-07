@@ -725,7 +725,14 @@ serve(async (req) => {
         console.log(`🔄 Syncing token: ${tokenData.account_username} (merchant: ${tokenData.merchant_id}) - Partner: ${partnerName.toUpperCase()}`);
         
         // ✅ جلب أحدث الفواتير فقط من API المناسب للشركة
-          const apiInvoices = await fetchInvoicesWithTokenRecovery(supabase, tokenData, partnerName);
+        // 🛡️ نلتقط InvoiceAuthError هنا حتى لا يفشل الاستدعاء كاملاً بـ 500
+        let apiInvoices: Invoice[] = [];
+        try {
+          apiInvoices = await fetchInvoicesWithTokenRecovery(supabase, tokenData, partnerName);
+        } catch (tokenErr) {
+          console.warn(`⚠️ Skipping token ${tokenData.account_username} (${partnerName}): ${(tokenErr as Error).message}`);
+          continue;
+        }
         console.log(`📥 Processing ${apiInvoices.length} invoices for ${tokenData.account_username} from ${partnerName.toUpperCase()}`);
 
         let orderDetailsFetchedForToken = 0;
