@@ -881,24 +881,41 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               let regionsData;
               
               if (activePartner === 'modon') {
-                // ✅ مدن: cache-first من region_delivery_mappings (5700+ منطقة محلياً)
-                //    external_id = MODON region id, ونربط عبر regions_master.city_id (= MODON city_id)
+                // ✅ مدن: cache-first من region_delivery_mappings
+                //    cityIdForRegions = MODON external_id (مثلاً "1" لبغداد)
+                //    نحوّله أولاً إلى city_id الداخلي عبر city_delivery_mappings
+                //    ثم نفلتر region_delivery_mappings الخاصة بمدن.
                 devLog.log(`🔍 [مدن] جلب المناطق للمدينة ${cityIdForRegions} من الكاش...`);
-                const { data: modonRegions, error: modonRegErr } = await supabase
-                  .from('region_delivery_mappings')
-                  .select('external_id, external_name, regions_master:region_id!inner(city_id)')
+                
+                const { data: cityMap } = await supabase
+                  .from('city_delivery_mappings')
+                  .select('city_id')
                   .eq('delivery_partner', 'modon')
+                  .eq('external_id', String(cityIdForRegions))
                   .eq('is_active', true)
-                  .eq('regions_master.city_id', parseInt(cityIdForRegions));
+                  .maybeSingle();
+                
+                const internalCityId = cityMap?.city_id;
+                
+                if (internalCityId) {
+                  const { data: modonRegions, error: modonRegErr } = await supabase
+                    .from('region_delivery_mappings')
+                    .select('external_id, external_name, regions_master:region_id!inner(city_id)')
+                    .eq('delivery_partner', 'modon')
+                    .eq('is_active', true)
+                    .eq('regions_master.city_id', internalCityId);
 
-                if (!modonRegErr && modonRegions && modonRegions.length > 0) {
-                  regionsData = modonRegions.map(r => ({
-                    id: r.external_id,
-                    name: r.external_name,
-                    city_id: cityIdForRegions
-                  }));
-                  devLog.log(`✅ [مدن] تم جلب ${regionsData.length} منطقة من الكاش (فوري)`);
-                } else {
+                  if (!modonRegErr && modonRegions && modonRegions.length > 0) {
+                    regionsData = modonRegions.map(r => ({
+                      id: r.external_id,
+                      name: r.external_name,
+                      city_id: cityIdForRegions
+                    }));
+                    devLog.log(`✅ [مدن] تم جلب ${regionsData.length} منطقة من الكاش (فوري)`);
+                  }
+                }
+                
+                if (!regionsData || regionsData.length === 0) {
                   // fallback إلى API فقط إن كان الكاش فارغاً للمدينة
                   devLog.warn('⚠️ [مدن] الكاش فارغ للمدينة، جلب من API...');
                   const ModonAPI = await import('@/lib/modon-api');
