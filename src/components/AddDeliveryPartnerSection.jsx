@@ -256,19 +256,21 @@ const AddDeliveryPartnerSection = () => {
         </AccordionItem>
       </Accordion>
 
-      {/* ========== النموذج بأقسام ========== */}
-      <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Plus className="w-4 h-4" />
-            تسجيل شركة توصيل جديدة
-          </CardTitle>
-          <CardDescription className="text-xs">
-            للمدير فقط. كل قسم قابل للطي. القيم الافتراضية مأخوذة من نموذج الوسيط/مدن.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Accordion type="multiple" defaultValue={['identity']} className="space-y-2">
+      {/* ========== النموذج بأقسام (قابل للطي بالكامل) ========== */}
+      <Accordion type="single" collapsible>
+        <AccordionItem value="register-form" className="border rounded-lg px-3 bg-muted/10">
+          <AccordionTrigger className="text-sm">
+            <div className="flex items-center gap-2">
+              <Plus className="w-4 h-4 text-primary" />
+              تسجيل شركة توصيل جديدة
+              <span className="text-[10px] text-muted-foreground font-normal mr-2">(للمدير فقط)</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <p className="text-[11px] text-muted-foreground mb-3">
+              كل قسم قابل للطي. القيم الافتراضية مأخوذة من نموذج الوسيط/مدن.
+            </p>
+            <Accordion type="multiple" defaultValue={['identity']} className="space-y-2">
             {/* القسم 1: الهوية */}
             <AccordionItem value="identity" className="border rounded px-3">
               <AccordionTrigger className="text-xs py-2">1. الهوية</AccordionTrigger>
@@ -433,12 +435,13 @@ const AddDeliveryPartnerSection = () => {
             </AccordionItem>
           </Accordion>
 
-          <Button onClick={handleSubmit} disabled={saving} size="sm" className="w-full mt-3">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Plus className="w-4 h-4 ml-2" />}
-            إضافة الشركة
-          </Button>
-        </CardContent>
-      </Card>
+            <Button onClick={handleSubmit} disabled={saving} size="sm" className="w-full mt-3">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin ml-2" /> : <Plus className="w-4 h-4 ml-2" />}
+              إضافة الشركة
+            </Button>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
 
       {/* ========== الشركات المسجلة ========== */}
       <Card>

@@ -313,22 +313,28 @@ const BottomNav = () => {
   
   const itemCount = (cart || []).reduce((sum, item) => sum + (item?.quantity || 0), 0);
 
+  const scrollAllToTop = (smooth = true) => {
+    const behavior = smooth ? 'smooth' : 'auto';
+    try { window.scrollTo({ top: 0, left: 0, behavior }); } catch { window.scrollTo(0, 0); }
+    // ✅ مرّر كل الحاويات القابلة للسكرول (main + أي عنصر overflow-y-auto)
+    document.querySelectorAll('main, [data-scroll-container], .overflow-y-auto, .overflow-auto').forEach((el) => {
+      try { el.scrollTo({ top: 0, left: 0, behavior }); } catch { el.scrollTop = 0; }
+    });
+  };
+
   const handleHomeClick = () => {
     const targetPage = user?.default_page || '/';
-    
-    // ✅ إذا كنا في نفس الصفحة، فقط اصعد للأعلى بشكل سلس
+
+    // ✅ في نفس الصفحة → صعود سلس فقط
     if (location.pathname === targetPage) {
-      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      scrollAllToTop(true);
       return;
     }
-    
-    // ✅ إذا كنا في صفحة أخرى، انتقل ثم اصعد
+
+    // ✅ صفحة أخرى → انتقل ثم اصعد (مرتين: فوري + smooth fallback)
     navigate(targetPage);
-    
-    // ✅ تأكيد الصعود بعد التنقل (فوري)
-    setTimeout(() => {
-      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-    }, 100);
+    requestAnimationFrame(() => scrollAllToTop(false));
+    setTimeout(() => scrollAllToTop(true), 150);
   };
 
   const handleCheckout = () => {
