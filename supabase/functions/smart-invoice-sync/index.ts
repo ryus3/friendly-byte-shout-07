@@ -232,7 +232,7 @@ serve(async (req) => {
 
         try {
           // ✅ جلب جميع الفواتير من API المناسب للشركة
-          const apiInvoices = await fetchInvoicesFromAPI(tokenData.token, partnerName);
+          const apiInvoices = await fetchInvoicesFromAPI(tokenData.token, partnerName, MAX_INVOICES_PER_TOKEN);
           console.log(`  📥 Fetched ${apiInvoices.length} total invoices from ${partnerName.toUpperCase()} API`);
 
           let employeeInvoicesSynced = 0;
@@ -504,7 +504,7 @@ serve(async (req) => {
         console.log(`🔄 Syncing token: ${tokenData.account_username} (merchant: ${tokenData.merchant_id}) - Partner: ${partnerName.toUpperCase()}`);
         
         // ✅ جلب كل الفواتير من API المناسب للشركة
-        const apiInvoices = await fetchInvoicesFromAPI(tokenData.token, partnerName);
+          const apiInvoices = await fetchInvoicesFromAPI(tokenData.token, partnerName, MAX_INVOICES_PER_TOKEN);
         console.log(`📥 Processing ${apiInvoices.length} invoices for ${tokenData.account_username} from ${partnerName.toUpperCase()}`);
 
         // ✅ معالجة كل الفواتير وليس فقط 5
