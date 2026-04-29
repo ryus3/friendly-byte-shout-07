@@ -124,11 +124,10 @@ Deno.serve(async (req) => {
       try {
         const partnerName = tokenRecord.partner_name || 'alwaseet';
         console.log(`📡 جلب طلبات ${partnerName} للحساب: ${tokenRecord.account_username}`);
-        
-        // تحديد API URL بناءً على الشركة
-        const apiUrl = partnerName === 'modon'
-          ? `https://mcht.modon-express.net/v1/merchant/merchant-orders?token=${tokenRecord.token}`
-          : `https://api.alwaseet-iq.net/v1/merchant/merchant-orders?token=${tokenRecord.token}`;
+
+        // ✅ تحديد API URL ديناميكياً من سجل الشركاء
+        const baseUrl = partnerBaseMap[partnerName] || 'https://api.alwaseet-iq.net/v1/merchant';
+        const apiUrl = `${baseUrl.replace(/\/$/, '')}/merchant-orders?token=${tokenRecord.token}`;
         
         const response = await fetch(apiUrl, {
           headers: { 'Accept': 'application/json' }
