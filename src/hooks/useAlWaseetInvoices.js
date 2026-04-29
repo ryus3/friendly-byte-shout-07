@@ -46,8 +46,10 @@ export const useAlWaseetInvoices = () => {
           orders_count: inv.orders_count,
           status: inv.status,
           merchant_id: inv.merchant_id,
-          updated_at: inv.issued_at || inv.updated_at,
-          created_at: inv.created_at,
+          // ✅ updated_at = تاريخ الفاتورة الفعلي من شركة التوصيل (issued_at في DB)
+          updated_at: inv.issued_at,
+          issued_at: inv.issued_at,
+          created_at: inv.issued_at,
           raw: inv.raw,
           account_username: inv.account_username,
           partner: inv.partner,
