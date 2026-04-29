@@ -403,7 +403,15 @@ export async function createModonOrder(orderData, token) {
         id: data.data?.id
       };
     }
-    
+
+    // ✅ خطأ city/region من مدن (errNum:21 على create-order)
+    if (data.errNum === 21 || data.errNum === '21') {
+      throw new Error(
+        'مدن رفضت إنشاء الطلب: المحافظة/المنطقة غير صالحة في حساب مدن، أو الحساب لا يملك صلاحية الإنشاء. ' +
+        'حدّث كاش مدن من إدارة شركات التوصيل ثم أعد المحاولة.'
+      );
+    }
+
     throw new Error(data.msg || 'فشل إنشاء الطلب في مدن');
   } catch (error) {
     console.error('❌ خطأ في إنشاء الطلب في مدن:', error);
