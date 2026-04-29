@@ -10,7 +10,6 @@ const corsHeaders = {
 };
 
 const ALWASEET_PROXY_URL = 'https://api.ryusbrand.com/alwaseet/v1/merchant';
-const ALWASEET_DIRECT_URL = 'https://api.alwaseet-iq.net/v1/merchant';
 
 // NOTE: We intentionally do NOT initialize a Supabase client at module top-level.
 // The proxy does not perform any DB operations (deactivateBadToken is a no-op).
@@ -136,14 +135,17 @@ Deno.serve(async (req) => {
         throw new Error(`Proxy returned ${response.status}`);
       }
     } catch (proxyError) {
-      console.warn(
-        `[AlWaseet Proxy] Static proxy failed: ${getErrorMessage(proxyError)} — falling back to direct`,
+      console.error(
+        `[AlWaseet Proxy] Static proxy failed: ${getErrorMessage(proxyError)} — direct fallback disabled to preserve whitelist path`,
       );
-      usedSource = 'direct';
-      const directUrl = `${ALWASEET_DIRECT_URL}${suffix}`;
-      response = await fetch(directUrl, buildFetchOptions(method, payload));
-      contentType = response.headers.get('content-type') || '';
-      responseText = await response.text();
+      return json({
+        status: false,
+        ok: false,
+        errNum: 'STATIC_PROXY_ERROR',
+        msg: 'تعذر الوصول إلى مسار الوسيط المعتمد حالياً. لم يتم استخدام الاتصال المباشر حفاظاً على مسار الوايتلست.',
+        fallback: true,
+        details: { endpoint, source: usedSource },
+      });
     }
 
     console.log(
