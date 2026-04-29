@@ -19,21 +19,48 @@ export const useAlWaseetInvoices = () => {
   const [invoiceOrders, setInvoiceOrders] = useState([]);
 
   // Enhanced smart fetch with instant loading and background sync - UNIFIED for all partners
+  // 🛡️ Cache-first: نعرض فواتير قاعدة البيانات أولاً، ثم نحاول API بهدوء.
+  //    لا نستبدل القائمة الحالية بـ [] أبداً عند فشل API/errNum:21/CF.
   const fetchInvoices = useCallback(async (timeFilter = 'week', forceRefresh = false) => {
-    // ✅ Universal: لا حاجة لـ activePartner - جلب فواتير كل الشركات
-    if (!isLoggedIn) {
-      return;
-    }
+    if (!isLoggedIn) return;
 
-    // Only show loading if this is a force refresh or manual action
-    if (forceRefresh) {
-      setLoading(true);
-    }
+    if (forceRefresh) setLoading(true);
+
+    // 1) تحميل فوري من قاعدة البيانات (لا يُمسح أبداً)
+    let cachedFromDb = [];
+    try {
+      const { data: cached, error: cachedErr } = await supabase
+        .from('delivery_invoices')
+        .select('*')
+        .in('partner', ['alwaseet', 'modon'])
+        .eq('owner_user_id', user?.id)
+        .order('issued_at', { ascending: false })
+        .limit(200);
+
+      if (!cachedErr && cached?.length) {
+        cachedFromDb = cached.map(inv => ({
+          id: inv.external_id,
+          external_id: inv.external_id,
+          merchant_price: inv.amount,
+          delivered_orders_count: inv.orders_count,
+          orders_count: inv.orders_count,
+          status: inv.status,
+          merchant_id: inv.merchant_id,
+          updated_at: inv.issued_at || inv.updated_at,
+          created_at: inv.created_at,
+          raw: inv.raw,
+          account_username: inv.account_username,
+          partner: inv.partner,
+          partner_name_ar: inv.partner_name_ar || (inv.partner === 'modon' ? 'مدن' : 'الوسيط'),
+          received: inv.received,
+          received_flag: inv.received_flag,
+          status_normalized: inv.status_normalized
+        }));
+      }
+    } catch {/* silent */}
 
     try {
-      // Smart fetch: only get recent invoices to avoid loading thousands
-      
-      // ✅ جلب جميع التوكنات النشطة للمستخدم - كل الشركات
+      // 2) محاولة الجلب من توكنات المستخدم النشطة
       const { data: userTokens, error: tokensError } = await supabase
         .from('delivery_partner_tokens')
         .select('*')
@@ -41,19 +68,17 @@ export const useAlWaseetInvoices = () => {
         .in('partner_name', ['alwaseet', 'modon'])
         .eq('is_active', true)
         .gt('expires_at', new Date().toISOString());
-      
-      if (tokensError) {
-        throw new Error('فشل جلب التوكنات');
-      }
-      
+
+      if (tokensError) throw new Error('فشل جلب التوكنات');
+
       let allInvoicesData = [];
-      
-      // جلب الفواتير من كل توكن على حدة - كل الشركات
+      let anyApiSuccess = false;
+      let anyApiPermissionDenied = false;
+
       if (userTokens && userTokens.length > 0) {
         for (const tokenData of userTokens) {
           const partnerName = tokenData.partner_name;
-          
-          let invoicesFromThisToken;
+          let invoicesFromThisToken = null;
           try {
             if (partnerName === 'modon') {
               const ModonAPI = await import('@/lib/modon-api');
@@ -61,12 +86,17 @@ export const useAlWaseetInvoices = () => {
             } else {
               invoicesFromThisToken = await AlWaseetAPI.getMerchantInvoices(tokenData.token);
             }
+            anyApiSuccess = true;
           } catch (apiErr) {
-            devLog.warn(`⚠️ فشل جلب فواتير ${partnerName}:`, apiErr.message);
+            if (apiErr?.permissionDenied || apiErr?.isNoInvoicesError) {
+              anyApiPermissionDenied = true;
+              devLog.warn(`⚠️ ${partnerName}/${tokenData.account_username}: الوسيط لم يُعطِ صلاحية على endpoint الفواتير.`);
+            } else {
+              devLog.warn(`⚠️ فشل جلب فواتير ${partnerName}:`, apiErr?.message);
+            }
             continue;
           }
-          
-          // إضافة معلومات الحساب الصحيحة لكل فاتورة
+
           if (invoicesFromThisToken && invoicesFromThisToken.length > 0) {
             invoicesFromThisToken.forEach(inv => {
               inv.account_username = tokenData.account_username;
@@ -75,127 +105,90 @@ export const useAlWaseetInvoices = () => {
               inv.owner_user_id = user?.id;
               inv.partner = partnerName;
             });
-            
             allInvoicesData.push(...invoicesFromThisToken);
           }
         }
       }
-      
-      const invoicesData = allInvoicesData;
-      
-      // Persist invoices to DB (bulk upsert via RPC)
-      if (invoicesData?.length > 0) {
+
+      // حفظ في DB (إذا حصلنا على بيانات فعلية)
+      if (allInvoicesData.length > 0) {
         try {
-          const { data: upsertRes, error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
-            p_invoices: invoicesData
+          const { error: upsertErr } = await supabase.rpc('upsert_alwaseet_invoice_list', {
+            p_invoices: allInvoicesData
           });
-          
           if (upsertErr) {
-            console.error('❌ خطأ في حفظ الفواتير - تفاصيل كاملة:', {
-              message: upsertErr.message,
-              code: upsertErr.code,
-              details: upsertErr.details,
-              hint: upsertErr.hint,
-              fullError: upsertErr
-            });
-            console.error('📦 البيانات المرسلة (أول فاتورة):', invoicesData[0]);
-            toast({
-              title: 'تحذير',
-              description: `فشل حفظ الفواتير: ${upsertErr.message || 'خطأ غير معروف'}`,
-              variant: 'destructive'
-            });
-          } else {
-            devLog.log(`✅ تم حفظ/تحديث ${invoicesData.length} فاتورة بنجاح`);
-            // Log status breakdown for debugging
-            const receivedCount = invoicesData.filter(inv => 
-              inv.status?.includes('التاجر') || 
-              (inv.status?.includes('مستلم') && !inv.status?.includes('المندوب'))
-            ).length;
-            const pendingCount = invoicesData.length - receivedCount;
-            devLog.log(`   📊 مستلمة: ${receivedCount} | معلقة/مُرسلة: ${pendingCount}`);
+            console.error('❌ خطأ في حفظ الفواتير:', upsertErr.message);
           }
         } catch (e) {
           console.error('❌ استثناء أثناء حفظ الفواتير:', e);
-          toast({
-            title: 'خطأ',
-            description: 'فشل حفظ الفواتير: ' + e.message,
-            variant: 'destructive'
-          });
         }
       }
-      
-      // Enhanced smart filtering and sorting
-      const filteredAndSortedInvoices = (invoicesData || [])
+
+      // 3) قرار العرض:
+      //    - إذا حصلنا فواتير من API → نُطبّق الفلتر ونعرضها.
+      //    - إذا فشل API (لا توكن/permission_denied/CF) → نعرض cachedFromDb (لا تفريغ).
+      const sourceList = (anyApiSuccess && allInvoicesData.length > 0) ? allInvoicesData : cachedFromDb;
+
+      const filteredAndSortedInvoices = (sourceList || [])
         .filter(invoice => {
           if (timeFilter === 'all') {
-            // For "all", limit to last 6 months for performance
             const sixMonthsAgo = new Date();
             sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
             const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
             return invoiceDate >= sixMonthsAgo;
           }
-          
           const invoiceDate = new Date(invoice.updated_at || invoice.created_at);
-          
           switch (timeFilter) {
-            case 'week':
-              const weekAgo = new Date();
-              weekAgo.setDate(weekAgo.getDate() - 7);
-              return invoiceDate >= weekAgo;
-            case 'month':
-              const monthAgo = new Date();
-              monthAgo.setMonth(monthAgo.getMonth() - 1);
-              return invoiceDate >= monthAgo;
-            case '3months':
-              const threeMonthsAgo = new Date();
-              threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-              return invoiceDate >= threeMonthsAgo;
-            case '6months':
-              const sixMonthsAgo = new Date();
-              sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-              return invoiceDate >= sixMonthsAgo;
-            case 'year':
-              const yearAgo = new Date();
-              yearAgo.setFullYear(yearAgo.getFullYear() - 1);
-              return invoiceDate >= yearAgo;
-            case 'custom':
-              return true; // Handle custom range in the component
-            default:
-              return true;
+            case 'week': { const d = new Date(); d.setDate(d.getDate() - 7); return invoiceDate >= d; }
+            case 'month': { const d = new Date(); d.setMonth(d.getMonth() - 1); return invoiceDate >= d; }
+            case '3months': { const d = new Date(); d.setMonth(d.getMonth() - 3); return invoiceDate >= d; }
+            case '6months': { const d = new Date(); d.setMonth(d.getMonth() - 6); return invoiceDate >= d; }
+            case 'year': { const d = new Date(); d.setFullYear(d.getFullYear() - 1); return invoiceDate >= d; }
+            case 'custom': return true;
+            default: return true;
           }
         })
         .sort((a, b) => {
-          // Priority sort: pending invoices first
           const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
           const bIsPending = b.status !== 'تم الاستلام من قبل التاجر';
-          
           if (aIsPending && !bIsPending) return -1;
           if (!aIsPending && bIsPending) return 1;
-          
-          // Then sort by date - newest first
-          const aDate = new Date(a.updated_at || a.created_at);
-          const bDate = new Date(b.updated_at || b.created_at);
-          return bDate - aDate;
+          return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
         });
-      
-      setInvoices(filteredAndSortedInvoices);
+
+      // ⛔ لا نستبدل القائمة بـ [] إذا API فشل وكان لدينا كاش
+      if (filteredAndSortedInvoices.length === 0 && cachedFromDb.length > 0 && !anyApiSuccess) {
+        devLog.warn('⚠️ لم نتمكن من جلب الفواتير من API — نُبقي بيانات قاعدة البيانات.');
+        // نترك القائمة الحالية كما هي (دون setInvoices)
+      } else {
+        setInvoices(filteredAndSortedInvoices);
+      }
+
+      if (forceRefresh && !anyApiSuccess && anyApiPermissionDenied) {
+        toast({
+          title: 'تعذر الجلب من شركة التوصيل',
+          description: 'تم عرض البيانات المحفوظة. الوسيط رفض الـ endpoint مؤقتاً (errNum:21).',
+        });
+      }
+
       return filteredAndSortedInvoices;
     } catch (error) {
-      // Only show error toast for force refresh (manual actions)
+      // فشل عام — لا نمسح القائمة. نعرض الكاش إن وجد.
+      if (cachedFromDb.length > 0 && invoices.length === 0) {
+        setInvoices(cachedFromDb);
+      }
       if (forceRefresh) {
         toast({
           title: 'خطأ في جلب الفواتير',
-          description: error.message,
+          description: error.message || 'سيتم عرض البيانات المحفوظة.',
           variant: 'destructive'
         });
       }
-      return [];
+      return invoices;
     } finally {
-      if (forceRefresh) {
-        setLoading(false);
-      }
+      if (forceRefresh) setLoading(false);
     }
-  }, [token, isLoggedIn, activePartner]);
+  }, [token, isLoggedIn, activePartner, user?.id]);
 
   // Enhanced smart sync for background updates
   const smartBackgroundSync = useCallback(async () => {
