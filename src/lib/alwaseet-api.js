@@ -580,29 +580,51 @@ export const getOrdersByIdsBulk = async (token, ids) => {
 // بدلاً من رمي خطأ token-expired (الذي يسجل خروج كاذب). هذا يعيد السلوك الذي كان يعمل سابقاً.
 
 // Get all merchant invoices
+// 🔧 إذا رجع الوسيط errNum:21 (لا صلاحية لهذا التوكن على endpoint الفواتير) لا نُرجع []
+//    صامتاً لأن ذلك كان يمسح قائمة الفواتير في الواجهة. نرمي خطأ موسوماً ليتعامل معه المستدعي
+//    كـ "تعذر الجلب" دون استبدال الكاش.
 export const getMerchantInvoices = async (token) => {
   try {
     return await handleApiCall('get_merchant_invoices', 'GET', token, null, { token });
   } catch (error) {
-    // إذا رجع endpoint الفواتير "لا صلاحية" أو "لا فواتير"، نتعامل معه كنتيجة فارغة بدون رمي خطأ
     const msg = String(error?.message || '');
     if (msg.includes('ليس لديك صلاحية') || msg.includes('لا توجد فواتير') || error?.isNoInvoicesError) {
-      devLog.log('ℹ️ getMerchantInvoices: لا توجد فواتير للحساب الحالي (errNum:21 محلياً)');
-      return [];
+      devLog.warn('⚠️ getMerchantInvoices: الوسيط رفض الـ endpoint (errNum:21). لن نمسح القائمة.');
+      const noPerm = new Error(error?.message || 'permission_denied');
+      noPerm.isNoInvoicesError = true;
+      noPerm.permissionDenied = true;
+      throw noPerm;
     }
     throw error;
   }
 };
 
+// 🔧 تطبيع استجابة طلبات الفاتورة لتغطية كل أشكال API:
+//    - { orders: [...] }
+//    - [...]
+//    - { data: { orders: [...] } } (تم تجريده مسبقاً في handleApiCall)
+const normalizeInvoiceOrdersResponse = (raw) => {
+  if (!raw) return { orders: [] };
+  if (Array.isArray(raw)) return { orders: raw };
+  if (Array.isArray(raw.orders)) return { orders: raw.orders };
+  if (Array.isArray(raw.data)) return { orders: raw.data };
+  if (raw.data && Array.isArray(raw.data.orders)) return { orders: raw.data.orders };
+  return { orders: [] };
+};
+
 // Get orders for a specific invoice
 export const getInvoiceOrders = async (token, invoiceId) => {
   try {
-    return await handleApiCall('get_merchant_invoice_orders', 'GET', token, null, { token, invoice_id: invoiceId });
+    const raw = await handleApiCall('get_merchant_invoice_orders', 'GET', token, null, { token, invoice_id: invoiceId });
+    return normalizeInvoiceOrdersResponse(raw);
   } catch (error) {
     const msg = String(error?.message || '');
     if (msg.includes('ليس لديك صلاحية') || error?.isNoInvoicesError) {
-      devLog.log(`ℹ️ getInvoiceOrders(${invoiceId}): لا صلاحية - إرجاع فارغ`);
-      return { orders: [] };
+      devLog.warn(`⚠️ getInvoiceOrders(${invoiceId}): الوسيط رفض الـ endpoint (errNum:21). لا نعتبرها فاتورة فارغة.`);
+      const noPerm = new Error(error?.message || 'permission_denied');
+      noPerm.isNoInvoicesError = true;
+      noPerm.permissionDenied = true;
+      throw noPerm;
     }
     throw error;
   }
