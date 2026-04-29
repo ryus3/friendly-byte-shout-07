@@ -510,11 +510,13 @@ serve(async (req) => {
         const partnerName = tokenData.partner_name || 'alwaseet';  // ✅ تحديد الشركة
         console.log(`🔄 Syncing token: ${tokenData.account_username} (merchant: ${tokenData.merchant_id}) - Partner: ${partnerName.toUpperCase()}`);
         
-        // ✅ جلب كل الفواتير من API المناسب للشركة
+        // ✅ جلب أحدث الفواتير فقط من API المناسب للشركة
           const apiInvoices = await fetchInvoicesFromAPI(tokenData.token, partnerName, MAX_INVOICES_PER_TOKEN);
         console.log(`📥 Processing ${apiInvoices.length} invoices for ${tokenData.account_username} from ${partnerName.toUpperCase()}`);
 
-        // ✅ معالجة كل الفواتير وليس فقط 5
+        let orderDetailsFetchedForToken = 0;
+
+        // ✅ معالجة أحدث الفواتير فقط؛ لا نعيد فحص التاريخ كله عند كل دخول للصفحة
         for (const invoice of apiInvoices) {
           const externalId = String(invoice.id);
           const statusNormalized = normalizeStatus(invoice.status);
@@ -595,9 +597,11 @@ serve(async (req) => {
           if (!upsertError) {
             totalInvoicesSynced++;
             
-            const shouldSyncOrders = sync_orders && upsertedInvoice?.id && expectedCount > 0 && (cachedOrdersCount < expectedCount);
+            const shouldSyncOrders = sync_orders && upsertedInvoice?.id && expectedCount > 0 && (cachedOrdersCount < expectedCount) && orderDetailsFetchedForToken < MAX_ORDER_DETAILS_PER_TOKEN;
             if (shouldSyncOrders) {
               try {
+                if (orderDetailsFetchedForToken > 0) await new Promise(r => setTimeout(r, ORDER_DETAILS_GAP_MS));
+                orderDetailsFetchedForToken++;
                 const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);  // ✅ تمرير partnerName
                 
                 if (invoiceOrders.length > 0) {
@@ -619,8 +623,8 @@ serve(async (req) => {
                     if (!orderError) totalOrdersUpdated++;
                   }
                   
-                  // ✅ تحقق اكتمال snapshot + إعادة محاولة واحدة (للفواتير غير المستلمة فقط)
-                  if (!isReceived) {
+                  // ✅ لا نعمل retry داخل نفس التشغيل؛ التشغيل التالي يكمل بدون تجاوز حد الوسيط.
+                  if (false && !isReceived) {
                     const expected = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
                     let { count: dioNow } = await supabase
                       .from('delivery_invoice_orders')
@@ -701,7 +705,11 @@ serve(async (req) => {
                 console.error(`Error syncing orders for invoice ${externalId}:`, ordersError);
               }
             } else if (sync_orders && upsertedInvoice?.id && expectedCount > 0) {
-              console.log(`  ✅ Invoice ${externalId} orders cache already complete: have=${cachedOrdersCount}, expected=${expectedCount}`);
+              if (cachedOrdersCount >= expectedCount) {
+                console.log(`  ✅ Invoice ${externalId} orders cache already complete: have=${cachedOrdersCount}, expected=${expectedCount}`);
+              } else {
+                console.log(`  ⏭️ Invoice ${externalId} order details deferred to next sync (budget ${orderDetailsFetchedForToken}/${MAX_ORDER_DETAILS_PER_TOKEN})`);
+              }
             }
           }
         }
