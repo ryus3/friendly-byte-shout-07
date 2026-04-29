@@ -4223,6 +4223,7 @@ export type Database = {
           invoice_received_by: string | null
           is_partial_delivery: boolean | null
           isarchived: boolean | null
+          last_synced_at: string | null
           merchant_pays_delivery: boolean | null
           notes: string | null
           order_number: string
@@ -4280,6 +4281,7 @@ export type Database = {
           invoice_received_by?: string | null
           is_partial_delivery?: boolean | null
           isarchived?: boolean | null
+          last_synced_at?: string | null
           merchant_pays_delivery?: boolean | null
           notes?: string | null
           order_number: string
@@ -4337,6 +4339,7 @@ export type Database = {
           invoice_received_by?: string | null
           is_partial_delivery?: boolean | null
           isarchived?: boolean | null
+          last_synced_at?: string | null
           merchant_pays_delivery?: boolean | null
           notes?: string | null
           order_number?: string
