@@ -439,7 +439,8 @@ export const useAlWaseetInvoices = () => {
 
           const finalInvoiceId = invoiceRecord?.id || invoiceId;
           
-          // ✅ إذا الفاتورة موجودة لكن delivery_invoice_orders فارغة - أعد المزامنة
+          // ✅ إذا الفاتورة موجودة لكن delivery_invoice_orders فارغة لا نعمل retry مباشر هنا.
+          // الجلب من API تمت محاولته مرة واحدة أعلاه؛ التكرار الفوري كان يسبب errNum:2 من الوسيط.
           if (invoiceRecord?.orders_count > 0) {
             const { data: existingOrders, error: checkError } = await supabase
               .from('delivery_invoice_orders')
@@ -448,53 +449,7 @@ export const useAlWaseetInvoices = () => {
               .limit(1);
             
             if (!checkError && (!existingOrders || existingOrders.length === 0) && !cacheOnly) {
-              devLog.warn('⚠️ الفاتورة موجودة لكن الطلبات فارغة - إجبار المزامنة');
-              
-              // محاولة جلب من API مرة أخرى مع retry
-              if (selectedToken) {
-                try {
-                  let apiOrders;
-                  if (invoiceRecord?.partner === 'modon') {
-                    const ModonAPI = await import('@/lib/modon-api');
-                    apiOrders = await ModonAPI.getInvoiceOrders(selectedToken, invoiceId);
-                  } else {
-                    apiOrders = await AlWaseetAPI.getInvoiceOrders(selectedToken, invoiceId);
-                  }
-                  
-                  if (apiOrders?.orders && apiOrders.orders.length > 0) {
-                    // حفظ في delivery_invoice_orders
-                    const ordersToInsert = apiOrders.orders.map(order => ({
-                      invoice_id: finalInvoiceId,
-                      external_order_id: String(order.id),
-                      raw: order,
-                      status: order.status,
-                      amount: order.price
-                    }));
-                    
-                    const { error: insertError } = await supabase
-                      .from('delivery_invoice_orders')
-                      .upsert(ordersToInsert, { 
-                        onConflict: 'invoice_id,external_order_id' 
-                      });
-                    
-                    if (!insertError) {
-                      // تحديث orders_last_synced_at
-                      await supabase
-                        .from('delivery_invoices')
-                        .update({ orders_last_synced_at: new Date().toISOString() })
-                        .eq('id', finalInvoiceId);
-
-                      devLog.log(`✅ تم حفظ ${ordersToInsert.length} طلب للفاتورة ${invoiceId}`);
-                      invoiceData = apiOrders;
-                      dataSource = 'api_retry';
-                    }
-                  } else {
-                    devLog.warn(`⚠️ الفاتورة ${invoiceId}: شركة التوصيل لم تُرجع طلبات. قد تكون قديمة أو محذوفة.`);
-                  }
-                } catch (retryError) {
-                  console.error('❌ فشل retry للمزامنة:', retryError.message);
-                }
-              }
+              devLog.warn('⚠️ الفاتورة موجودة لكن كاش الطلبات فارغ؛ سيتم عرض المحفوظ وإكمالها بالمزامنة التالية بدون تكرار فوري.');
             }
           }
 

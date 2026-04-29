@@ -248,9 +248,13 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
           const noInvErr = new Error(data.msg || 'حدث خطأ غير متوقع من واجهة برمجة التطبيقات.');
           if (
             noInvoicesEndpoints.has(endpoint) &&
-            (data.errNum === 21 || data.errNum === '21' || data.fallback === true)
+            (data.errNum === 21 || data.errNum === '21')
           ) {
             noInvErr.isNoInvoicesError = true;
+          }
+          if (data.errNum === 'RATE_LIMITED' || data.errNum === 2 || data.errNum === '2') {
+            noInvErr.retryAfter = data.retryAfter;
+            noInvErr.isRateLimitError = true;
           }
           throw noInvErr;
         }

@@ -8,8 +8,10 @@ const corsHeaders = {
 
 // ✅ API Base URLs for both delivery partners
 const ALWASEET_API_BASE = 'https://api.ryusbrand.com/alwaseet/v1/merchant';
-const ALWASEET_DIRECT_API_BASE = 'https://api.alwaseet-iq.net/v1/merchant';
 const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
+const MAX_INVOICES_PER_TOKEN = 5;
+const MAX_ORDER_DETAILS_PER_TOKEN = 2;
+const ORDER_DETAILS_GAP_MS = 1200;
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
@@ -44,6 +46,13 @@ interface InvoiceOrder {
 
 const isAlWaseet = (partner: string) => partner === 'alwaseet';
 
+class InvoiceAuthError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'InvoiceAuthError';
+  }
+}
+
 async function fetchDeliveryJson(url: string, token: string): Promise<{ response: Response; data: any }> {
   const response = await fetch(url, {
     method: 'GET',
@@ -74,7 +83,9 @@ function extractInvoiceOrders(data: any): InvoiceOrder[] {
 // ✅ Fetch ALL invoices from API (supports both AlWaseet and MODON)
 // 🛡️ ملاحظة: واجهات الفواتير في توثيق الوسيط تقبل Merchant token فقط؛ Merchant user token يرجع errNum:21
 // ("ليس لديك صلاحية الوصول.") ـ وهذا ليس خطأ، بل يعني ببساطة لا فواتير لهذا الحساب. نتعامل معه كـ [].
-async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet'): Promise<Invoice[]> {
+const invoiceTime = (invoice: Invoice) => new Date(String(invoice.updated_at || invoice.created_at || 0)).getTime() || 0;
+
+async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet', limit: number = MAX_INVOICES_PER_TOKEN): Promise<Invoice[]> {
   try {
     const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
     console.log(`📡 Fetching invoices from ${partner.toUpperCase()} API (static proxy only for whitelist)...`);
@@ -87,8 +98,7 @@ async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet')
     }
 
     if (data?.errNum === 21 || data?.errNum === '21') {
-      console.warn(`⚠️ ${partner.toUpperCase()}: errNum:21 على get_merchant_invoices - الوسيط رفض endpoint للحساب (لا تفريغ DB).`);
-      return [];
+      throw new InvoiceAuthError(`${partner.toUpperCase()}: get_merchant_invoices requires a valid Merchant token`);
     }
 
     if (!response.ok && data?.errNum !== 'S000') {
@@ -97,8 +107,9 @@ async function fetchInvoicesFromAPI(token: string, partner: string = 'alwaseet')
     }
 
     const invoices = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    console.log(`📥 ${partner.toUpperCase()} API: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}`);
-    return invoices;
+    const limitedInvoices = [...invoices].sort((a, b) => invoiceTime(b) - invoiceTime(a)).slice(0, limit);
+    console.log(`📥 ${partner.toUpperCase()} API: status=${data?.status}, errNum=${data?.errNum}, count=${invoices.length}, processing=${limitedInvoices.length}`);
+    return limitedInvoices;
   } catch (error) {
     console.error(`Error fetching invoices from ${partner}:`, error);
     return [];
@@ -128,6 +139,45 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partn
   } catch (error) {
     console.error(`Error fetching orders for invoice ${invoiceId}:`, error);
     return [];
+  }
+}
+
+async function renewAlWaseetTokenIfNeeded(supabase: any, tokenData: any): Promise<string | null> {
+  if ((tokenData.partner_name || 'alwaseet') !== 'alwaseet') return null;
+  const username = tokenData.account_username || tokenData.partner_data?.username;
+  const password = tokenData.partner_data?.password;
+  if (!username || !password) return null;
+
+  const formData = new FormData();
+  formData.append('username', username);
+  formData.append('password', password);
+  const response = await fetch(`${ALWASEET_API_BASE}/login`, { method: 'POST', body: formData, headers: { Accept: 'application/json' } });
+  const data = await response.json().catch(() => null);
+  if (!response.ok || !data?.status || !data?.data?.token) {
+    console.warn(`⚠️ Could not renew AlWaseet merchant token for ${username}: ${data?.msg || response.status}`);
+    return null;
+  }
+
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 7);
+  await supabase
+    .from('delivery_partner_tokens')
+    .update({ token: data.data.token, expires_at: expiresAt.toISOString(), last_used_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', tokenData.id);
+  console.log(`🔑 Renewed AlWaseet merchant token for ${username}`);
+  return data.data.token;
+}
+
+async function fetchInvoicesWithTokenRecovery(supabase: any, tokenData: any, partnerName: string): Promise<Invoice[]> {
+  try {
+    return await fetchInvoicesFromAPI(tokenData.token, partnerName, MAX_INVOICES_PER_TOKEN);
+  } catch (error) {
+    if (error instanceof InvoiceAuthError) {
+      console.warn(`🔑 Invoice API rejected stored token for ${tokenData.account_username}; renewing once from saved merchant credentials.`);
+      const renewedToken = await renewAlWaseetTokenIfNeeded(supabase, tokenData);
+      if (renewedToken) return await fetchInvoicesFromAPI(renewedToken, partnerName, MAX_INVOICES_PER_TOKEN);
+    }
+    throw error;
   }
 }
 
@@ -227,14 +277,16 @@ serve(async (req) => {
 
         try {
           // ✅ جلب جميع الفواتير من API المناسب للشركة
-          const apiInvoices = await fetchInvoicesFromAPI(tokenData.token, partnerName);
+          const apiInvoices = await fetchInvoicesWithTokenRecovery(supabase, tokenData, partnerName);
           console.log(`  📥 Fetched ${apiInvoices.length} total invoices from ${partnerName.toUpperCase()} API`);
 
           let employeeInvoicesSynced = 0;
           let employeeOrdersSynced = 0;
           let employeeNewInvoices = 0;
 
-          // ✅ معالجة كل الفواتير من API
+          let orderDetailsFetchedForToken = 0;
+
+          // ✅ معالجة أحدث الفواتير فقط؛ تفاصيل الطلبات لها ميزانية محدودة لمنع errNum:2 من الوسيط
           for (const invoice of apiInvoices) {
             const externalId = String(invoice.id);
             const statusNormalized = normalizeStatus(invoice.status);
@@ -309,9 +361,12 @@ serve(async (req) => {
             } else {
               employeeInvoicesSynced++;
               
-              // ✅ مزامنة طلبات الفاتورة - استخدام partnerName
-              if (sync_orders && upsertedInvoice?.id) {
+              // ✅ مزامنة طلبات الفاتورة - استخدام partnerName وبهدوء شديد لمنع rate limit
+              const expectedForOrders = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
+              if (sync_orders && upsertedInvoice?.id && expectedForOrders > 0 && orderDetailsFetchedForToken < MAX_ORDER_DETAILS_PER_TOKEN) {
                 try {
+                  if (orderDetailsFetchedForToken > 0) await new Promise(r => setTimeout(r, ORDER_DETAILS_GAP_MS));
+                  orderDetailsFetchedForToken++;
                   const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);
                   
                   if (invoiceOrders.length > 0) {
@@ -333,8 +388,8 @@ serve(async (req) => {
                       if (!orderError) employeeOrdersSynced++;
                     }
                     
-                    // ✅ تحقق اكتمال snapshot + إعادة محاولات متعددة (للفواتير غير المستلمة فقط)
-                    if (!isReceived) {
+                    // ✅ لا نعمل retry داخل نفس التشغيل؛ cron/UI سيعيد المحاولة لاحقاً بدون عاصفة طلبات.
+                    if (false && !isReceived) {
                       const expected = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
                       let { count: dioNow } = await supabase
                         .from('delivery_invoice_orders')
@@ -415,6 +470,8 @@ serve(async (req) => {
                 } catch (ordersError) {
                   console.error(`    ❌ Error syncing orders for invoice ${externalId}:`, ordersError);
                 }
+              } else if (sync_orders && upsertedInvoice?.id && expectedForOrders > 0) {
+                console.log(`    ⏭️ Invoice ${externalId} order details deferred to next sync (budget ${orderDetailsFetchedForToken}/${MAX_ORDER_DETAILS_PER_TOKEN})`);
               }
             }
           }
@@ -498,11 +555,13 @@ serve(async (req) => {
         const partnerName = tokenData.partner_name || 'alwaseet';  // ✅ تحديد الشركة
         console.log(`🔄 Syncing token: ${tokenData.account_username} (merchant: ${tokenData.merchant_id}) - Partner: ${partnerName.toUpperCase()}`);
         
-        // ✅ جلب كل الفواتير من API المناسب للشركة
-        const apiInvoices = await fetchInvoicesFromAPI(tokenData.token, partnerName);
+        // ✅ جلب أحدث الفواتير فقط من API المناسب للشركة
+          const apiInvoices = await fetchInvoicesWithTokenRecovery(supabase, tokenData, partnerName);
         console.log(`📥 Processing ${apiInvoices.length} invoices for ${tokenData.account_username} from ${partnerName.toUpperCase()}`);
 
-        // ✅ معالجة كل الفواتير وليس فقط 5
+        let orderDetailsFetchedForToken = 0;
+
+        // ✅ معالجة أحدث الفواتير فقط؛ لا نعيد فحص التاريخ كله عند كل دخول للصفحة
         for (const invoice of apiInvoices) {
           const externalId = String(invoice.id);
           const statusNormalized = normalizeStatus(invoice.status);
@@ -583,9 +642,11 @@ serve(async (req) => {
           if (!upsertError) {
             totalInvoicesSynced++;
             
-            const shouldSyncOrders = sync_orders && upsertedInvoice?.id && expectedCount > 0 && (cachedOrdersCount < expectedCount);
+            const shouldSyncOrders = sync_orders && upsertedInvoice?.id && expectedCount > 0 && (cachedOrdersCount < expectedCount) && orderDetailsFetchedForToken < MAX_ORDER_DETAILS_PER_TOKEN;
             if (shouldSyncOrders) {
               try {
+                if (orderDetailsFetchedForToken > 0) await new Promise(r => setTimeout(r, ORDER_DETAILS_GAP_MS));
+                orderDetailsFetchedForToken++;
                 const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);  // ✅ تمرير partnerName
                 
                 if (invoiceOrders.length > 0) {
@@ -607,8 +668,8 @@ serve(async (req) => {
                     if (!orderError) totalOrdersUpdated++;
                   }
                   
-                  // ✅ تحقق اكتمال snapshot + إعادة محاولة واحدة (للفواتير غير المستلمة فقط)
-                  if (!isReceived) {
+                  // ✅ لا نعمل retry داخل نفس التشغيل؛ التشغيل التالي يكمل بدون تجاوز حد الوسيط.
+                  if (false && !isReceived) {
                     const expected = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
                     let { count: dioNow } = await supabase
                       .from('delivery_invoice_orders')
@@ -689,7 +750,11 @@ serve(async (req) => {
                 console.error(`Error syncing orders for invoice ${externalId}:`, ordersError);
               }
             } else if (sync_orders && upsertedInvoice?.id && expectedCount > 0) {
-              console.log(`  ✅ Invoice ${externalId} orders cache already complete: have=${cachedOrdersCount}, expected=${expectedCount}`);
+              if (cachedOrdersCount >= expectedCount) {
+                console.log(`  ✅ Invoice ${externalId} orders cache already complete: have=${cachedOrdersCount}, expected=${expectedCount}`);
+              } else {
+                console.log(`  ⏭️ Invoice ${externalId} order details deferred to next sync (budget ${orderDetailsFetchedForToken}/${MAX_ORDER_DETAILS_PER_TOKEN})`);
+              }
             }
           }
         }
