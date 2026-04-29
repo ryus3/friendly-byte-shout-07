@@ -18,9 +18,28 @@ serve(async (req) => {
     
     console.log('📦 MODON Proxy Request:', { endpoint, method, isFormData });
 
+    // 🔑 CRITICAL FIX (per https://modon-express.com/api-doc):
+    //   MODON requires the auth token to be passed as a QUERY STRING parameter
+    //   on ALL authenticated endpoints, e.g. /create-order?token=loginToken
+    //   The Authorization: Bearer header is NOT what MODON checks for these
+    //   merchant endpoints — passing the token only in the header was the
+    //   reason create-order/edit-order/delete_orders kept returning
+    //   errNum:21 ("ليس لديك صلاحية الوصول") even when the token was valid.
+    //   Listing/invoice endpoints already worked because the frontend was
+    //   passing { token } in queryParams for them.
+    const mergedQueryParams: Record<string, string> = {};
+    if (queryParams && typeof queryParams === 'object') {
+      for (const [k, v] of Object.entries(queryParams)) {
+        mergedQueryParams[k] = String(v);
+      }
+    }
+    if (token && endpoint !== 'login' && !mergedQueryParams.token) {
+      mergedQueryParams.token = String(token);
+    }
+
     let suffix = `/${endpoint}`;
-    if (queryParams) {
-      const params = new URLSearchParams(queryParams);
+    if (Object.keys(mergedQueryParams).length > 0) {
+      const params = new URLSearchParams(mergedQueryParams);
       suffix += `?${params.toString()}`;
     }
     let url = `${MODON_PROXY_URL}${suffix}`;
@@ -36,7 +55,9 @@ serve(async (req) => {
       headers['Content-Type'] = 'application/json';
     }
 
-    if (token) {
+    // Keep Authorization header as a redundant best-effort.
+    // Primary auth source is the ?token=... query param above.
+    if (token && endpoint !== 'login') {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
