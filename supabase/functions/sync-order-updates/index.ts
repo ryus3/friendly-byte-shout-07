@@ -450,45 +450,34 @@ Deno.serve(async (req) => {
         const currentFinalAmount = parseInt(String(localOrder.final_amount || 0));
         const newFinalAmount = parseInt(String(waseetOrder.price || 0));
         const currentDeliveryFee = parseInt(String(localOrder.delivery_fee || 0));
-        const currentDiscount = parseInt(String((localOrder as any).discount || 0));
-        const currentPriceChangeType = (localOrder as any).price_change_type;
 
-        // ✅ إعادة حساب الخصم حتى لو السعر لم يتغير (للطلبات التي تم تحديثها قبل الإصلاح)
-        const priceNeedsRecalculation = 
-          !isPartialDelivery && 
-          newFinalAmount > 0 && 
-          currentDiscount === 0 &&
-          currentPriceChangeType === null;
-
-        // تحديث السعر للطلبات العادية فقط
+        // ✅ تحديث السعر فقط عند تغيّر فعلي من الشريك (لا تخمين خصم وهمي)
         // ⚠️ هام: الـ triggers تحسب final_amount = total_amount + delivery_fee
         // لذلك يجب تحديث total_amount بدلاً من final_amount مباشرة
-        if (!isPartialDelivery && newFinalAmount > 0 && (currentFinalAmount !== newFinalAmount || priceNeedsRecalculation)) {
+        if (!isPartialDelivery && newFinalAmount > 0 && currentFinalAmount !== newFinalAmount) {
           // حساب total_amount الجديد (السعر الكلي - رسوم التوصيل)
           const newTotalAmount = Math.max(0, newFinalAmount - currentDeliveryFee);
-          
+
           // ✅ جلب السعر الأصلي للمنتجات من order_items
           const { data: orderItems } = await supabase
             .from('order_items')
             .select('unit_price, quantity')
             .eq('order_id', localOrder.id);
-          
+
           const originalProductsTotal = (orderItems || []).reduce(
             (sum: number, item: any) => sum + (parseInt(String(item.unit_price || 0)) * parseInt(String(item.quantity || 1))),
             0
           );
-          
-          // ✅ حساب الخصم/الزيادة (مثل AlWaseetContext.jsx)
+
+          // ✅ حساب الخصم/الزيادة (فقط عند تغير حقيقي للسعر من الشريك)
           const priceDiff = originalProductsTotal - newTotalAmount;
-          
+
           if (priceDiff > 0) {
-            // خصم
             updates.discount = priceDiff;
             updates.price_increase = 0;
             updates.price_change_type = 'discount';
             console.log(`🔻 خصم: ${priceDiff.toLocaleString()} د.ع (أصلي: ${originalProductsTotal}, جديد: ${newTotalAmount})`);
           } else if (priceDiff < 0) {
-            // زيادة
             updates.discount = 0;
             updates.price_increase = Math.abs(priceDiff);
             updates.price_change_type = 'increase';
@@ -498,9 +487,9 @@ Deno.serve(async (req) => {
             updates.price_increase = 0;
             updates.price_change_type = null;
           }
-          
+
           updates.total_amount = newTotalAmount;
-          updates.sales_amount = newTotalAmount; // ✅ تحديث sales_amount أيضاً
+          updates.sales_amount = newTotalAmount;
           priceChanged = true;
 
           console.log(`💵 تحديث السعر: original=${originalProductsTotal}, new=${newTotalAmount}, diff=${priceDiff}, delivery_fee=${currentDeliveryFee}`);
