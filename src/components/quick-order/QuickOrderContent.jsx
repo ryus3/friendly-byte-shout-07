@@ -735,7 +735,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             }
 
             // أحجام الطرود من الكاش (مع ترجمة عربية للأحجام الإنجليزية)
-            const MODON_SIZE_AR = { small:'صغير', medium:'وسط', middle:'وسط', large:'كبير', xlarge:'كبير جداً', xl:'كبير جداً', 'extra large':'كبير جداً', 'extra-large':'كبير جداً' };
+            const MODON_SIZE_AR = { normal:'عادي', regular:'عادي', standard:'عادي', small:'صغير', medium:'وسط', middle:'وسط', large:'كبير', xlarge:'كبير جداً', xl:'كبير جداً', 'x-large':'كبير جداً', 'x large':'كبير جداً', 'extra large':'كبير جداً', 'extra-large':'كبير جداً' };
             const trSize = (n) => {
               if (!n) return n;
               const k = String(n).trim().toLowerCase();
