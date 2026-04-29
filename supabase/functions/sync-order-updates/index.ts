@@ -103,6 +103,8 @@ Deno.serve(async (req) => {
 
     // 2️⃣ لكل توكن، جلب جميع طلباته من شركته (الوسيط/مدن)
     const allWaseetOrders: any[] = [];
+    // ✅ نتتبع أي (شريك + حساب) جلب رداً ناجحاً، لتجنب احتساب الطلب كمحذوف بسبب فشل API
+    const successfulFetches = new Set<string>();
     for (const tokenRecord of allTokens) {
       try {
         const partnerName = tokenRecord.partner_name || 'alwaseet';
@@ -130,6 +132,7 @@ Deno.serve(async (req) => {
             _partner: partnerName
           }));
           allWaseetOrders.push(...ordersWithAccount);
+          successfulFetches.add(`${partnerName}:${tokenRecord.account_username}`);
           console.log(`✅ تم جلب ${result.data.length} طلب من ${partnerName}/${tokenRecord.account_username}`);
         }
       } catch (tokenError) {
