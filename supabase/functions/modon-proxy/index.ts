@@ -169,13 +169,23 @@ serve(async (req) => {
         });
       }
 
-      // errNum:21 على endpoints أخرى = خطأ حقيقي (غالباً city/region غير صالح أو طلب مرفوض)
+      // errNum:21 على endpoints أخرى:
+      // - create-order/edit-order/delete_orders: السبب الأشيع هو "ليس لديك صلاحية الوصول"
+      //   وهذا تقريباً دائماً = التوكن لم يصل بصيغة query ?token=... كما تتطلبه مدن.
+      //   (لاحظنا هذا فعلياً في اللوج: msg = "ليس لديك صلاحية الوصول".)
+      //   تم إصلاح ذلك أعلاه بإضافة token تلقائياً إلى queryParams.
+      // - بقية الـ endpoints: قد يكون فعلاً خطأ مدينة/منطقة.
       if (data.errNum === 21 || data.errNum === '21') {
+        const isOrderMutation = ['create-order', 'edit-order', 'delete_orders'].includes(endpoint);
+        const friendlyMsg = isOrderMutation
+          ? `مدن رفضت إنشاء/تعديل/حذف الطلب: ${data.msg || 'ليس لديك صلاحية الوصول'}. ` +
+            `تحقّق من حساب مدن (هل هو فعّال ولديه صلاحية إنشاء طلبات؟)، ومن سلامة التوكن (سجّل دخول مدن مجدداً إن لزم).`
+          : `مدن رفضت العملية على ${endpoint}: ${data.msg || 'غير معروف'}.`;
         console.error(`❌ MODON رفض الطلب على endpoint=${endpoint} مع errNum:21 (${data.msg})`);
         return new Response(JSON.stringify({
           status: false,
           errNum: '21',
-          msg: `مدن رفضت الطلب على ${endpoint}: ${data.msg || 'غير معروف'}. تحقّق من المحافظة/المنطقة وكاش مدن، أو من صلاحية الحساب.`,
+          msg: friendlyMsg,
           originalMsg: data.msg,
           httpStatus: 400
         }), {
