@@ -6,12 +6,15 @@ import devLog from '@/lib/devLogger';
 // قائمة حالات التسليم المسموح حذفها للطلبات الخارجية
 const DELETABLE_DELIVERY_STATUSES = [
   'فعال',
-  'active', 
+  'active',
   'في انتظار استلام المندوب',
   'waiting for pickup',
   'pending pickup',
+  'pending',
+  'قيد الانتظار',
   'جديد',
   'new',
+  '1', // الوسيط: نشط
   'معطل',
   'غير فعال',
   'disabled',
@@ -38,8 +41,13 @@ export const canDeleteOrder = (order) => {
     isExternal: !!order.external_id
   });
 
-  const isLocalOrder = !order.external_id;
-  
+  // ✅ كشف الطلب الخارجي عبر الحقول الفعلية في DB:
+  //    delivery_partner_order_id أو tracking_number أو delivery_partner != 'محلي'
+  const partner = (order.delivery_partner || '').toString().toLowerCase().trim();
+  const hasPartnerId = !!(order.delivery_partner_order_id || order.tracking_number || order.external_id || order.qr_id);
+  const isExternalPartner = partner && partner !== 'محلي' && partner !== 'local';
+  const isLocalOrder = !hasPartnerId && !isExternalPartner;
+
   if (isLocalOrder) {
     // الطلبات المحلية: فقط إذا كانت في انتظار
     const canDelete = order.status === 'pending';
@@ -76,10 +84,12 @@ export const canDeleteOrder = (order) => {
  * @returns {boolean}
  */
 export const isBeforePickup = (order) => {
-  if (!order || !order.external_id) return false;
-  
+  if (!order) return false;
+  const hasPartnerId = !!(order.delivery_partner_order_id || order.tracking_number || order.external_id || order.qr_id);
+  if (!hasPartnerId) return false;
+
   const deliveryStatus = (order.delivery_status || '').toLowerCase().trim();
-  return DELETABLE_DELIVERY_STATUSES.some(status => 
+  return DELETABLE_DELIVERY_STATUSES.some(status =>
     deliveryStatus.includes(status.toLowerCase())
   );
 };

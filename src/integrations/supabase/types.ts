@@ -1842,6 +1842,60 @@ export type Database = {
         }
         Relationships: []
       }
+      delivery_partners_registry: {
+        Row: {
+          auth_strategy: Json
+          auth_type: string
+          base_url: string
+          created_at: string
+          display_name_ar: string
+          display_name_en: string | null
+          endpoints: Json
+          id: string
+          is_active: boolean
+          is_builtin: boolean
+          notes: string | null
+          partner_key: string
+          proxy_url: string | null
+          status_map: Json
+          updated_at: string
+        }
+        Insert: {
+          auth_strategy?: Json
+          auth_type?: string
+          base_url: string
+          created_at?: string
+          display_name_ar: string
+          display_name_en?: string | null
+          endpoints?: Json
+          id?: string
+          is_active?: boolean
+          is_builtin?: boolean
+          notes?: string | null
+          partner_key: string
+          proxy_url?: string | null
+          status_map?: Json
+          updated_at?: string
+        }
+        Update: {
+          auth_strategy?: Json
+          auth_type?: string
+          base_url?: string
+          created_at?: string
+          display_name_ar?: string
+          display_name_en?: string | null
+          endpoints?: Json
+          id?: string
+          is_active?: boolean
+          is_builtin?: boolean
+          notes?: string | null
+          partner_key?: string
+          proxy_url?: string | null
+          status_map?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       department_manager_profit_rules: {
         Row: {
           category_id: string | null
@@ -4174,6 +4228,7 @@ export type Database = {
           order_number: string
           order_type: string | null
           original_order_id: string | null
+          partner_missed_count: number
           payment_received_source_id: string | null
           payment_status: string
           price_change_type: string | null
@@ -4230,6 +4285,7 @@ export type Database = {
           order_number: string
           order_type?: string | null
           original_order_id?: string | null
+          partner_missed_count?: number
           payment_received_source_id?: string | null
           payment_status?: string
           price_change_type?: string | null
@@ -4286,6 +4342,7 @@ export type Database = {
           order_number?: string
           order_type?: string | null
           original_order_id?: string | null
+          partner_missed_count?: number
           payment_received_source_id?: string | null
           payment_status?: string
           price_change_type?: string | null
