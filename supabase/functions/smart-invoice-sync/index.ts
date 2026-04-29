@@ -9,9 +9,15 @@ const corsHeaders = {
 // ✅ API Base URLs for both delivery partners
 const ALWASEET_API_BASE = 'https://api.ryusbrand.com/alwaseet/v1/merchant';
 const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
-const MAX_INVOICES_PER_TOKEN = 5;
-const MAX_ORDER_DETAILS_PER_TOKEN = 2;
-const ORDER_DETAILS_GAP_MS = 1200;
+// 🛡️ ميزانيات آمنة:
+// - عدد الفواتير المعالجة في كل دورة (أحدث أولاً + الناقصة).
+// - عدد جلب تفاصيل طلبات الفاتورة في الدورة الواحدة (لتجنب rate limit).
+// - الفجوة الزمنية بين كل استدعاء تفاصيل وآخر.
+// المنطق الجديد يعطي أولوية للفواتير التي orders_count > 0 وعدد طلباتها المخزن أقل من المتوقع
+// (سواء جديدة أو مستلمة لكن طلباتها لم تُجلب بعد).
+const MAX_INVOICES_PER_TOKEN = 25;
+const MAX_ORDER_DETAILS_PER_TOKEN = 8;
+const ORDER_DETAILS_GAP_MS = 900;
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
@@ -20,6 +26,10 @@ interface SyncRequest {
   sync_orders?: boolean;
   force_refresh?: boolean;
   run_reconciliation?: boolean;
+  // 🆕 وضع موجه: عند فتح فاتورة من الواجهة وكانت طلباتها ناقصة، نمرر external_id الخاص بها
+  // لتُعالج فوراً بدون انتظار الميزانية، بدون تأثير على باقي الفواتير.
+  target_invoice_external_id?: string;
+  target_invoice_partner?: 'alwaseet' | 'modon';
 }
 
 interface Invoice {
