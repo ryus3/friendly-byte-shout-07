@@ -748,6 +748,8 @@ const DeliveryPartnerDialog = ({ open, onOpenChange }) => {
                         </motion.div>
                     </AnimatePresence>
 
+                    <AddDeliveryPartnerSection />
+
                      <DialogFooter>
                         <Button 
                             type="submit" 
