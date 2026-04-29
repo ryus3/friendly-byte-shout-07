@@ -61,6 +61,19 @@ export const useAlWaseetInvoices = () => {
       }
     } catch {/* silent */}
 
+    // ✅ عرض فوري للكاش (لا تفريغ شاشة) — ثم نحاول API بهدوء بالخلفية
+    if (cachedFromDb.length > 0) {
+      const sortedCache = [...cachedFromDb].sort((a, b) => {
+        const aIsPending = a.status !== 'تم الاستلام من قبل التاجر';
+        const bIsPending = b.status !== 'تم الاستلام من قبل التاجر';
+        if (aIsPending && !bIsPending) return -1;
+        if (!aIsPending && bIsPending) return 1;
+        return new Date(b.updated_at || 0) - new Date(a.updated_at || 0);
+      });
+      setInvoices(sortedCache);
+      setLoading(false);
+    }
+
     try {
       // 2) محاولة الجلب من توكنات المستخدم النشطة
       const { data: userTokens, error: tokensError } = await supabase
