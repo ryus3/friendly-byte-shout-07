@@ -273,7 +273,7 @@ return this.fetch('all_data', async () => {
       product_seasons_occasions (seasons_occasions (id, name, type))
     `).order('created_at', { ascending: false }),
     
-    // الطلبات مع العناصر - ترتيب حسب آخر تحديث (updated_at) لإظهار الطلبات المحدثة أولاً
+    // الطلبات مع العناصر
     supabase.from('orders').select(`
       *,
       order_items (
@@ -285,47 +285,37 @@ return this.fetch('all_data', async () => {
           sizes (name)
         )
       )
-    `).order('status_changed_at', { ascending: false }), // ترتيب حسب آخر تغيير في الحالة
+    `).order('status_changed_at', { ascending: false }),
     
     // العملاء من VIEW الموحد (مع RLS تلقائياً)
     supabase.from('customers_unified_loyalty')
       .select('*')
       .order('total_points', { ascending: false }),
+    supabase.from('cash_sources').select('*').order('created_at', { ascending: false }),
+    supabase.from('settings').select('*'),
+    supabase.from('profiles').select('user_id, full_name, employee_code, status'),
+  ]);
+
+  // فشل حرج فقط إن فشلت products أو orders
+  if (products.error) throw products.error;
+  if (orders.error) throw orders.error;
+
+  // ⚡ Phase 2: البيانات غير الحرجة (تجلب فوراً بالتوازي مع lookup إن احتجنا)
+  // نُكملها بنفس الطلب لكن لا نحجز عليها الواجهة الأولية في getAllDataPhased
+  const phase2Promise = Promise.all([
     supabase.from('purchases').select('*').order('created_at', { ascending: false }),
     supabase.from('expenses').select('*').order('created_at', { ascending: false }),
     supabase.from('profits').select('*').order('created_at', { ascending: false }),
-    supabase.from('cash_sources').select('*').order('created_at', { ascending: false }),
-    supabase.from('settings').select('*'),
     supabase.from('employee_profit_rules').select('*'),
-    supabase.from('profiles').select('user_id, full_name, employee_code, status'),
     supabase.from('customer_loyalty').select('*'),
     supabase.from('loyalty_tiers').select('*'),
     supabase.from('order_discounts').select('*').order('created_at', { ascending: false }),
-    
-    // بيانات المرشحات
-    supabase.from('colors').select('*').order('name'),
-    supabase.from('sizes').select('*').order('name'),
-    supabase.from('categories').select('*').order('name'),
-    supabase.from('departments').select('*').order('name'),
-    supabase.from('product_types').select('*').order('name'),
-    supabase.from('seasons_occasions').select('*').order('name')
   ]);
 
-  // التحقق من الأخطاء
-  const responses = [products, orders, customers, purchases, expenses, profits, 
-                    cashSources, settings, aiOrders, profitRules, profiles, orderDiscounts, colors, sizes, 
-                    categories, departments, productTypes, seasons];
-  
-  // لا نفشل الطلب بالكامل إلا إذا فشلت الجداول الحرجة (products أو orders)
-  if (products.error) {
-    throw products.error;
-  }
-  if (orders.error) {
-    throw orders.error;
-  }
-  
-  // السجلات غير الحرجة: نسجل تحذيراً ونكمل بجداول فارغة لضمان تحميل الواجهة
-  const nonCritical = { customers, purchases, expenses, profits, cashSources, settings, aiOrders, profitRules, profiles, orderDiscounts, colors, sizes, categories, departments, productTypes, seasons };
+  const [purchases, expenses, profits, profitRules, customerLoyalty, loyaltyTiers, orderDiscounts] = await phase2Promise;
+
+  // lookup tables: من الكاش أو من الجلب الجديد
+  const lookup = lookupCached || (await lookupPromise);
 
   const allData = {
     // البيانات الأساسية
@@ -342,15 +332,15 @@ return this.fetch('all_data', async () => {
     employeeProfitRules: profitRules.data || [],
     users: profiles.data || [],
     orderDiscounts: orderDiscounts.data || [],
-    
-    // بيانات المرشحات
-    colors: colors.data || [],
-    sizes: sizes.data || [],
-    categories: categories.data || [],
-    departments: departments.data || [],
-    productTypes: productTypes.data || [],
-    seasons: seasons.data || [],
-    
+
+    // بيانات المرشحات (من الكاش أو الجلب)
+    colors: lookup?.colors || [],
+    sizes: lookup?.sizes || [],
+    categories: lookup?.categories || [],
+    departments: lookup?.departments || [],
+    productTypes: lookup?.productTypes || [],
+    seasons: lookup?.seasons || [],
+
     // معلومات النظام
     fetchedAt: new Date(),
     totalItems: {
