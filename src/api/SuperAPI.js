@@ -175,8 +175,58 @@ class SuperAPI {
   // APIs الموحدة
   // ==============
 
+  // ⚡ كاش lookup tables (24h TTL في localStorage) — آمن: بيانات مرجعية فقط
+  LOOKUP_TTL_MS = 24 * 60 * 60 * 1000;
+  LOOKUP_KEY = 'superapi_lookup_v1';
+
+  readLookupCache() {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(this.LOOKUP_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.ts) return null;
+      if (Date.now() - parsed.ts > this.LOOKUP_TTL_MS) return null;
+      return parsed.data;
+    } catch { return null; }
+  }
+
+  writeLookupCache(data) {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(this.LOOKUP_KEY, JSON.stringify({ ts: Date.now(), data }));
+    } catch {}
+  }
+
+  invalidateLookupCache() {
+    if (typeof window === 'undefined') return;
+    try { localStorage.removeItem(this.LOOKUP_KEY); } catch {}
+  }
+
+  async fetchLookupTables() {
+    const [colors, sizes, categories, departments, productTypes, seasons] = await Promise.all([
+      supabase.from('colors').select('*').order('name'),
+      supabase.from('sizes').select('*').order('name'),
+      supabase.from('categories').select('*').order('name'),
+      supabase.from('departments').select('*').order('name'),
+      supabase.from('product_types').select('*').order('name'),
+      supabase.from('seasons_occasions').select('*').order('name'),
+    ]);
+    const data = {
+      colors: colors.data || [],
+      sizes: sizes.data || [],
+      categories: categories.data || [],
+      departments: departments.data || [],
+      productTypes: productTypes.data || [],
+      seasons: seasons.data || [],
+    };
+    this.writeLookupCache(data);
+    return data;
+  }
+
   /**
-   * جلب جميع البيانات مرة واحدة - بدلاً من 170+ طلب!
+   * جلب جميع البيانات - Phase 1 (حرج) + Phase 2 (خلفي)
+   * النتيجة: نفس الشكل القديم، بدون كسر أي مستهلك.
    */
   async getAllData() {
 return this.fetch('all_data', async () => {
@@ -191,29 +241,22 @@ return this.fetch('all_data', async () => {
     aiOrders = { data: [], error: null };
   }
 
-  // طلب واحد كبير بدلاً من 170+ طلب منفصل
+  // ⚡ Lookup tables من الكاش إن توفر (مرجعي فقط — لا تأثير على الجرد)
+  let lookupCached = this.readLookupCache();
+  let lookupPromise = null;
+  if (!lookupCached) {
+    // أول مرة أو انتهت 24h: ضمّ الجلب مع Phase 1
+    lookupPromise = this.fetchLookupTables();
+  }
+
+  // ⚡ Phase 1: البيانات الحرجة فقط (تظهر بها الواجهة)
   const [
     products,
     orders,
     customers,
-    purchases,
-    expenses,
-    profits,
     cashSources,
     settings,
-    profitRules,
     profiles,
-    customerLoyalty,
-    loyaltyTiers,
-    orderDiscounts,
-    
-    // بيانات المرشحات
-    colors,
-    sizes,
-    categories,
-    departments,
-    productTypes,
-    seasons
   ] = await Promise.all([
     // المنتجات مع كل شيء - إصلاح ربط المخزون
     supabase.from('products').select(`
