@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingCart, Bot, Home, Search, Menu, User, Settings, Package, DollarSign } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -13,7 +13,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
-import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
+const BarcodeScannerDialog = lazy(() => import('@/components/products/BarcodeScannerDialog'));
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 
 const NavButton = React.forwardRef(({ onClick, icon: Icon, label, className, badgeCount, isActive, ...props }, ref) => (
@@ -291,11 +291,15 @@ const SearchSheet = ({ children, open, onOpenChange }) => {
           )}
         </div>
       </SheetContent>
-      <BarcodeScannerDialog
-        open={isQRCodeOpen}
-        onOpenChange={setIsQRCodeOpen}
-        onScanSuccess={handleQRCodeScan}
-      />
+      {isQRCodeOpen && (
+        <Suspense fallback={null}>
+          <BarcodeScannerDialog
+            open={isQRCodeOpen}
+            onOpenChange={setIsQRCodeOpen}
+            onScanSuccess={handleQRCodeScan}
+          />
+        </Suspense>
+      )}
     </Sheet>
   );
 };

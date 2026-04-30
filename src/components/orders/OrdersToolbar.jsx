@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, lazy, Suspense } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Filter, Grid3X3, List, LayoutGrid, QrCode, Trash2, RotateCcw } from 'lucide-react';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
-import QROrderScanner from './QROrderScanner';
+const QROrderScanner = lazy(() => import('./QROrderScanner'));
 import { AutoDeleteLogDialog } from './AutoDeleteLogDialog';
 import { ReturnOrdersDialog } from './ReturnOrdersDialog';
 import {
@@ -210,12 +210,16 @@ const OrdersToolbar = ({ filters, onFiltersChange, viewMode, onViewModeChange, o
       </div>
 
       {/* QR Scanner Dialog */}
-      <QROrderScanner
-        isOpen={showQRScanner}
-        onClose={() => setShowQRScanner(false)}
-        onOrderFound={onOrderFound}
-        onUpdateOrderStatus={onUpdateOrderStatus}
-      />
+      {showQRScanner && (
+        <Suspense fallback={null}>
+          <QROrderScanner
+            isOpen={showQRScanner}
+            onClose={() => setShowQRScanner(false)}
+            onOrderFound={onOrderFound}
+            onUpdateOrderStatus={onUpdateOrderStatus}
+          />
+        </Suspense>
+      )}
 
       {/* Return Orders Dialog */}
       <ReturnOrdersDialog 

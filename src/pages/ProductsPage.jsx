@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useLocation } from 'react-router-dom';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -21,7 +21,7 @@ import ProductFilters from '@/components/products/ProductFilters';
 import AdvancedProductFilters from '@/components/products/AdvancedProductFilters';
 import QuickOrderDialog from '@/components/quick-order/QuickOrderDialog';
 import ProductVariantDialog from '@/components/products/ProductVariantDialog';
-import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
+const BarcodeScannerDialog = lazy(() => import('@/components/products/BarcodeScannerDialog'));
 import { RefreshCacheButton } from '@/components/products/RefreshCacheButton';
 import { toast } from '@/components/ui/use-toast';
 
@@ -367,13 +367,17 @@ const ProductsPage = () => {
         onCreateOrder={handleCreateOrder}
       />
 
-      <BarcodeScannerDialog
-        open={dialogs.barcodeScanner}
-        onOpenChange={(open) => setDialogs(prev => ({ ...prev, barcodeScanner: open }))}
-        onScanSuccess={handleBarcodeScan}
-        mode="cart"
-        title="مسح وإضافة للسلة"
-      />
+      {dialogs.barcodeScanner && (
+        <Suspense fallback={null}>
+          <BarcodeScannerDialog
+            open={dialogs.barcodeScanner}
+            onOpenChange={(open) => setDialogs(prev => ({ ...prev, barcodeScanner: open }))}
+            onScanSuccess={handleBarcodeScan}
+            mode="cart"
+            title="مسح وإضافة للسلة"
+          />
+        </Suspense>
+      )}
 
       <AdvancedProductFilters
         open={dialogs.advancedFilters}

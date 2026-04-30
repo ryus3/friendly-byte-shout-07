@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, lazy, Suspense } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,7 @@ import { QRButton } from '@/components/ui/qr-button';
 import { useInventory } from '@/contexts/InventoryContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
-import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
+const BarcodeScannerDialog = lazy(() => import('@/components/products/BarcodeScannerDialog'));
 import ProductSelectionDialog from '@/components/products/ProductSelectionDialog';
 
 const CartDialog = ({ open, onOpenChange, onCheckout }) => {
@@ -194,11 +194,15 @@ const CartDialog = ({ open, onOpenChange, onCheckout }) => {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-    <BarcodeScannerDialog
-      open={isScannerOpen}
-      onOpenChange={setIsScannerOpen}
-      onScanSuccess={handleScanSuccess}
-    />
+    {isScannerOpen && (
+      <Suspense fallback={null}>
+        <BarcodeScannerDialog
+          open={isScannerOpen}
+          onOpenChange={setIsScannerOpen}
+          onScanSuccess={handleScanSuccess}
+        />
+      </Suspense>
+    )}
     <ProductSelectionDialog
         open={isProductSelectorOpen}
         onOpenChange={setIsProductSelectorOpen}
