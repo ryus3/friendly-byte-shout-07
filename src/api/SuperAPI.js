@@ -485,10 +485,11 @@ return this.fetch('all_data', async () => {
    * اشتراك موحد للتحديثات الفورية
    */
   setupRealtimeSubscriptions(callback) {
-    // ⚡ ai_orders مُضافة للقائمة مع استثناء خاص لـ invalidate
-    const tables = ['orders', 'order_items', 'products', 'inventory', 'expenses', 'notifications', 'ai_orders'];
-    
-    tables.forEach(table => {
+    // ⚡ تقسيم القنوات: حرجة (فوراً) + ثانوية (متأخرة 1500ms لتسريع الإقلاع)
+    const criticalTables = ['orders', 'order_items', 'notifications'];
+    const secondaryTables = ['products', 'inventory', 'expenses', 'ai_orders'];
+
+    const subscribe = (table) => {
       const channel = supabase
         .channel(`unified_${table}`)
         .on('postgres_changes', {
@@ -496,26 +497,30 @@ return this.fetch('all_data', async () => {
           schema: 'public',
           table: table
         }, (payload) => {
-          // معالجة فورية للطلبات وعناصرها بدون تأخير
           if (table === 'orders' || table === 'order_items') {
-            // إبطال فوري للطلبات فقط
             this.invalidate('orders_only');
           } else if (table === 'ai_orders') {
             // ⚡ لا invalidate للطلبات الذكية - التحديث المباشر في SuperProvider يكفي
           } else if (table === 'products' || table === 'inventory') {
-            // ⚡ فقط invalidate المنتجات - ليس كل البيانات
             this.invalidate('products_only');
           } else {
-            // حذف البيانات المحفوظة بشكل مجمّع للجداول الأخرى
             this.debouncedInvalidateAll(200);
           }
-          
+
           if (callback) callback(table, payload);
         })
         .subscribe();
-      
+
       this.subscriptions.set(table, channel);
-    });
+    };
+
+    // قنوات حرجة فوراً
+    criticalTables.forEach(subscribe);
+
+    // قنوات ثانوية مؤجلة لتقليل الضغط أثناء الإقلاع
+    setTimeout(() => {
+      secondaryTables.forEach(subscribe);
+    }, 1500);
   }
 
   /**
