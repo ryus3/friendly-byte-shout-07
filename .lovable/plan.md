@@ -1,176 +1,234 @@
+## التشخيص المؤكد
 
-# خطة تحسين شاملة (بدون كسر أي وظيفة)
+### مشكلة الطلب 140222501
 
-## 1) لماذا الموقع ثقيل عند الفتح؟ (التشخيص الفعلي)
+الطلب موجود محلياً:
 
-بعد فحص دقيق للكود، هذه هي الأسباب الحقيقية للبطء عند الإقلاع:
+- `tracking_number = 140222501`
+- `delivery_partner = alwaseet`
+- `delivery_account_used = alshmry94`
+- `created_by = 91484496-b887-44f7-9e5d-be9db5567604`
+- `partner_missed_count = 0`
+- `last_synced_at = null`
 
-### أ. ملف `AlWaseetContext.jsx` ضخم جداً (5,769 سطر / 265 KB)
-- يُحمَّل **بالكامل عند كل إقلاع** قبل ظهور أي شيء على الشاشة لأنه `Provider` عام في `Providers.jsx`.
-- هذا أكبر مسبب للبطء عند فتح الموقع.
+سبب عدم حذفه تلقائياً ليس أن النظام لا يعرف الموظف أو التوكن، بل لأن `sync-order-updates` يفشل في جلب قائمة AlWaseet قبل أن يصل لمرحلة إثبات الحذف.
 
-### ب. `SuperProvider.jsx` ضخم (3,400 سطر / 148 KB)
-- يحتوي على دوال متشعّبة + `useEffect`s متعددة + جلب بيانات أولي ثقيل.
+السجلات تؤكد:
 
-### ج. مكتبات ثقيلة تُستورد بشكل ساكن (static) في صفحات مرئية:
-- `recharts` (MiniChart, ProfessionalReportsSystem, UnifiedAnalyticsSystem) — لا يجب تحميلها قبل أن يفتح المستخدم صفحة التحليلات.
-- `@react-pdf/renderer` (PDFDownloadLink) — تُستورد ساكنة في `ProfessionalReportsSystem`.
-- `html5-qrcode` — تُستورد ساكنة في `BarcodeInventoryPage`.
-- `framer-motion` مستخدم في 60+ ملف (هذا جيد لأنه مُجزّأ في chunk).
+```text
+خطأ في جلب طلبات alshmry94: HTTP 400
+الطلب 140222501 غير موجود لكن لم يصل رد ناجح من alwaseet - تخطي بأمان
+```
 
-### د. اشتراكات Realtime مكررة ومبعثرة
-- يوجد **27 قناة realtime منفصلة** عبر السياقات والـ hooks. كل قناة = اتصال WebSocket، تأخير عند الإقلاع، استهلاك ذاكرة.
-- بعض القنوات تستخدم `Date.now()` في اسم القناة → **تسريب** عند كل إعادة mount.
+وهذا التصرف آمن: النظام لا يحذف إذا فشل API، حتى لا نحذف طلبات صحيحة بسبب حظر/خطأ خارجي.
 
-### هـ. مكتبات موجودة في `package.json` غير مستخدمة فعلياً (تنفّخ bundle):
-- `formik` → 0 استخدام في الكود.
-- `uuid` → 0 استخدام في الكود.
-- `react-helmet` (القديم) → الكود يستخدم `react-helmet-async` فقط.
-- `@babel/parser`, `@babel/traverse`, `@babel/generator`, `@babel/types` → موجودة كـ dependencies للمستخدم النهائي رغم أنها للـ build فقط (موجودة في `external` في vite، لكن npm يحمّلها).
+السبب التقني الواضح:
 
-### و. ملفات/سياقات ميتة لا تُستورد من أي مكان:
-- `src/contexts/AlWaseetContext_hasValidTokenForAccount.jsx` (0 imports)
-- `src/contexts/SuperProvider_DeliveryOrderHandler.jsx` (0 imports)
-- `src/lib/barcode-migration.js` (0 imports)
+- `sync-order-updates` يستخدم لـ AlWaseet الرابط المباشر:
+  `https://api.alwaseet-iq.net/v1/merchant`
+- بينما باقي النظام يستخدم الـ static proxy الصحيح:
+  `https://api.ryusbrand.com/alwaseet/v1/merchant`
+- لذلك AlWaseet يرجع `HTTP 400` لكل الحسابات، ولا يتم احتساب `partner_missed_count` ولا الحذف.
 
-### ز. `setInterval` للـ Service Worker كل ساعة + offlineSync كل 30 ثانية
-- يضيف ضغطاً مستمراً على الـ Main Thread.
+### هل يعرف الطلب لأي موظف وتوكن ينتمي؟
 
----
+نعم، قاعدة البيانات تعرف ذلك من:
 
-## 2) لماذا تطلب pos.ryusbrand.com تسجيل الدخول كل مرة؟
+- `orders.created_by`
+- `orders.delivery_partner`
+- `orders.delivery_account_used`
 
-### السبب الجذري (مؤكَّد من الكود + auth-logs)
-في `src/integrations/supabase/client.ts`:
+لكن منطق الـ Edge Function الحالي يتحقق من نجاح جلب نفس الحساب بهذا المفتاح:
+
+```text
+partner + account_username
+```
+
+وبما أن الجلب فاشل، لا يسمح بالحذف. هذا صحيح أمنياً، لكن يحتاج إصلاح مسار API.
+
+### هل هناك ضغط عالي؟
+
+حالياً يوجد ضغط غير مثالي:
+
+- عند فتح صفحة الطلبات يتم تشغيل `syncVisibleOrdersBatch`.
+- وبعد 5 ثوان يتم تشغيل `sync-order-updates` أيضاً.
+- في AlWaseetContext توجد منطق مزامنة وحذف كثيرة وقديمة ومتداخلة.
+
+لكن بالنسبة لهذا الطلب تحديداً: السبب المباشر هو فشل AlWaseet HTTP 400 بسبب عدم استخدام proxy في `sync-order-updates`.
+
+## الخطة الآمنة للتنفيذ
+
+### 1) إصلاح مسار AlWaseet داخل `sync-order-updates`
+
+تغيير مسار AlWaseet فقط إلى الـ static proxy:
+
 ```ts
-storage: localStorage,
-persistSession: true,
+if (partnerName === 'modon') {
+  baseUrl = 'https://api.ryusbrand.com/modon/v1/merchant';
+} else if (partnerName === 'alwaseet') {
+  baseUrl = 'https://api.ryusbrand.com/alwaseet/v1/merchant';
+} else {
+  baseUrl = partnerBaseMap[partnerName] || 'https://api.alwaseet-iq.net/v1/merchant';
+}
 ```
-الإعداد صحيح من حيث المبدأ، **لكن** السبب الفعلي ظاهر في auth-logs:
+
+بدون تغيير:
+
+- منطق الحذف 2-strike
+- منطق تحرير المخزون
+- منطق الفواتير
+- RLS
+- بوت التليغرام
+- التريغرات المالية/المخزنية
+
+### 2) جعل المطابقة عالمية وآمنة للحسابات المشتركة
+
+سأعدّل داخل `sync-order-updates` منطق `successfulFetches` ليكون أدق:
+
+- النجاح يُسجل حسب:
+  `partner + account_username`
+- والطلب يُطابق فقط على نفس:
+  `delivery_partner + delivery_account_used`
+- إذا كان نفس حساب شركة التوصيل مستخدماً عند أكثر من موظف، لا نخلط الطلبات بين الموظفين، بل نستخدم اسم الحساب كشاهد أساسي، ومعرّفات الطلب (`id/qr/tracking`) كشاهد المطابقة.
+
+المبدأ:
+
+```text
+لا حذف إلا إذا:
+1. جلب الحساب الصحيح نجح فعلاً
+2. الطلب غير موجود في نتيجة الحساب الصحيح
+3. تكرر الغياب مرتين 2-strike
+4. لا توجد حماية مالية تمنع الحذف الفعلي
 ```
-"error_code":"refresh_token_not_found"
-"400: Invalid Refresh Token: Refresh Token Not Found"
+
+هذا يضمن أنه يعرف الطلب لأي توكن/حساب ينتمي ولا يحذف بسبب فشل API أو حساب خطأ.
+
+### 3) تحسين سجل الأخطاء لتشخيص التوكن بدون كشف أسرار
+
+سأضيف logging آمن في Edge Function:
+
+- الحساب
+- الشريك
+- status code
+- `errNum` إن وجد
+- بدون طباعة التوكن
+
+حتى إذا رجع AlWaseet `errNum:21` نعرف هل المشكلة صلاحية endpoint أو توكن فعلاً، بدون تعطيل الحساب تلقائياً.
+
+### 4) إصلاح خطأ `modon_cities_cache` بدون تغيير قاعدة البيانات
+
+الكونسول يظهر:
+
+```text
+Could not find table public.modon_cities_cache
 ```
-ثم بعدها مباشرة login جديد. أي أن `localStorage` للجلسة **يُمسَح** بين الزيارات على هذا الدومين. الأسباب المحتملة:
 
-1. **`Service Worker` القديم** يحتوي على code يمسح storage عند update (تحقق من `public/sw.js`).
-2. **Capacitor**: المشروع يحتوي على إعدادات Capacitor → قد يكون هناك تعارض.
-3. **Cross-Origin-Embedder-Policy: credentialless** في `vite.config.js` → يؤثر على iframe لكن ليس على الدومين الإنتاجي.
-4. الأهم: في `main.jsx` السطر 47-49، عند تحديث SW يُعرض `confirm()` ثم `window.location.reload()` — هذا لا يمسح الجلسة، لكن يجب التأكد من `sw.js` نفسه.
+الجدول غير موجود فعلاً، والموجود هو النظام الموحد:
 
-### الحل المخطط
-- التحقق من `public/sw.js` وإزالة أي `caches.delete` أو `clients.claim` يؤثر على localStorage.
-- تأكيد `flowType: 'pkce'` + `autoRefreshToken: true` (موجودان بالفعل).
-- إضافة معالج `visibilitychange` يستدعي `supabase.auth.refreshSession()` عند العودة للتاب — يحافظ على الجلسة طويلاً.
-- التأكد أن SW لا يستخدم `clients.claim()` بشكل عدواني.
+- `cities_master`
+- `regions_master`
+- `cities_cache`
+- `regions_cache`
 
----
+سأغيّر في `AlWaseetContext.jsx`:
 
-## 3) لماذا مزامنة مدن لا تُحدّث وقت "آخر مزامنة"؟
-
-في `sync-order-updates/index.ts` (السطر 132):
-```ts
-const apiUrl = `${baseUrl.replace(/\/$/, '')}/merchant-orders?token=...`;
-const response = await fetch(apiUrl, ...);
-```
-الـ Edge Function تستدعي `mcht.modon-express.net` **مباشرة** (بدون proxy ثابت IP)، وWAF Cloudflare لمدن **يحجب IPات Supabase Edge** → الطلب يفشل → `successfulFetches` لا يضيف مدن → `last_sync_at` لا يُحدَّث.
-
-### الحل
-- استخدام `https://api.ryusbrand.com/modon/v1/merchant` (الـ proxy ثابت IP، نفس ما يستخدمه `modon-proxy`) بدلاً من URL مباشر داخل `sync-order-updates`.
-- إضافة **Heartbeat**: حتى لو فشل الجلب، يُحدَّث `last_sync_at` كل دورة لأن السكريبت "حاول"، مع تسجيل `last_sync_status='failed'` للتمييز. هذا يطمئن المستخدم أن النظام يعمل.
-
----
-
-## 4) خطة التنفيذ التفصيلية (آمنة 100%)
-
-### المرحلة A — تنظيف Bundle (تقليل الحجم ~30%)
-
-**A1.** حذف الملفات الميتة (0 imports → آمن تماماً):
-- `src/contexts/AlWaseetContext_hasValidTokenForAccount.jsx`
-- `src/contexts/SuperProvider_DeliveryOrderHandler.jsx`
-- `src/lib/barcode-migration.js`
-
-**A2.** إزالة dependencies غير مستخدمة من `package.json`:
-- `formik` (0 استخدام)
-- `uuid` (0 استخدام — `crypto.randomUUID()` أو الموجود يكفي)
-- `react-helmet` (الكود يستخدم `react-helmet-async`)
-
-**A3.** Lazy-load المكتبات الثقيلة:
-- `recharts` → تحويل `MiniChart`, `UnifiedAnalyticsSystem`, `ProfessionalReportsSystem` إلى `React.lazy`.
-- `@react-pdf/renderer` → dynamic import داخل `ProfessionalReportsSystem` فقط عند الضغط على "تنزيل PDF".
-- `html5-qrcode` → dynamic import داخل `BarcodeInventoryPage` عند فتح المسح.
-
-### المرحلة B — تحسين السياقات (Providers)
-
-**B1.** تقسيم `AlWaseetContext.jsx` (5,769 سطر) ليصبح "lite" يبدأ سريعاً:
-- نقل دوال الفواتير الضخمة (`useAlWaseetInvoices` فعلياً) خارج الـ Provider.
-- استخدام `lazy` للجزء الذي يحتاج token + UI فقط عند الحاجة.
-- **بدون كسر أي API عام** — كل export يبقى كما هو.
-
-**B2.** تنظيف Realtime channels:
-- إزالة `Date.now()` من أسماء القنوات (يمنع تسرّب الاشتراكات).
-- توحيد قنوات orders/notifications في `realtime-setup.js` فقط (مرة واحدة عند login).
-
-### المرحلة C — إصلاح الجلسة الدائمة (POS)
-
-**C1.** فحص + تنظيف `public/sw.js`:
-- إزالة أي `caches.delete()` أثناء `activate`.
-- استخدام `self.skipWaiting()` فقط عند رسالة صريحة من المستخدم.
-- التأكد أن `clients.claim()` لا يحدث قبل تأكيد المستخدم.
-
-**C2.** إضافة استرجاع الجلسة عند العودة:
 ```js
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) supabase.auth.refreshSession();
-});
+activePartner === 'modon' ? 'modon_cities_cache' : 'cities_master'
 ```
 
-**C3.** زيادة JWT expiry في Supabase auth settings (الإعداد الافتراضي 1 ساعة → نقترح 7 أيام مع refresh rotation). **يتم إخبار المستخدم لتغييرها يدوياً في Supabase Dashboard** (لا يمكن تغييرها برمجياً).
+إلى استخدام `cities_master` أو جدول الكاش الموحد حسب النمط الحالي، حتى يتوقف الخطأ المتكرر عند فتح الموقع. هذا إصلاح آمن لأنه لا ينشئ جداول ولا يغير بيانات.
 
-### المرحلة D — مزامنة مدن (last_sync_at)
+### 5) سبب التحميل بعد السبلاش
 
-**D1.** تحديث `supabase/functions/sync-order-updates/index.ts`:
-- لمدن تحديداً: استخدام `https://api.ryusbrand.com/modon/v1/merchant` بدل `mcht.modon-express.net`.
-- إضافة Heartbeat: تحديث `last_sync_at` لكل توكن مدن **حتى لو فشل** (مع علامة `sync_status='proxy_failed'` إن وُجد عمود لذلك، وإلا نُحدِّث `last_sync_at` فقط).
+نعم كلامك صحيح: السبلاش يجب أن يغطي تحميل البداية. المشكلة الآن أن السبلاش ينتهي بعد 2.8 ثانية ثابتة، ثم التطبيق لا يزال ينتظر:
 
-### المرحلة E — التحذيرات (آمنة فقط)
+- `useAuth.loading`
+- `usePermissions.loading`
+- `SuperProvider.loading`
+- تحميل Dashboard الذي يشترط `inventoryLoading || loading || !user`
 
-سأصلح **فقط** التحذيرات الآمنة 100% (بدون لمس RLS أو search_path أو Telegram):
+لذلك يظهر Loader بعد السبلاش.
 
-**E1.** `Function components cannot be given refs` (`SystemNotificationIcon`):
-- إضافة `React.forwardRef` للمكون.
+### 6) إصلاح ظهور Loader بعد السبلاش بدون كسر النظام
 
-**E2.** `robots.txt` (موجود الآن).
+سأجعل السبلاش لا يختفي بالوقت فقط، بل يبقى إلى أن تنتهي المرحلة الأساسية:
 
-**E3.** ChunkLoadError prevention: إضافة retry للـ lazy imports.
+```text
+auth ready + permissions ready + أول بيانات أساسية جاهزة أو timeout آمن
+```
 
-### ما لن أصلحه (لتجنب التخريب):
-- ❌ `search_path` على دوال SECURITY DEFINER (سبق وكسر بوت تليغرام).
-- ❌ تعديل RLS policies على telegram_employee_codes / smart_orders.
-- ❌ تعديل أي trigger مرتبط بالمخزون أو القاصة.
+ثم يظهر التطبيق مباشرة، بدل:
 
----
+```text
+Splash -> Loader -> الصفحة
+```
 
-## 5) التأثير المتوقع
+ليصبح:
 
-| المجال | قبل | بعد |
-|---|---|---|
-| حجم Bundle الأولي | ~2.5 MB | ~1.4 MB |
-| First Contentful Paint | 4-6 ثوان | 1-1.5 ثانية |
-| تسجيل دخول متكرر | كل إغلاق متصفح | يبقى لأسابيع |
-| last_sync_at لمدن | لا يتحدّث | يتحدّث كل دورة |
-| تحذير ref على Toast | موجود | محلول |
-| ملفات ميتة | 3+ ملفات | 0 |
-| Dependencies غير مستخدمة | 3 | 0 |
+```text
+Splash -> الصفحة
+```
 
----
+مع timeout قصير حتى لا يعلق السبلاش إذا فشل طلب خارجي.
 
-## 6) ضمانات السلامة
+### 7) أسباب بطء فتح الموقع حالياً
 
-- **لا حذف لأي ملف مستخدم** — فقط ملفات بـ 0 imports مؤكد.
-- **لا تعديل لأي trigger أو RLS** على الجداول الحرجة.
-- **بوت Telegram لا يُلمَس إطلاقاً**.
-- **لا تغيير في منطق المخزون / القاصة / الأرباح**.
-- جميع التغييرات في طبقة العرض (lazy load) + Edge Function (proxy URL).
+الأسباب الأكبر التي وجدتها:
 
-هل أبدأ التنفيذ بهذا الترتيب: A → D → C → E → B (الأخفّ مخاطرة أولاً)؟
+1. `AlWaseetContext.jsx` ضخم جداً ويتم تحميله من البداية، رغم أن معظم وظائفه لا نحتاجها فور فتح الموقع.
+2. `SuperProvider` يجلب بيانات كثيرة جداً دفعة واحدة:
+   - products
+   - orders مع order_items
+   - customers
+   - purchases
+   - expenses
+   - profits
+   - cash sources
+   - settings
+   - filters
+   - profiles
+   - loyalty
+3. `UnifiedAuthContext` يجلب الصلاحيات، ثم `UnifiedPermissionsProvider` يجلب نفس الصلاحيات مرة ثانية تقريباً.
+4. `ProfitsProvider` يجلب profits وnotifications عند البداية، ثم `useUnifiedProfits` قد يعيد حسابات ثقيلة في Dashboard.
+5. خطأ `modon_cities_cache` يكرر طلبات فاشلة ويزيد الضجيج والبطء.
+6. صفحة الطلبات تشغل مزامنتين عند الدخول: مزامنة ظاهرة + Edge Function بعد 5 ثوان.
+
+### 8) تحسين الأداء بأقل مخاطرة الآن
+
+لن أعمل refactor كبير الآن. سأطبق فقط إصلاحات منخفضة المخاطرة:
+
+- إصلاح `modon_cities_cache`.
+- منع تحميل المدن/الأحجام عند الإقلاع إلا عند الحاجة الفعلية لإنشاء/تعديل طلب.
+- جعل السبلاش يغطي التحميل الأساسي بدل ظهور Loader بعده.
+- عدم تشغيل مزامنتين متداخلتين عند فتح صفحة الطلبات؛ نترك `sync-order-updates` للحذف الآمن، ونؤجل المزامنة المرئية أو نجعلها لا تعمل إذا كانت Edge Function قيد العمل.
+
+## ما لن أغيره
+
+- لا تعديل RLS.
+- لا تعديل search_path.
+- لا تعديل تريغرات المخزون/الكاش.
+- لا تعديل بوت التليغرام.
+- لا حذف أو تعطيل توكنات تلقائياً.
+- لا حذف الطلب مباشرة من قاعدة البيانات يدوياً.
+
+## نتيجة التنفيذ المتوقعة
+
+بعد التنفيذ:
+
+- AlWaseet sync سيستخدم المسار الصحيح مثل باقي النظام.
+- الطلب `140222501` سيتم فحصه من حساب `alshmry94` الصحيح.
+- إذا كان محذوفاً فعلاً من الشركة، سيزيد `partner_missed_count` في أول تشغيل، ثم يُحذف/يُلغى حسب الحماية المالية في التشغيل الثاني.
+- لن يحصل حذف عشوائي بسبب API فاشل.
+- سيقل تحميل البداية، ويتوقف Loader بعد السبلاش قدر الإمكان.
+- يقل الضغط عند فتح صفحة الطلبات.
+
+إذا وافقت، أنفذ بهذا الترتيب الآمن:
+
+```text
+1. إصلاح sync-order-updates لـ AlWaseet proxy
+2. تحسين منطق الحساب/التوكن المشترك في sync-order-updates
+3. إصلاح modon_cities_cache
+4. تحسين السبلاش ليغطي التحميل الأساسي
+5. تخفيف مزامنة بداية صفحة الطلبات لمنع الضغط
+6. اختبار الطلب 140222501 من السجلات وقاعدة البيانات
+```

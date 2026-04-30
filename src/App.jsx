@@ -151,23 +151,32 @@ function AppContent() {
   const { user, loading } = useAuth();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
   const [showSplash, setShowSplash] = useState(() => {
-    // التحقق من عرض السبلاش من قبل - مرة واحدة فقط في الجلسة
     const hasShownSplash = sessionStorage.getItem('hasShownSplash');
     return !hasShownSplash;
   });
-  
+  const [splashMinElapsed, setSplashMinElapsed] = useState(false);
+
   // useAppStartSync يعمل عبر AppStartSync داخل AppProviders
 
+  // الحد الأدنى لمدة السبلاش (للأنيميشن)، والحد الأقصى الصارم لمنع التعليق
   useEffect(() => {
-    if (showSplash) {
-      // انتظار اكتمال السبلاش وحفظ الحالة
-      const timer = setTimeout(() => {
-        setShowSplash(false);
-        sessionStorage.setItem('hasShownSplash', 'true');
-      }, 2800); // 2.8 ثانية للسماح بإكمال الأنيميشن
-      return () => clearTimeout(timer);
-    }
+    if (!showSplash) return;
+    const minTimer = setTimeout(() => setSplashMinElapsed(true), 2000); // 2s للأنيميشن
+    const maxTimer = setTimeout(() => {
+      setShowSplash(false);
+      sessionStorage.setItem('hasShownSplash', 'true');
+    }, 6000); // سقف صارم 6s مهما حصل
+    return () => { clearTimeout(minTimer); clearTimeout(maxTimer); };
   }, [showSplash]);
+
+  // أخفِ السبلاش بمجرد جاهزية auth + انقضاء الحد الأدنى
+  useEffect(() => {
+    if (!showSplash) return;
+    if (splashMinElapsed && !loading) {
+      setShowSplash(false);
+      sessionStorage.setItem('hasShownSplash', 'true');
+    }
+  }, [showSplash, splashMinElapsed, loading]);
 
   if (showSplash) {
     return (
