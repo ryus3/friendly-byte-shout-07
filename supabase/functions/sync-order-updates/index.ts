@@ -125,11 +125,12 @@ Deno.serve(async (req) => {
         const partnerName = tokenRecord.partner_name || 'alwaseet';
         console.log(`📡 جلب طلبات ${partnerName} للحساب: ${tokenRecord.account_username}`);
 
-        // ✅ MODON: استخدام الـ proxy الثابت IP لتفادي حجب Cloudflare WAF
-        // ✅ AlWaseet: نبقى على base URL من سجل الشركاء (له proxy خاص)
+        // ✅ كلا الشريكين عبر Static IP proxy لتفادي حجب Cloudflare WAF
         let baseUrl: string;
         if (partnerName === 'modon') {
           baseUrl = 'https://api.ryusbrand.com/modon/v1/merchant';
+        } else if (partnerName === 'alwaseet') {
+          baseUrl = 'https://api.ryusbrand.com/alwaseet/v1/merchant';
         } else {
           baseUrl = partnerBaseMap[partnerName] || 'https://api.alwaseet-iq.net/v1/merchant';
         }
@@ -140,12 +141,17 @@ Deno.serve(async (req) => {
         });
 
         if (!response.ok) {
+          // logging آمن — بدون طباعة التوكن
+          console.error(`❌ HTTP ${response.status} من ${partnerName}/${tokenRecord.account_username}`);
           throw new Error(`HTTP ${response.status}`);
         }
 
         const result = await response.json();
-        if (result?.status && result?.data) {
-          const ordersWithAccount = result.data.map((order: any) => ({
+        // ✅ سجّل النجاح فقط إذا كان الرد صحيحاً (status=true)، حتى لو كانت data فارغة
+        // (حساب نشط بدون طلبات حالياً = نجاح، لا فشل)
+        if (result?.status === true) {
+          const dataArr = Array.isArray(result?.data) ? result.data : [];
+          const ordersWithAccount = dataArr.map((order: any) => ({
             ...order,
             _account: tokenRecord.account_username,
             _user_id: tokenRecord.user_id,
@@ -153,10 +159,13 @@ Deno.serve(async (req) => {
           }));
           allWaseetOrders.push(...ordersWithAccount);
           successfulFetches.add(`${partnerName}:${tokenRecord.account_username}`);
-          console.log(`✅ تم جلب ${result.data.length} طلب من ${partnerName}/${tokenRecord.account_username}`);
+          console.log(`✅ تم جلب ${dataArr.length} طلب من ${partnerName}/${tokenRecord.account_username}`);
+        } else {
+          // errNum معروف من API الشريك — لا نعتبرها نجاح كي لا نحذف عن طريق الخطأ
+          console.warn(`⚠️ رد غير ناجح من ${partnerName}/${tokenRecord.account_username}: errNum=${result?.errNum} msg=${result?.msg || ''}`);
         }
-      } catch (tokenError) {
-        console.error(`❌ خطأ في جلب طلبات ${tokenRecord.account_username}:`, tokenError);
+      } catch (tokenError: any) {
+        console.error(`❌ خطأ في جلب طلبات ${partnerName}/${tokenRecord.account_username}: ${tokenError?.message || tokenError}`);
       }
     }
 
