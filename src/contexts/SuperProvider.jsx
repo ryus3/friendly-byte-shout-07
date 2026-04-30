@@ -650,6 +650,29 @@ export const SuperProvider = ({ children }) => {
     }
   }, [fetchAllData]);
 
+  // ⚡ Phase 2 merge — يدمج البيانات الثقيلة (المشتريات/المصروفات/الأرباح/قواعد الأرباح/الولاء/الخصومات) عند جاهزيتها
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handler = (e) => {
+      const merged = e?.detail;
+      if (!merged) return;
+      const filtered = filterDataByEmployeeCode(merged, user);
+      setAllData(prev => ({
+        ...prev,
+        purchases: filtered.purchases || [],
+        expenses: filtered.expenses || [],
+        profits: filtered.profits || [],
+        profitRules: filtered.profitRules || [],
+        employeeProfitRules: filtered.employeeProfitRules || filtered.profitRules || [],
+        customerLoyalty: filtered.customerLoyalty || [],
+        loyaltyTiers: filtered.loyaltyTiers || [],
+        orderDiscounts: filtered.orderDiscounts || [],
+      }));
+    };
+    window.addEventListener('superapi:phase2-ready', handler);
+    return () => window.removeEventListener('superapi:phase2-ready', handler);
+  }, [user]);
+
   // ⚡ دالة فورية لعرض الطلب الجديد - محسّنة للأداء
   const addOrderInstantly = useCallback((newOrderPayload) => {
     try {

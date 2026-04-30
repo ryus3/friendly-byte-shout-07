@@ -245,11 +245,10 @@ return this.fetch('all_data', async () => {
   let lookupCached = this.readLookupCache();
   let lookupPromise = null;
   if (!lookupCached) {
-    // أول مرة أو انتهت 24h: ضمّ الجلب مع Phase 1
     lookupPromise = this.fetchLookupTables();
   }
 
-  // ⚡ Phase 1: البيانات الحرجة فقط (تظهر بها الواجهة)
+  // ⚡ Phase 1: البيانات الحرجة فقط (تظهر بها الواجهة فوراً)
   const [
     products,
     orders,
@@ -258,7 +257,6 @@ return this.fetch('all_data', async () => {
     settings,
     profiles,
   ] = await Promise.all([
-    // المنتجات مع كل شيء - إصلاح ربط المخزون
     supabase.from('products').select(`
       *,
       product_variants (
@@ -273,7 +271,6 @@ return this.fetch('all_data', async () => {
       product_seasons_occasions (seasons_occasions (id, name, type))
     `).order('created_at', { ascending: false }),
     
-    // الطلبات مع العناصر
     supabase.from('orders').select(`
       *,
       order_items (
@@ -287,7 +284,6 @@ return this.fetch('all_data', async () => {
       )
     `).order('status_changed_at', { ascending: false }),
     
-    // العملاء من VIEW الموحد (مع RLS تلقائياً)
     supabase.from('customers_unified_loyalty')
       .select('*')
       .order('total_points', { ascending: false }),
@@ -296,44 +292,30 @@ return this.fetch('all_data', async () => {
     supabase.from('profiles').select('user_id, full_name, employee_code, status'),
   ]);
 
-  // فشل حرج فقط إن فشلت products أو orders
   if (products.error) throw products.error;
   if (orders.error) throw orders.error;
 
-  // ⚡ Phase 2: البيانات غير الحرجة (تجلب فوراً بالتوازي مع lookup إن احتجنا)
-  // نُكملها بنفس الطلب لكن لا نحجز عليها الواجهة الأولية في getAllDataPhased
-  const phase2Promise = Promise.all([
-    supabase.from('purchases').select('*').order('created_at', { ascending: false }),
-    supabase.from('expenses').select('*').order('created_at', { ascending: false }),
-    supabase.from('profits').select('*').order('created_at', { ascending: false }),
-    supabase.from('employee_profit_rules').select('*'),
-    supabase.from('customer_loyalty').select('*'),
-    supabase.from('loyalty_tiers').select('*'),
-    supabase.from('order_discounts').select('*').order('created_at', { ascending: false }),
-  ]);
+  // lookup tables: من الكاش أو من الجلب (إن لزم) — ضروري للواجهة الأولية
+  const lookup = lookupCached || (lookupPromise ? await lookupPromise : null);
 
-  const [purchases, expenses, profits, profitRules, customerLoyalty, loyaltyTiers, orderDiscounts] = await phase2Promise;
-
-  // lookup tables: من الكاش أو من الجلب الجديد
-  const lookup = lookupCached || (await lookupPromise);
-
+  // Phase 1 data — تُعاد فوراً
   const allData = {
-    // البيانات الأساسية
     products: products.data || [],
     orders: orders.data || [],
     customers: customers.data || [],
-    purchases: purchases.data || [],
-    expenses: expenses.data || [],
-    profits: profits.data || [],
+    purchases: [],
+    expenses: [],
+    profits: [],
     cashSources: cashSources.data || [],
     settings: settings.data?.[0] || {},
     aiOrders: aiOrders.data || [],
-    profitRules: profitRules.data || [],
-    employeeProfitRules: profitRules.data || [],
+    profitRules: [],
+    employeeProfitRules: [],
     users: profiles.data || [],
-    orderDiscounts: orderDiscounts.data || [],
+    orderDiscounts: [],
+    customerLoyalty: [],
+    loyaltyTiers: [],
 
-    // بيانات المرشحات (من الكاش أو الجلب)
     colors: lookup?.colors || [],
     sizes: lookup?.sizes || [],
     categories: lookup?.categories || [],
@@ -341,15 +323,54 @@ return this.fetch('all_data', async () => {
     productTypes: lookup?.productTypes || [],
     seasons: lookup?.seasons || [],
 
-    // معلومات النظام
     fetchedAt: new Date(),
+    phase2Ready: false,
     totalItems: {
       products: products.data?.length || 0,
       orders: orders.data?.length || 0,
       customers: customers.data?.length || 0
     }
   };
-  
+
+  // ⚡ Phase 2: في الخلفية — لا نحجز عليه الواجهة
+  // يُحدّث نفس مدخل الكاش ويبثّ event حتى يدمج SuperProvider البيانات
+  (async () => {
+    try {
+      const [purchases, expenses, profits, profitRules, customerLoyalty, loyaltyTiers, orderDiscounts] = await Promise.all([
+        supabase.from('purchases').select('*').order('created_at', { ascending: false }),
+        supabase.from('expenses').select('*').order('created_at', { ascending: false }),
+        supabase.from('profits').select('*').order('created_at', { ascending: false }),
+        supabase.from('employee_profit_rules').select('*'),
+        supabase.from('customer_loyalty').select('*'),
+        supabase.from('loyalty_tiers').select('*'),
+        supabase.from('order_discounts').select('*').order('created_at', { ascending: false }),
+      ]);
+
+      const current = this.cache.get('all_data') || allData;
+      const merged = {
+        ...current,
+        purchases: purchases.data || [],
+        expenses: expenses.data || [],
+        profits: profits.data || [],
+        profitRules: profitRules.data || [],
+        employeeProfitRules: profitRules.data || [],
+        customerLoyalty: customerLoyalty.data || [],
+        loyaltyTiers: loyaltyTiers.data || [],
+        orderDiscounts: orderDiscounts.data || [],
+        phase2Ready: true,
+      };
+      this.cache.set('all_data', merged);
+      this.timestamps.set('all_data', Date.now());
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('superapi:phase2-ready', { detail: merged }));
+      }
+    } catch (e) {
+      // فشل Phase 2 لا يُسقط الواجهة — تبقى Phase 1 شغّالة
+      console.warn('Phase 2 fetch failed (non-critical):', e?.message);
+    }
+  })();
+
   return allData;
 });
   }

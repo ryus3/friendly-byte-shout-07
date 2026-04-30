@@ -95,9 +95,9 @@ function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   
-  // انتظار تحميل البيانات الأساسية أولاً
+  // انتظار تحميل البيانات الأساسية أولاً (بدون spinner — خلفية فقط لتفادي وميض)
   if (loading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
+    return <div className="h-dvh w-screen bg-background" />;
   }
   
   // إذا لم يكن هناك مستخدم، انتقل لصفحة تسجيل الدخول
@@ -112,7 +112,7 @@ function ProtectedRoute({ children, permission }) {
 
   // انتظار تحميل الصلاحيات بعد التأكد من وجود المستخدم
   if (permissionsLoading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
+    return <div className="h-dvh w-screen bg-background" />;
   }
 
   // فحص الصلاحيات إذا كانت مطلوبة
@@ -178,16 +178,16 @@ function AppContent() {
     }
   }, [showSplash, splashMinElapsed, loading]);
 
-  if (showSplash) {
+  // ✅ السبلاش يبقى ظاهراً حتى انتهاء auth loading كاملاً — لا توجد شاشة تحميل بعده
+  if (showSplash || loading) {
     return (
       <AnimatePresence mode="wait">
-        <AppSplashScreen key="splash" onComplete={() => setShowSplash(false)} />
+        <AppSplashScreen key="splash" onComplete={() => {
+          setShowSplash(false);
+          sessionStorage.setItem('hasShownSplash', 'true');
+        }} />
       </AnimatePresence>
     );
-  }
-
-  if (loading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
   }
 
   const childrenWithProps = (Component, props = {}) => (
@@ -204,7 +204,7 @@ function AppContent() {
         <meta name="theme-color" content="#ffffff" />
       </Helmet>
       <ScrollToTop />
-      <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>}>
+      <Suspense fallback={<div className="h-dvh w-screen bg-background" />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
