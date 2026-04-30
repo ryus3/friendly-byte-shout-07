@@ -124,6 +124,8 @@ const SyncStatusIndicator = ({ className }) => {
         )}
         
         <div 
+          role="button"
+          tabIndex={0}
           className={`relative flex items-center justify-center w-10 h-10 rounded-full transition-all duration-300 backdrop-blur-sm bg-white/90 dark:bg-gray-800/90 shadow-lg border ${
             autoSyncEnabled 
               ? "border-border/50" 
@@ -132,6 +134,7 @@ const SyncStatusIndicator = ({ className }) => {
             syncMode === 'countdown' || syncMode === 'syncing' ? "cursor-not-allowed opacity-80" : "cursor-pointer hover:scale-105"
           }`}
           onClick={handleClick}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleClick(e); } }}
           title={
             syncMode === 'syncing'
               ? "جاري المزامنة..." 
