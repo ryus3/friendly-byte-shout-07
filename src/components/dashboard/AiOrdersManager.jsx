@@ -34,6 +34,7 @@ import AiOrderDestinationSelector from '@/components/ai-orders/AiOrderDestinatio
 import { useUnifiedUserData } from '@/hooks/useUnifiedUserData';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
 import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 
 
