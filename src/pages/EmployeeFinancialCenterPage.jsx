@@ -14,7 +14,7 @@ import { FileText, Edit, BarChart, TrendingUp, TrendingDown, Wallet, Box, Users,
 import { format, parseISO, isValid, startOfMonth, endOfMonth, startOfWeek, startOfYear, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
-import { PDFDownloadLink } from '@react-pdf/renderer';
+import { LazyPDFDownloadLink as PDFDownloadLink } from '@/components/pdf/LazyPDFDownloadLink';
 import StatCard from '@/components/dashboard/StatCard';
 import FinancialReportPDF from '@/components/pdf/FinancialReportPDF';
 import { useNavigate } from 'react-router-dom';

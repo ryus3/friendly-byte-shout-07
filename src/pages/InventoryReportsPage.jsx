@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { FileText, Download, Printer } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
-import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
+import { LazyPDFDownloadLink as PDFDownloadLink, LazyPDFViewer as PDFViewer } from '@/components/pdf/LazyPDFDownloadLink';
 import InventoryReportPDF from '@/components/pdf/InventoryReportPDF';
 import { motion } from 'framer-motion';
 
