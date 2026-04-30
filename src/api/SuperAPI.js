@@ -71,6 +71,11 @@ class SuperAPI {
     } catch {}
   }
 
+  // مفاتيح حساسة للوقت — لا نقرأها من localStorage أبداً (تمنع اختفاء الطلبات/قواعد الأرباح بعد التحديث)
+  isVolatileKey(key) {
+    return key.includes('order') || key.includes('all_data');
+  }
+
   // جلب البيانات مع منع التكرار
   async fetch(key, queryFn, options = {}) {
     const { force = false } = options;
@@ -80,8 +85,8 @@ class SuperAPI {
       return this.cache.get(key);
     }
 
-    // قراءة من التخزين المحلي إذا لم تكن الذاكرة صالحة
-    if (!force && typeof window !== 'undefined') {
+    // قراءة من التخزين المحلي إذا لم تكن الذاكرة صالحة (فقط للبيانات الثابتة)
+    if (!force && typeof window !== 'undefined' && !this.isVolatileKey(key)) {
       const persisted = this.readPersisted(key);
       if (persisted) {
         this.cache.set(key, persisted);
