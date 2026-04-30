@@ -118,32 +118,22 @@ const OrdersPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
-  // ✅ تفعيل المزامنة التلقائية عند دخول الصفحة
+  // ✅ مزامنة واحدة موحدة عند دخول الصفحة عبر sync-order-updates
+  //    (تعرف الحساب/التوكن الصحيح لكل طلب وتعالج الحذف الآمن للطلبات المحذوفة من الشركة).
+  //    أزلنا syncVisibleOrdersBatch المتزامن لتقليل الضغط على API الشريك ومنع التداخل.
   useEffect(() => {
-    if (orders?.length > 0 && syncVisibleOrdersBatch) {
-      const syncableOrders = orders.filter(o => !o.isarchived && o.tracking_number);
-      if (syncableOrders.length > 0) {
-        syncVisibleOrdersBatch(syncableOrders).catch(err => {
-        });
-      }
-    }
-    // ✅ تشغيل sync-order-updates للكشف عن الطلبات المحذوفة من الشركاء (الوسيط/مدن)
-    //    هذا يستخدم عداد 2-strike لتجنب الحذف الخاطئ بسبب فشل API.
-    //    تأخير 5 ثوان حتى لا يضغط API مع المزامنة المرئية.
     const deletionPassTimer = setTimeout(() => {
       import('@/integrations/supabase/client').then(({ supabase }) => {
         supabase.functions.invoke('sync-order-updates', { body: {} })
           .then(({ data, error }) => {
-            if (error) {
-              return;
-            }
+            if (error) return;
             if (data?.updated > 0) {
               // الإشعارات تُرسل تلقائياً من الـ edge function
             }
           })
           .catch(() => { /* صامت */ });
       });
-    }, 5000);
+    }, 3000);
     return () => clearTimeout(deletionPassTimer);
   }, []); // مرة واحدة عند دخول الصفحة
 
