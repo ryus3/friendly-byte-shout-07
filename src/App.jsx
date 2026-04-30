@@ -178,16 +178,16 @@ function AppContent() {
     }
   }, [showSplash, splashMinElapsed, loading]);
 
-  if (showSplash) {
+  // ✅ السبلاش يبقى ظاهراً حتى انتهاء auth loading كاملاً — لا توجد شاشة تحميل بعده
+  if (showSplash || loading) {
     return (
       <AnimatePresence mode="wait">
-        <AppSplashScreen key="splash" onComplete={() => setShowSplash(false)} />
+        <AppSplashScreen key="splash" onComplete={() => {
+          setShowSplash(false);
+          sessionStorage.setItem('hasShownSplash', 'true');
+        }} />
       </AnimatePresence>
     );
-  }
-
-  if (loading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
   }
 
   const childrenWithProps = (Component, props = {}) => (
