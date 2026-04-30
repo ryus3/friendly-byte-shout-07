@@ -121,8 +121,8 @@ Deno.serve(async (req) => {
     // ✅ نتتبع أي (شريك + حساب) جلب رداً ناجحاً، لتجنب احتساب الطلب كمحذوف بسبب فشل API
     const successfulFetches = new Set<string>();
     for (const tokenRecord of allTokens) {
+      const partnerName = tokenRecord.partner_name || 'alwaseet';
       try {
-        const partnerName = tokenRecord.partner_name || 'alwaseet';
         console.log(`📡 جلب طلبات ${partnerName} للحساب: ${tokenRecord.account_username}`);
 
         // ✅ كلا الشريكين عبر Static IP proxy لتفادي حجب Cloudflare WAF
@@ -141,14 +141,12 @@ Deno.serve(async (req) => {
         });
 
         if (!response.ok) {
-          // logging آمن — بدون طباعة التوكن
           console.error(`❌ HTTP ${response.status} من ${partnerName}/${tokenRecord.account_username}`);
           throw new Error(`HTTP ${response.status}`);
         }
 
         const result = await response.json();
-        // ✅ سجّل النجاح فقط إذا كان الرد صحيحاً (status=true)، حتى لو كانت data فارغة
-        // (حساب نشط بدون طلبات حالياً = نجاح، لا فشل)
+        // ✅ نجاح فقط إذا الرد منظم (status=true)، حتى لو كانت data فارغة
         if (result?.status === true) {
           const dataArr = Array.isArray(result?.data) ? result.data : [];
           const ordersWithAccount = dataArr.map((order: any) => ({
@@ -161,7 +159,6 @@ Deno.serve(async (req) => {
           successfulFetches.add(`${partnerName}:${tokenRecord.account_username}`);
           console.log(`✅ تم جلب ${dataArr.length} طلب من ${partnerName}/${tokenRecord.account_username}`);
         } else {
-          // errNum معروف من API الشريك — لا نعتبرها نجاح كي لا نحذف عن طريق الخطأ
           console.warn(`⚠️ رد غير ناجح من ${partnerName}/${tokenRecord.account_username}: errNum=${result?.errNum} msg=${result?.msg || ''}`);
         }
       } catch (tokenError: any) {
