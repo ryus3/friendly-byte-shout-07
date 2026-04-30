@@ -517,7 +517,24 @@ export const SuperProvider = ({ children }) => {
       // حساب الكميات المحجوزة الحقيقية وتحديثها في البيانات
       const updatedDataWithReservations = calculateUnifiedReservations(processedData);
       
-      setAllData(updatedDataWithReservations);
+      // ✅ حماية الطلبات اللحظية: إذا كان طلب موجود محلياً ولم يظهر بعد في الجلب الجديد
+      // (DB read replica lag)، نحتفظ به في الواجهة لمنع اختفاءه
+      setAllData(prev => {
+        const fetchedOrderIds = new Set((updatedDataWithReservations.orders || []).map(o => o.id));
+        const recentLocalOrders = (prev.orders || []).filter(o => {
+          if (fetchedOrderIds.has(o.id)) return false;
+          if (permanentlyDeletedOrders.has(o.id)) return false;
+          // احتفظ بالطلبات التي أُضيفت محلياً في آخر دقيقتين
+          const createdAt = o.created_at ? new Date(o.created_at).getTime() : 0;
+          return (Date.now() - createdAt) < 120000;
+        });
+        return {
+          ...updatedDataWithReservations,
+          orders: recentLocalOrders.length > 0
+            ? [...recentLocalOrders, ...(updatedDataWithReservations.orders || [])]
+            : updatedDataWithReservations.orders
+        };
+      });
       
       // تحديث accounting بنفس الطريقة القديمة
       setAccounting(prev => ({
@@ -1263,14 +1280,16 @@ export const SuperProvider = ({ children }) => {
         try {
           const fullOrder = await superAPI.getOrderById(createdOrder.id);
           if (fullOrder) {
-            const normalized = normalizeOrder(fullOrder, prev.users);
-            setAllData(prev => ({
-              ...prev,
-              orders: prev.orders.map(o => 
-                o.id === createdOrder.id ? { ...normalized, _fullySynced: true } : o
-              )
-            }));
-            devLog.log(`🔄 تزامن كامل للطلب:`, normalized.order_number);
+            setAllData(prev => {
+              const normalized = normalizeOrder(fullOrder, prev.users || []);
+              return {
+                ...prev,
+                orders: (prev.orders || []).map(o => 
+                  o.id === createdOrder.id ? { ...normalized, _fullySynced: true } : o
+                )
+              };
+            });
+            devLog.log(`🔄 تزامن كامل للطلب:`, fullOrder.order_number);
           }
         } catch (error) {
           devLog.warn('⚠️ فشل التزامن الخلفي، الطلب المعروض فورياً يبقى صالحاً:', error);
@@ -2881,13 +2900,20 @@ export const SuperProvider = ({ children }) => {
       devLog.log('📋 SuperProvider: تعديل قاعدة ربح للموظف:', { employeeId, ruleData });
       
       if (ruleData.id && ruleData.is_active === false) {
-        // حذف قاعدة
+        // حذف فعلي للقاعدة (hard delete) - يضمن عدم عودتها بعد التحديث
         const { error } = await supabase
           .from('employee_profit_rules')
-          .update({ is_active: false })
+          .delete()
           .eq('id', ruleData.id);
         
         if (error) throw error;
+        
+        // تحديث الواجهة فوراً قبل fetchAllData
+        setAllData(prev => ({
+          ...prev,
+          employeeProfitRules: (prev.employeeProfitRules || []).filter(r => r.id !== ruleData.id),
+          profitRules: (prev.profitRules || []).filter(r => r.id !== ruleData.id)
+        }));
       } else {
         // فحص وجود قاعدة مماثلة
         const { data: existingRules } = await supabase

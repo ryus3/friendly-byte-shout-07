@@ -71,6 +71,11 @@ class SuperAPI {
     } catch {}
   }
 
+  // مفاتيح حساسة للوقت — لا نقرأها من localStorage أبداً (تمنع اختفاء الطلبات/قواعد الأرباح بعد التحديث)
+  isVolatileKey(key) {
+    return key.includes('order') || key.includes('all_data');
+  }
+
   // جلب البيانات مع منع التكرار
   async fetch(key, queryFn, options = {}) {
     const { force = false } = options;
@@ -80,8 +85,8 @@ class SuperAPI {
       return this.cache.get(key);
     }
 
-    // قراءة من التخزين المحلي إذا لم تكن الذاكرة صالحة
-    if (!force && typeof window !== 'undefined') {
+    // قراءة من التخزين المحلي إذا لم تكن الذاكرة صالحة (فقط للبيانات الثابتة)
+    if (!force && typeof window !== 'undefined' && !this.isVolatileKey(key)) {
       const persisted = this.readPersisted(key);
       if (persisted) {
         this.cache.set(key, persisted);
@@ -117,8 +122,10 @@ class SuperAPI {
       // حفظ البيانات
       this.cache.set(key, data);
       this.timestamps.set(key, Date.now());
-      // حفظ محلي للتسريع وتقليل الاستهلاك
-      this.writePersisted(key, data);
+      // حفظ محلي فقط للبيانات الثابتة (ليس الطلبات/all_data)
+      if (!this.isVolatileKey(key)) {
+        this.writePersisted(key, data);
+      }
       
       return data;
       
@@ -129,10 +136,13 @@ class SuperAPI {
     }
   }
 
-  // حذف cache عند التحديث
+  // حذف cache عند التحديث (يشمل localStorage)
   invalidate(key) {
     this.cache.delete(key);
     this.timestamps.delete(key);
+    if (typeof window !== 'undefined') {
+      try { localStorage.removeItem(this.persistPrefix + key); } catch {}
+    }
   }
 
   // حذف جميع البيانات
@@ -140,6 +150,13 @@ class SuperAPI {
     this.cache.clear();
     this.timestamps.clear();
     this.loading.clear();
+    if (typeof window !== 'undefined') {
+      try {
+        Object.keys(localStorage)
+          .filter(k => k.startsWith(this.persistPrefix))
+          .forEach(k => localStorage.removeItem(k));
+      } catch {}
+    }
   }
 
   // تقليل الاستهلاك: إبطال مجمّع لتفادي إعادة الجلب المتكرر
