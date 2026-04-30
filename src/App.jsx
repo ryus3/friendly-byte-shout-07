@@ -296,6 +296,16 @@ function AppContent() {
       <Toaster />
       <SuperAiChatDialog open={aiChatOpen} onOpenChange={setAiChatOpen} />
       {user && <NotificationsHandler />}
+
+      {/* ⚡ Overlay سبلاش متلاشي فوق الصفحة الرئيسية لانتقال سلس */}
+      {splashFading && (
+        <div
+          className="fixed inset-0 z-[9999] pointer-events-none animate-splash-fade-out"
+          aria-hidden="true"
+        >
+          <AppSplashScreen onComplete={() => {}} />
+        </div>
+      )}
     </div>
   )
 }
