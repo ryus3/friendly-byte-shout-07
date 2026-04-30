@@ -36,10 +36,10 @@ const AppSplashScreen = ({ onComplete }) => {
 
   useEffect(() => {
     if (progress === 100) {
-      // انتقال فوري بدون تأخير (0 ثانية)
+      // تأخير بسيط ليُرى الشريط مكتملاً 100% بصرياً قبل الانتقال
       const timer = setTimeout(() => {
         onComplete?.();
-      }, 0);
+      }, 150);
       return () => clearTimeout(timer);
     }
   }, [progress, onComplete]);

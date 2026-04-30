@@ -747,9 +747,9 @@ const Dashboard = () => {
     }, [profitsData, canViewAllData, user?.id, user?.user_id]);
 
     
-    // إظهار loader فقط عند تحميل البيانات الأساسية
+    // انتقال سلس مباشر من السبلاش — بدون لودر بيني
     if (inventoryLoading || loading || !user || isAdmin === undefined) {
-        return <div className="flex h-full w-full items-center justify-center"><Loader /></div>;
+        return <div className="h-full w-full bg-background" />;
     }
 
     const allStatCards = [
