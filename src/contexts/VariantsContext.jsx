@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { SuperContext } from '@/contexts/SuperProvider';
+import superAPI from '@/api/SuperAPI';
 import devLog from '@/lib/devLogger';
 
 const VariantsContext = createContext();
@@ -95,6 +96,7 @@ export const VariantsProvider = ({ children }) => {
       toast({ title: "فشل الإضافة", description: error.message, variant: 'destructive' });
       return { success: false };
     }
+    superAPI.invalidateLookupCache?.();
     await refreshData();
     return { success: true, data: result };
   };
@@ -105,6 +107,7 @@ export const VariantsProvider = ({ children }) => {
       toast({ title: "فشل التحديث", description: error.message, variant: 'destructive' });
       return { success: false };
     }
+    superAPI.invalidateLookupCache?.();
     await refreshData();
     return { success: true };
   };
@@ -119,6 +122,7 @@ export const VariantsProvider = ({ children }) => {
       return { success: false };
     }
     devLog.log('Delete successful, refreshing data...');
+    superAPI.invalidateLookupCache?.();
     await refreshData();
     toast({ title: "تم الحذف بنجاح", variant: 'default' });
     return { success: true };

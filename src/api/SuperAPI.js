@@ -175,8 +175,58 @@ class SuperAPI {
   // APIs الموحدة
   // ==============
 
+  // ⚡ كاش lookup tables (24h TTL في localStorage) — آمن: بيانات مرجعية فقط
+  LOOKUP_TTL_MS = 24 * 60 * 60 * 1000;
+  LOOKUP_KEY = 'superapi_lookup_v1';
+
+  readLookupCache() {
+    if (typeof window === 'undefined') return null;
+    try {
+      const raw = localStorage.getItem(this.LOOKUP_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed?.ts) return null;
+      if (Date.now() - parsed.ts > this.LOOKUP_TTL_MS) return null;
+      return parsed.data;
+    } catch { return null; }
+  }
+
+  writeLookupCache(data) {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem(this.LOOKUP_KEY, JSON.stringify({ ts: Date.now(), data }));
+    } catch {}
+  }
+
+  invalidateLookupCache() {
+    if (typeof window === 'undefined') return;
+    try { localStorage.removeItem(this.LOOKUP_KEY); } catch {}
+  }
+
+  async fetchLookupTables() {
+    const [colors, sizes, categories, departments, productTypes, seasons] = await Promise.all([
+      supabase.from('colors').select('*').order('name'),
+      supabase.from('sizes').select('*').order('name'),
+      supabase.from('categories').select('*').order('name'),
+      supabase.from('departments').select('*').order('name'),
+      supabase.from('product_types').select('*').order('name'),
+      supabase.from('seasons_occasions').select('*').order('name'),
+    ]);
+    const data = {
+      colors: colors.data || [],
+      sizes: sizes.data || [],
+      categories: categories.data || [],
+      departments: departments.data || [],
+      productTypes: productTypes.data || [],
+      seasons: seasons.data || [],
+    };
+    this.writeLookupCache(data);
+    return data;
+  }
+
   /**
-   * جلب جميع البيانات مرة واحدة - بدلاً من 170+ طلب!
+   * جلب جميع البيانات - Phase 1 (حرج) + Phase 2 (خلفي)
+   * النتيجة: نفس الشكل القديم، بدون كسر أي مستهلك.
    */
   async getAllData() {
 return this.fetch('all_data', async () => {
@@ -191,29 +241,22 @@ return this.fetch('all_data', async () => {
     aiOrders = { data: [], error: null };
   }
 
-  // طلب واحد كبير بدلاً من 170+ طلب منفصل
+  // ⚡ Lookup tables من الكاش إن توفر (مرجعي فقط — لا تأثير على الجرد)
+  let lookupCached = this.readLookupCache();
+  let lookupPromise = null;
+  if (!lookupCached) {
+    // أول مرة أو انتهت 24h: ضمّ الجلب مع Phase 1
+    lookupPromise = this.fetchLookupTables();
+  }
+
+  // ⚡ Phase 1: البيانات الحرجة فقط (تظهر بها الواجهة)
   const [
     products,
     orders,
     customers,
-    purchases,
-    expenses,
-    profits,
     cashSources,
     settings,
-    profitRules,
     profiles,
-    customerLoyalty,
-    loyaltyTiers,
-    orderDiscounts,
-    
-    // بيانات المرشحات
-    colors,
-    sizes,
-    categories,
-    departments,
-    productTypes,
-    seasons
   ] = await Promise.all([
     // المنتجات مع كل شيء - إصلاح ربط المخزون
     supabase.from('products').select(`
@@ -230,7 +273,7 @@ return this.fetch('all_data', async () => {
       product_seasons_occasions (seasons_occasions (id, name, type))
     `).order('created_at', { ascending: false }),
     
-    // الطلبات مع العناصر - ترتيب حسب آخر تحديث (updated_at) لإظهار الطلبات المحدثة أولاً
+    // الطلبات مع العناصر
     supabase.from('orders').select(`
       *,
       order_items (
@@ -242,47 +285,37 @@ return this.fetch('all_data', async () => {
           sizes (name)
         )
       )
-    `).order('status_changed_at', { ascending: false }), // ترتيب حسب آخر تغيير في الحالة
+    `).order('status_changed_at', { ascending: false }),
     
     // العملاء من VIEW الموحد (مع RLS تلقائياً)
     supabase.from('customers_unified_loyalty')
       .select('*')
       .order('total_points', { ascending: false }),
+    supabase.from('cash_sources').select('*').order('created_at', { ascending: false }),
+    supabase.from('settings').select('*'),
+    supabase.from('profiles').select('user_id, full_name, employee_code, status'),
+  ]);
+
+  // فشل حرج فقط إن فشلت products أو orders
+  if (products.error) throw products.error;
+  if (orders.error) throw orders.error;
+
+  // ⚡ Phase 2: البيانات غير الحرجة (تجلب فوراً بالتوازي مع lookup إن احتجنا)
+  // نُكملها بنفس الطلب لكن لا نحجز عليها الواجهة الأولية في getAllDataPhased
+  const phase2Promise = Promise.all([
     supabase.from('purchases').select('*').order('created_at', { ascending: false }),
     supabase.from('expenses').select('*').order('created_at', { ascending: false }),
     supabase.from('profits').select('*').order('created_at', { ascending: false }),
-    supabase.from('cash_sources').select('*').order('created_at', { ascending: false }),
-    supabase.from('settings').select('*'),
     supabase.from('employee_profit_rules').select('*'),
-    supabase.from('profiles').select('user_id, full_name, employee_code, status'),
     supabase.from('customer_loyalty').select('*'),
     supabase.from('loyalty_tiers').select('*'),
     supabase.from('order_discounts').select('*').order('created_at', { ascending: false }),
-    
-    // بيانات المرشحات
-    supabase.from('colors').select('*').order('name'),
-    supabase.from('sizes').select('*').order('name'),
-    supabase.from('categories').select('*').order('name'),
-    supabase.from('departments').select('*').order('name'),
-    supabase.from('product_types').select('*').order('name'),
-    supabase.from('seasons_occasions').select('*').order('name')
   ]);
 
-  // التحقق من الأخطاء
-  const responses = [products, orders, customers, purchases, expenses, profits, 
-                    cashSources, settings, aiOrders, profitRules, profiles, orderDiscounts, colors, sizes, 
-                    categories, departments, productTypes, seasons];
-  
-  // لا نفشل الطلب بالكامل إلا إذا فشلت الجداول الحرجة (products أو orders)
-  if (products.error) {
-    throw products.error;
-  }
-  if (orders.error) {
-    throw orders.error;
-  }
-  
-  // السجلات غير الحرجة: نسجل تحذيراً ونكمل بجداول فارغة لضمان تحميل الواجهة
-  const nonCritical = { customers, purchases, expenses, profits, cashSources, settings, aiOrders, profitRules, profiles, orderDiscounts, colors, sizes, categories, departments, productTypes, seasons };
+  const [purchases, expenses, profits, profitRules, customerLoyalty, loyaltyTiers, orderDiscounts] = await phase2Promise;
+
+  // lookup tables: من الكاش أو من الجلب الجديد
+  const lookup = lookupCached || (await lookupPromise);
 
   const allData = {
     // البيانات الأساسية
@@ -299,15 +332,15 @@ return this.fetch('all_data', async () => {
     employeeProfitRules: profitRules.data || [],
     users: profiles.data || [],
     orderDiscounts: orderDiscounts.data || [],
-    
-    // بيانات المرشحات
-    colors: colors.data || [],
-    sizes: sizes.data || [],
-    categories: categories.data || [],
-    departments: departments.data || [],
-    productTypes: productTypes.data || [],
-    seasons: seasons.data || [],
-    
+
+    // بيانات المرشحات (من الكاش أو الجلب)
+    colors: lookup?.colors || [],
+    sizes: lookup?.sizes || [],
+    categories: lookup?.categories || [],
+    departments: lookup?.departments || [],
+    productTypes: lookup?.productTypes || [],
+    seasons: lookup?.seasons || [],
+
     // معلومات النظام
     fetchedAt: new Date(),
     totalItems: {
@@ -452,10 +485,11 @@ return this.fetch('all_data', async () => {
    * اشتراك موحد للتحديثات الفورية
    */
   setupRealtimeSubscriptions(callback) {
-    // ⚡ ai_orders مُضافة للقائمة مع استثناء خاص لـ invalidate
-    const tables = ['orders', 'order_items', 'products', 'inventory', 'expenses', 'notifications', 'ai_orders'];
-    
-    tables.forEach(table => {
+    // ⚡ تقسيم القنوات: حرجة (فوراً) + ثانوية (متأخرة 1500ms لتسريع الإقلاع)
+    const criticalTables = ['orders', 'order_items', 'notifications'];
+    const secondaryTables = ['products', 'inventory', 'expenses', 'ai_orders'];
+
+    const subscribe = (table) => {
       const channel = supabase
         .channel(`unified_${table}`)
         .on('postgres_changes', {
@@ -463,26 +497,30 @@ return this.fetch('all_data', async () => {
           schema: 'public',
           table: table
         }, (payload) => {
-          // معالجة فورية للطلبات وعناصرها بدون تأخير
           if (table === 'orders' || table === 'order_items') {
-            // إبطال فوري للطلبات فقط
             this.invalidate('orders_only');
           } else if (table === 'ai_orders') {
             // ⚡ لا invalidate للطلبات الذكية - التحديث المباشر في SuperProvider يكفي
           } else if (table === 'products' || table === 'inventory') {
-            // ⚡ فقط invalidate المنتجات - ليس كل البيانات
             this.invalidate('products_only');
           } else {
-            // حذف البيانات المحفوظة بشكل مجمّع للجداول الأخرى
             this.debouncedInvalidateAll(200);
           }
-          
+
           if (callback) callback(table, payload);
         })
         .subscribe();
-      
+
       this.subscriptions.set(table, channel);
-    });
+    };
+
+    // قنوات حرجة فوراً
+    criticalTables.forEach(subscribe);
+
+    // قنوات ثانوية مؤجلة لتقليل الضغط أثناء الإقلاع
+    setTimeout(() => {
+      secondaryTables.forEach(subscribe);
+    }, 1500);
   }
 
   /**

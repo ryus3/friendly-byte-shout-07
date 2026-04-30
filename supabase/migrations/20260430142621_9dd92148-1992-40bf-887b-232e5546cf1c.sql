@@ -1,0 +1,11 @@
+CREATE INDEX IF NOT EXISTS idx_orders_status_changed_at ON public.orders(status_changed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_created_by ON public.orders(created_by);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON public.orders(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_inventory_variant_id ON public.inventory(variant_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON public.order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_variant_id ON public.order_items(variant_id);
+CREATE INDEX IF NOT EXISTS idx_profits_employee_id ON public.profits(employee_id);
+CREATE INDEX IF NOT EXISTS idx_profits_order_id ON public.profits(order_id);
+CREATE INDEX IF NOT EXISTS idx_product_variants_product_id ON public.product_variants(product_id);
+CREATE INDEX IF NOT EXISTS idx_purchases_created_by ON public.purchases(created_by);
+CREATE INDEX IF NOT EXISTS idx_expenses_created_by ON public.expenses(created_by);
