@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/hooks/use-toast';
-import { AnimatePresence } from 'framer-motion';
+// AnimatePresence لم يعد مستخدماً هنا — السبلاش مكون مستقل
 
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
