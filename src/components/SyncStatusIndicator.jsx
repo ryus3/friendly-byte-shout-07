@@ -26,7 +26,12 @@ const SyncStatusIndicator = ({ className }) => {
   const [isSpinning, setIsSpinning] = useState(false);
   const [syncProgress, setSyncProgress] = useState({ current: 0, total: 0, syncing: false });
 
-  const handleClick = async () => {
+  const handleClick = async (e) => {
+    // منع التفاعل من الانتقال للعناصر الأعلى (يسبب القفز للأعلى)
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (isSyncing || syncMode === 'countdown') return;
 
     setSyncProgress({ syncing: true, current: 0, total: 0 });
