@@ -748,18 +748,17 @@ const Dashboard = () => {
     }, [profitsData, canViewAllData, user?.id, user?.user_id]);
 
     
-    // إشارة جاهزية الداشبورد للسبلاش — يبقى السبلاش حتى نُصبح فعلياً جاهزين
-    const isDashboardReady = !(inventoryLoading || loading || !user || isAdmin === undefined);
+    // ✅ إشارة جاهزية مبكرة: بمجرد توفر المستخدم وحالة الصلاحيات — لا ننتظر بيانات المخزون
+    // نتيجة: السبلاش يختفي ⇐ كروت تظهر فوراً (تمتلئ تدريجياً عند وصول البيانات)
+    const isDashboardReady = !!user && isAdmin !== undefined && !loading;
     useEffect(() => {
         if (isDashboardReady && typeof window !== 'undefined') {
             window.dispatchEvent(new CustomEvent('app:dashboard-ready'));
         }
     }, [isDashboardReady]);
-    
-    // أثناء التحميل: خلفية شفافة (السبلاش لا يزال يغطي الشاشة من App.jsx)
-    if (!isDashboardReady) {
-        return <div className="h-full w-full bg-background" />;
-    }
+
+    // لا نعيد خلفية فارغة — نسمح للكروت بالظهور ولو بقيم صفرية أثناء وصول البيانات
+    // هذا يُلغي "النافذة الشفافة" التي كانت تظهر بعد السبلاش
 
     const allStatCards = [
         // إزالة شروط الصلاحيات مؤقتاً لإصلاح المشكلة
