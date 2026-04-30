@@ -20,13 +20,9 @@
 ## 🔜 متبقٍّ من Phase D (يحتاج جلسة مخصصة لكل بند)
 
 ### D3 — Lazy-load للمكتبات الثقيلة
-- `html5-qrcode` مستعمل في 6 ملفات (BarcodeInventoryPage, OptimizedQRScanner, BarcodeScannerDialog, BarcodeInventoryCard, EnhancedBarcodeScannerDialog, QROrderScanner).
-- `recharts` في 5 ملفات.
-- `@react-pdf/renderer` في 9 ملفات.
-- التحويل لـ dynamic import يتطلب:
-  - تغليف كل مكون استخدام بـ `React.lazy` + `<Suspense>` مع Skeleton.
-  - أو dynamic `await import(...)` داخل الدوال.
-- **مقترح:** التنفيذ على دفعات (مكتبة واحدة في كل جلسة) مع اختبار يدوي بعد كل دفعة.
+- ✅ **`@react-pdf/renderer`** — تم! إنشاء `src/components/pdf/LazyPDFDownloadLink.jsx` (wrapper بـ React.lazy + Suspense). استُبدل في 4 ملفات: AccountingPage, EmployeeFinancialCenterPage, InventoryReportsPage, ProfessionalReportsSystem. المكتبة (~500KB) لم تعد تُحمَّل عند فتح صفحة المحاسبة/المخزون — تُحمَّل فقط عند ظهور زر التصدير. **نفس API تماماً** (signature `{({ loading }) => ...}` محفوظ).
+- ⏳ `recharts` (5 ملفات) — الدفعة التالية.
+- ⏳ `html5-qrcode` (6 ملفات) — الدفعة بعدها.
 
 ### D5 — Skeletons موحدة
 - استبدال `<Loader2 />` بـ Skeleton في OrderList و Inventory.
