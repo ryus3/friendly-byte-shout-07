@@ -1,97 +1,91 @@
-# إجابات وخطة تنفيذ
+# خطة الإصلاح والتسريع — المرحلة التالية
 
-## 1) لماذا تظهر "نافذة شفافة" بعد السبلاش؟
+## 1) لماذا تتأخر الكروت بعد السبلاش؟ والحل
 
-السبلاش يختفي بمجرد جاهزية `auth` (`loading=false`)، لكن **بيانات الـ Dashboard** (`inventoryLoading`, `loading` من SuperProvider, الصلاحيات) قد لا تكون جاهزة بعد. حالياً (السطر 752 في `Dashboard.jsx`):
-```js
-if (inventoryLoading || loading || !user || isAdmin === undefined) {
-  return <div className="h-full w-full bg-background" />;
-}
-```
-هذه الخلفية الفارغة هي ما تراه. الحل الصحيح: **إبقاء السبلاش ظاهراً حتى تجهز بيانات الداشبورد الأساسية**، لا فقط حتى تجهز `auth`.
+السبلاش مرتبط حالياً بحدث `app:dashboard-ready` الذي يُطلَق بعد جاهزية: `inventoryLoading=false` + `loading=false` + `user` + `isAdmin !== undefined`. لكن في المسار الفعلي يحدث:
 
-**التنفيذ:** نمرّر إشارة "appReady" من `SuperProvider`/`useUnifiedPermissions` إلى `App.jsx`، فلا يُخفى السبلاش إلا عندما يكون الداشبورد قادراً على الرسم فوراً → نتيجة: سبلاش ← كروت مباشرة، بدون وميض.
+- شريط السبلاش يكتمل خلال 1.5s مع تأخير 150ms.
+- في نفس اللحظة، `Dashboard.jsx` لا يزال ينتظر بيانات (الفواتير/الأرباح/المخزون)، فيرجع `<div bg-background />` فارغ → هذا هو "التحميل البسيط" الذي تراه.
+- بعد ذلك تظهر الكروت.
 
-## 2) لماذا يظهر للموظف أحمد "إجمالي الطلبات = 3" وهو لا يملك طلبات؟
+**الحل:**
+- إزالة الشرط `!isDashboardReady → bg-background فارغ` نهائياً. عرض **Skeletons** للكروت بدلاً من خلفية فارغة، بحيث يبدو الانتقال طبيعياً.
+- جعل الكروت تَرسم بقيم 0/Skeleton أثناء وصول البيانات (بدون انتظار `inventoryLoading`)، فالـ `useMemo` آمن (يرجع 0 افتراضياً).
+- الإبقاء على إطلاق `app:dashboard-ready` لكن أبكر: بمجرد توفر `user && isAdmin !== undefined` (بدون انتظار `inventoryLoading`).
+- نتيجة: السبلاش يختفي ⇐ كروت بـ Skeleton لجزء من الثانية ⇐ تمتلئ الأرقام بدون أي شاشة فارغة/شفافة.
 
-**خلل منطقي في `Dashboard.jsx` السطر 605:**
-```js
-(canViewAllData ? (o.created_by === user.id || o.created_by === user.user_id) : true)
-```
-المنطق **معكوس**: عندما يكون المستخدم موظفاً (`canViewAllData=false`)، الشرط يُرجع `true` لكل الطلبات، فيرى الموظف عدد كل الطلبات المرئية له (والتي تشمل أحياناً طلبات غير مفلترة بالـ created_by). وعندما يكون مديراً، يفلتر بطلباته فقط.
+## 2) الطلبات الذكية لمدير القسم — لحظية أم تحتاج تحديث؟
 
-**الحل:** عكس الشرط ليصبح:
-```js
-canViewAllData ? true : (o.created_by === user.id || o.created_by === user.user_id)
-```
-بهذا: المدير يرى الكل، والموظف يرى طلباته فقط (الرقم الصحيح = 0 لأحمد).
+فحصت `SuperProvider.jsx` (السطور 765–805): الاشتراك الحي على `ai_orders` يعمل لـ INSERT/UPDATE/DELETE ويبث `aiOrderCreated` فوراً. `AiOrdersManager.jsx` يقرأ من `useSuper().aiOrders` ويفلتر لمدير القسم عبر `isAdmin || isDepartmentManager`. **النظام لحظي بالفعل** — لا حاجة لتحديث يدوي.
 
-## 3) منتج المدير ضمن طلب موظف — كيف يعرف أحمد، وأين يذهب الإيراد والربح؟
+**التحقق العملي بعد التنفيذ:** أنشئ طلباً ذكياً من حساب موظف تحت إشراف أحمد → يجب أن يظهر في شاشة أحمد خلال أقل من ثانية بدون أي تدخل. سأضيف لوغ خفيف في الواجهة (devLog فقط) لتأكيد الوصول، ثم نزيله.
 
-النظام الحالي (موثّق في الذاكرة `revenue-routing-and-settlement-logic` و`product-ownership-architecture`):
-- **توجيه الإيراد** يتم حسب `products.owner_user_id` للمنتج، **وليس** حسب منشئ الطلب.
-- عند استلام المدير الفاتورة من شركة التوصيل: تقسم الـ `cash_movements` تلقائياً عبر التريجر — جزء الإيراد المتعلق بمنتجات أحمد يذهب لقاصة أحمد، وجزء منتجات المدير يذهب لقاصة المدير.
-- **ربح أحمد:** يُحتسب من `employee_profit_rules` المربوطة به عن منتجاته فقط، ويُسجَّل في `profits` للموظف صاحب المنتج (لا منشئ الطلب).
-- **معرفة أحمد بالطلب:** حالياً لا يصله إشعار تلقائي إذا لم يكن هو منشئ الطلب. سنضيف إشعاراً + إظهار الطلب في "متابعة طلبات منتجاتي" لأحمد بصلاحية SELECT بالـ RLS عبر `owner_user_id` للعناصر داخل الطلب (قراءة فقط، لا تعديل).
+تحسين إضافي صغير: تأمين أن قناة الـ realtime مشتركة (مفعلة) لـ `ai_orders` على مستوى Postgres (`ALTER PUBLICATION supabase_realtime ADD TABLE ai_orders` — إن لم تكن مضافة سأضيفها في migration).
 
-ملاحظة: هذا تعديل حساس لـ RLS — سأضعه في **Phase E منفصلة** بعد تثبيت Phase D، لأنه يمسّ الأمن.
+## 3) المنسدلة في الطلبات الذكية تظهر كل المستخدمين لأحمد — والحل
 
-## 4) هل التوريث الجديد (منتج/لون/قياس عبر `+`) يعمل في المساعد الذكي؟
+في `AiOrdersManager.jsx` السطور 246–255 و879–899:
+- المنسدلة تَستعمل `allUsers` (كامل قائمة المستخدمين) ثم تفلتر بالأدوار فقط.
+- يظهر للمدير العام/سارة/عبدالله/إلخ لأحمد لأنه مدير قسم — وهذا خطأ.
 
-**نعم، تلقائياً.** فحصت `supabase/functions/ai-gemini-chat/index.ts`: المساعد يستدعي `process_telegram_order` (السطر 655 و1405)، وهي تستدعي داخلياً `extract_product_items_from_text` التي حدّثناها. أي تحسين في الدالة ينعكس فوراً على المساعد الذكي بدون أي تعديل إضافي. ✓
+**الحل (دقيق وآمن):**
+- استخدام `useSupervisedEmployees` (موجود) داخل `AiOrdersManager.jsx`.
+- إذا `isAdmin` ⇒ نُبقي السلوك الحالي (يرى الجميع).
+- إذا `isDepartmentManager && !isAdmin` ⇒ نبني `employeesOnly` من `supervisedEmployees` فقط (مع إضافة المدير نفسه `user` كخيار).
+- إذا موظف عادي ⇒ المنسدلة لا تُعرض أصلاً (الشرط `(isAdmin || isDepartmentManager)` يُلغيها).
+- `visibleOrders` و`baseVisible` يبقيان كما هما — نحن نَفلتر فقط مَن يظهر في المنسدلة، لا منطق الطلبات نفسها.
 
-## 5) الخطوة التالية للتسريع (Phase D) — بدون كسر
+## 4) ربط بقية خطة التسريع (Phase D continued)
 
-بعد إصلاح المشاكل أعلاه، أنفّذ هذه التحسينات بترتيب آمن:
+### D3 — Lazy-load للمكتبات الثقيلة (وفر متوقع 30–40%)
+- `recharts` → `React.lazy` مع `<Suspense fallback={Skeleton}>` في كل من:
+  - `src/components/analytics/UnifiedAnalyticsSystem.jsx`
+  - `src/components/analytics/ProfessionalReportsSystem.jsx`
+  - `src/components/department/DepartmentStatsCharts.jsx`
+- `jspdf` + `AmiriFont` → dynamic `await import('jspdf')` داخل الدوال التي تُولّد PDF (في `src/utils/pdfGenerator.js` ومكونات `src/components/pdf/*`)، بدون كسر التوقيع.
+- `@react-pdf/renderer` (للـ PDFs التفاعلية) → `React.lazy` لمكونات `src/components/pdf/*` تُحمَّل فقط عند فتح حوار التقارير.
+- `html5-qrcode` → dynamic import داخل `src/pages/BarcodeInventoryPage.jsx` عند تشغيل الكاميرا فقط.
 
-### D1 — تكامل السبلاش مع جاهزية الداشبورد
-- `App.jsx`: إضافة state `appDataReady` يُحدَّث من السوبر-بروفايدر/الصلاحيات.
-- إخفاء السبلاش فقط عند `splashMinElapsed && !loading && appDataReady`.
-- إزالة الـ `<div bg-background />` المؤقت من `Dashboard.jsx` (السطر 752) واستبداله بـ Skeleton ناعم لو احتجنا (نادراً).
+كل تحويل يتم بدون تغيير API الخارجي للمكون.
 
-### D2 — إصلاح عداد طلبات الموظف
-- عكس الشرط في `Dashboard.jsx` السطر 605 فقط — تعديل سطر واحد.
+### D5 — Skeleton للقوائم (إحساس فوري)
+- استبدال `<Loader2 />` المركزي في:
+  - شاشة OrderList (قائمة الطلبات)
+  - شاشة Inventory (قائمة المخزون)
+  - شاشة AiOrdersManager قبل وصول البيانات
+- استخدام مكون `Skeleton` الموجود (`src/components/ui/skeleton.jsx`) بـ 6 صفوف.
 
-### D3 — Lazy-load للمكتبات الثقيلة (وفر 30–40% من الـ bundle)
-- `jspdf`, `react-pdf`, `html5-qrcode`, `recharts`: تغليف باستخدام `React.lazy` + `Suspense` في الصفحات/المكونات التي تستخدمها فقط (`InventoryReportsPage`, `BarcodeInventoryPage`, `AdvancedProfitsAnalysisPage`، تقارير PDF).
-- **ضمان عدم الكسر:** استدعاء واحد لكل مكتبة عبر helper موجود حالياً، بدون تغيير API.
+### D6 — جاهزية تطبيق الموبايل
+- التحقق من `capacitor.config.ts` و`AndroidManifest.xml` (موجودان).
+- تثبيت: `@capacitor/camera`, `@capacitor/push-notifications`, `@capacitor/app`, `@capacitor/status-bar`.
+- إعداد `firebase` config في AndroidManifest للإشعارات.
+- توثيق خطوات `npx cap sync` للمستخدم.
 
-### D4 — Preload خطوط Amiri
-- إضافة `<link rel="preload" as="font" href="/fonts/Amiri-Regular.ttf" type="font/ttf" crossorigin>` في `index.html` لتفادي وميض النص في PDFs.
+## 5) ما لن يُمَس
+- منطق توريث المنتج/اللون/القياس في `extract_product_items_from_text` (يعمل).
+- RLS / triggers / cash_movements / profits.
+- توقيعات أي API أو hooks.
+- منطق `process_telegram_order` ومنطق التوجيه المالي (`owner_user_id`).
 
-### D5 — Skeleton للقوائم الثقيلة (Orders/Inventory)
-- بدل `<Loader2 />`، Skeleton من 6 صفوف بـ `bg-muted/40 animate-pulse` → إحساس فوري بدون شاشة سوداء.
-
-### D6 — جاهزية تطبيق الموبايل (Capacitor)
-- التحقق من `capacitor.config.ts` و`AndroidManifest.xml` (موجودان أصلاً).
-- تثبيت `@capacitor/camera` و`@capacitor/push-notifications` و`@capacitor/app` (للتحكم بالأيقونة والإشعارات الأصلية).
-- التأكد من أيقونات `public/icon-192x192.png` و`MOBILE_APP_ICON_INSTRUCTIONS.md` — جاهزة.
-- تشغيل `npx cap sync` بعد البناء (يحدث تلقائياً عند Build).
-
-## ما لن يُمَس مطلقاً
-- دالة `extract_product_items_from_text` (تعمل بشكل صحيح بعد إصلاح أمس).
-- منطق `process_telegram_order`.
-- RLS / triggers / cash_movements / profits — كلها تبقى كما هي في Phase D.
-- توقيعات أي API.
-
-## التغييرات بالملفات
+## 6) الملفات المعدّلة
 
 | الملف | التغيير |
 |---|---|
-| `src/App.jsx` | إضافة `appDataReady` لإخفاء السبلاش بشكل صحيح |
-| `src/pages/Dashboard.jsx` | عكس شرط الفلترة (سطر 605) + إزالة الخلفية الفارغة |
-| `src/contexts/SuperProvider` (أو ما يعادله) | تصدير `dataReady` (إن لم يكن موجوداً) |
-| `index.html` | preload خطوط Amiri |
-| `src/components/pdf/*`, `src/pages/InventoryReportsPage.jsx` | تحويل استيراد jspdf/react-pdf إلى dynamic import |
+| `src/pages/Dashboard.jsx` | إزالة الـ bg فارغ، إطلاق `app:dashboard-ready` أبكر، Skeletons للكروت |
+| `src/components/dashboard/AiOrdersManager.jsx` | المنسدلة تستخدم `useSupervisedEmployees` لمدير القسم |
+| `src/components/dashboard/StatCard.jsx` (إن لزم) | دعم حالة skeleton |
+| `src/components/analytics/*` | dynamic import لـ recharts |
+| `src/components/pdf/*`, `src/utils/pdfGenerator.js` | dynamic import لـ jspdf و@react-pdf |
 | `src/pages/BarcodeInventoryPage.jsx` | dynamic import لـ html5-qrcode |
-| `src/components/analytics/*` | dynamic import لـ recharts (داخل Suspense) |
+| migration | `ALTER PUBLICATION supabase_realtime ADD TABLE ai_orders` (إن لم تكن مضافة) |
+| `package.json` | تثبيت Capacitor plugins |
 
-## الاختبارات بعد التنفيذ
-1. السبلاش → كروت مباشرة (لا شاشة سوداء/شفافة بينهما).
-2. حساب أحمد: اجمالي الطلبات = 0 (لا 3).
-3. حساب المدير: اجمالي الطلبات يعرض كل طلبات المؤسسة (سلوك سابق محفوظ).
-4. اختبار طلب من المساعد الذكي: `نايك نيلي سمول + ميديم` → عنصران ✓.
-5. فتح صفحة تقارير المخزون (تستخدم react-pdf) → تعمل بدون أخطاء.
-6. صفحة الباركود → الكاميرا تعمل.
+## 7) الاختبارات بعد التنفيذ
+1. السبلاش 100% → كروت بـ Skeleton فوراً → تمتلئ الأرقام (لا شاشة فارغة بينهما).
+2. حساب أحمد (مدير قسم) → المنسدلة تعرض فقط: أحمد + موظفيه تحت الإشراف.
+3. إنشاء طلب ذكي من موظف أحمد → يظهر فوراً عند أحمد بدون refresh.
+4. فتح صفحة التقارير المتقدمة → recharts يُحمَّل عند الحاجة فقط (Network tab).
+5. فتح صفحة الباركود → الكاميرا تعمل، html5-qrcode يُحمَّل عند الفتح فقط.
+6. توليد PDF → لا تأخير على الإقلاع، jspdf يُحمَّل عند الضغط فقط.
 
-هل أنفّذ Phase D (D1→D6) الآن؟ مسألة "إشعار أحمد عن طلب فيه منتجه" تنفّذ في Phase E منفصلة (تعدل RLS — تحتاج مراجعتك أولاً).
+هل أبدأ التنفيذ؟
