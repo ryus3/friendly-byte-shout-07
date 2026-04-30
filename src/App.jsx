@@ -161,7 +161,7 @@ function AppContent() {
   // الحد الأدنى لمدة السبلاش (للأنيميشن)، والحد الأقصى الصارم لمنع التعليق
   useEffect(() => {
     if (!showSplash) return;
-    const minTimer = setTimeout(() => setSplashMinElapsed(true), 2000); // 2s للأنيميشن
+    const minTimer = setTimeout(() => setSplashMinElapsed(true), 1500); // 1.5s — يتزامن مع شريط التقدم
     const maxTimer = setTimeout(() => {
       setShowSplash(false);
       sessionStorage.setItem('hasShownSplash', 'true');

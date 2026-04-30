@@ -16,8 +16,8 @@ const AppSplashScreen = ({ onComplete }) => {
   const isDark = effectiveTheme === 'dark';
 
   useEffect(() => {
-    const duration = 2800; // 2.8 seconds to match App.jsx transition
-    const interval = 28; // Update every 28ms (2800/100 = 28ms per 1%)
+    const duration = 1500; // 1.5 seconds — يتزامن مع minTimer في App.jsx
+    const interval = 15; // Update every 15ms (1500/100 = 15ms per 1%)
     const step = 100 / (duration / interval);
     
     const timer = setInterval(() => {
