@@ -156,6 +156,7 @@ function AppContent() {
   });
   const [splashMinElapsed, setSplashMinElapsed] = useState(false);
   const [dashboardReady, setDashboardReady] = useState(false);
+  const [splashFading, setSplashFading] = useState(false); // ⚡ مرحلة الـ fade-out السلس
 
   // useAppStartSync يعمل عبر AppStartSync داخل AppProviders
 
@@ -164,8 +165,11 @@ function AppContent() {
     if (!showSplash) return;
     const minTimer = setTimeout(() => setSplashMinElapsed(true), 1500);
     const maxTimer = setTimeout(() => {
-      setShowSplash(false);
-      sessionStorage.setItem('hasShownSplash', 'true');
+      setSplashFading(true);
+      setTimeout(() => {
+        setShowSplash(false);
+        sessionStorage.setItem('hasShownSplash', 'true');
+      }, 500);
     }, 6000); // سقف صارم 6s مهما حصل
     return () => { clearTimeout(minTimer); clearTimeout(maxTimer); };
   }, [showSplash]);
@@ -180,21 +184,29 @@ function AppContent() {
   // إذا لم يكن المستخدم مسجلاً أو في صفحات عامة، لا داعي لانتظار الداشبورد
   const needsDashboardWait = !!user && window.location.pathname === '/';
 
-  // أخفِ السبلاش بمجرد جاهزية auth + انقضاء الحد الأدنى + جاهزية الداشبورد (إن لزم)
+  // أخفِ السبلاش بانتقال سلس عند جاهزية كل المتطلبات
   useEffect(() => {
-    if (!showSplash) return;
+    if (!showSplash || splashFading) return;
     if (splashMinElapsed && !loading && (!needsDashboardWait || dashboardReady)) {
-      setShowSplash(false);
-      sessionStorage.setItem('hasShownSplash', 'true');
-    }
-  }, [showSplash, splashMinElapsed, loading, dashboardReady, needsDashboardWait]);
-
-  // ✅ السبلاش يبقى ظاهراً حتى تجهز كل المتطلبات
-  if (showSplash || loading) {
-    return (
-      <AppSplashScreen onComplete={() => {
+      // ابدأ مرحلة الـ fade-out — الصفحة الرئيسية تحته جاهزة
+      setSplashFading(true);
+      const t = setTimeout(() => {
         setShowSplash(false);
         sessionStorage.setItem('hasShownSplash', 'true');
+      }, 500); // مدة الـ fade
+      return () => clearTimeout(t);
+    }
+  }, [showSplash, splashFading, splashMinElapsed, loading, dashboardReady, needsDashboardWait]);
+
+  // ⚡ إذا ما زال auth قيد التحميل ولم نبدأ الـ fade — اعرض السبلاش لوحده
+  if ((showSplash || loading) && !splashFading) {
+    return (
+      <AppSplashScreen onComplete={() => {
+        setSplashFading(true);
+        setTimeout(() => {
+          setShowSplash(false);
+          sessionStorage.setItem('hasShownSplash', 'true');
+        }, 500);
       }} />
     );
   }
