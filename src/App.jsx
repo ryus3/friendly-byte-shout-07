@@ -95,9 +95,9 @@ function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   
-  // انتظار تحميل البيانات الأساسية أولاً
+  // انتظار تحميل البيانات الأساسية أولاً (بدون spinner — خلفية فقط لتفادي وميض)
   if (loading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
+    return <div className="h-dvh w-screen bg-background" />;
   }
   
   // إذا لم يكن هناك مستخدم، انتقل لصفحة تسجيل الدخول
@@ -112,7 +112,7 @@ function ProtectedRoute({ children, permission }) {
 
   // انتظار تحميل الصلاحيات بعد التأكد من وجود المستخدم
   if (permissionsLoading) {
-    return <div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>;
+    return <div className="h-dvh w-screen bg-background" />;
   }
 
   // فحص الصلاحيات إذا كانت مطلوبة
