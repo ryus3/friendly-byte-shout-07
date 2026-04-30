@@ -96,6 +96,7 @@ export const VariantsProvider = ({ children }) => {
       toast({ title: "فشل الإضافة", description: error.message, variant: 'destructive' });
       return { success: false };
     }
+    superAPI.invalidateLookupCache?.();
     await refreshData();
     return { success: true, data: result };
   };
@@ -106,6 +107,7 @@ export const VariantsProvider = ({ children }) => {
       toast({ title: "فشل التحديث", description: error.message, variant: 'destructive' });
       return { success: false };
     }
+    superAPI.invalidateLookupCache?.();
     await refreshData();
     return { success: true };
   };
@@ -120,6 +122,7 @@ export const VariantsProvider = ({ children }) => {
       return { success: false };
     }
     devLog.log('Delete successful, refreshing data...');
+    superAPI.invalidateLookupCache?.();
     await refreshData();
     toast({ title: "تم الحذف بنجاح", variant: 'default' });
     return { success: true };
