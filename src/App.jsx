@@ -3,7 +3,7 @@ import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster.jsx';
 import { toast } from '@/hooks/use-toast';
-import { AnimatePresence } from 'framer-motion';
+// AnimatePresence لم يعد مستخدماً هنا — السبلاش مكون مستقل
 
 import { useAuth } from '@/contexts/UnifiedAuthContext.jsx';
 import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifiedPermissionsSystem.jsx';
@@ -155,13 +155,14 @@ function AppContent() {
     return !hasShownSplash;
   });
   const [splashMinElapsed, setSplashMinElapsed] = useState(false);
+  const [dashboardReady, setDashboardReady] = useState(false);
 
   // useAppStartSync يعمل عبر AppStartSync داخل AppProviders
 
-  // الحد الأدنى لمدة السبلاش (للأنيميشن)، والحد الأقصى الصارم لمنع التعليق
+  // الحد الأدنى لمدة السبلاش، والحد الأقصى الصارم لمنع التعليق
   useEffect(() => {
     if (!showSplash) return;
-    const minTimer = setTimeout(() => setSplashMinElapsed(true), 1500); // 1.5s — يتزامن مع شريط التقدم
+    const minTimer = setTimeout(() => setSplashMinElapsed(true), 1500);
     const maxTimer = setTimeout(() => {
       setShowSplash(false);
       sessionStorage.setItem('hasShownSplash', 'true');
@@ -169,24 +170,32 @@ function AppContent() {
     return () => { clearTimeout(minTimer); clearTimeout(maxTimer); };
   }, [showSplash]);
 
-  // أخفِ السبلاش بمجرد جاهزية auth + انقضاء الحد الأدنى
+  // الاستماع لإشارة جاهزية الداشبورد
+  useEffect(() => {
+    const onReady = () => setDashboardReady(true);
+    window.addEventListener('app:dashboard-ready', onReady);
+    return () => window.removeEventListener('app:dashboard-ready', onReady);
+  }, []);
+
+  // إذا لم يكن المستخدم مسجلاً أو في صفحات عامة، لا داعي لانتظار الداشبورد
+  const needsDashboardWait = !!user && window.location.pathname === '/';
+
+  // أخفِ السبلاش بمجرد جاهزية auth + انقضاء الحد الأدنى + جاهزية الداشبورد (إن لزم)
   useEffect(() => {
     if (!showSplash) return;
-    if (splashMinElapsed && !loading) {
+    if (splashMinElapsed && !loading && (!needsDashboardWait || dashboardReady)) {
       setShowSplash(false);
       sessionStorage.setItem('hasShownSplash', 'true');
     }
-  }, [showSplash, splashMinElapsed, loading]);
+  }, [showSplash, splashMinElapsed, loading, dashboardReady, needsDashboardWait]);
 
-  // ✅ السبلاش يبقى ظاهراً حتى انتهاء auth loading كاملاً — لا توجد شاشة تحميل بعده
+  // ✅ السبلاش يبقى ظاهراً حتى تجهز كل المتطلبات
   if (showSplash || loading) {
     return (
-      <AnimatePresence mode="wait">
-        <AppSplashScreen key="splash" onComplete={() => {
-          setShowSplash(false);
-          sessionStorage.setItem('hasShownSplash', 'true');
-        }} />
-      </AnimatePresence>
+      <AppSplashScreen onComplete={() => {
+        setShowSplash(false);
+        sessionStorage.setItem('hasShownSplash', 'true');
+      }} />
     );
   }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Package, Zap, Brain, Users, TrendingUp, ShoppingBag } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
 import ryusLogo from '@/assets/ryus-logo.png';
@@ -88,14 +88,13 @@ const AppSplashScreen = ({ onComplete }) => {
   const iconOpacity = isDark ? 0.25 : 0.15;
 
   return (
-    <AnimatePresence>
-      <motion.div
+    <motion.div
       initial={{ opacity: 0, scale: 1 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95, filter: 'blur(20px)' }}
-      transition={{ duration: 1.2, ease: [0.43, 0.13, 0.23, 0.96] }}
-        className={`fixed inset-0 z-[9999] flex items-center justify-center ${bgClass} overflow-hidden`}
-      >
+      transition={{ duration: 0.6, ease: [0.43, 0.13, 0.23, 0.96] }}
+      className={`fixed inset-0 z-[9999] flex items-center justify-center ${bgClass} overflow-hidden`}
+    >
         {/* خلفية متحركة بتدرجات شفافة */}
         <div className="absolute inset-0">
           {/* تدرج أزرق - بنفسجي */}
@@ -393,7 +392,6 @@ const AppSplashScreen = ({ onComplete }) => {
           />
         ))}
       </motion.div>
-    </AnimatePresence>
   );
 };
 
