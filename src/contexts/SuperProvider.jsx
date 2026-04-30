@@ -517,7 +517,24 @@ export const SuperProvider = ({ children }) => {
       // حساب الكميات المحجوزة الحقيقية وتحديثها في البيانات
       const updatedDataWithReservations = calculateUnifiedReservations(processedData);
       
-      setAllData(updatedDataWithReservations);
+      // ✅ حماية الطلبات اللحظية: إذا كان طلب موجود محلياً ولم يظهر بعد في الجلب الجديد
+      // (DB read replica lag)، نحتفظ به في الواجهة لمنع اختفاءه
+      setAllData(prev => {
+        const fetchedOrderIds = new Set((updatedDataWithReservations.orders || []).map(o => o.id));
+        const recentLocalOrders = (prev.orders || []).filter(o => {
+          if (fetchedOrderIds.has(o.id)) return false;
+          if (permanentlyDeletedOrders.has(o.id)) return false;
+          // احتفظ بالطلبات التي أُضيفت محلياً في آخر دقيقتين
+          const createdAt = o.created_at ? new Date(o.created_at).getTime() : 0;
+          return (Date.now() - createdAt) < 120000;
+        });
+        return {
+          ...updatedDataWithReservations,
+          orders: recentLocalOrders.length > 0
+            ? [...recentLocalOrders, ...(updatedDataWithReservations.orders || [])]
+            : updatedDataWithReservations.orders
+        };
+      });
       
       // تحديث accounting بنفس الطريقة القديمة
       setAccounting(prev => ({
