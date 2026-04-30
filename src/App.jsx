@@ -204,7 +204,7 @@ function AppContent() {
         <meta name="theme-color" content="#ffffff" />
       </Helmet>
       <ScrollToTop />
-      <Suspense fallback={<div className="h-screen w-screen flex items-center justify-center bg-background"><Loader /></div>}>
+      <Suspense fallback={<div className="h-dvh w-screen bg-background" />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
