@@ -105,7 +105,13 @@ const OrdersStats = ({ orders, aiOrders, onAiOrdersClick, onStatCardClick, globa
       return filtered.filter(o => IN_DELIVERY_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
     }
     if (status === 'delivered') {
-      return filtered.filter(o => DELIVERED_STATUSES.includes(o.delivery_status) && !o.isarchived).length;
+      // ✅ تم التسليم: مُسلّم فعلياً ولم يُكتمل بعد (لا فاتورة مستلمة، ليس مؤرشفاً، ليس راجعاً للمخزن)
+      return filtered.filter(o =>
+        DELIVERED_STATUSES.includes(o.delivery_status) &&
+        !o.isarchived &&
+        o.status !== 'completed' &&
+        o.status !== 'returned_in_stock'
+      ).length;
     }
     if (status === 'needs_processing') {
       // ✅ يشمل: delivery_status (24-41) + status='returned' + status='cancelled'
