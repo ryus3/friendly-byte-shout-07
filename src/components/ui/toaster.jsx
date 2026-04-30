@@ -11,48 +11,55 @@ import React from 'react';
 import devLog from '@/lib/devLogger';
 
 // أيقونات احترافية نظيفة بدون رموز مزعجة
-const StockWarningIcon = () => (
-  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+// ✅ forwardRef يمنع تحذير: Function components cannot be given refs
+const StockWarningIcon = React.forwardRef((props, ref) => (
+  <svg ref={ref} className="h-5 w-5" viewBox="0 0 24 24" fill="none" {...props}>
     <rect x="3" y="4" width="18" height="16" rx="2" className="fill-orange-50 stroke-orange-500" strokeWidth="1.5"/>
     <path d="M8 10v4M12 8v6M16 12v2" className="stroke-orange-600" strokeWidth="2" strokeLinecap="round"/>
   </svg>
-);
+));
+StockWarningIcon.displayName = 'StockWarningIcon';
 
-const OrderSuccessIcon = () => (
-  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+const OrderSuccessIcon = React.forwardRef((props, ref) => (
+  <svg ref={ref} className="h-5 w-5" viewBox="0 0 24 24" fill="none" {...props}>
     <circle cx="12" cy="12" r="9" className="fill-green-50 stroke-green-500" strokeWidth="1.5"/>
     <path d="M9 12l2 2 4-4" className="stroke-green-600" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
-);
+));
+OrderSuccessIcon.displayName = 'OrderSuccessIcon';
 
-const UserRegistrationIcon = () => (
-  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+const UserRegistrationIcon = React.forwardRef((props, ref) => (
+  <svg ref={ref} className="h-5 w-5" viewBox="0 0 24 24" fill="none" {...props}>
     <circle cx="12" cy="8" r="3" className="fill-purple-50 stroke-purple-500" strokeWidth="1.5"/>
     <path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2" className="fill-purple-50 stroke-purple-500" strokeWidth="1.5"/>
   </svg>
-);
+));
+UserRegistrationIcon.displayName = 'UserRegistrationIcon';
 
-const OrderPendingIcon = () => (
-  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+const OrderPendingIcon = React.forwardRef((props, ref) => (
+  <svg ref={ref} className="h-5 w-5" viewBox="0 0 24 24" fill="none" {...props}>
     <rect x="3" y="3" width="18" height="18" rx="2" className="fill-blue-50 stroke-blue-500" strokeWidth="1.5"/>
     <circle cx="9" cy="9" r="2" className="fill-blue-200"/>
     <path d="m21 15-3-3H12l-1 3" className="stroke-blue-600" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>
-);
+));
+OrderPendingIcon.displayName = 'OrderPendingIcon';
 
-const SystemNotificationIcon = () => (
-  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+const SystemNotificationIcon = React.forwardRef((props, ref) => (
+  <svg ref={ref} className="h-5 w-5" viewBox="0 0 24 24" fill="none" {...props}>
     <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" className="fill-primary/10 stroke-primary" strokeWidth="1.5"/>
     <path d="M13.73 21a2 2 0 0 1-3.46 0" className="stroke-primary" strokeWidth="1.5" strokeLinecap="round"/>
   </svg>
-);
+));
+SystemNotificationIcon.displayName = 'SystemNotificationIcon';
 
-const ProfitIcon = () => (
-  <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none">
+const ProfitIcon = React.forwardRef((props, ref) => (
+  <svg ref={ref} className="h-5 w-5" viewBox="0 0 24 24" fill="none" {...props}>
     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" className="fill-yellow-100 stroke-yellow-500" strokeWidth="1.5"/>
     <circle cx="12" cy="12" r="3" className="fill-yellow-300"/>
   </svg>
-);
+));
+ProfitIcon.displayName = 'ProfitIcon';
 
 const iconMap = {
   success: <OrderSuccessIcon />,

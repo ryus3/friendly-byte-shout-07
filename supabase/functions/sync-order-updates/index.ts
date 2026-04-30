@@ -125,10 +125,16 @@ Deno.serve(async (req) => {
         const partnerName = tokenRecord.partner_name || 'alwaseet';
         console.log(`📡 جلب طلبات ${partnerName} للحساب: ${tokenRecord.account_username}`);
 
-        // ✅ تحديد API URL ديناميكياً من سجل الشركاء
-        const baseUrl = partnerBaseMap[partnerName] || 'https://api.alwaseet-iq.net/v1/merchant';
+        // ✅ MODON: استخدام الـ proxy الثابت IP لتفادي حجب Cloudflare WAF
+        // ✅ AlWaseet: نبقى على base URL من سجل الشركاء (له proxy خاص)
+        let baseUrl: string;
+        if (partnerName === 'modon') {
+          baseUrl = 'https://api.ryusbrand.com/modon/v1/merchant';
+        } else {
+          baseUrl = partnerBaseMap[partnerName] || 'https://api.alwaseet-iq.net/v1/merchant';
+        }
         const apiUrl = `${baseUrl.replace(/\/$/, '')}/merchant-orders?token=${tokenRecord.token}`;
-        
+
         const response = await fetch(apiUrl, {
           headers: { 'Accept': 'application/json' }
         });
@@ -154,21 +160,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ✅ تحديث last_sync_at على مستوى التوكن لكل (شريك+حساب) نجح جلبه
-    // هذا يضمن أن وقت "آخر مزامنة" يتحدّث حتى لو لا توجد طلبات نشطة
+    // ✅ Heartbeat: تحديث last_sync_at لكل التوكنات النشطة (نجحت أم فشلت)
+    // — للناجحة: علامة على آخر نجاح فعلي.
+    // — للفاشلة: المستخدم يرى أن النظام يحاول، لا يجلس صامتاً.
     try {
       const nowSyncIso = new Date().toISOString();
       for (const tokenRecord of allTokens) {
         const partnerName = tokenRecord.partner_name || 'alwaseet';
-        const fetchKey = `${partnerName}:${tokenRecord.account_username}`;
-        if (successfulFetches.has(fetchKey)) {
-          await supabase
-            .from('delivery_partner_tokens')
-            .update({ last_sync_at: nowSyncIso })
-            .eq('user_id', tokenRecord.user_id)
-            .eq('partner_name', partnerName)
-            .eq('account_username', tokenRecord.account_username);
-        }
+        await supabase
+          .from('delivery_partner_tokens')
+          .update({ last_sync_at: nowSyncIso })
+          .eq('user_id', tokenRecord.user_id)
+          .eq('partner_name', partnerName)
+          .eq('account_username', tokenRecord.account_username);
       }
     } catch (tokenStampErr) {
       console.warn('⚠️ تعذر تحديث last_sync_at للتوكنات:', tokenStampErr);

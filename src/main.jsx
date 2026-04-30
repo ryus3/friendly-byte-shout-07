@@ -23,31 +23,28 @@ enforceEmployeeCodeSystem();
 
 // Real-time subscriptions يتم إدارتها بالكامل في SuperProvider لتجنب التضارب
 
-// ✅ تسجيل Service Worker المحسن
+// ✅ تسجيل Service Worker — تحديث صامت بدون إزعاج المستخدم
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js', { 
+      .register('/sw.js', {
         scope: '/',
-        updateViaCache: 'none' // ✅ عدم استخدام cache للـ SW نفسه
+        updateViaCache: 'none'
       })
       .then(registration => {
-        // ✅ التحقق من التحديثات كل ساعة
+        // ✅ تحديث كل 6 ساعات (بدلاً من كل ساعة لتقليل العبء)
         setInterval(() => {
-          registration.update();
-        }, 60 * 60 * 1000);
-        
-        // ✅ معالجة SW الجديد
+          registration.update().catch(() => {});
+        }, 6 * 60 * 60 * 1000);
+
+        // ✅ تطبيق التحديث تلقائياً بصمت — يبقى المستخدم مسجلاً، لا confirm() ولا reload
         registration.addEventListener('updatefound', () => {
           const newWorker = registration.installing;
-          
+          if (!newWorker) return;
           newWorker.addEventListener('statechange', () => {
             if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              // ✅ إشعار المستخدم بالتحديث
-              if (confirm('يوجد تحديث جديد للتطبيق. هل تريد التحديث الآن؟')) {
-                newWorker.postMessage({ type: 'SKIP_WAITING' });
-                window.location.reload();
-              }
+              // طبّق SW الجديد عند فتح الصفحة المرة القادمة طبيعياً
+              newWorker.postMessage({ type: 'SKIP_WAITING' });
             }
           });
         });
@@ -56,14 +53,11 @@ if ('serviceWorker' in navigator) {
         // Silent fail in production
       });
   });
-  
-  // ✅ لا إعادة تحميل تلقائية عند تفعيل SW جديد - يحافظ على الجلسة
-  // المستخدم سيحصل على آخر نسخة عند فتح صفحة جديدة طبيعياً
-  
+
   // ✅ معالجة رسائل SW
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'SYNC_PENDING_ORDERS') {
-      // Silent handling - no console log
+      // Silent handling
     }
   });
 }

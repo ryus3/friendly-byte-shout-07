@@ -17,3 +17,25 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     flowType: 'pkce',
   }
 });
+
+// ✅ تجديد الجلسة عند العودة للتاب — يحافظ على تسجيل الدخول طويلاً
+if (typeof window !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      // فحص الجلسة وتجديدها عند الحاجة (لا يُرمى خطأ إن لم يكن مسجلاً)
+      supabase.auth.getSession().then(({ data }) => {
+        if (data?.session) {
+          // إذا كانت الجلسة على وشك الانتهاء (<5 دقائق)، جدّدها
+          const expiresAt = data.session.expires_at;
+          if (expiresAt) {
+            const msLeft = expiresAt * 1000 - Date.now();
+            if (msLeft < 5 * 60 * 1000) {
+              supabase.auth.refreshSession().catch(() => {});
+            }
+          }
+        }
+      }).catch(() => {});
+    }
+  });
+}
+
