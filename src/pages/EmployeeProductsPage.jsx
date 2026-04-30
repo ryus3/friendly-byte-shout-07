@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -10,7 +10,7 @@ import ManageProductsToolbar from '@/components/manage-products/ManageProductsTo
 import ManageProductListItem from '@/components/manage-products/ManageProductListItem';
 import ManageProductCard from '@/components/manage-products/ManageProductCard';
 import PrintLabelsDialog from '@/components/manage-products/PrintLabelsDialog';
-import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
+const BarcodeScannerDialog = lazy(() => import('@/components/products/BarcodeScannerDialog'));
 import { Checkbox } from '@/components/ui/checkbox';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { toast } from '@/components/ui/use-toast';
@@ -169,11 +169,15 @@ const EmployeeProductsPage = () => {
         products={selectedProducts}
       />
 
-      <BarcodeScannerDialog
-        open={isScannerOpen}
-        onOpenChange={setIsScannerOpen}
-        onScanSuccess={handleScanSuccess}
-      />
+      {isScannerOpen && (
+        <Suspense fallback={null}>
+          <BarcodeScannerDialog
+            open={isScannerOpen}
+            onOpenChange={setIsScannerOpen}
+            onScanSuccess={handleScanSuccess}
+          />
+        </Suspense>
+      )}
 
       <div className="space-y-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">

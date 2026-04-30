@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, lazy, Suspense } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import AddEditColorDialog from '@/components/manage-variants/AddEditColorDialog';
 import AddEditSizeDialog from '@/components/manage-variants/AddEditSizeDialog';
-import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
+const BarcodeScannerDialog = lazy(() => import('@/components/products/BarcodeScannerDialog'));
 
 const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
     const { products, settings } = useInventory();
@@ -302,7 +302,11 @@ const SelectProductForPurchaseDialog = ({ open, onOpenChange, onItemsAdd }) => {
             </Dialog>
             <AddEditColorDialog open={isColorDialogOpen} onOpenChange={setIsColorDialogOpen} onSuccess={handleCreateColor} />
             <AddEditSizeDialog open={isSizeDialogOpen} onOpenChange={setIsSizeDialogOpen} onSuccessfulSubmit={handleCreateSize} />
-            <BarcodeScannerDialog open={isScannerOpen} onOpenChange={setIsScannerOpen} onScanSuccess={handleBarcodeScan} />
+            {isScannerOpen && (
+              <Suspense fallback={null}>
+                <BarcodeScannerDialog open={isScannerOpen} onOpenChange={setIsScannerOpen} onScanSuccess={handleBarcodeScan} />
+              </Suspense>
+            )}
         </>
     );
 };

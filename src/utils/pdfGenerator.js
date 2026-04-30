@@ -3,12 +3,13 @@ let _jsPDF = null;
 let _html2canvas = null;
 const loadPdfDeps = async () => {
   if (!_jsPDF) {
-    const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+    const [jspdfMod, html2canvasMod] = await Promise.all([
       import('jspdf'),
       import('html2canvas'),
     ]);
-    _jsPDF = jsPDF;
-    _html2canvas = html2canvas;
+    // jspdf يصدّر { jsPDF } كـ named export — والـ default قد يكون namespace في بعض bundlers
+    _jsPDF = jspdfMod.jsPDF || jspdfMod.default?.jsPDF || jspdfMod.default;
+    _html2canvas = html2canvasMod.default || html2canvasMod;
   }
   return { jsPDF: _jsPDF, html2canvas: _html2canvas };
 };

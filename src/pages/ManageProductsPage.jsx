@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom';
 import { useInventory } from '@/contexts/InventoryContext';
@@ -14,7 +14,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import PrintLabelsDialog from '@/components/manage-products/PrintLabelsDialog';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { toast } from '@/components/ui/use-toast';
-import BarcodeScannerDialog from '@/components/products/BarcodeScannerDialog';
+const BarcodeScannerDialog = lazy(() => import('@/components/products/BarcodeScannerDialog'));
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import SmartPagination from '@/components/ui/SmartPagination';
 import TransferOwnershipDialog from '@/components/manage-products/TransferOwnershipDialog';
@@ -210,11 +210,15 @@ const ManageProductsPage = () => {
         products={selectedProducts}
       />
 
-       <BarcodeScannerDialog
-          open={isScannerOpen}
-          onOpenChange={setIsScannerOpen}
-          onScanSuccess={handleScanSuccess}
-        />
+       {isScannerOpen && (
+         <Suspense fallback={null}>
+           <BarcodeScannerDialog
+              open={isScannerOpen}
+              onOpenChange={setIsScannerOpen}
+              onScanSuccess={handleScanSuccess}
+            />
+         </Suspense>
+       )}
         
 
       <div className="space-y-6">

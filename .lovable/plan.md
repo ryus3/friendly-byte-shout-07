@@ -20,9 +20,10 @@
 ## 🔜 متبقٍّ من Phase D (يحتاج جلسة مخصصة لكل بند)
 
 ### D3 — Lazy-load للمكتبات الثقيلة
-- ✅ **`@react-pdf/renderer`** — تم! إنشاء `src/components/pdf/LazyPDFDownloadLink.jsx` (wrapper بـ React.lazy + Suspense). استُبدل في 4 ملفات: AccountingPage, EmployeeFinancialCenterPage, InventoryReportsPage, ProfessionalReportsSystem. المكتبة (~500KB) لم تعد تُحمَّل عند فتح صفحة المحاسبة/المخزون — تُحمَّل فقط عند ظهور زر التصدير. **نفس API تماماً** (signature `{({ loading }) => ...}` محفوظ).
+- ✅ **`@react-pdf/renderer`** — wrapper موحّد `LazyPDFDownloadLink`. مطبّق في 4 ملفات.
+- ✅ **`html5-qrcode`** — جميع مكونات الماسح (BarcodeScannerDialog, QROrderScanner) صارت `React.lazy` + render شرطي `{open && <Suspense>...}`. المكتبة لا تُحمَّل إلا عند فتح الماسح فعلياً. مطبّق في: BottomNav, ProductsPage, ManageProductsPage, EmployeeProductsPage, CartDialog, OrdersToolbar, SelectProductForPurchaseDialog.
+- ✅ **`jspdf`** — تصحيح named import (`jspdfMod.jsPDF`) بدل `default` لإصلاح خطأ `l.save is not a function` في تصدير تقرير المخزون.
 - ⏳ `recharts` (5 ملفات) — الدفعة التالية.
-- ⏳ `html5-qrcode` (6 ملفات) — الدفعة بعدها.
 
 ### D5 — Skeletons موحدة
 - استبدال `<Loader2 />` بـ Skeleton في OrderList و Inventory.
