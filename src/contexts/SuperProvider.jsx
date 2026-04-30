@@ -1263,14 +1263,16 @@ export const SuperProvider = ({ children }) => {
         try {
           const fullOrder = await superAPI.getOrderById(createdOrder.id);
           if (fullOrder) {
-            const normalized = normalizeOrder(fullOrder, prev.users);
-            setAllData(prev => ({
-              ...prev,
-              orders: prev.orders.map(o => 
-                o.id === createdOrder.id ? { ...normalized, _fullySynced: true } : o
-              )
-            }));
-            devLog.log(`🔄 تزامن كامل للطلب:`, normalized.order_number);
+            setAllData(prev => {
+              const normalized = normalizeOrder(fullOrder, prev.users || []);
+              return {
+                ...prev,
+                orders: (prev.orders || []).map(o => 
+                  o.id === createdOrder.id ? { ...normalized, _fullySynced: true } : o
+                )
+              };
+            });
+            devLog.log(`🔄 تزامن كامل للطلب:`, fullOrder.order_number);
           }
         } catch (error) {
           devLog.warn('⚠️ فشل التزامن الخلفي، الطلب المعروض فورياً يبقى صالحاً:', error);
