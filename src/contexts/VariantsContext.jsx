@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { SuperContext } from '@/contexts/SuperProvider';
+import superAPI from '@/api/SuperAPI';
 import devLog from '@/lib/devLogger';
 
 const VariantsContext = createContext();
