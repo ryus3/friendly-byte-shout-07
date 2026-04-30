@@ -2881,13 +2881,20 @@ export const SuperProvider = ({ children }) => {
       devLog.log('📋 SuperProvider: تعديل قاعدة ربح للموظف:', { employeeId, ruleData });
       
       if (ruleData.id && ruleData.is_active === false) {
-        // حذف قاعدة
+        // حذف فعلي للقاعدة (hard delete) - يضمن عدم عودتها بعد التحديث
         const { error } = await supabase
           .from('employee_profit_rules')
-          .update({ is_active: false })
+          .delete()
           .eq('id', ruleData.id);
         
         if (error) throw error;
+        
+        // تحديث الواجهة فوراً قبل fetchAllData
+        setAllData(prev => ({
+          ...prev,
+          employeeProfitRules: (prev.employeeProfitRules || []).filter(r => r.id !== ruleData.id),
+          profitRules: (prev.profitRules || []).filter(r => r.id !== ruleData.id)
+        }));
       } else {
         // فحص وجود قاعدة مماثلة
         const { data: existingRules } = await supabase
