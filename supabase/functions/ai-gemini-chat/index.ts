@@ -488,8 +488,8 @@ async function getStoreData(userInfo: any, authToken?: string) {
         sold_quantity: totalSold,
         variants: product.product_variants?.map((variant: any) => ({
           ...variant,
-          color: variant.colors?.name || 'افتراضي',
-          size: variant.sizes?.name || 'افتراضي',
+          color: variant.colors?.name || '-',
+          size: variant.sizes?.name || '-',
           stock: variant.inventory?.[0]?.quantity || 0,
           reserved: variant.inventory?.[0]?.reserved_quantity || 0,
           sold: variant.inventory?.[0]?.sold_quantity || 0
@@ -808,7 +808,7 @@ ${items || '• لا توجد منتجات محددة'}
       const dept = product.department_name || 'غير مصنف';
       const colorGroups: Record<string, string[]> = {};
       for (const v of variants as any[]) {
-        const color = v.color || 'افتراضي';
+        const color = v.color || '-';
         const available = Math.max(0, (v.stock || 0) - (v.reserved || 0));
         if (!colorGroups[color]) colorGroups[color] = [];
         colorGroups[color].push(`${v.size || '-'}(${available})`);
