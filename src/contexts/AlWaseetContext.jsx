@@ -4443,7 +4443,8 @@ export const AlWaseetProvider = ({ children }) => {
     if (!token) return;
     try {
       // ✅ جلب المدن من الكاش المحلي أولاً (بدون استهلاك API خارجي)
-      const cacheTable = activePartner === 'modon' ? 'modon_cities_cache' : 'cities_master';
+      // ✅ كلا الشريكين يستخدمان cities_master (لا يوجد modon_cities_cache في القاعدة)
+      const cacheTable = 'cities_master';
       const { data: cachedCities, error: cacheErr } = await supabase
         .from(cacheTable)
         .select('id, name, name_ar')
