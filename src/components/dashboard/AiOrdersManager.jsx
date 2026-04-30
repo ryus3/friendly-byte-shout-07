@@ -246,14 +246,24 @@ useEffect(() => {
 
   // فلتر الموظفين مع حفظ محلي: الافتراضي "جميع الموظفين"
   const [employeeFilter, setEmployeeFilter] = useLocalStorage('aiOrdersEmployeeFilter', 'all');
-  const employeesOnly = useMemo(
-    () => (allUsers || []).filter(u => 
+  // ✅ مدير القسم: يرى فقط موظفيه تحت الإشراف + نفسه. الأدمن: يرى الجميع.
+  const { supervisedEmployeeIds, isAdmin: supIsAdmin, isDepartmentManager: supIsDeptMgr } = useSupervisedEmployees();
+  const employeesOnly = useMemo(() => {
+    const baseList = (allUsers || []).filter(u =>
       u?.status === 'active' &&
       Array.isArray(u?.roles) &&
       u.roles.some(r => ['super_admin','admin','department_manager','sales_employee','warehouse_employee','cashier'].includes(r))
-    ),
-    [allUsers]
-  );
+    );
+    // الأدمن يرى الكل
+    if (supIsAdmin) return baseList;
+    // مدير القسم يرى فقط موظفيه + نفسه
+    if (supIsDeptMgr) {
+      const allowed = new Set([user?.user_id, user?.id, ...supervisedEmployeeIds].filter(Boolean).map(String));
+      return baseList.filter(u => allowed.has(String(u.user_id)) || allowed.has(String(u.id)));
+    }
+    // غير ذلك: لا قائمة (لن تُعرض المنسدلة أصلاً)
+    return [];
+  }, [allUsers, supIsAdmin, supIsDeptMgr, supervisedEmployeeIds, user?.user_id, user?.id]);
 
   // تحميل إعدادات المستخدم (الوجهة والموافقة التلقائية)
   useEffect(() => {
