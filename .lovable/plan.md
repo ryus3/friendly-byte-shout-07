@@ -1,41 +1,123 @@
-# خطة الإصلاح والتسريع — الحالة
 
-## ✅ منفّذ في هذه الجلسة
-1. **النافذة الشفافة بعد السبلاش** — حُلّت في `src/pages/Dashboard.jsx`:
-   - إزالة `<div bg-background />` الفارغ.
-   - إطلاق `app:dashboard-ready` بمجرد جاهزية المستخدم والصلاحيات (بدون انتظار `inventoryLoading`).
-   - الكروت تظهر فوراً بعد السبلاش وتمتلئ تدريجياً عند وصول البيانات.
+# خطة الجلسة — إصلاحات + تسريع عالمي (آمنة بالكامل)
 
-2. **منسدلة "عرض الطلبات" في الطلبات الذكية** — حُلّت في `src/components/dashboard/AiOrdersManager.jsx`:
-   - استخدام `useSupervisedEmployees`.
-   - الأدمن: يرى الجميع.
-   - مدير القسم (مثل أحمد): يرى فقط موظفيه تحت الإشراف + نفسه.
-   - الموظف العادي: المنسدلة لا تُعرض أصلاً (شرط `isAdmin || isDepartmentManager`).
+## 1) إصلاح خطأ تصدير PDF نهائياً (السبب الجذري)
 
-3. **الطلبات الذكية لحظية لمدير القسم** — تم التحقق:
-   - `ai_orders` مُضافة في `supabase_realtime` publication.
-   - `SuperProvider.jsx` (السطور 765–805) يستمع لـ INSERT/UPDATE/DELETE ويبث الأحداث فوراً.
-   - لا يحتاج تحديث يدوي.
+**السبب الحقيقي** (ليس import jspdf):
+- الدالة `generateInventoryReportPDF` في `src/utils/pdfGenerator.js` صارت `async` بعد تحويل jspdf/html2canvas للتحميل الديناميكي.
+- لكن في `src/pages/InventoryPage.jsx` السطر 301 لا يزال:
+  ```js
+  const doc = generateInventoryReportPDF(exportData);   // ← Promise!
+  doc.save(...)                                          // ← l.save is not a function
+  ```
+- لذلك يظهر التوست بالخطأ، ومع ذلك الملف يُنزَّل لأن الدالة داخلياً تستدعي `pdf.save()` بنفسها قبل أن ترجع.
 
-## 🔜 متبقٍّ من Phase D (يحتاج جلسة مخصصة لكل بند)
+**الإصلاح**:
+- إضافة `await` على الاستدعاء في `InventoryPage.jsx` (وأي صفحة أخرى تستدعي نفس الدالة) وحذف `doc.save(...)` المكرر، أو جعل الدالة ترجع `pdf` فقط دون أن تحفظ بنفسها.
+- الخيار الأنظف: تعديل `pdfGenerator.js` لترجع `{ save: (name) => pdf.save(name) }` صراحة + الاستهلاك بـ `await`.
 
-### D3 — Lazy-load للمكتبات الثقيلة
-- ✅ **`@react-pdf/renderer`** — wrapper موحّد `LazyPDFDownloadLink`. مطبّق في 4 ملفات.
-- ✅ **`html5-qrcode`** — جميع مكونات الماسح (BarcodeScannerDialog, QROrderScanner) صارت `React.lazy` + render شرطي `{open && <Suspense>...}`. المكتبة لا تُحمَّل إلا عند فتح الماسح فعلياً. مطبّق في: BottomNav, ProductsPage, ManageProductsPage, EmployeeProductsPage, CartDialog, OrdersToolbar, SelectProductForPurchaseDialog.
-- ✅ **`jspdf`** — تصحيح named import (`jspdfMod.jsPDF`) بدل `default` لإصلاح خطأ `l.save is not a function` في تصدير تقرير المخزون.
-- ⏳ `recharts` (5 ملفات) — الدفعة التالية.
+النتيجة: لا يظهر توست خطأ + التحميل يعمل بدون أي تحذير.
 
-### D5 — Skeletons موحدة
-- استبدال `<Loader2 />` بـ Skeleton في OrderList و Inventory.
+## 2) تسريع الانتقال بين الصفحات (شاشة سوداء فارغة)
 
-### D6 — Capacitor plugins
-- `@capacitor/camera`, `@capacitor/push-notifications`, `@capacitor/app`, `@capacitor/status-bar`.
-- إعداد Firebase config في AndroidManifest.
+**السبب**: `Suspense fallback` في `App.jsx` السطر 228 هو `<div className="h-dvh w-screen bg-background" />` فارغ، فعند lazy-load أي صفحة جديدة تظهر شاشة سوداء حتى يصل الـchunk.
 
-### Phase E — إشعارات RLS لمالك المنتج
-- إشعار أحمد عند طلب فيه منتجه (يعدّل RLS — حساس).
+**الإصلاح (آمن)**:
+- استبدال الـ fallback بمكون `RouteFallback` خفيف يعرض:
+  - الـ Layout (الـ TopHeader + BottomNav موجودان فعلاً ولا يومضان).
+  - Skeleton أنيق في منطقة المحتوى (شريط + 4 كروت رمادية pulse) — يطابق تخطيط الداشبورد/الجرد/الطلبات.
+- إضافة `prefetch-on-hover/touchstart` للروابط الرئيسية في BottomNav (استدعاء `import()` للصفحة عند أول لمسة قبل الإفلات) — يحوّل الانتقال إلى فوري تقريباً.
 
-## ما لم يُمَس
-- منطق توريث المنتج/اللون/القياس.
-- RLS / triggers / cash_movements / profits / process_telegram_order.
-- توقيعات أي API.
+النتيجة: لا شاشة سوداء، انتقال يبدو فورياً مثل التطبيقات الأصلية.
+
+## 3) صفحة الجرد التفصيلي — وميض الكروت
+
+**السبب**: `InventoryStats` يعرض حالة "صفر" قبل وصول البيانات ثم يقفز للأرقام الحقيقية — يبدو كوميض.
+
+**الإصلاح**:
+- استخدام Skeleton مكان كروت الإحصاءات أثناء `loading || !products` (نفس أبعاد الكرت بالضبط) بدل القفز من 0 إلى القيم.
+- تثبيت ارتفاع الحاوية الرئيسية لمنع Layout shift.
+
+## 4) تحسين انتقال السبلاش → الداشبورد (تطبيق عالمي)
+
+التحويل الحالي يعمل لكن يبقى تأخير محسوس بسبب:
+- الانتظار 1500ms حد أدنى + 500ms fade.
+
+**الإصلاح**:
+- خفض الحد الأدنى إلى 800ms (أو حتى إزالته إذا `dashboardReady` وصل قبله).
+- تشغيل خلف السبلاش (preload) لـ `Dashboard.jsx` فعلياً عبر `import('@/pages/Dashboard.jsx')` فور تركيب السبلاش، حتى يكون chunk الداشبورد جاهزاً قبل بدء الـ fade.
+- ضبط الانتقال بـ `transform/opacity` فقط (GPU-accelerated) — `cubic-bezier(0.22, 1, 0.36, 1)` (iOS-spring-like) ومدة 350ms فقط.
+
+النتيجة: انتقال ناعم خلال أقل من ثانية إجمالاً، لا "نافذة شفافة"، لا تأخير.
+
+## 5) Skeletons — ما هي ولماذا آمنة 100%
+
+**Skeleton** = صندوق رمادي pulse بنفس مقاس البطاقة، يظهر فقط أثناء التحميل بدل سبينر أو فراغ. **لا تمسّ منطق العمل، لا triggers، لا RLS، لا profits**. مجرد `<div className="animate-pulse rounded-md bg-muted" />` (المكون موجود فعلاً في `src/components/ui/skeleton.jsx`).
+
+**الفائدة**: ينقل الإحساس من "الموقع متجمد" إلى "الموقع يحضّر المحتوى" — نفس ما تفعله Facebook/YouTube/Instagram.
+
+سأطبّقه بحذر في:
+- منطقة المحتوى داخل `Suspense fallback`.
+- كروت `InventoryStats` و `Dashboard` أثناء `loading`.
+- قائمة الطلبات في `OrdersPage`.
+
+**لا حذف لأي وظيفة، فقط استبدال spinner/فراغ بـ skeleton**.
+
+## 6) كرت "طلبات الذكاء الاصطناعي = 0"
+
+التصوير يُظهر:
+- **طلبات الذكاء الاصطناعي: 0** ← هذا عداد لجدول `ai_orders` (طلبات تيليجرام/الذكاء الذكي قبل الموافقة).
+- **إجمالي الطلبات: 2** ← عداد جدول `orders` (الطلبات الحقيقية المُنشأة).
+
+**الرقمان لا يقيسان نفس الشيء**. الـ 0 صحيح إذا لم يكن هناك طلب ai_order معلّق. سأتحقق فعلياً من قاعدة البيانات قبل أي تعديل لأقطع الشك. إن كانت RLS لمدير القسم تخفي ai_orders حقيقية، سأصلح الـ RLS؛ وإلا سأترك المنطق كما هو وأوضّح الفرق في tooltip على الكرت.
+
+## 7) متابعة خطة التسريع (الخطوة التالية الأهم والأكثر تأثيراً)
+
+**الترتيب حسب الأثر مقابل المخاطرة**:
+
+| # | البند | الأثر | المخاطرة |
+|---|------|-------|---------|
+| A | Lazy `recharts` (5 ملفات تحليلات) | **عالي ~250KB** | منخفضة |
+| B | Skeleton fallback للـRoutes | عالي (تجربة) | صفر |
+| C | Prefetch-on-touch للـBottomNav | عالي (سرعة محسوسة) | صفر |
+| D | Lazy framer-motion للصفحات الثانوية | متوسط ~80KB | منخفضة |
+| E | تقسيم SuperProvider لقطاعات (orders/products/...) | عالي جداً | متوسط — لاحقاً بجلسة مخصصة |
+
+**هذه الجلسة**: A + B + C + إصلاحات 1–4 (آمنة كلها).
+
+## 8) أثقل الملفات (سأقيسها فعلياً وأفيدك)
+
+سأقوم بـ `npx vite build --report` (أو فحص حجم imports) وأعرض لك أكبر 10 ملفات + أكبر 5 chunks. التوقعات الأولية بناء على ما رأيت:
+- `recharts` → ~300KB
+- `@react-pdf/renderer` (تم فعلاً lazy ✅)
+- `html5-qrcode` (تم ✅)
+- `jspdf + html2canvas` → كبيران (يجب تأكيد lazy فعلياً)
+- `framer-motion` → 80KB
+- `SuperProvider.jsx` (~3000 سطر) → ضخم جداً، تقسيمه لاحقاً.
+
+## 9) جاهزية تطبيق الهاتف
+
+`capacitor.config.ts` موجود فعلاً. المتبقي:
+- إضافة `@capacitor/status-bar` + `@capacitor/splash-screen` (يحلّ السبلاش الأصلي للأندرويد).
+- `@capacitor/app` لمعالجة زر الرجوع.
+- `@capacitor/push-notifications` لربطه بنظام الإشعارات الموجود.
+
+سأفعلها في **جلسة مستقلة** بعد إكمال هذه التحسينات حتى لا أخلط Web build مع Native.
+
+## ما لن أمسّه (نسخة آمنة محفوظة قبل البدء)
+
+- لا triggers، لا RLS، لا cash_movements، لا profits، لا process_telegram_order.
+- لا توقيعات API، لا منطق المخزون/الإرجاع.
+- سأستخدم `code--line_replace` بدقة + سأخبرك بكل ملف عُدّل بعد كل خطوة.
+
+## الترتيب التنفيذي (بعد موافقتك)
+
+1. إصلاح PDF (ملف واحد + سطر واحد).
+2. RouteFallback + Skeletons (3 ملفات).
+3. تسريع انتقال السبلاش (ملف واحد).
+4. Prefetch للـBottomNav (ملف واحد).
+5. Lazy `recharts` (5 ملفات تحليلات).
+6. تشخيص ai_orders للمدير (قراءة DB فقط — قرار بعد رؤية النتيجة).
+7. تقرير أحجام الملفات.
+
+**لن أكسر أي وظيفة. سأعرض ملخصاً واضحاً بعد كل خطوة.**
