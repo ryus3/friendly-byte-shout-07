@@ -381,7 +381,8 @@ const BottomNav = () => {
           
           {/* الرئيسية */}
           <NavButton 
-            onClick={handleHomeClick} 
+            onClick={handleHomeClick}
+            onPointerDown={() => { import('@/pages/Dashboard.jsx').catch(() => {}); }}
             icon={Home} 
             label="الرئيسية"
             isActive={location.pathname === (user?.default_page || '/')}

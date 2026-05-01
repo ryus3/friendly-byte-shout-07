@@ -186,6 +186,30 @@ const SidebarContent = ({ onClose, isMobile }) => {
                 <div
                   className={`sidebar-item ${isActive ? 'active' : ''}`}
                   onClick={() => handleNavigation(item.path)}
+                  onPointerDown={() => {
+                    // ⚡ Prefetch chunk الصفحة عند أول لمسة قبل الإفلات — انتقال شبه فوري
+                    const map = {
+                      '/': () => import('@/pages/Dashboard.jsx'),
+                      '/quick-order': () => import('@/pages/QuickOrderPage.jsx'),
+                      '/my-orders': () => import('@/pages/OrdersPage.jsx'),
+                      '/products': () => import('@/pages/ProductsPage.jsx'),
+                      '/manage-products': () => import('@/pages/ManageProductsPage.jsx'),
+                      '/employee-products': () => import('@/pages/EmployeeProductsPage.jsx'),
+                      '/inventory': () => import('@/pages/InventoryPage.jsx'),
+                      '/purchases': () => import('@/pages/PurchasesPage.jsx'),
+                      '/employee-purchases': () => import('@/pages/EmployeePurchasesPage.jsx'),
+                      '/accounting': () => import('@/pages/AccountingPage.jsx'),
+                      '/employee-financial-center': () => import('@/pages/EmployeeFinancialCenterPage.jsx'),
+                      '/profits-summary': () => import('@/pages/ProfitsSummaryPage.jsx'),
+                      '/sales': () => import('@/pages/SalesPage.jsx'),
+                      '/employee-follow-up': () => import('@/pages/EmployeeFollowUpPage.jsx'),
+                      '/notifications': () => import('@/pages/NotificationsPage.jsx'),
+                      '/settings': () => import('@/pages/SettingsPage.jsx'),
+                      '/customers-management': () => import('@/pages/CustomersManagementPage.jsx'),
+                    };
+                    const fn = map[item.path];
+                    if (fn) fn().catch(() => {});
+                  }}
                 >
                   <Icon className={`w-5 h-5 ${isActive ? '' : item.color}`} />
                   <span className="font-medium">{item.label}</span>

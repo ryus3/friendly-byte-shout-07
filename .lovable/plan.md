@@ -1,41 +1,50 @@
 # خطة الإصلاح والتسريع — الحالة
 
 ## ✅ منفّذ في هذه الجلسة
-1. **النافذة الشفافة بعد السبلاش** — حُلّت في `src/pages/Dashboard.jsx`:
-   - إزالة `<div bg-background />` الفارغ.
-   - إطلاق `app:dashboard-ready` بمجرد جاهزية المستخدم والصلاحيات (بدون انتظار `inventoryLoading`).
-   - الكروت تظهر فوراً بعد السبلاش وتمتلئ تدريجياً عند وصول البيانات.
 
-2. **منسدلة "عرض الطلبات" في الطلبات الذكية** — حُلّت في `src/components/dashboard/AiOrdersManager.jsx`:
-   - استخدام `useSupervisedEmployees`.
-   - الأدمن: يرى الجميع.
-   - مدير القسم (مثل أحمد): يرى فقط موظفيه تحت الإشراف + نفسه.
-   - الموظف العادي: المنسدلة لا تُعرض أصلاً (شرط `isAdmin || isDepartmentManager`).
+### 1) إصلاح خطأ تصدير PDF نهائياً
+- **السبب الجذري** (مختلف عن التشخيص السابق): `generateInventoryReportPDF` دالة `async` تحفظ الملف داخلياً ولا ترجع شيئاً. لكن المُستدعي في `InventoryPage.jsx` كان يفعل `const doc = generateInventoryReportPDF(...)` ثم `doc.save(...)` على Promise/undefined ⇒ خطأ `l.save is not a function` رغم أن الملف يُحمَّل فعلاً.
+- **الحل**: استبدال الاستدعاء بـ `await generateInventoryReportPDF(exportData)` وحذف `doc.save()` المكرر.
 
-3. **الطلبات الذكية لحظية لمدير القسم** — تم التحقق:
-   - `ai_orders` مُضافة في `supabase_realtime` publication.
-   - `SuperProvider.jsx` (السطور 765–805) يستمع لـ INSERT/UPDATE/DELETE ويبث الأحداث فوراً.
-   - لا يحتاج تحديث يدوي.
+### 2) إزالة الشاشة السوداء بين الصفحات
+- إنشاء `src/components/ui/RouteFallback.jsx` — Skeleton أنيق (شريط + كروت + قائمة) بدل `<div bg-background>` الفارغ.
+- استبدال جميع `Suspense fallback` و loading حالات `ProtectedRoute` بـ `<RouteFallback />`.
+- النتيجة: لا شاشة سوداء، تجربة أشبه بالتطبيقات الأصلية.
 
-## 🔜 متبقٍّ من Phase D (يحتاج جلسة مخصصة لكل بند)
+### 3) Prefetch on Pointer-Down
+- BottomNav: زر الرئيسية يستدعي `import('@/pages/Dashboard.jsx')` فور أول لمسة قبل الإفلات.
+- Layout sidebar: كل عنصر قائمة يحمّل chunk صفحته فور `onPointerDown` — انتقال شبه فوري للروابط الأكثر استخداماً (Dashboard, Orders, Products, Inventory, Accounting, ...).
 
-### D3 — Lazy-load للمكتبات الثقيلة
-- ✅ **`@react-pdf/renderer`** — wrapper موحّد `LazyPDFDownloadLink`. مطبّق في 4 ملفات.
-- ✅ **`html5-qrcode`** — جميع مكونات الماسح (BarcodeScannerDialog, QROrderScanner) صارت `React.lazy` + render شرطي `{open && <Suspense>...}`. المكتبة لا تُحمَّل إلا عند فتح الماسح فعلياً. مطبّق في: BottomNav, ProductsPage, ManageProductsPage, EmployeeProductsPage, CartDialog, OrdersToolbar, SelectProductForPurchaseDialog.
-- ✅ **`jspdf`** — تصحيح named import (`jspdfMod.jsPDF`) بدل `default` لإصلاح خطأ `l.save is not a function` في تصدير تقرير المخزون.
-- ⏳ `recharts` (5 ملفات) — الدفعة التالية.
+### 4) تسريع انتقال السبلاش (تطبيق عالمي)
+- خفض الحد الأدنى للسبلاش: 1500ms → **800ms**.
+- خفض السقف الصارم: 6000ms → **5000ms**.
+- خفض مدة الـ fade: 500ms → **350ms**.
+- إزالة `filter: blur` (ثقيل على CPU) من keyframe — الآن `opacity + transform` فقط (GPU-accelerated).
+- منحنى iOS-spring: `cubic-bezier(0.22, 1, 0.36, 1)`.
+- **Preload chunk الداشبورد فور تركيب السبلاش** ⇒ جاهز قبل بدء الـ fade.
 
-### D5 — Skeletons موحدة
-- استبدال `<Loader2 />` بـ Skeleton في OrderList و Inventory.
+### 5) تخفيف وميض كروت الجرد
+- `animationDelay` في `InventoryStats` خُفّض من `100ms × index` إلى `30ms × index` ⇒ ظهور الكروت دفعة واحدة شبه متزامنة بدل cascade مزعج.
 
-### D6 — Capacitor plugins
-- `@capacitor/camera`, `@capacitor/push-notifications`, `@capacitor/app`, `@capacitor/status-bar`.
-- إعداد Firebase config في AndroidManifest.
+### 6) كرت "طلبات الذكاء الاصطناعي = 0"
+- **تحققت من DB مباشرة**: جدول `ai_orders` فارغ (0 صفوف).
+- "إجمالي الطلبات: 2" يأتي من جدول `orders` (طلبات حقيقية).
+- "طلبات الذكاء الاصطناعي" يأتي من `ai_orders` (طلبات تيليجرام/الذكاء قبل الموافقة).
+- **الرقمان لا يقيسان نفس الشيء — الـ 0 صحيح ولا يوجد خطأ**.
 
-### Phase E — إشعارات RLS لمالك المنتج
-- إشعار أحمد عند طلب فيه منتجه (يعدّل RLS — حساس).
+## 🔜 الخطوة التالية (موصى بها للجلسة القادمة)
 
-## ما لم يُمَس
-- منطق توريث المنتج/اللون/القياس.
-- RLS / triggers / cash_movements / profits / process_telegram_order.
-- توقيعات أي API.
+### A — Lazy `recharts` (الأثر الأعلى المتبقي ~250KB)
+5 ملفات تحليلات. سأطبق نفس نمط `React.lazy` + `Suspense` المستخدم في PDF و QR.
+
+### B — تقسيم `SuperProvider.jsx` (3000+ سطر)
+أكبر ملف في المشروع. تقسيمه إلى Providers مستقلة (orders/products/cash/profits) سيقلل re-renders بشكل كبير ويسرّع كل شيء — لكن يحتاج جلسة مخصصة بحذر شديد لأنه يلامس كل الأنظمة.
+
+### C — جاهزية تطبيق الهاتف
+- `@capacitor/status-bar`, `@capacitor/splash-screen`, `@capacitor/app`, `@capacitor/push-notifications`.
+- جلسة مستقلة بعد إكمال تحسينات الويب.
+
+## ما لم يُمَس (Zero Risk)
+- لا triggers، لا RLS، لا cash_movements، لا profits.
+- لا توقيعات API، لا منطق المخزون/الإرجاع/التسوية.
+- التغييرات كلها في طبقة العرض (Frontend Presentation).

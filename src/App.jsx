@@ -15,6 +15,7 @@ import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 // ملاحظة: useAppStartSync يعمل داخل AppProviders (AppStartSync) — لا تكرّره هنا
 import AppSplashScreen from '@/components/AppSplashScreen.jsx';
+import RouteFallback from '@/components/ui/RouteFallback.jsx';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 
@@ -95,9 +96,9 @@ function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   
-  // انتظار تحميل البيانات الأساسية أولاً (بدون spinner — خلفية فقط لتفادي وميض)
+  // انتظار تحميل البيانات الأساسية أولاً (Skeleton بدل شاشة فارغة)
   if (loading) {
-    return <div className="h-dvh w-screen bg-background" />;
+    return <RouteFallback />;
   }
   
   // إذا لم يكن هناك مستخدم، انتقل لصفحة تسجيل الدخول
@@ -112,7 +113,7 @@ function ProtectedRoute({ children, permission }) {
 
   // انتظار تحميل الصلاحيات بعد التأكد من وجود المستخدم
   if (permissionsLoading) {
-    return <div className="h-dvh w-screen bg-background" />;
+    return <RouteFallback />;
   }
 
   // فحص الصلاحيات إذا كانت مطلوبة
@@ -163,14 +164,16 @@ function AppContent() {
   // الحد الأدنى لمدة السبلاش، والحد الأقصى الصارم لمنع التعليق
   useEffect(() => {
     if (!showSplash) return;
-    const minTimer = setTimeout(() => setSplashMinElapsed(true), 1500);
+    // ⚡ Preload chunk الداشبورد فوراً مع السبلاش حتى يكون جاهزاً للظهور الفوري
+    import('@/pages/Dashboard.jsx').catch(() => {});
+    const minTimer = setTimeout(() => setSplashMinElapsed(true), 800); // ⚡ 1500 → 800ms
     const maxTimer = setTimeout(() => {
       setSplashFading(true);
       setTimeout(() => {
         setShowSplash(false);
         sessionStorage.setItem('hasShownSplash', 'true');
-      }, 500);
-    }, 6000); // سقف صارم 6s مهما حصل
+      }, 350);
+    }, 5000); // سقف صارم 5s
     return () => { clearTimeout(minTimer); clearTimeout(maxTimer); };
   }, [showSplash]);
 
@@ -193,7 +196,7 @@ function AppContent() {
       const t = setTimeout(() => {
         setShowSplash(false);
         sessionStorage.setItem('hasShownSplash', 'true');
-      }, 500); // مدة الـ fade
+      }, 350); // ⚡ fade أسرع
       return () => clearTimeout(t);
     }
   }, [showSplash, splashFading, splashMinElapsed, loading, dashboardReady, needsDashboardWait]);
@@ -206,7 +209,7 @@ function AppContent() {
         setTimeout(() => {
           setShowSplash(false);
           sessionStorage.setItem('hasShownSplash', 'true');
-        }, 500);
+        }, 350);
       }} />
     );
   }
@@ -225,7 +228,7 @@ function AppContent() {
         <meta name="theme-color" content="#ffffff" />
       </Helmet>
       <ScrollToTop />
-      <Suspense fallback={<div className="h-dvh w-screen bg-background" />}>
+      <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />

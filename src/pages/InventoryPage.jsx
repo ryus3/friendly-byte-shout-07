@@ -298,10 +298,9 @@ const InventoryHeaderWithAudit = ({ inventoryItems, filteredItems, selectedItems
                  return;
                }
                
-               const doc = generateInventoryReportPDF(exportData);
-               const date = new Date().toLocaleDateString('ar-SA');
-               doc.save(`تقرير-المخزون-${date}.pdf`);
-               toast({ title: "تم التصدير", description: `تم تصدير ${exportData.length} منتج` });
+                // الدالة async وتحفظ الملف داخلياً عبر pdf.save() — فقط ننتظرها
+                await generateInventoryReportPDF(exportData);
+                toast({ title: "تم التصدير", description: `تم تصدير ${exportData.length} منتج` });
              } catch (err) {
                console.error('PDF export error:', err);
                toast({ title: "خطأ في التصدير", description: err.message, variant: "destructive" });
