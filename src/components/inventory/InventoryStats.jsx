@@ -13,7 +13,7 @@ const StatCard = ({ icon: Icon, title, value, colorClass, delay, onClick }) => (
       onClick && "cursor-pointer group"
     )}
     onClick={onClick}
-    style={{ animationDelay: `${delay * 100}ms` }}
+    style={{ animationDelay: `${delay * 30}ms` }}
   >
      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
      <div 
