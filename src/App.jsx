@@ -164,14 +164,16 @@ function AppContent() {
   // الحد الأدنى لمدة السبلاش، والحد الأقصى الصارم لمنع التعليق
   useEffect(() => {
     if (!showSplash) return;
-    const minTimer = setTimeout(() => setSplashMinElapsed(true), 1500);
+    // ⚡ Preload chunk الداشبورد فوراً مع السبلاش حتى يكون جاهزاً للظهور الفوري
+    import('@/pages/Dashboard.jsx').catch(() => {});
+    const minTimer = setTimeout(() => setSplashMinElapsed(true), 800); // ⚡ 1500 → 800ms
     const maxTimer = setTimeout(() => {
       setSplashFading(true);
       setTimeout(() => {
         setShowSplash(false);
         sessionStorage.setItem('hasShownSplash', 'true');
-      }, 500);
-    }, 6000); // سقف صارم 6s مهما حصل
+      }, 350);
+    }, 5000); // سقف صارم 5s
     return () => { clearTimeout(minTimer); clearTimeout(maxTimer); };
   }, [showSplash]);
 
@@ -194,7 +196,7 @@ function AppContent() {
       const t = setTimeout(() => {
         setShowSplash(false);
         sessionStorage.setItem('hasShownSplash', 'true');
-      }, 500); // مدة الـ fade
+      }, 350); // ⚡ fade أسرع
       return () => clearTimeout(t);
     }
   }, [showSplash, splashFading, splashMinElapsed, loading, dashboardReady, needsDashboardWait]);
@@ -207,7 +209,7 @@ function AppContent() {
         setTimeout(() => {
           setShowSplash(false);
           sessionStorage.setItem('hasShownSplash', 'true');
-        }, 500);
+        }, 350);
       }} />
     );
   }
