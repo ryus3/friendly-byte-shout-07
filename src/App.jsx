@@ -15,6 +15,7 @@ import NotificationsHandler from './contexts/NotificationsHandler';
 import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 // ملاحظة: useAppStartSync يعمل داخل AppProviders (AppStartSync) — لا تكرّره هنا
 import AppSplashScreen from '@/components/AppSplashScreen.jsx';
+import RouteFallback from '@/components/ui/RouteFallback.jsx';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 
@@ -95,9 +96,9 @@ function ProtectedRoute({ children, permission }) {
   const { user, loading } = useAuth();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   
-  // انتظار تحميل البيانات الأساسية أولاً (بدون spinner — خلفية فقط لتفادي وميض)
+  // انتظار تحميل البيانات الأساسية أولاً (Skeleton بدل شاشة فارغة)
   if (loading) {
-    return <div className="h-dvh w-screen bg-background" />;
+    return <RouteFallback />;
   }
   
   // إذا لم يكن هناك مستخدم، انتقل لصفحة تسجيل الدخول
@@ -112,7 +113,7 @@ function ProtectedRoute({ children, permission }) {
 
   // انتظار تحميل الصلاحيات بعد التأكد من وجود المستخدم
   if (permissionsLoading) {
-    return <div className="h-dvh w-screen bg-background" />;
+    return <RouteFallback />;
   }
 
   // فحص الصلاحيات إذا كانت مطلوبة
@@ -225,7 +226,7 @@ function AppContent() {
         <meta name="theme-color" content="#ffffff" />
       </Helmet>
       <ScrollToTop />
-      <Suspense fallback={<div className="h-dvh w-screen bg-background" />}>
+      <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/update-password" element={<UpdatePasswordPage />} />
