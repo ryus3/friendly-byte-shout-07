@@ -150,69 +150,89 @@ function ScrollToTop() {
 
 function AppContent() {
   const { user, loading } = useAuth();
+  const { loading: permissionsLoading } = usePermissions();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
   const [showSplash, setShowSplash] = useState(() => {
     const hasShownSplash = sessionStorage.getItem('hasShownSplash');
     return !hasShownSplash;
   });
-  const [splashMinElapsed, setSplashMinElapsed] = useState(false);
-  const [dashboardReady, setDashboardReady] = useState(false);
-  const [splashFading, setSplashFading] = useState(false); // ⚡ مرحلة الـ fade-out السلس
+  const [splashFading, setSplashFading] = useState(false);
+  const [splashFinished, setSplashFinished] = useState(false); // أكمل السبلاش 100%
 
-  // useAppStartSync يعمل عبر AppStartSync داخل AppProviders
-
-  // الحد الأدنى لمدة السبلاش، والحد الأقصى الصارم لمنع التعليق
+  // ⚡ Preload chunk الداشبورد فور بدء السبلاش
   useEffect(() => {
     if (!showSplash) return;
-    // ⚡ Preload chunk الداشبورد فوراً مع السبلاش حتى يكون جاهزاً للظهور الفوري
     import('@/pages/Dashboard.jsx').catch(() => {});
-    const minTimer = setTimeout(() => setSplashMinElapsed(true), 800); // ⚡ 1500 → 800ms
-    const maxTimer = setTimeout(() => {
-      setSplashFading(true);
-      setTimeout(() => {
-        setShowSplash(false);
-        sessionStorage.setItem('hasShownSplash', 'true');
-      }, 350);
-    }, 5000); // سقف صارم 5s
-    return () => { clearTimeout(minTimer); clearTimeout(maxTimer); };
   }, [showSplash]);
 
-  // الاستماع لإشارة جاهزية الداشبورد
+  // ⚡ إطلاق إشارات الجاهزية لشريط السبلاش الحقيقي
   useEffect(() => {
-    const onReady = () => setDashboardReady(true);
-    window.addEventListener('app:dashboard-ready', onReady);
-    return () => window.removeEventListener('app:dashboard-ready', onReady);
-  }, []);
+    if (!showSplash) return;
+    if (!loading) {
+      window.dispatchEvent(new CustomEvent('app:auth-ready'));
+    }
+  }, [showSplash, loading]);
 
-  // إذا لم يكن المستخدم مسجلاً أو في صفحات عامة، لا داعي لانتظار الداشبورد
-  const needsDashboardWait = !!user && window.location.pathname === '/';
-
-  // أخفِ السبلاش بانتقال سلس عند جاهزية كل المتطلبات
   useEffect(() => {
-    if (!showSplash || splashFading) return;
-    if (splashMinElapsed && !loading && (!needsDashboardWait || dashboardReady)) {
-      // ابدأ مرحلة الـ fade-out — الصفحة الرئيسية تحته جاهزة
-      setSplashFading(true);
+    if (!showSplash) return;
+    if (!permissionsLoading && !loading) {
+      window.dispatchEvent(new CustomEvent('app:permissions-ready'));
+    }
+  }, [showSplash, permissionsLoading, loading]);
+
+  // dashboard-ready يصدر من Dashboard.jsx
+  // إذا المستخدم في صفحة غير الرئيسية، نُصدر data-ready مبكراً
+  useEffect(() => {
+    if (!showSplash) return;
+    const path = typeof window !== 'undefined' ? window.location.pathname : '/';
+    if (path !== '/' && !loading && !permissionsLoading) {
       const t = setTimeout(() => {
-        setShowSplash(false);
-        sessionStorage.setItem('hasShownSplash', 'true');
-      }, 350); // ⚡ fade أسرع
+        window.dispatchEvent(new CustomEvent('app:dashboard-ready'));
+        window.dispatchEvent(new CustomEvent('app:data-ready'));
+      }, 100);
       return () => clearTimeout(t);
     }
-  }, [showSplash, splashFading, splashMinElapsed, loading, dashboardReady, needsDashboardWait]);
+  }, [showSplash, loading, permissionsLoading]);
 
-  // ⚡ إذا ما زال auth قيد التحميل ولم نبدأ الـ fade — اعرض السبلاش لوحده
+  // الاستماع لجاهزية الداشبورد ⇒ data-ready
+  useEffect(() => {
+    if (!showSplash) return;
+    const onReady = () => {
+      window.dispatchEvent(new CustomEvent('app:data-ready'));
+    };
+    window.addEventListener('app:dashboard-ready', onReady);
+    return () => window.removeEventListener('app:dashboard-ready', onReady);
+  }, [showSplash]);
+
+  // ⚡ السقف الصارم: 6 ثوانٍ كحد أقصى مهما حدث
+  useEffect(() => {
+    if (!showSplash) return;
+    const maxTimer = setTimeout(() => {
+      setSplashFinished(true);
+    }, 6000);
+    return () => clearTimeout(maxTimer);
+  }, [showSplash]);
+
+  // عند اكتمال السبلاش (onComplete من شاشة السبلاش) → fade out
+  const handleSplashComplete = useCallback(() => {
+    setSplashFinished(true);
+  }, []);
+
+  useEffect(() => {
+    if (!splashFinished || !showSplash || splashFading) return;
+    setSplashFading(true);
+    const t = setTimeout(() => {
+      setShowSplash(false);
+      sessionStorage.setItem('hasShownSplash', 'true');
+    }, 350);
+    return () => clearTimeout(t);
+  }, [splashFinished, showSplash, splashFading]);
+
+  // ⚡ السبلاش يبقى ظاهراً حتى يكتمل
   if ((showSplash || loading) && !splashFading) {
-    return (
-      <AppSplashScreen onComplete={() => {
-        setSplashFading(true);
-        setTimeout(() => {
-          setShowSplash(false);
-          sessionStorage.setItem('hasShownSplash', 'true');
-        }, 350);
-      }} />
-    );
+    return <AppSplashScreen onComplete={handleSplashComplete} />;
   }
+
 
   const childrenWithProps = (Component, props = {}) => (
     <Layout>
