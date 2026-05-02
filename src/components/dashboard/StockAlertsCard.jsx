@@ -13,45 +13,48 @@ import devLog from '@/lib/devLogger';
 
 const StockAlertsCard = () => {
   const navigate = useNavigate();
-  const { products, settings, refetchProducts } = useInventory(); // المنتجات الخام
+  const { products, settings, refetchProducts } = useInventory();
   const { canManageFinances, isAdmin, canViewStockAlerts, canManageInventory } = usePermissions();
+  const { user } = require('@/contexts/UnifiedAuthContext').useAuth ? require('@/contexts/UnifiedAuthContext').useAuth() : { user: null };
   
   // فلترة المنتجات حسب صلاحيات المستخدم
   const filteredProducts = useFilteredStockNotifications(products);
   
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // الاستماع لأحداث التحديث
   useEffect(() => {
     const handleRefresh = async () => {
-      // لا حاجة لإعادة تحديث المنتجات هنا - سيتم تحديثها تلقائياً من InventoryContext
       devLog.log('📦 Stock alerts refreshed');
     };
-
-    // استمع لأحداث التحديث المخصصة فقط (للتوافق مع النظام القديم)
     window.addEventListener('refresh-inventory', handleRefresh);
-    
     return () => {
       window.removeEventListener('refresh-inventory', handleRefresh);
     };
   }, []);
   
-  // حساب المتغيرات منخفضة المخزون فقط (استبعاد النافذ تماماً)
+  // ✅ المنتجات المملوكة للمستخدم الحالي (للموظف/مدير القسم)
+  const myProducts = React.useMemo(() => {
+    if (!filteredProducts) return [];
+    if (isAdmin) return filteredProducts;
+    const uid = user?.id || user?.user_id;
+    if (!uid) return [];
+    return filteredProducts.filter(p => p.owner_user_id === uid);
+  }, [filteredProducts, isAdmin, user?.id, user?.user_id]);
+  
+  // حساب المتغيرات منخفضة المخزون من منتجاته فقط
   const lowStockProducts = React.useMemo(() => {
-    if (!filteredProducts || !Array.isArray(filteredProducts)) return [];
+    if (!myProducts || !Array.isArray(myProducts)) return [];
     
     const threshold = settings?.lowStockThreshold || 5;
     const lowStockItems = [];
     
-    filteredProducts.forEach(product => {
+    myProducts.forEach(product => {
       if (product.variants && product.variants.length > 0) {
-        // البحث عن المتغيرات منخفضة المخزون (أكبر من 0 وأقل من أو يساوي العتبة)
         const lowStockVariants = product.variants.filter(variant => {
           const variantQuantity = variant.quantity || 0;
           return variantQuantity > 0 && variantQuantity <= threshold;
         });
         
-        // إذا كان هناك متغيرات منخفضة، إضافة المنتج مع تفاصيل المتغيرات المنخفضة
         if (lowStockVariants.length > 0) {
           lowStockItems.push({
             id: product.id,
@@ -66,14 +69,13 @@ const StockAlertsCard = () => {
       }
     });
     
-    // ترتيب حسب أقل كمية
     return lowStockItems.sort((a, b) => a.totalLowStockQuantity - b.totalLowStockQuantity);
-  }, [filteredProducts, settings?.lowStockThreshold]);
+  }, [myProducts, settings?.lowStockThreshold]);
   
-  // صلاحيات عرض تنبيهات المخزون - فقط للموظفين المخولين
-  const canViewAlerts = canViewStockAlerts || canManageInventory || isAdmin;
+  // ✅ يظهر الكرت فقط لمن يمتلك منتجات (أو للأدمن)
+  const ownsAnyProducts = isAdmin || (myProducts && myProducts.length > 0);
+  const canViewAlerts = (canViewStockAlerts || canManageInventory || isAdmin) && ownsAnyProducts;
   
-  // إذا لم يكن لديه صلاحية، لا تعرض الكارت
   if (!canViewAlerts) {
     return null;
   }
