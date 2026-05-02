@@ -13,17 +13,29 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/hooks/use-toast';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
 import { cn } from '@/lib/utils';
+import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
 
 const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = [] }) => {
     const navigate = useNavigate();
     const [selectedEmployee, setSelectedEmployee] = useState('all');
     const [selectedOrders, setSelectedOrders] = useState([]);
+    const { isAdmin, isDepartmentManager, allowedUserIds } = useSupervisedEmployees();
+
+    // ✅ عزل البيانات: المدير العام يرى الكل، مدير القسم يرى نفسه + موظفيه فقط
+    const scopedProfits = useMemo(() => {
+        if (!Array.isArray(allProfits)) return [];
+        if (isAdmin) return allProfits;
+        if (isDepartmentManager && Array.isArray(allowedUserIds)) {
+            return allProfits.filter(p => allowedUserIds.includes(p.employee_id));
+        }
+        return allProfits;
+    }, [allProfits, isAdmin, isDepartmentManager, allowedUserIds]);
 
     // استخدام بيانات جدول profits بدلاً من الحساب اليدوي
     const pendingProfitsData = useMemo(() => {
-        if (!allProfits || !orders) return [];
+        if (!scopedProfits || !orders) return [];
         
-        return allProfits.filter(profit => {
+        return scopedProfits.filter(profit => {
             // استخدام دالة موحدة لفحص الحالات المعلقة
             if (!isPendingStatus(profit.status)) return false;
             
@@ -43,12 +55,22 @@ const PendingDuesDialog = ({ open, onOpenChange, orders, allUsers, allProfits = 
                 order: order
             };
         });
-    }, [allProfits, orders]);
+    }, [scopedProfits, orders]);
+
+    // ✅ allUsers مفلترة كذلك حسب نطاق الإشراف
+    const scopedAllUsers = useMemo(() => {
+        if (!Array.isArray(allUsers)) return [];
+        if (isAdmin) return allUsers;
+        if (isDepartmentManager && Array.isArray(allowedUserIds)) {
+            return allUsers.filter(u => allowedUserIds.includes(u.id) || allowedUserIds.includes(u.user_id));
+        }
+        return allUsers;
+    }, [allUsers, isAdmin, isDepartmentManager, allowedUserIds]);
 
     const employeesWithPendingDues = useMemo(() => {
         const employeeIds = new Set(pendingProfitsData.map(p => p.employee_id));
-        return allUsers.filter(u => employeeIds.has(u.id));
-    }, [pendingProfitsData, allUsers]);
+        return scopedAllUsers.filter(u => employeeIds.has(u.id) || employeeIds.has(u.user_id));
+    }, [pendingProfitsData, scopedAllUsers]);
 
     const filteredData = useMemo(() => {
         if (selectedEmployee === 'all') {
