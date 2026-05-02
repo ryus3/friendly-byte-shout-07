@@ -38,44 +38,44 @@ import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
 const ManagerProfitsDialog = ({ 
   isOpen, 
   onClose, 
-  orders = [], 
-  employees = [], 
+  orders: ordersProp = [], 
+  employees: employeesProp = [], 
   calculateProfit,
-  profits = [],
+  profits: profitsProp = [],
   managerId,
-  stats: externalStats, // الإحصائيات المحسوبة من الصفحة الرئيسية
-  timePeriod: externalTimePeriod = null // فلتر الفترة من الصفحة الرئيسية
+  stats: externalStats,
+  timePeriod: externalTimePeriod = null
 }) => {
   const { isAdmin, isDepartmentManager, allowedUserIds } = useSupervisedEmployees();
   const [selectedEmployee, setSelectedEmployee] = useState('all');
 
   // ✅ عزل: مدير القسم لا يرى موظفين/طلبات/أرباح خارج إشرافه
-  const scopedEmployees = useMemo(() => {
-    if (!Array.isArray(employees)) return [];
-    if (isAdmin) return employees;
+  const employees = useMemo(() => {
+    if (!Array.isArray(employeesProp)) return [];
+    if (isAdmin) return employeesProp;
     if (isDepartmentManager && Array.isArray(allowedUserIds)) {
-      return employees.filter(e => allowedUserIds.includes(e.id) || allowedUserIds.includes(e.user_id));
+      return employeesProp.filter(e => allowedUserIds.includes(e.id) || allowedUserIds.includes(e.user_id));
     }
-    return employees;
-  }, [employees, isAdmin, isDepartmentManager, allowedUserIds]);
+    return employeesProp;
+  }, [employeesProp, isAdmin, isDepartmentManager, allowedUserIds]);
 
-  const scopedProfits = useMemo(() => {
-    if (!Array.isArray(profits)) return [];
-    if (isAdmin) return profits;
+  const profits = useMemo(() => {
+    if (!Array.isArray(profitsProp)) return [];
+    if (isAdmin) return profitsProp;
     if (isDepartmentManager && Array.isArray(allowedUserIds)) {
-      return profits.filter(p => allowedUserIds.includes(p.employee_id));
+      return profitsProp.filter(p => allowedUserIds.includes(p.employee_id));
     }
-    return profits;
-  }, [profits, isAdmin, isDepartmentManager, allowedUserIds]);
+    return profitsProp;
+  }, [profitsProp, isAdmin, isDepartmentManager, allowedUserIds]);
 
-  const scopedOrders = useMemo(() => {
-    if (!Array.isArray(orders)) return [];
-    if (isAdmin) return orders;
+  const orders = useMemo(() => {
+    if (!Array.isArray(ordersProp)) return [];
+    if (isAdmin) return ordersProp;
     if (isDepartmentManager && Array.isArray(allowedUserIds)) {
-      return orders.filter(o => allowedUserIds.includes(o.created_by));
+      return ordersProp.filter(o => allowedUserIds.includes(o.created_by));
     }
-    return orders;
-  }, [orders, isAdmin, isDepartmentManager, allowedUserIds]);
+    return ordersProp;
+  }, [ordersProp, isAdmin, isDepartmentManager, allowedUserIds]);
 
   
   // فلتر الفترة الزمنية مع حفظ الخيار
