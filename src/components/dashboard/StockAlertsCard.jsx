@@ -111,7 +111,7 @@ const StockAlertsCard = () => {
             </CardTitle>
           </div>
           {lowStockProducts && lowStockProducts.length > 0 && (
-            <div className="flex items-center justify-center w-8 h-8 bg-red-500 rounded-full text-white text-sm font-bold animate-pulse">
+            <div className="flex items-center justify-center w-8 h-8 bg-red-500 rounded-full text-white text-sm font-bold">
               {lowStockProducts.length}
             </div>
           )}

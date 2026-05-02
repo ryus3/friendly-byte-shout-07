@@ -3,17 +3,16 @@ import { Package, TrendingUp, TrendingDown, AlertTriangle, Archive, PackageX } f
 import { cn } from '@/lib/utils';
 import useInventoryStats from '@/hooks/useInventoryStats';
 
-const StatCard = ({ icon: Icon, title, value, colorClass, delay, onClick }) => (
+const StatCard = ({ icon: Icon, title, value, colorClass, onClick }) => (
   <div
     className={cn(
-      "relative bg-card rounded-xl p-4 sm:p-6 border transition-all duration-300 animate-fade-in hover-scale",
+      "relative bg-card rounded-xl p-4 sm:p-6 border transition-all duration-300 hover-scale",
       "shadow-lg shadow-black/10 dark:shadow-black/30",
       "hover:shadow-2xl hover:shadow-primary/10",
       "dark:hover:shadow-primary/20",
       onClick && "cursor-pointer group"
     )}
     onClick={onClick}
-    style={{ animationDelay: `${delay * 30}ms` }}
   >
      <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/10 to-transparent rounded-xl pointer-events-none"></div>
      <div 
