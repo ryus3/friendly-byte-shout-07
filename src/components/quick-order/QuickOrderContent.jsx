@@ -764,6 +764,14 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               citiesData = [];
             }
 
+            // ✅ ترجمة أحجام الطرود للعربية (موحّدة مع map MODON أعلاه)
+            const SIZE_AR = { normal:'عادي', regular:'عادي', standard:'عادي', small:'صغير', medium:'متوسط', middle:'متوسط', large:'كبير', xlarge:'كبير جداً', xl:'كبير جداً', 'x-large':'كبير جداً', 'x large':'كبير جداً', 'extra large':'كبير جداً', 'extra-large':'كبير جداً' };
+            const trAlwSize = (n) => {
+              if (!n) return n;
+              const k = String(n).trim().toLowerCase();
+              return SIZE_AR[k] || n;
+            };
+
             const { data: cachedSizes } = await supabase
               .from('package_sizes_cache')
               .select('external_id, size_name')
@@ -771,7 +779,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               .eq('is_active', true);
 
             if (cachedSizes && cachedSizes.length > 0) {
-              packageSizesData = cachedSizes.map(s => ({ id: s.external_id, size: s.size_name }));
+              packageSizesData = cachedSizes.map(s => ({ id: s.external_id, size: trAlwSize(s.size_name) }));
             } else {
               packageSizesData = [{ id: '1', size: 'عادي' }, { id: '2', size: 'متوسط' }, { id: '3', size: 'كبير' }, { id: '4', size: 'كبير جداً' }];
             }
