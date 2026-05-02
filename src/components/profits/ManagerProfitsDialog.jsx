@@ -33,6 +33,8 @@ import {
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
+import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
+
 const ManagerProfitsDialog = ({ 
   isOpen, 
   onClose, 
@@ -44,7 +46,37 @@ const ManagerProfitsDialog = ({
   stats: externalStats, // الإحصائيات المحسوبة من الصفحة الرئيسية
   timePeriod: externalTimePeriod = null // فلتر الفترة من الصفحة الرئيسية
 }) => {
+  const { isAdmin, isDepartmentManager, allowedUserIds } = useSupervisedEmployees();
   const [selectedEmployee, setSelectedEmployee] = useState('all');
+
+  // ✅ عزل: مدير القسم لا يرى موظفين/طلبات/أرباح خارج إشرافه
+  const scopedEmployees = useMemo(() => {
+    if (!Array.isArray(employees)) return [];
+    if (isAdmin) return employees;
+    if (isDepartmentManager && Array.isArray(allowedUserIds)) {
+      return employees.filter(e => allowedUserIds.includes(e.id) || allowedUserIds.includes(e.user_id));
+    }
+    return employees;
+  }, [employees, isAdmin, isDepartmentManager, allowedUserIds]);
+
+  const scopedProfits = useMemo(() => {
+    if (!Array.isArray(profits)) return [];
+    if (isAdmin) return profits;
+    if (isDepartmentManager && Array.isArray(allowedUserIds)) {
+      return profits.filter(p => allowedUserIds.includes(p.employee_id));
+    }
+    return profits;
+  }, [profits, isAdmin, isDepartmentManager, allowedUserIds]);
+
+  const scopedOrders = useMemo(() => {
+    if (!Array.isArray(orders)) return [];
+    if (isAdmin) return orders;
+    if (isDepartmentManager && Array.isArray(allowedUserIds)) {
+      return orders.filter(o => allowedUserIds.includes(o.created_by));
+    }
+    return orders;
+  }, [orders, isAdmin, isDepartmentManager, allowedUserIds]);
+
   
   // فلتر الفترة الزمنية مع حفظ الخيار
   // إذا تم تمرير فترة من الخارج، استخدمها، وإلا استخدم المحفوظ محلياً
