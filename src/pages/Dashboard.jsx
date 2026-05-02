@@ -597,13 +597,12 @@ const Dashboard = () => {
             topProducts: []
         };
 
+        // ✅ نفس فلترة OrdersStats.getStats('all') تماماً — visibleOrders مفلترة سابقاً بالصلاحيات
         const filteredTotalOrders = filterOrdersByPeriod(
           visibleOrders.filter(o => 
             !o.isarchived && 
             o.status !== 'completed' && 
-            o.status !== 'returned_in_stock' &&
-            // ✅ المدير يرى الكل، الموظف يرى طلباته فقط
-            (canViewAllData ? true : (o.created_by === user?.id || o.created_by === user?.user_id))
+            o.status !== 'returned_in_stock'
           ), 
           periods.totalOrders
         );

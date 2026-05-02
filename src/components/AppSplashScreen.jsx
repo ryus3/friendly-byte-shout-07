@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Package, Zap, Brain, Users, TrendingUp, ShoppingBag } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -6,6 +6,8 @@ import ryusLogo from '@/assets/ryus-logo.png';
 
 const AppSplashScreen = ({ onComplete }) => {
   const [progress, setProgress] = useState(0);
+  const targetRef = useRef(8); // الهدف الحالي للشريط (يرتفع مع وصول الإشارات)
+  const startTimeRef = useRef(Date.now());
   const { theme } = useTheme();
   
   // تحديد الثيم الفعلي
@@ -15,31 +17,60 @@ const AppSplashScreen = ({ onComplete }) => {
   
   const isDark = effectiveTheme === 'dark';
 
+  // ⚡ شريط حقيقي يتحرك بناءً على إشارات جاهزية فعلية
   useEffect(() => {
-    const duration = 1500; // 1.5 seconds — يتزامن مع minTimer في App.jsx
-    const interval = 15; // Update every 15ms (1500/100 = 15ms per 1%)
-    const step = 100 / (duration / interval);
+    // الإشارات والقيم المستهدفة لكل مرحلة
+    const stages = [
+      { event: 'app:auth-ready', target: 35 },
+      { event: 'app:permissions-ready', target: 65 },
+      { event: 'app:dashboard-ready', target: 95 },
+      { event: 'app:data-ready', target: 100 },
+    ];
     
-    const timer = setInterval(() => {
-      setProgress(prev => {
-        const next = prev + step;
-        if (next >= 100) {
-          clearInterval(timer);
-          return 100;
-        }
-        return next;
-      });
-    }, interval);
+    const handlers = stages.map(({ event, target }) => {
+      const handler = () => {
+        if (target > targetRef.current) targetRef.current = target;
+      };
+      window.addEventListener(event, handler);
+      return { event, handler };
+    });
 
-    return () => clearInterval(timer);
+    // ✅ ضمان وصول 100% خلال 4 ثوانٍ كحد أقصى حتى لو فاتت إشارة
+    const safetyTimer = setTimeout(() => {
+      targetRef.current = 100;
+    }, 4000);
+
+    // ✅ تقدّم تدريجي ناعم نحو الهدف الحالي
+    const tick = setInterval(() => {
+      setProgress((prev) => {
+        const target = targetRef.current;
+        if (prev >= target) {
+          // عند عدم وجود إشارات لفترة، نزحف ببطء حتى 90% فقط حتى لا يكتمل بدون جاهزية فعلية
+          const minElapsed = (Date.now() - startTimeRef.current) / 1000;
+          if (minElapsed > 0.6 && prev < 90 && target < 90) {
+            return Math.min(prev + 0.3, 90);
+          }
+          return prev;
+        }
+        // حركة ناعمة: تقدم نسبي حسب البعد عن الهدف
+        const delta = Math.max(0.6, (target - prev) * 0.08);
+        return Math.min(prev + delta, target);
+      });
+    }, 30);
+
+    return () => {
+      clearInterval(tick);
+      clearTimeout(safetyTimer);
+      handlers.forEach(({ event, handler }) => window.removeEventListener(event, handler));
+    };
   }, []);
 
   useEffect(() => {
-    if (progress === 100) {
+    if (progress >= 100) {
       // تأخير بسيط ليُرى الشريط مكتملاً 100% بصرياً قبل الانتقال
       const timer = setTimeout(() => {
         onComplete?.();
-      }, 150);
+      }, 220);
       return () => clearTimeout(timer);
     }
   }, [progress, onComplete]);

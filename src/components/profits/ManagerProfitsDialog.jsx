@@ -33,18 +33,50 @@ import {
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
+import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
+
 const ManagerProfitsDialog = ({ 
   isOpen, 
   onClose, 
-  orders = [], 
-  employees = [], 
+  orders: ordersProp = [], 
+  employees: employeesProp = [], 
   calculateProfit,
-  profits = [],
+  profits: profitsProp = [],
   managerId,
-  stats: externalStats, // الإحصائيات المحسوبة من الصفحة الرئيسية
-  timePeriod: externalTimePeriod = null // فلتر الفترة من الصفحة الرئيسية
+  stats: externalStats,
+  timePeriod: externalTimePeriod = null
 }) => {
+  const { isAdmin, isDepartmentManager, allowedUserIds } = useSupervisedEmployees();
   const [selectedEmployee, setSelectedEmployee] = useState('all');
+
+  // ✅ عزل: مدير القسم لا يرى موظفين/طلبات/أرباح خارج إشرافه
+  const employees = useMemo(() => {
+    if (!Array.isArray(employeesProp)) return [];
+    if (isAdmin) return employeesProp;
+    if (isDepartmentManager && Array.isArray(allowedUserIds)) {
+      return employeesProp.filter(e => allowedUserIds.includes(e.id) || allowedUserIds.includes(e.user_id));
+    }
+    return employeesProp;
+  }, [employeesProp, isAdmin, isDepartmentManager, allowedUserIds]);
+
+  const profits = useMemo(() => {
+    if (!Array.isArray(profitsProp)) return [];
+    if (isAdmin) return profitsProp;
+    if (isDepartmentManager && Array.isArray(allowedUserIds)) {
+      return profitsProp.filter(p => allowedUserIds.includes(p.employee_id));
+    }
+    return profitsProp;
+  }, [profitsProp, isAdmin, isDepartmentManager, allowedUserIds]);
+
+  const orders = useMemo(() => {
+    if (!Array.isArray(ordersProp)) return [];
+    if (isAdmin) return ordersProp;
+    if (isDepartmentManager && Array.isArray(allowedUserIds)) {
+      return ordersProp.filter(o => allowedUserIds.includes(o.created_by));
+    }
+    return ordersProp;
+  }, [ordersProp, isAdmin, isDepartmentManager, allowedUserIds]);
+
   
   // فلتر الفترة الزمنية مع حفظ الخيار
   // إذا تم تمرير فترة من الخارج، استخدمها، وإلا استخدم المحفوظ محلياً
