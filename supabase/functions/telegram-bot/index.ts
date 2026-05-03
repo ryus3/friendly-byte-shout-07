@@ -28,6 +28,18 @@ let regionsCache: Array<{ id: number; city_id: number; name: string; normalized:
 let cityAliasesCache: Array<{ city_id: number; alias: string; normalized: string; confidence: number }> = [];
 let lastCacheUpdate: number | null = null;
 
+// 🔑 Partner-specific external ID maps (filled per active partner)
+let cityExternalIdMap: Map<number, number | string> = new Map();   // city_id -> partner external_id
+let regionExternalIdMap: Map<number, number | string> = new Map(); // region_id -> partner external_id
+let currentDeliveryPartner: string = 'alwaseet';
+
+function getCityExternalId(cityId: number, fallback?: number | string): number | string | undefined {
+  return cityExternalIdMap.get(cityId) ?? fallback;
+}
+function getRegionExternalId(regionId: number, fallback?: number | string): number | string | undefined {
+  return regionExternalIdMap.get(regionId) ?? fallback;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
