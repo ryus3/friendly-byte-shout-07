@@ -43,7 +43,7 @@ const TopListCard = ({ title, items, titleIcon: TitleIcon, itemIcon: ItemIcon, s
       </CardHeader>
       <CardContent className="flex-1 flex flex-col p-4 pt-0">
         <div className="space-y-4 flex-1">
-          {processedItems.length > 0 ? processedItems.map((item, index) => (
+          {processedItems.length > 0 ? processedItems.slice(0, 5).map((item, index) => (
             <motion.div 
               key={index} 
               className="flex items-center justify-between"
