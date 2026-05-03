@@ -23,6 +23,8 @@ import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
 import SyncStatusIndicator from '@/components/SyncStatusIndicator.jsx';
 import { Helmet } from 'react-helmet-async';
 import ryusLogo from '@/assets/ryus-logo-new.png';
+import usePullToRefresh from '@/hooks/usePullToRefresh';
+import PullToRefreshIndicator from '@/components/ui/PullToRefreshIndicator';
 
 const SidebarContent = ({ onClose, isMobile }) => {
   const { user, logout } = useAuth();
