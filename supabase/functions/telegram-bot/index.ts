@@ -421,6 +421,43 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     }));
     
     lastCacheUpdate = Date.now();
+
+    // 🔑 تحميل خرائط المعرّفات الخارجية حسب شركة التوصيل المختارة
+    currentDeliveryPartner = deliveryPartner;
+    cityExternalIdMap = new Map();
+    regionExternalIdMap = new Map();
+    try {
+      const { data: cityMaps } = await supabase
+        .from('city_delivery_mappings')
+        .select('city_id, external_id')
+        .eq('delivery_partner', deliveryPartner)
+        .eq('is_active', true);
+      (cityMaps || []).forEach((m: any) => {
+        if (m.city_id != null && m.external_id != null) cityExternalIdMap.set(m.city_id, m.external_id);
+      });
+
+      // المناطق: pagination لأن العدد كبير
+      let rPage = 0;
+      while (true) {
+        const start = rPage * 1000;
+        const { data: regionMaps } = await supabase
+          .from('region_delivery_mappings')
+          .select('region_id, external_id')
+          .eq('delivery_partner', deliveryPartner)
+          .eq('is_active', true)
+          .range(start, start + 999);
+        (regionMaps || []).forEach((m: any) => {
+          if (m.region_id != null && m.external_id != null) regionExternalIdMap.set(m.region_id, m.external_id);
+        });
+        if (!regionMaps || regionMaps.length < 1000) break;
+        rPage++;
+        if (rPage > 20) break;
+      }
+      console.log(`🔑 خرائط ${deliveryPartner}: ${cityExternalIdMap.size} مدينة، ${regionExternalIdMap.size} منطقة`);
+    } catch (mapErr) {
+      console.warn('⚠️ فشل تحميل خرائط الشركاء، fallback على alwaseet_id:', mapErr);
+    }
+
     
     // ==========================================
     // CRITICAL VALIDATION
