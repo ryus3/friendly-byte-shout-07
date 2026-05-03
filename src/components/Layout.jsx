@@ -357,6 +357,8 @@ const Layout = ({ children }) => {
         className="flex-1 flex flex-col lg:mr-72"
         onPan={handlePan}
       >
+        <PullToRefreshOverlay />
+
         <header
           className="bg-card/80 backdrop-blur-lg border-b border-border p-3 sm:p-4 sticky top-0 z-30 cursor-pointer"
           onClick={(e) => {
