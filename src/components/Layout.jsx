@@ -23,6 +23,8 @@ import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
 import SyncStatusIndicator from '@/components/SyncStatusIndicator.jsx';
 import { Helmet } from 'react-helmet-async';
 import ryusLogo from '@/assets/ryus-logo-new.png';
+import usePullToRefresh from '@/hooks/usePullToRefresh';
+import PullToRefreshIndicator from '@/components/ui/PullToRefreshIndicator';
 
 const SidebarContent = ({ onClose, isMobile }) => {
   const { user, logout } = useAuth();
@@ -234,6 +236,17 @@ const SidebarContent = ({ onClose, isMobile }) => {
   );
 };
 
+// 🚀 Pull-to-refresh overlay (يستخدم window.location.reload كـ fallback عام)
+const PullToRefreshOverlay = () => {
+  const onRefresh = React.useCallback(async () => {
+    // إصدار حدث عام كي تستجيب الصفحات بإعادة جلب بياناتها
+    window.dispatchEvent(new CustomEvent('app:pull-to-refresh'));
+    await new Promise((r) => setTimeout(r, 600));
+  }, []);
+  const { pullDistance, isRefreshing } = usePullToRefresh(onRefresh);
+  return <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />;
+};
+
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
@@ -355,6 +368,8 @@ const Layout = ({ children }) => {
         className="flex-1 flex flex-col lg:mr-72"
         onPan={handlePan}
       >
+        <PullToRefreshOverlay />
+
         <header
           className="bg-card/80 backdrop-blur-lg border-b border-border p-3 sm:p-4 sticky top-0 z-30 cursor-pointer"
           onClick={(e) => {

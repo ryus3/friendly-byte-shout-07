@@ -28,6 +28,18 @@ let regionsCache: Array<{ id: number; city_id: number; name: string; normalized:
 let cityAliasesCache: Array<{ city_id: number; alias: string; normalized: string; confidence: number }> = [];
 let lastCacheUpdate: number | null = null;
 
+// 🔑 Partner-specific external ID maps (filled per active partner)
+let cityExternalIdMap: Map<number, number | string> = new Map();   // city_id -> partner external_id
+let regionExternalIdMap: Map<number, number | string> = new Map(); // region_id -> partner external_id
+let currentDeliveryPartner: string = 'alwaseet';
+
+function getCityExternalId(cityId: number, fallback?: number | string): number | string | undefined {
+  return cityExternalIdMap.get(cityId) ?? fallback;
+}
+function getRegionExternalId(regionId: number, fallback?: number | string): number | string | undefined {
+  return regionExternalIdMap.get(regionId) ?? fallback;
+}
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -409,6 +421,43 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
     }));
     
     lastCacheUpdate = Date.now();
+
+    // 🔑 تحميل خرائط المعرّفات الخارجية حسب شركة التوصيل المختارة
+    currentDeliveryPartner = deliveryPartner;
+    cityExternalIdMap = new Map();
+    regionExternalIdMap = new Map();
+    try {
+      const { data: cityMaps } = await supabase
+        .from('city_delivery_mappings')
+        .select('city_id, external_id')
+        .eq('delivery_partner', deliveryPartner)
+        .eq('is_active', true);
+      (cityMaps || []).forEach((m: any) => {
+        if (m.city_id != null && m.external_id != null) cityExternalIdMap.set(m.city_id, m.external_id);
+      });
+
+      // المناطق: pagination لأن العدد كبير
+      let rPage = 0;
+      while (true) {
+        const start = rPage * 1000;
+        const { data: regionMaps } = await supabase
+          .from('region_delivery_mappings')
+          .select('region_id, external_id')
+          .eq('delivery_partner', deliveryPartner)
+          .eq('is_active', true)
+          .range(start, start + 999);
+        (regionMaps || []).forEach((m: any) => {
+          if (m.region_id != null && m.external_id != null) regionExternalIdMap.set(m.region_id, m.external_id);
+        });
+        if (!regionMaps || regionMaps.length < 1000) break;
+        rPage++;
+        if (rPage > 20) break;
+      }
+      console.log(`🔑 خرائط ${deliveryPartner}: ${cityExternalIdMap.size} مدينة، ${regionExternalIdMap.size} منطقة`);
+    } catch (mapErr) {
+      console.warn('⚠️ فشل تحميل خرائط الشركاء، fallback على alwaseet_id:', mapErr);
+    }
+
     
     // ==========================================
     // CRITICAL VALIDATION
@@ -493,7 +542,7 @@ function searchCityLocal(text: string): { cityId: number; cityName: string; conf
         const city = citiesCache.find(c => c.id === alias.city_id);
         if (city) {
           console.log(`✅ تم العثور على المدينة "${city.name}" عبر المرادف من الكلمة الأولى في السطر: "${line}"`);
-          return { cityId: city.id, cityName: city.name, externalId: city.alwaseet_id, confidence: alias.confidence, cityLine: line };
+          return { cityId: city.id, cityName: city.name, externalId: getCityExternalId(city.id, city.alwaseet_id), confidence: alias.confidence, cityLine: line };
         }
       }
       
@@ -501,7 +550,7 @@ function searchCityLocal(text: string): { cityId: number; cityName: string; conf
       const containsCity = citiesCache.find(c => c.normalized.includes(normalizedFirstWord) || normalizedFirstWord.includes(c.normalized));
       if (containsCity) {
         console.log(`✅ تم العثور على المدينة "${containsCity.name}" من الكلمة الأولى في السطر: "${line}"`);
-        return { cityId: containsCity.id, cityName: containsCity.name, externalId: containsCity.alwaseet_id, confidence: 0.7, cityLine: line };
+        return { cityId: containsCity.id, cityName: containsCity.name, externalId: getCityExternalId(containsCity.id, containsCity.alwaseet_id), confidence: 0.7, cityLine: line };
       }
     }
     
@@ -613,7 +662,7 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
         matches.push({
           regionId: region.id,
           regionName: region.name,
-          externalId: region.alwaseet_id,
+          externalId: getRegionExternalId(region.id, region.alwaseet_id),
           confidence: 1.0
         });
         console.log(`✅ تطابق كامل 100%: "${text}" = "${region.name}"`);
@@ -623,7 +672,7 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
         matches.push({
           regionId: region.id,
           regionName: region.name,
-          externalId: region.alwaseet_id,
+          externalId: getRegionExternalId(region.id, region.alwaseet_id),
           confidence: 0.98
         });
         console.log(`✅ تطابق جزئي قوي 98%: "${text}" في "${region.name}"`);
@@ -654,7 +703,7 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
                 matches.push({
                   regionId: region.id,
                   regionName: region.name,
-                  externalId: region.alwaseet_id,
+                  externalId: getRegionExternalId(region.id, region.alwaseet_id),
                   confidence: Math.min(baseConfidence, 0.97)
                 });
                 console.log(`✅ تركيب ${len} كلمات: "${combination}" في "${region.name}" (${baseConfidence})`);
@@ -712,7 +761,7 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
         matches.push({
           regionId: region.id,
           regionName: region.name,
-          externalId: region.alwaseet_id,
+          externalId: getRegionExternalId(region.id, region.alwaseet_id),
           confidence: bestScore / 100
         });
       }
@@ -1841,7 +1890,7 @@ serve(async (req) => {
                         city_external_id: localCityResult.externalId,
                         all_regions: localRegionMatches.map(r => ({
                           ...r,
-                          externalId: regionsCache.find(reg => reg.id === r.regionId)?.alwaseet_id
+                          externalId: getRegionExternalId(r.regionId, regionsCache.find(reg => reg.id === r.regionId)?.alwaseet_id)
                         }))
                       }
                     });
