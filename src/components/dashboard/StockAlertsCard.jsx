@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useInventory } from '@/contexts/SuperProvider';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useFilteredStockNotifications } from '@/hooks/useFilteredStockNotifications';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 import DefaultProductImage from '@/components/ui/default-product-image';
 import devLog from '@/lib/devLogger';
@@ -15,7 +16,7 @@ const StockAlertsCard = () => {
   const navigate = useNavigate();
   const { products, settings, refetchProducts } = useInventory();
   const { canManageFinances, isAdmin, canViewStockAlerts, canManageInventory } = usePermissions();
-  const { user } = require('@/contexts/UnifiedAuthContext').useAuth ? require('@/contexts/UnifiedAuthContext').useAuth() : { user: null };
+  const { user } = useAuth();
   
   // فلترة المنتجات حسب صلاحيات المستخدم
   const filteredProducts = useFilteredStockNotifications(products);
