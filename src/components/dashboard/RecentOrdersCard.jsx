@@ -102,7 +102,7 @@ const RecentOrdersCard = ({ recentOrders }) => {
         </CardHeader>
         <CardContent className="flex-1 flex flex-col p-0">
           <div className="space-y-0 flex-1">
-            {recentOrders && recentOrders.length > 0 ? recentOrders.slice(0, 3).map((order, index) => (
+            {recentOrders && recentOrders.length > 0 ? recentOrders.slice(0, 5).map((order, index) => (
               <motion.div 
                 key={order.id} 
                 className={cn(
@@ -137,18 +137,18 @@ const RecentOrdersCard = ({ recentOrders }) => {
                     </div>
                     
                     {/* Location and Delivery Info */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-sm font-medium text-foreground truncate max-w-[120px]">
-                          {order.customer_city}
-                          {order.customer_province && ` - ${order.customer_province}`}
-                        </span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 min-w-0 flex-1">
+                        <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                        <ScrollingText
+                          text={`${order.customer_city || ''}${order.customer_province ? ' - ' + order.customer_province : ''}${order.customer_address ? ' - ' + order.customer_address : ''}`}
+                          className="text-sm font-medium text-foreground"
+                        />
                       </div>
-                      
-                      <div className="h-3 w-px bg-border/50" />
-                      
-                      <div className="flex items-center gap-1.5">
+
+                      <div className="h-3 w-px bg-border/50 flex-shrink-0" />
+
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         {getDeliveryType(order) === 'محلي' ? (
                           <>
                             <Home className="w-3 h-3 text-green-500" />
@@ -160,29 +160,6 @@ const RecentOrdersCard = ({ recentOrders }) => {
                             <span className="text-xs text-blue-600 font-medium">{getDeliveryType(order)}</span>
                           </>
                         )}
-                      </div>
-                      
-                      <div className="h-3 w-px bg-border/50" />
-                      
-                      <div className="flex items-center gap-1">
-                        <Package className="w-3 h-3 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground truncate max-w-[120px]">
-                          {getOrderProducts(order)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Total Amount */}
-                    <div className="flex items-center justify-end">
-                      <div className="flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-md">
-                        <span className="font-bold text-sm text-primary">
-                          {(
-                            (order.sales_amount != null)
-                              ? (Number(order.sales_amount) || 0)
-                              : (Number(order.final_amount || order.total_amount || 0) - Number(order.delivery_fee || 0))
-                          ).toLocaleString()}
-                        </span>
-                        <span className="text-xs text-primary/70">د.ع</span>
                       </div>
                     </div>
                   </div>
