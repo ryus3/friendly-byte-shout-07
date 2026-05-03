@@ -236,6 +236,17 @@ const SidebarContent = ({ onClose, isMobile }) => {
   );
 };
 
+// 🚀 Pull-to-refresh overlay (يستخدم window.location.reload كـ fallback عام)
+const PullToRefreshOverlay = () => {
+  const onRefresh = React.useCallback(async () => {
+    // إصدار حدث عام كي تستجيب الصفحات بإعادة جلب بياناتها
+    window.dispatchEvent(new CustomEvent('app:pull-to-refresh'));
+    await new Promise((r) => setTimeout(r, 600));
+  }, []);
+  const { pullDistance, isRefreshing } = usePullToRefresh(onRefresh);
+  return <PullToRefreshIndicator pullDistance={pullDistance} isRefreshing={isRefreshing} />;
+};
+
 const Layout = ({ children }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
