@@ -11,7 +11,9 @@ import devLog from '@/lib/devLogger';
  * هوك موحد لجلب بيانات الأرباح - يستخدم نفس منطق AccountingPage
  * يضمن عرض نفس البيانات بطريقتين مختلفتين في التصميم
  */
-export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = []) => {
+const EMPTY_SUPERVISED_IDS = [];
+export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EMPTY_SUPERVISED_IDS) => {
+  const supervisedIdsKey = Array.isArray(supervisedEmployeeIds) ? supervisedEmployeeIds.join(',') : '';
   const { orders, accounting, products, profits: contextProfits } = useSuper();
   const { user: currentUser, allUsers } = useAuth();
   const { isAdmin, isDepartmentManager } = usePermissions();
@@ -328,7 +330,7 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = []
     if (orders && Array.isArray(orders) && orders.length > 0) {
       fetchUnifiedProfitData();
     }
-  }, [orders, accounting, currentUser?.id, timePeriod, contextProfits, isAdmin, isDepartmentManager, supervisedEmployeeIds]);
+  }, [orders, accounting, currentUser?.id, timePeriod, contextProfits, isAdmin, isDepartmentManager, supervisedIdsKey]);
 
   // دالة لإعادة تحميل البيانات
   const refreshData = () => {
