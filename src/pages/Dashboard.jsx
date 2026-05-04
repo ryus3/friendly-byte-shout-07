@@ -597,9 +597,13 @@ const Dashboard = () => {
             topProducts: []
         };
 
-        // ✅ نفس فلترة OrdersStats.getStats('all') تماماً — visibleOrders مفلترة سابقاً بالصلاحيات
+        // ✅ كرت "إجمالي الطلبات" يطابق صفحة الطلبات: طلبات المستخدم نفسه فقط (وليس موظفيه)
+        const userUUID = user?.user_id || user?.id;
+        const personalOrders = canViewAllData
+          ? visibleOrders
+          : (orders || []).filter(o => o.created_by === userUUID);
         const filteredTotalOrders = filterOrdersByPeriod(
-          visibleOrders.filter(o => 
+          personalOrders.filter(o => 
             !o.isarchived && 
             o.status !== 'completed' && 
             o.status !== 'returned_in_stock'
@@ -694,6 +698,7 @@ const Dashboard = () => {
         };
     }, [
         visibleOrders, 
+        orders,
         periods.totalOrders, 
         periods.pendingProfit, 
         periods.deliveredSales, 
@@ -901,14 +906,18 @@ const Dashboard = () => {
                       </>
                     )}
                 </div>
+                {/* الترتيب الجديد: الطلبات الأخيرة → تنبيهات المخزون → المنتجات → المحافظات → الزبائن */}
+                <div className="grid grid-cols-1 gap-4 sm:gap-6">
+                    <RecentOrdersCard recentOrders={visibleOrders.slice(0, 5)} />
+                    <StockAlertsCard />
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     <TopListCard 
-                      title="الزبائن الأكثر طلباً" 
-                      items={dashboardData.topCustomers} 
-                      titleIcon={Users} 
-                      itemIcon={UserIcon} 
-                      sortByPhone={true}
-                      onViewAll={() => setTopCustomersOpen(true)}
+                      title="المنتجات الأكثر طلباً" 
+                      items={dashboardData.topProducts} 
+                      titleIcon={Package} 
+                      itemIcon={TrendingUp}
+                      onViewAll={() => setTopProductsOpen(true)}
                     />
                     <TopListCard 
                       title="المحافظات الأكثر طلباً" 
@@ -918,16 +927,13 @@ const Dashboard = () => {
                       onViewAll={() => setTopProvincesOpen(true)}
                     />
                     <TopListCard 
-                      title="المنتجات الأكثر طلباً" 
-                      items={dashboardData.topProducts} 
-                      titleIcon={Package} 
-                      itemIcon={TrendingUp}
-                      onViewAll={() => setTopProductsOpen(true)}
+                      title="الزبائن الأكثر طلباً" 
+                      items={dashboardData.topCustomers} 
+                      titleIcon={Users} 
+                      itemIcon={UserIcon} 
+                      sortByPhone={true}
+                      onViewAll={() => setTopCustomersOpen(true)}
                     />
-                </div>
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-6">
-                    <StockAlertsCard />
-                    <RecentOrdersCard recentOrders={visibleOrders.slice(0, 3)} />
                 </div>
             </div>
             

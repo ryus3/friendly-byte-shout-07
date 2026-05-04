@@ -657,17 +657,66 @@ Deno.serve(async (req) => {
       }
     }
 
-    // إدراج جميع الإشعارات دفعة واحدة (فقط إذا كانت الإشعارات مفعلة)
+    // ✅ Dedup عالمي: لكل طلب، نحتفظ بإشعار واحد لكل حالة. عند تغيّر الحالة نُحدّث الإشعار نفسه (يصبح غير مقروء)
     if (notificationsEnabled && notificationsToInsert.length > 0) {
-      const { error: notifError } = await supabase
-        .from('notifications')
-        .insert(notificationsToInsert);
+      let inserted = 0;
+      let updated = 0;
+      let skipped = 0;
+      for (const notif of notificationsToInsert) {
+        try {
+          const orderId = (notif.data as any)?.order_id;
+          const stateId = (notif.data as any)?.state_id ?? null;
+          if (!orderId) {
+            await supabase.from('notifications').insert(notif);
+            inserted++;
+            continue;
+          }
 
-      if (notifError) {
-        console.error('❌ خطأ في إدراج الإشعارات:', notifError);
-      } else {
-        console.log(`📬 تم إرسال ${notificationsToInsert.length} إشعار`);
+          // ابحث عن أحدث إشعار alwaseet_status_change لنفس الطلب (آخر 7 أيام)
+          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+          const { data: existing } = await supabase
+            .from('notifications')
+            .select('id, data, is_read')
+            .eq('user_id', notif.user_id)
+            .eq('type', 'alwaseet_status_change')
+            .gte('created_at', sevenDaysAgo)
+            .order('created_at', { ascending: false })
+            .limit(20);
+
+          const sameOrder = (existing || []).find((n: any) => 
+            (n.data?.order_id === orderId) || (n.data?.tracking_number && n.data?.tracking_number === (notif.data as any)?.tracking_number)
+          );
+
+          if (sameOrder) {
+            const sameState = stateId && sameOrder.data?.state_id && String(sameOrder.data.state_id) === String(stateId);
+            if (sameState && sameOrder.is_read === false) {
+              // نفس الحالة وغير مقروء → تخطي (لا تكرار)
+              skipped++;
+              continue;
+            }
+            // حالة جديدة (أو سابقاً مقروء) → حدّث الإشعار نفسه ليصبح غير مقروء بمحتوى جديد
+            await supabase
+              .from('notifications')
+              .update({
+                title: notif.title,
+                message: notif.message,
+                priority: notif.priority,
+                data: notif.data,
+                is_read: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', sameOrder.id);
+            updated++;
+          } else {
+            await supabase.from('notifications').insert(notif);
+            inserted++;
+          }
+        } catch (e: any) {
+          console.warn('⚠️ فشل dedup إشعار:', e?.message);
+        }
       }
+      console.log(`📬 إشعارات: جديد=${inserted}، محدّث=${updated}، متخطى=${skipped}`);
     } else if (!notificationsEnabled) {
       console.log('📭 تم تخطي إرسال الإشعارات (معطلة في الإعدادات)');
     }
