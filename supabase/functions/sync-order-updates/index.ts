@@ -560,8 +560,8 @@ Deno.serve(async (req) => {
         }
 
         if (statusChanged || priceChanged || accountChanged || addressChanged) {
-          // ✅ إنشاء إشعار بالصيغة الصحيحة (مثل: "صلاح الدين - الدور | تم التسليم للزبون 138760983")
-          if (notificationsEnabled) {
+          // ✅ إشعار فقط عند تغيّر الحالة فعلياً — تغيّر السعر/العنوان لا يرسل إشعار حالة
+          if (notificationsEnabled && statusChanged) {
             // بناء رسالة الإشعار: مدينة - منطقة | نص الحالة بالعربي رقم_التتبع
             const statusConfig = statusChanged ? getStatusConfig(newStatus) : null;
             const statusText = statusConfig?.text || '';
@@ -630,6 +630,7 @@ Deno.serve(async (req) => {
         if (Object.keys(updates).length > 0) {
           updates.updated_at = nowIso;
           updates.last_synced_at = nowIso;
+          if (statusChanged) updates.status_changed_at = nowIso;
 
           const { error: updateError } = await supabase
             .from('orders')
@@ -689,8 +690,8 @@ Deno.serve(async (req) => {
 
           if (sameOrder) {
             const sameState = stateId && sameOrder.data?.state_id && String(sameOrder.data.state_id) === String(stateId);
-            if (sameState && sameOrder.is_read === false) {
-              // نفس الحالة وغير مقروء → تخطي (لا تكرار)
+            if (sameState) {
+              // نفس الحالة لنفس الطلب → تخطي دائماً حتى لو كان مقروءاً
               skipped++;
               continue;
             }

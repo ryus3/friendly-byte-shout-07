@@ -597,11 +597,9 @@ const Dashboard = () => {
             topProducts: []
         };
 
-        // ✅ كرت "إجمالي الطلبات" يطابق صفحة الطلبات: طلبات المستخدم نفسه فقط (وليس موظفيه)
-        const userUUID = user?.user_id || user?.id;
-        const personalOrders = canViewAllData
-          ? visibleOrders
-          : (orders || []).filter(o => o.created_by === userUUID);
+        // ✅ يطابق صفحة الطلبات: طلبات المستخدم الشخصية فقط، لا كل الفريق/النظام
+        const userUUID = getUserUUID(user);
+        const personalOrders = (orders || []).filter(o => o.created_by === userUUID);
         const filteredTotalOrders = filterOrdersByPeriod(
           personalOrders.filter(o => 
             !o.isarchived && 
@@ -709,6 +707,12 @@ const Dashboard = () => {
         unifiedProfitData,
         pendingProfitData
     ]);
+
+    const recentOrdersForDashboard = useMemo(() => {
+        return [...(visibleOrders || [])]
+            .sort((a, b) => new Date(b.status_changed_at || b.updated_at || b.created_at) - new Date(a.status_changed_at || a.updated_at || a.created_at))
+            .slice(0, 5);
+    }, [visibleOrders]);
 
     const handlePeriodChange = useCallback((cardKey, period) => {
         setPeriods(prev => ({ ...prev, [cardKey]: period }));
@@ -908,7 +912,7 @@ const Dashboard = () => {
                 </div>
                 {/* الترتيب الجديد: الطلبات الأخيرة → تنبيهات المخزون → المنتجات → المحافظات → الزبائن */}
                 <div className="grid grid-cols-1 gap-4 sm:gap-6">
-                    <RecentOrdersCard recentOrders={visibleOrders.slice(0, 5)} />
+                    <RecentOrdersCard recentOrders={recentOrdersForDashboard} />
                     <StockAlertsCard />
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">

@@ -485,6 +485,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [isResetting, setIsResetting] = useState(false);
   const [preservedRegionId, setPreservedRegionId] = useState('');
 
+  const dedupeById = useCallback((items = []) => {
+    const seen = new Set();
+    return (Array.isArray(items) ? items : []).filter((item) => {
+      const key = String(item?.name ?? item?.size ?? item?.id ?? '').trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, []);
+
   // استخدام قيم فعالة للمدينة والمنطقة - إصلاح شامل للتحكم في القيم
   const effectiveCityId = useMemo(() => {
     if (activePartner === 'alwaseet' || activePartner === 'modon') {
@@ -728,10 +738,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               }));
               devLog.log(`✅ مدن: تم جلب ${citiesData.length} مدينة من الكاش`);
             } else {
-              // fallback إلى API فقط إن كان الكاش فارغاً
-              const ModonAPI = await import('@/lib/modon-api');
-              const modonCitiesData = await ModonAPI.getCities(waseetToken);
-              citiesData = (modonCitiesData || []).map(city => ({ id: city.id, name: city.city_name }));
+              citiesData = [];
             }
 
             // أحجام الطرود من الكاش (مع ترجمة عربية للأحجام الإنجليزية)
@@ -749,9 +756,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             if (modonSizes && modonSizes.length > 0) {
               packageSizesData = modonSizes.map(s => ({ id: s.external_id, size: trSize(s.size_name) }));
             } else {
-              const ModonAPI = await import('@/lib/modon-api');
-              packageSizesData = await ModonAPI.getPackageSizes(waseetToken);
-              packageSizesData = (packageSizesData || []).map(size => ({ id: size.id, size: trSize(size.size) }));
+              packageSizesData = [];
             }
           } else {
             // ✅ الوسيط: cache من cachedCities (موجود)
@@ -790,8 +795,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           const safeCities = Array.isArray(citiesData) ? citiesData : Object.values(citiesData || {});
           const safePackageSizes = Array.isArray(packageSizesData) ? packageSizesData : Object.values(packageSizesData || {});
 
-          setCities(safeCities);
-          setPackageSizes(safePackageSizes);
+          setCities(dedupeById(safeCities));
+          setPackageSizes(dedupeById(safePackageSizes));
 
           if ((!formData.city_id || formData.city_id === '') && safeCities.length > 0) {
             const baghdadCity = safeCities.find(city => 
@@ -930,15 +935,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 }
                 
                 if (!regionsData || regionsData.length === 0) {
-                  // fallback إلى API فقط إن كان الكاش فارغاً للمدينة
-                  devLog.warn('⚠️ [مدن] الكاش فارغ للمدينة، جلب من API...');
-                  const ModonAPI = await import('@/lib/modon-api');
-                  regionsData = await ModonAPI.getRegionsByCity(waseetToken, cityIdForRegions);
-                  regionsData = (regionsData || []).map(region => ({
-                    id: region.id,
-                    name: region.region_name,
-                    city_id: region.city_id
-                  }));
+                  devLog.warn('⚠️ [مدن] لا توجد مناطق في الكاش لهذه المدينة');
+                  regionsData = [];
                 }
               } else {
                 // ✅ الوسيط: فلترة المناطق من الـ Cache فوراً
@@ -973,11 +971,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 }
               }
               
-              regionCache.current.set(cacheKey, safeRegions);
-              setRegions(safeRegions);
+              const dedupedRegions = dedupeById(safeRegions);
+              regionCache.current.set(cacheKey, dedupedRegions);
+              setRegions(dedupedRegions);
               
                // ✅ تطبيق pendingRegionId بعد تحميل المناطق من API
-               if (pendingRegionIdRef.current && safeRegions.find(r => String(r.id) === String(pendingRegionIdRef.current))) {
+                if (pendingRegionIdRef.current && dedupedRegions.find(r => String(r.id) === String(pendingRegionIdRef.current))) {
                  setSelectedRegionId(pendingRegionIdRef.current);
                  setFormData(prev => ({ ...prev, region_id: pendingRegionIdRef.current }));
                  pendingRegionIdRef.current = null;

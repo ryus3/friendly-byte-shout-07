@@ -506,7 +506,8 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
 // Instance Warming - تحميل Cache عند بدء Edge Function
 // ==========================================
 async function warmupCache() {
-  if (citiesCache.length === 0 || regionsCache.length === 0) {
+  const selectedPartner = await getDeliveryPartnerSetting();
+  if (citiesCache.length === 0 || regionsCache.length === 0 || currentDeliveryPartner !== selectedPartner) {
     console.log('🔥 Instance Warming: تحميل cache المدن والمناطق...');
     const loaded = await loadCitiesRegionsCache();
     if (loaded) {
