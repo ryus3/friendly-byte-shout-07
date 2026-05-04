@@ -738,10 +738,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               }));
               devLog.log(`✅ مدن: تم جلب ${citiesData.length} مدينة من الكاش`);
             } else {
-              // fallback إلى API فقط إن كان الكاش فارغاً
-              const ModonAPI = await import('@/lib/modon-api');
-              const modonCitiesData = await ModonAPI.getCities(waseetToken);
-              citiesData = (modonCitiesData || []).map(city => ({ id: city.id, name: city.city_name }));
+              citiesData = [];
             }
 
             // أحجام الطرود من الكاش (مع ترجمة عربية للأحجام الإنجليزية)
@@ -759,9 +756,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
             if (modonSizes && modonSizes.length > 0) {
               packageSizesData = modonSizes.map(s => ({ id: s.external_id, size: trSize(s.size_name) }));
             } else {
-              const ModonAPI = await import('@/lib/modon-api');
-              packageSizesData = await ModonAPI.getPackageSizes(waseetToken);
-              packageSizesData = (packageSizesData || []).map(size => ({ id: size.id, size: trSize(size.size) }));
+              packageSizesData = [];
             }
           } else {
             // ✅ الوسيط: cache من cachedCities (موجود)
@@ -940,15 +935,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 }
                 
                 if (!regionsData || regionsData.length === 0) {
-                  // fallback إلى API فقط إن كان الكاش فارغاً للمدينة
-                  devLog.warn('⚠️ [مدن] الكاش فارغ للمدينة، جلب من API...');
-                  const ModonAPI = await import('@/lib/modon-api');
-                  regionsData = await ModonAPI.getRegionsByCity(waseetToken, cityIdForRegions);
-                  regionsData = (regionsData || []).map(region => ({
-                    id: region.id,
-                    name: region.region_name,
-                    city_id: region.city_id
-                  }));
+                  devLog.warn('⚠️ [مدن] لا توجد مناطق في الكاش لهذه المدينة');
+                  regionsData = [];
                 }
               } else {
                 // ✅ الوسيط: فلترة المناطق من الـ Cache فوراً
