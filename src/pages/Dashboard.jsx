@@ -698,6 +698,7 @@ const Dashboard = () => {
         };
     }, [
         visibleOrders, 
+        orders,
         periods.totalOrders, 
         periods.pendingProfit, 
         periods.deliveredSales, 
