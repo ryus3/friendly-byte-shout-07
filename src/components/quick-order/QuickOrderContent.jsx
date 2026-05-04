@@ -488,7 +488,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const dedupeById = useCallback((items = []) => {
     const seen = new Set();
     return (Array.isArray(items) ? items : []).filter((item) => {
-      const key = String(item?.id ?? item?.name ?? '').trim();
+      const key = String(item?.name ?? item?.size ?? item?.id ?? '').trim().toLowerCase();
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
