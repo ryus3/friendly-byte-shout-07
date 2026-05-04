@@ -597,9 +597,13 @@ const Dashboard = () => {
             topProducts: []
         };
 
-        // ✅ نفس فلترة OrdersStats.getStats('all') تماماً — visibleOrders مفلترة سابقاً بالصلاحيات
+        // ✅ كرت "إجمالي الطلبات" يطابق صفحة الطلبات: طلبات المستخدم نفسه فقط (وليس موظفيه)
+        const userUUID = user?.user_id || user?.id;
+        const personalOrders = canViewAllData
+          ? visibleOrders
+          : (orders || []).filter(o => o.created_by === userUUID);
         const filteredTotalOrders = filterOrdersByPeriod(
-          visibleOrders.filter(o => 
+          personalOrders.filter(o => 
             !o.isarchived && 
             o.status !== 'completed' && 
             o.status !== 'returned_in_stock'
