@@ -485,6 +485,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   const [isResetting, setIsResetting] = useState(false);
   const [preservedRegionId, setPreservedRegionId] = useState('');
 
+  const dedupeById = useCallback((items = []) => {
+    const seen = new Set();
+    return (Array.isArray(items) ? items : []).filter((item) => {
+      const key = String(item?.id ?? item?.name ?? '').trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, []);
+
   // استخدام قيم فعالة للمدينة والمنطقة - إصلاح شامل للتحكم في القيم
   const effectiveCityId = useMemo(() => {
     if (activePartner === 'alwaseet' || activePartner === 'modon') {
@@ -790,8 +800,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           const safeCities = Array.isArray(citiesData) ? citiesData : Object.values(citiesData || {});
           const safePackageSizes = Array.isArray(packageSizesData) ? packageSizesData : Object.values(packageSizesData || {});
 
-          setCities(safeCities);
-          setPackageSizes(safePackageSizes);
+          setCities(dedupeById(safeCities));
+          setPackageSizes(dedupeById(safePackageSizes));
 
           if ((!formData.city_id || formData.city_id === '') && safeCities.length > 0) {
             const baghdadCity = safeCities.find(city => 
@@ -973,11 +983,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                 }
               }
               
-              regionCache.current.set(cacheKey, safeRegions);
-              setRegions(safeRegions);
+              const dedupedRegions = dedupeById(safeRegions);
+              regionCache.current.set(cacheKey, dedupedRegions);
+              setRegions(dedupedRegions);
               
                // ✅ تطبيق pendingRegionId بعد تحميل المناطق من API
-               if (pendingRegionIdRef.current && safeRegions.find(r => String(r.id) === String(pendingRegionIdRef.current))) {
+                if (pendingRegionIdRef.current && dedupedRegions.find(r => String(r.id) === String(pendingRegionIdRef.current))) {
                  setSelectedRegionId(pendingRegionIdRef.current);
                  setFormData(prev => ({ ...prev, region_id: pendingRegionIdRef.current }));
                  pendingRegionIdRef.current = null;
