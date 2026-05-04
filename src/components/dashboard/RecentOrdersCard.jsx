@@ -89,12 +89,16 @@ const RecentOrdersCard = ({ recentOrders }) => {
     });
   };
 
+  const getStatusTime = (order) => formatDate(order.status_changed_at || order.updated_at || order.created_at);
+  const getLocationLabel = (order) => [order.customer_city, order.customer_province].filter(Boolean).join(' - ') || 'عنوان غير محدد';
+
   return (
     <>
-      <Card className="glass-effect h-full border-border/60 flex flex-col overflow-hidden">
-        <CardHeader className="bg-gradient-to-l from-primary/5 to-accent/5 border-b border-border/50">
-          <CardTitle className="flex items-center gap-3 text-xl text-foreground">
-            <div className="p-2 rounded-lg bg-primary/10">
+      <Card className="glass-effect h-full border-primary/20 flex flex-col overflow-hidden shadow-2xl shadow-primary/5">
+        <CardHeader className="relative border-b border-border/50 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.18),transparent_42%)]" />
+          <CardTitle className="relative flex items-center gap-3 text-xl text-foreground">
+            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20 shadow-lg shadow-primary/10">
               <ShoppingCart className="w-6 h-6 text-primary" />
             </div>
             الطلبات الأخيرة
@@ -106,10 +110,8 @@ const RecentOrdersCard = ({ recentOrders }) => {
               <motion.div 
                 key={order.id} 
                 className={cn(
-                  "relative p-3 border-b border-border/20 cursor-pointer group transition-all duration-300",
-                  "hover:bg-gradient-to-r hover:from-primary/5 hover:to-accent/5",
-                  "hover:shadow-lg hover:shadow-primary/10 hover:border-l-4 hover:border-l-primary",
-                  "hover:scale-[1.01] hover:-translate-y-0.5"
+                  "relative p-4 border-b border-border/20 cursor-pointer group transition-all duration-300 overflow-hidden",
+                  "hover:bg-primary/5 hover:shadow-lg hover:shadow-primary/10"
                 )}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -119,7 +121,7 @@ const RecentOrdersCard = ({ recentOrders }) => {
                 {/* Compact Order Card */}
                 <div className="flex items-center gap-3">
                   {/* Order Number Icon */}
-                  <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center border border-primary/30">
+                  <div className="flex-shrink-0 w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center border border-primary/30 shadow-inner">
                     <span className="text-primary font-bold text-lg">
                       {getOrderIcon(getOrderNumber(index))}
                     </span>
@@ -131,7 +133,7 @@ const RecentOrdersCard = ({ recentOrders }) => {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-bold text-primary">#{getOrderId(order)}</span>
-                        <span className="text-xs text-muted-foreground">{formatDate(order.created_at)}</span>
+                        <span className="text-xs text-muted-foreground flex items-center gap-1"><Clock className="w-3 h-3" />{getStatusTime(order)}</span>
                       </div>
                       {getStatusBadge(order)}
                     </div>
@@ -141,7 +143,7 @@ const RecentOrdersCard = ({ recentOrders }) => {
                       <div className="flex items-center gap-1 min-w-0 flex-1">
                         <MapPin className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                         <ScrollingText
-                          text={`${order.customer_city || ''}${order.customer_province ? ' - ' + order.customer_province : ''}${order.customer_address ? ' - ' + order.customer_address : ''}`}
+                          text={getLocationLabel(order)}
                           className="text-sm font-medium text-foreground"
                         />
                       </div>
@@ -166,7 +168,7 @@ const RecentOrdersCard = ({ recentOrders }) => {
                 </div>
 
                 {/* Hover Effect Indicator */}
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-primary rounded-r opacity-0 group-hover:opacity-100 transition-all duration-300" />
+                <div className="absolute left-0 top-0 h-full w-1 bg-primary opacity-0 group-hover:opacity-100 transition-all duration-300" />
               </motion.div>
             )) : (
               <div className="flex flex-col items-center justify-center h-48 text-muted-foreground">
