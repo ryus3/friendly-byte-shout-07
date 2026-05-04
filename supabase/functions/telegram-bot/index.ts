@@ -454,6 +454,19 @@ async function loadCitiesRegionsCache(): Promise<boolean> {
         if (rPage > 20) break;
       }
       console.log(`🔑 خرائط ${deliveryPartner}: ${cityExternalIdMap.size} مدينة، ${regionExternalIdMap.size} منطقة`);
+
+      // ✅ فلترة الكاش بحيث يحوي فقط المدن والمناطق المتاحة لدى الشريك المختار
+      // هذا يمنع ظهور مناطق مكررة أو لا يستطيع الشريك معالجتها في "هل تقصد؟"
+      if (cityExternalIdMap.size > 0) {
+        const beforeCities = citiesCache.length;
+        citiesCache = citiesCache.filter(c => cityExternalIdMap.has(c.id));
+        console.log(`🧹 فلترة المدن للشريك ${deliveryPartner}: ${beforeCities} → ${citiesCache.length}`);
+      }
+      if (regionExternalIdMap.size > 0) {
+        const beforeRegions = regionsCache.length;
+        regionsCache = regionsCache.filter(r => regionExternalIdMap.has(r.id));
+        console.log(`🧹 فلترة المناطق للشريك ${deliveryPartner}: ${beforeRegions} → ${regionsCache.length}`);
+      }
     } catch (mapErr) {
       console.warn('⚠️ فشل تحميل خرائط الشركاء، fallback على alwaseet_id:', mapErr);
     }
