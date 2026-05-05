@@ -11,6 +11,32 @@ const TelegramBotDeliveryPartnerSelector = () => {
   const [currentPartner, setCurrentPartner] = useState('alwaseet');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reloading, setReloading] = useState(false);
+  const [reloadStats, setReloadStats] = useState(null);
+
+  const handleReloadBotCache = async () => {
+    setReloading(true);
+    setReloadStats(null);
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const anon = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/telegram-bot?action=reload_cache`,
+        { method: 'POST', headers: { 'Authorization': `Bearer ${anon}`, 'apikey': anon, 'Content-Type': 'application/json' }, body: '{}' }
+      );
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.error || 'فشل إعادة التحميل');
+      setReloadStats(data);
+      toast({
+        title: '✅ تم إعادة تحميل كاش البوت',
+        description: `${data.cities} مدينة، ${data.regions} منطقة، ${data.region_aliases} مرادف منطقة (${data.partner})`,
+      });
+    } catch (e) {
+      toast({ title: 'خطأ', description: e.message, variant: 'destructive' });
+    } finally {
+      setReloading(false);
+    }
+  };
 
   // جلب الإعداد الحالي
   useEffect(() => {
