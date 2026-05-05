@@ -26,6 +26,7 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days
 let citiesCache: Array<{ id: number; name: string; normalized: string; alwaseet_id: number }> = [];
 let regionsCache: Array<{ id: number; city_id: number; name: string; normalized: string; alwaseet_id: number }> = [];
 let cityAliasesCache: Array<{ city_id: number; alias: string; normalized: string; confidence: number }> = [];
+let regionAliasesCache: Array<{ region_id: number; alias: string; normalized: string; confidence: number }> = [];
 let lastCacheUpdate: number | null = null;
 
 // 🔑 Partner-specific external ID maps (filled per active partner)
