@@ -237,6 +237,27 @@ const TelegramBotDeliveryPartnerSelector = () => {
           )}
         </Button>
 
+        {/* زر إعادة تحميل كاش البوت */}
+        <Button
+          variant="outline"
+          onClick={handleReloadBotCache}
+          disabled={reloading}
+          className="w-full"
+        >
+          {reloading ? (
+            <><RefreshCw className="h-4 w-4 animate-spin mr-2" />جاري إعادة التحميل...</>
+          ) : (
+            <><Database className="h-4 w-4 mr-2" />إعادة تحميل كاش البوت الآن</>
+          )}
+        </Button>
+        {reloadStats && (
+          <div className="text-xs bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded p-3 space-y-1">
+            <p>الشريك النشط: <strong>{getPartnerName(reloadStats.partner)}</strong></p>
+            <p>المدن: <strong>{reloadStats.cities}</strong> • المناطق: <strong>{reloadStats.regions}</strong></p>
+            <p>مرادفات المدن: <strong>{reloadStats.city_aliases}</strong> • مرادفات المناطق: <strong>{reloadStats.region_aliases}</strong></p>
+          </div>
+        )}
+
         {/* معلومات إضافية */}
         <div className="text-xs text-muted-foreground space-y-1">
           <p>• Cache يُحفظ 30 يوم لتقليل عدد المرات المطلوب تحديثه</p>
