@@ -26,6 +26,7 @@ const CACHE_TTL = 30 * 24 * 60 * 60 * 1000; // 30 days
 let citiesCache: Array<{ id: number; name: string; normalized: string; alwaseet_id: number }> = [];
 let regionsCache: Array<{ id: number; city_id: number; name: string; normalized: string; alwaseet_id: number }> = [];
 let cityAliasesCache: Array<{ city_id: number; alias: string; normalized: string; confidence: number }> = [];
+let regionAliasesCache: Array<{ region_id: number; alias: string; normalized: string; confidence: number }> = [];
 let lastCacheUpdate: number | null = null;
 
 // 🔑 Partner-specific external ID maps (filled per active partner)
@@ -322,179 +323,125 @@ function shouldRefreshCache(): boolean {
 async function loadCitiesRegionsCache(): Promise<boolean> {
   try {
     console.log(`🔄 تحميل cache المدن والمناطق - إصدار ${BOT_VERSION}`);
-    
-    // Get delivery partner setting
+
     const deliveryPartner = await getDeliveryPartnerSetting();
     console.log(`📦 شركة التوصيل المختارة: ${deliveryPartner}`);
-    
-    // Load cities from UNIFIED cities_master table
-    const { data: cities, error: citiesError } = await supabase
-      .from('cities_master')
-      .select('id, name, alwaseet_id')
-      .eq('is_active', true)
-      .order('name')
-      .limit(100);
-    
-    if (citiesError) throw citiesError;
-    
+
     // ==========================================
-    // CRITICAL FIX: Manual Pagination Loop
+    // 1) تحميل المدن من city_delivery_mappings للشريك فقط
     // ==========================================
-    console.log('📥 بدء تحميل المناطق باستخدام pagination يدوي...');
-    let allRegions: any[] = [];
-    let page = 0;
-    const PAGE_SIZE = 1000;
-    let hasMore = true;
-    
-    while (hasMore) {
-      const startRange = page * PAGE_SIZE;
-      const endRange = startRange + PAGE_SIZE - 1;
-      
-      console.log(`📦 دفعة ${page + 1}: جلب المناطق من ${startRange} إلى ${endRange}...`);
-      
-      const { data: regionsBatch, error: regionsError } = await supabase
-        .from('regions_master')
-        .select('id, city_id, name, alwaseet_id')
+    const { data: cityMaps, error: cityMapsErr } = await supabase
+      .from('city_delivery_mappings')
+      .select('city_id, external_id, external_name, cities_master:city_id(id, name)')
+      .eq('delivery_partner', deliveryPartner)
+      .eq('is_active', true);
+
+    if (cityMapsErr) throw cityMapsErr;
+
+    cityExternalIdMap = new Map();
+    citiesCache = (cityMaps || [])
+      .filter((m: any) => m.cities_master?.id && m.cities_master?.name)
+      .map((m: any) => {
+        cityExternalIdMap.set(m.cities_master.id, m.external_id);
+        return {
+          id: m.cities_master.id,
+          name: m.cities_master.name,
+          normalized: normalizeArabicText(m.cities_master.name),
+          alwaseet_id: Number(m.external_id) || m.cities_master.id,
+        };
+      });
+
+    const cityIds = citiesCache.map(c => c.id);
+
+    // ==========================================
+    // 2) تحميل المناطق من region_delivery_mappings للشريك فقط (pagination)
+    // ==========================================
+    regionExternalIdMap = new Map();
+    regionsCache = [];
+    let rPage = 0;
+    while (true) {
+      const start = rPage * 1000;
+      const { data: regionMaps, error: rErr } = await supabase
+        .from('region_delivery_mappings')
+        .select('region_id, external_id, external_name, regions_master:region_id!inner(id, city_id, name)')
+        .eq('delivery_partner', deliveryPartner)
         .eq('is_active', true)
-        .range(startRange, endRange)
-        .order('name');
-      
-      if (regionsError) {
-        console.error(`❌ خطأ في تحميل دفعة ${page + 1}:`, regionsError);
-        throw regionsError;
+        .in('regions_master.city_id', cityIds.length > 0 ? cityIds : [-1])
+        .range(start, start + 999);
+
+      if (rErr) throw rErr;
+      if (!regionMaps || regionMaps.length === 0) break;
+
+      for (const m of regionMaps as any[]) {
+        const rm = m.regions_master;
+        if (!rm?.id || !rm?.name) continue;
+        regionExternalIdMap.set(rm.id, m.external_id);
+        regionsCache.push({
+          id: rm.id,
+          city_id: rm.city_id,
+          name: rm.name,
+          normalized: normalizeArabicText(rm.name),
+          alwaseet_id: Number(m.external_id) || rm.id,
+        });
       }
-      
-      const batchSize = regionsBatch?.length || 0;
-      allRegions = allRegions.concat(regionsBatch || []);
-      
-      console.log(`✅ دفعة ${page + 1}: تم تحميل ${batchSize} منطقة (الإجمالي حتى الآن: ${allRegions.length})`);
-      
-      // Check if we got less than PAGE_SIZE (means we're at the end)
-      if (batchSize < PAGE_SIZE) {
-        hasMore = false;
-        console.log(`🏁 اكتمل التحميل - آخر دفعة تحتوي على ${batchSize} منطقة فقط`);
-      }
-      
-      page++;
-      
-      // Safety limit to prevent infinite loops
-      if (page > 20) {
-        console.error('⚠️ تحذير: تم الوصول إلى الحد الأقصى للدفعات (20)');
-        hasMore = false;
-      }
+
+      if (regionMaps.length < 1000) break;
+      rPage++;
+      if (rPage > 30) break;
     }
-    
-    const regions = allRegions;
-    
-    
-    // Load city aliases
-    const { data: aliases, error: aliasesError } = await supabase
+
+    // ==========================================
+    // 3) تحميل city_aliases و region_aliases
+    // ==========================================
+    const { data: cAliases } = await supabase
       .from('city_aliases')
       .select('city_id, alias_name, confidence_score');
-    
-    if (aliasesError) {
-      console.warn('⚠️ تحذير: فشل تحميل city_aliases:', aliasesError);
-      // Continue without aliases
-    }
-    
-    // Normalize and cache - تخزين جميع المدن والمناطق الخاصة بشركة التوصيل
-    citiesCache = (cities || []).map(c => ({
-      id: c.id,
-      name: c.name,
-      normalized: normalizeArabicText(c.name),
-      alwaseet_id: c.alwaseet_id
-    }));
-    
-    regionsCache = (regions || []).map(r => ({
-      id: r.id,
-      city_id: r.city_id,
-      name: r.name,
-      normalized: normalizeArabicText(r.name),
-      alwaseet_id: r.alwaseet_id
-    }));
-    
-    cityAliasesCache = (aliases || []).map(a => ({
+    cityAliasesCache = (cAliases || []).map((a: any) => ({
       city_id: a.city_id,
       alias: a.alias_name,
       normalized: normalizeArabicText(a.alias_name),
-      confidence: a.confidence_score || 0.8
+      confidence: a.confidence_score || 0.8,
     }));
-    
-    lastCacheUpdate = Date.now();
 
-    // 🔑 تحميل خرائط المعرّفات الخارجية حسب شركة التوصيل المختارة
-    currentDeliveryPartner = deliveryPartner;
-    cityExternalIdMap = new Map();
-    regionExternalIdMap = new Map();
-    try {
-      const { data: cityMaps } = await supabase
-        .from('city_delivery_mappings')
-        .select('city_id, external_id')
-        .eq('delivery_partner', deliveryPartner)
-        .eq('is_active', true);
-      (cityMaps || []).forEach((m: any) => {
-        if (m.city_id != null && m.external_id != null) cityExternalIdMap.set(m.city_id, m.external_id);
-      });
-
-      // المناطق: pagination لأن العدد كبير
-      let rPage = 0;
-      while (true) {
-        const start = rPage * 1000;
-        const { data: regionMaps } = await supabase
-          .from('region_delivery_mappings')
-          .select('region_id, external_id')
-          .eq('delivery_partner', deliveryPartner)
-          .eq('is_active', true)
-          .range(start, start + 999);
-        (regionMaps || []).forEach((m: any) => {
-          if (m.region_id != null && m.external_id != null) regionExternalIdMap.set(m.region_id, m.external_id);
+    // region_aliases: pagination لاحتمال الكثرة
+    regionAliasesCache = [];
+    let aPage = 0;
+    while (true) {
+      const { data: rAliases, error: aErr } = await supabase
+        .from('region_aliases')
+        .select('region_id, alias_name, confidence_score')
+        .range(aPage * 1000, aPage * 1000 + 999);
+      if (aErr) { console.warn('⚠️ region_aliases:', aErr); break; }
+      if (!rAliases || rAliases.length === 0) break;
+      for (const a of rAliases as any[]) {
+        regionAliasesCache.push({
+          region_id: a.region_id,
+          alias: a.alias_name,
+          normalized: normalizeArabicText(a.alias_name),
+          confidence: a.confidence_score || 0.85,
         });
-        if (!regionMaps || regionMaps.length < 1000) break;
-        rPage++;
-        if (rPage > 20) break;
       }
-      console.log(`🔑 خرائط ${deliveryPartner}: ${cityExternalIdMap.size} مدينة، ${regionExternalIdMap.size} منطقة`);
-
-      // ✅ فلترة الكاش بحيث يحوي فقط المدن والمناطق المتاحة لدى الشريك المختار
-      // هذا يمنع ظهور مناطق مكررة أو لا يستطيع الشريك معالجتها في "هل تقصد؟"
-      if (cityExternalIdMap.size > 0) {
-        const beforeCities = citiesCache.length;
-        citiesCache = citiesCache.filter(c => cityExternalIdMap.has(c.id));
-        console.log(`🧹 فلترة المدن للشريك ${deliveryPartner}: ${beforeCities} → ${citiesCache.length}`);
-      }
-      if (regionExternalIdMap.size > 0) {
-        const beforeRegions = regionsCache.length;
-        regionsCache = regionsCache.filter(r => regionExternalIdMap.has(r.id));
-        console.log(`🧹 فلترة المناطق للشريك ${deliveryPartner}: ${beforeRegions} → ${regionsCache.length}`);
-      }
-    } catch (mapErr) {
-      console.warn('⚠️ فشل تحميل خرائط الشركاء، fallback على alwaseet_id:', mapErr);
+      if (rAliases.length < 1000) break;
+      aPage++;
+      if (aPage > 20) break;
     }
 
-    
-    // ==========================================
-    // CRITICAL VALIDATION
-    // ==========================================
-    const totalRegions = regionsCache.length;
-    console.log(`✅ تم تحميل ${cities?.length || 0} مدينة و ${totalRegions} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
-    
-    // تحديث وقت آخر تحميل
+    currentDeliveryPartner = deliveryPartner;
+    lastCacheUpdate = Date.now();
     lastCacheLoadTime = Date.now();
-    console.log('Cache TTL: 30 days - ' + Math.round(CACHE_MAX_AGE / (24 * 60 * 60 * 1000)) + ' days');
-    
-    if (totalRegions < 6000) {
-      console.error('Critical error: Loaded regions (' + totalRegions + ') much less than expected (6191 regions)!');
-      console.error('Required: Verify pagination loop works correctly');
+
+    console.log(`🔑 خرائط ${deliveryPartner}: ${cityExternalIdMap.size} مدينة، ${regionExternalIdMap.size} منطقة`);
+    console.log(`✅ تحميل البوت (${deliveryPartner}): ${citiesCache.length} مدينة، ${regionsCache.length} منطقة، ${cityAliasesCache.length} مرادف مدينة، ${regionAliasesCache.length} مرادف منطقة`);
+
+    // فحص بابل تشخيصياً
+    const babel = citiesCache.find(c => c.name.includes('بابل') || c.name.includes('الحلة'));
+    if (babel) {
+      const babelRegions = regionsCache.filter(r => r.city_id === babel.id).length;
+      console.log(`🏙️ بابل (${babel.name}, id=${babel.id}): ${babelRegions} منطقة في كاش ${deliveryPartner}`);
     } else {
-      console.log('Success! All expected regions loaded (' + totalRegions + ' >= 6000)');
+      console.warn(`⚠️ بابل غير موجودة في كاش ${deliveryPartner}!`);
     }
-    
-    console.log('Load version: ' + BOT_VERSION);
-    
-    console.log(`✅ تم تحميل ${citiesCache.length} مدينة و ${regionsCache.length} منطقة و ${cityAliasesCache.length} اسم بديل لشركة ${deliveryPartner}`);
-    console.log(`📅 Cache TTL: 30 أيام (${CACHE_TTL / (24 * 60 * 60 * 1000)} يوم)`);
-    console.log(`💾 الـ Cache سيبقى نشط حتى: ${new Date(lastCacheUpdate + CACHE_TTL).toLocaleDateString('ar-IQ')}`);
-    console.log(`🔄 إصدار التحميل: ${BOT_VERSION}`);
+
     return true;
   } catch (error) {
     console.error('❌ فشل تحميل cache المدن والمناطق:', error);
@@ -692,6 +639,32 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
         console.log(`✅ تطابق جزئي قوي 98%: "${text}" في "${region.name}"`);
       }
     }
+
+    // 🎯 المستوى 0.5: مطابقة عبر region_aliases (مرادفات/أخطاء إملائية)
+    const cityRegionIds = new Set(cityRegions.map(r => r.id));
+    for (const alias of regionAliasesCache) {
+      if (!cityRegionIds.has(alias.region_id)) continue;
+      let aliasConfidence = 0;
+      if (alias.normalized === normalized) {
+        aliasConfidence = Math.max(0.99, alias.confidence);
+      } else if (normalized.includes(alias.normalized) || alias.normalized.includes(normalized)) {
+        const minLen = Math.min(alias.normalized.length, normalized.length);
+        if (minLen >= 3) aliasConfidence = Math.min(0.95, alias.confidence);
+      }
+      if (aliasConfidence > 0) {
+        const region = cityRegions.find(r => r.id === alias.region_id);
+        if (region && !matches.some(m => m.regionId === region.id)) {
+          matches.push({
+            regionId: region.id,
+            regionName: region.name,
+            externalId: getRegionExternalId(region.id, region.alwaseet_id),
+            confidence: aliasConfidence
+          });
+          console.log(`✅ مرادف منطقة "${alias.alias}" → "${region.name}" (${Math.round(aliasConfidence * 100)}%)`);
+        }
+      }
+    }
+
     
     // إذا وجدنا تطابق كامل أو قوي، نحتفظ به لكن نكمل البحث
     if (matches.length > 0) {
@@ -1229,6 +1202,25 @@ serve(async (req) => {
         status: 413,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
+    }
+
+    // ==========================================
+    // إعادة تحميل الكاش يدوياً (من زر "إعادة تحميل كاش البوت")
+    // ==========================================
+    const url = new URL(req.url);
+    if (req.method === 'POST' && url.searchParams.get('action') === 'reload_cache') {
+      console.log('🔄 طلب إعادة تحميل الكاش يدوياً');
+      currentDeliveryPartner = '';
+      lastCacheLoadTime = 0;
+      const ok = await loadCitiesRegionsCache();
+      return new Response(JSON.stringify({
+        success: ok,
+        partner: currentDeliveryPartner,
+        cities: citiesCache.length,
+        regions: regionsCache.length,
+        city_aliases: cityAliasesCache.length,
+        region_aliases: regionAliasesCache.length,
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
     // ==========================================

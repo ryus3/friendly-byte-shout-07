@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Bot, Building2, RefreshCw, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Bot, Building2, RefreshCw, CheckCircle2, AlertTriangle, Database } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 
@@ -11,6 +11,32 @@ const TelegramBotDeliveryPartnerSelector = () => {
   const [currentPartner, setCurrentPartner] = useState('alwaseet');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reloading, setReloading] = useState(false);
+  const [reloadStats, setReloadStats] = useState(null);
+
+  const handleReloadBotCache = async () => {
+    setReloading(true);
+    setReloadStats(null);
+    try {
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const anon = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const res = await fetch(
+        `https://${projectId}.supabase.co/functions/v1/telegram-bot?action=reload_cache`,
+        { method: 'POST', headers: { 'Authorization': `Bearer ${anon}`, 'apikey': anon, 'Content-Type': 'application/json' }, body: '{}' }
+      );
+      const data = await res.json();
+      if (!res.ok || !data?.success) throw new Error(data?.error || 'فشل إعادة التحميل');
+      setReloadStats(data);
+      toast({
+        title: '✅ تم إعادة تحميل كاش البوت',
+        description: `${data.cities} مدينة، ${data.regions} منطقة، ${data.region_aliases} مرادف منطقة (${data.partner})`,
+      });
+    } catch (e) {
+      toast({ title: 'خطأ', description: e.message, variant: 'destructive' });
+    } finally {
+      setReloading(false);
+    }
+  };
 
   // جلب الإعداد الحالي
   useEffect(() => {
@@ -210,6 +236,27 @@ const TelegramBotDeliveryPartnerSelector = () => {
             </>
           )}
         </Button>
+
+        {/* زر إعادة تحميل كاش البوت */}
+        <Button
+          variant="outline"
+          onClick={handleReloadBotCache}
+          disabled={reloading}
+          className="w-full"
+        >
+          {reloading ? (
+            <><RefreshCw className="h-4 w-4 animate-spin mr-2" />جاري إعادة التحميل...</>
+          ) : (
+            <><Database className="h-4 w-4 mr-2" />إعادة تحميل كاش البوت الآن</>
+          )}
+        </Button>
+        {reloadStats && (
+          <div className="text-xs bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-900 rounded p-3 space-y-1">
+            <p>الشريك النشط: <strong>{getPartnerName(reloadStats.partner)}</strong></p>
+            <p>المدن: <strong>{reloadStats.cities}</strong> • المناطق: <strong>{reloadStats.regions}</strong></p>
+            <p>مرادفات المدن: <strong>{reloadStats.city_aliases}</strong> • مرادفات المناطق: <strong>{reloadStats.region_aliases}</strong></p>
+          </div>
+        )}
 
         {/* معلومات إضافية */}
         <div className="text-xs text-muted-foreground space-y-1">
