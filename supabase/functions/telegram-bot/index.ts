@@ -1205,6 +1205,25 @@ serve(async (req) => {
     }
 
     // ==========================================
+    // إعادة تحميل الكاش يدوياً (من زر "إعادة تحميل كاش البوت")
+    // ==========================================
+    const url = new URL(req.url);
+    if (req.method === 'POST' && url.searchParams.get('action') === 'reload_cache') {
+      console.log('🔄 طلب إعادة تحميل الكاش يدوياً');
+      currentDeliveryPartner = '';
+      lastCacheLoadTime = 0;
+      const ok = await loadCitiesRegionsCache();
+      return new Response(JSON.stringify({
+        success: ok,
+        partner: currentDeliveryPartner,
+        cities: citiesCache.length,
+        regions: regionsCache.length,
+        city_aliases: cityAliasesCache.length,
+        region_aliases: regionAliasesCache.length,
+      }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
+
+    // ==========================================
     // Instance Warming: تحميل Cache عند أول request
     // ==========================================
     await warmupCache();
