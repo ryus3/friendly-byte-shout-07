@@ -639,6 +639,32 @@ function searchRegionsLocal(cityId: number, text: string): Array<{ regionId: num
         console.log(`✅ تطابق جزئي قوي 98%: "${text}" في "${region.name}"`);
       }
     }
+
+    // 🎯 المستوى 0.5: مطابقة عبر region_aliases (مرادفات/أخطاء إملائية)
+    const cityRegionIds = new Set(cityRegions.map(r => r.id));
+    for (const alias of regionAliasesCache) {
+      if (!cityRegionIds.has(alias.region_id)) continue;
+      let aliasConfidence = 0;
+      if (alias.normalized === normalized) {
+        aliasConfidence = Math.max(0.99, alias.confidence);
+      } else if (normalized.includes(alias.normalized) || alias.normalized.includes(normalized)) {
+        const minLen = Math.min(alias.normalized.length, normalized.length);
+        if (minLen >= 3) aliasConfidence = Math.min(0.95, alias.confidence);
+      }
+      if (aliasConfidence > 0) {
+        const region = cityRegions.find(r => r.id === alias.region_id);
+        if (region && !matches.some(m => m.regionId === region.id)) {
+          matches.push({
+            regionId: region.id,
+            regionName: region.name,
+            externalId: getRegionExternalId(region.id, region.alwaseet_id),
+            confidence: aliasConfidence
+          });
+          console.log(`✅ مرادف منطقة "${alias.alias}" → "${region.name}" (${Math.round(aliasConfidence * 100)}%)`);
+        }
+      }
+    }
+
     
     // إذا وجدنا تطابق كامل أو قوي، نحتفظ به لكن نكمل البحث
     if (matches.length > 0) {
