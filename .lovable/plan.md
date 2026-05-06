@@ -1,119 +1,114 @@
-# Plan: Dashboard, Quick Order, Notifications & Telegram Bot Fixes
 
-## 1. كرت "إجمالي الطلبات" في الصفحة الرئيسية
+## تأكيد الأرقام
+تم التحقق من قاعدة البيانات:
+- **2744 مرادف منطقة** (region_aliases) ✅ الرقم صحيح ومأخوذ من جدول `region_aliases`
+- 64 مرادف مدينة (city_aliases)
+- الوسيط: 18 مدينة، 6261 منطقة
+- مدن: 18 مدينة، 5755 منطقة
 
-**المشكلة:** يعرض 7 بينما صفحة الطلبات تعرض 2 — لا يطابق منطق `OrdersStats.getStats('all')`.
+## السؤال المهم: ترجمة المنطقة بين الشركاء (تليغرام → مدن)
 
-**السبب:** في `src/pages/Dashboard.jsx` يُحسب `filteredTotalOrders` من `visibleOrders` (يتضمن طلبات الموظفين للمدير) بفلتر بسيط، بينما `OrdersStats` في صفحة الطلبات يفلتر دائماً طلبات المستخدم نفسه فقط بحسب الصلاحيات في `OrdersPage`.
+**نعم سينجح**، لأن المعمارية الحالية:
+- `regions_master` يحوي المنطقة "الأم" (هوية داخلية واحدة)
+- `region_delivery_mappings` يربط نفس `region_id` بـ `external_id` لكل شريك (الوسيط/مدن)
 
-**الحل:**
-- في `Dashboard.jsx` → `dashboardData.totalOrdersCount`: استخدام نفس قائمة الطلبات المستخدمة في صفحة الطلبات: للموظف فقط `orders.filter(o => o.created_by === userUUID)`، وللمدير العام نفس فلترته في `OrdersPage`. ثم تطبيق نفس فلتر `OrdersStats.getStats('all')`:
-  ```
-  !o.isarchived && o.status !== 'completed' && o.status !== 'returned_in_stock'
-  ```
-- إنشاء مجموعة منفصلة `personalOrders` (طلبات المستخدم فقط) واستخدامها لكرت إجمالي الطلبات، بدل `visibleOrders`.
+**كيف يعمل الترجمة عند الموافقة على طلب من تليغرام:**
+البوت يحفظ في `ai_orders` المعرّف الداخلي `region_id` (وليس external_id الوسيط فقط). عند الموافقة في "نافذة طلبات الذكاء" واختيار "مدن"، النظام يأخذ `region_id` الداخلي ويبحث في `region_delivery_mappings` بـ `delivery_partner='modon'` ليحصل على external_id الخاص بمدن. هذا هو "نظام الماستر/المترجم".
 
-## 2. صفحة "طلب سريع" — مدن/مناطق/أحجام حسب الشريك المختار من الكاش
+**المشكلة الحالية:** البوت يخزن external_id (alwaseet) فقط في `ai_orders.city_id/region_id`. سنُصلح هذا ليُخزَّن `regions_master.id` الداخلي، ثم عند الموافقة يُترجَم تلقائياً للشريك المختار.
 
-**الوضع الحالي:**
-- الوسيط: يقرأ من `cachedCities` (كاش `cities_master` بأعمدة alwaseet_id) ✅
-- مدن: يقرأ من `city_delivery_mappings` للكاش ✅
-- لكن مناطق الوسيط في صفحة طلب سريع تأتي من `regions_master` بـ `alwaseet_id` بشكل مباشر — صحيح للوسيط، لكن لا توجد آلية لمناطق "مدن".
+---
 
-**الحل:**
-- في `QuickOrderContent.jsx` و `useCitiesCache.js`: عند `activePartner === 'modon'`:
-  - المدن: من `city_delivery_mappings` (موجود) ✅
-  - **المناطق:** قراءة من `region_delivery_mappings` فلترة `delivery_partner='modon'` بدل قراءة `regions_master.alwaseet_id` (الذي قد يكون فارغاً لمدن).
-  - الأحجام: من `package_sizes_cache` فلترة `partner_name='modon'` (موجود) ✅ — مع ضمان الترجمة العربية الموحدة.
-- إنشاء helper `getPartnerCitiesAndRegions(partner)` يعيد `{cities, regions}` بنفس الشكل (id = external_id حسب الشريك، name من جدول master).
-- تمرير الـ partner المُحدد في `useCitiesCache` كمعامل، بحيث صفحة طلب سريع تستدعي بيانات الشريك المختار حصراً.
-- إضافة "مدن" في `useCitiesCache` ليصبح متعدد-الشركاء.
+## الخطة المتبقية الكاملة
 
-## 3. إصلاح الإشعارات المكررة لتغير حالة الطلب
+### 1) ترجمة المدن/المناطق بين الشركاء (Master Translator)
+- `telegram-bot/index.ts`: عند مطابقة المنطقة، حفظ `regions_master.id` الداخلي في `ai_orders.resolved_region_id` و `resolved_city_id` (مع الإبقاء على external_id للعرض).
+- `AiOrdersManager.jsx` / `AiOrderCard.jsx` عند الموافقة:
+  - قراءة الشريك المختار حالياً (alwaseet/modon)
+  - استدعاء helper جديد `translateLocationToPartner(internalCityId, internalRegionId, partner)` يقرأ من `*_delivery_mappings`
+  - تمرير external_id الصحيح للشريك المختار
 
-**المشكلة:** عند فتح الموقع يأتي إشعار جديد بنفس الحالة رغم أن الحالة لم تتغير منذ آخر مزامنة.
+### 2) Quick Order: كاش فوري + ترتيب الشركة + قوائم منسدلة ملتصقة
+- `QuickOrderContent.jsx`:
+  - تحميل المدن/المناطق/الأحجام من Cache مباشرة عند تغيير الشريك (بدون انتظار API). الترتيب حسب `external_id` (ترتيب الشركة) وليس أبجدياً.
+  - حذف حالة "جاري التحميل" — عرض فوري من الذاكرة المحلية إن توفرت، وإلا fallback صامت من DB.
+  - الأحجام بالعربية: ترجمة `Normal/Large/...` عبر خريطة ثابتة.
+  - **إصلاح القوائم العائمة**: استبدال `Select` الحالي (Radix Portal) بـ `Popover` مرتبط بـ trigger أو إضافة `position="popper" sideOffset={4}` مع `onScroll` يُغلق القائمة، بحيث لا تنفصل عند التمرير.
 
-**التحقق المطلوب من السبب الجذري (read DB):**
-- فحص جدول `notifications`: هل توجد إشعارات متعددة لنفس `order_id` بنفس `delivery_status`؟
-- فحص `sync-order-updates` edge function: المفروض `statusChanged = (newStatus !== currentStatus)` فقط — لكن قد يكون `currentStatus` يُقرأ بصيغة معدّلة (مثل السطر 451 يحدّث `delivery_status` بنص "currentStatus → newStatus (text)" قبل المقارنة في دورات لاحقة).
+### 3) Recent Orders: 5 طلبات + وقت تغير الحالة الفعلي
+- جلب `status_changed_at` من جدول `order_status_history` (آخر تغيير للحالة من شركة التوصيل) بدلاً من `updated_at`.
+- إضافة عمود `delivery_status_updated_at` يُحدّث فقط داخل edge function عند تغير الحالة فعلاً (مأخوذ من `updated_at` الذي ترجعه شركة التوصيل، وليس `now()`).
+- عرض "العنوان: مدينة - منطقة" فقط.
+- الحدّ بـ 5 طلبات (`.slice(0,5)`).
 
-**النمط العالمي الصحيح:**
-- إنشاء إشعار جديد فقط عند فعلياً `delivery_status` المخزن في DB ≠ الحالة الجديدة من API.
-- إذا وُجد إشعار سابق لنفس `order_id` و `type='alwaseet_status_change'` غير مقروء → تحديثه (UPDATE) بدل إدراج جديد، ليصبح "غير مقروء" وتُحدّث `created_at`. هذا هو النمط العالمي (Notification Deduplication).
+### 4) ثورة تصميمية للداشبورد (الكروت الخمسة)
+**أ. المحافظات الأكثر طلباً — خارطة العراق التفاعلية:**
+- استخدام SVG لخارطة العراق (18 محافظة) مع تلوين heatmap حسب عدد الطلبات
+- Hover/Click → tooltip بإحصائيات + شريط تقدم
+- ألوان متدرجة من theme primary
 
-**الحل:**
-- في `sync-order-updates/index.ts`:
-  1. إصلاح bug السطر 451: لا تخزّن النص "currentStatus → newStatus" في `delivery_status`، استخدم حقل `notes` فقط. خزّن `newStatus` فقط في `delivery_status`.
-  2. قبل الإدراج: `SELECT id FROM notifications WHERE data->>'order_id'=... AND type='alwaseet_status_change' AND is_read=false ORDER BY created_at DESC LIMIT 1`. إذا موجود ونفس `state_id` → skip. إذا موجود وحالة مختلفة → UPDATE (title, message, data, created_at, is_read=false). إذا غير موجود → INSERT.
-- يضمن: إشعار واحد فقط لكل طلب لكل حالة، وعند تغيّر الحالة يتحدّث الإشعار نفسه ويُعاد كـ"غير مقروء".
+**ب. الطلبات الأخيرة — Timeline عمودي:**
+- خط زمني بنقاط نابضة (pulse animation) لكل حالة
+- شارة حالة بتدرج لوني + رقم تتبع كبير
+- Glassmorphism card مع border متحرك للطلب الأحدث
 
-## 4. إعادة تصميم وترتيب الصفحة الرئيسية
+**ج. تنبيهات المخزون — بطاقات بصرية:**
+- صور المنتجات المصغرة + شريط نسبة المخزون
+- ألوان تحذير متدرجة (أحمر/برتقالي/أصفر) حسب الخطورة
+- shimmer effect للعناصر الحرجة
 
-**الترتيب الجديد (تحت كرت "المبيعات المعلقة" مباشرة):**
-1. **الطلبات الأخيرة** (5 طلبات) — يستبدل "الزبائن الأكثر طلباً" في موضعه الحالي
-2. **تنبيهات المخزون** — لمدير القسم الذي يملك منتجات (owner_user_id) فقط، عرض منتجاته الخاصة، بدون وميض الرقم
-3. **المنتجات الأكثر طلباً** (5)
-4. **المحافظات الأكثر طلباً** (5)
-5. **الزبائن الأكثر طلباً** (5)
+**د. الزبائن الأكثر طلباً:**
+- Avatar دائري بأحرف أولى ملونة + Badge ذهبي/فضي/برونزي للأول والثاني والثالث
+- نسبة مئوية للنمو
 
-**إعادة التصميم الإبداعي العالمي:**
-- **Recent Orders Card:** بطاقة Glassmorphism مع:
-  - شارة حالة ملوّنة متحركة (gradient pill)
-  - Avatar دائري للزبون بالحرف الأول
-  - وقت نسبي حقيقي بناءً على `updated_at` لآخر تغيير حالة (وليس `created_at`)
-  - hover: يظهر زر "عرض التفاصيل"
-  - شريط جانبي ملون يتغير لون حسب الحالة
-  - نص العنوان متحرك (scrolling) إن طال
-- **Top Lists:** كروت موحدة بـ progress bar نسبي، أيقونة دائرية مع gradient، badge "#1, #2..." ذهبي/فضي/برونزي للأوائل، animation عند الـ enter.
-- **Stock Alerts:** بدون pulse على الرقم، تأثير shimmer خفيف على الحدود فقط، فلترة `products.owner_user_id === user.id` لمدير القسم.
+**هـ. المنتجات الأكثر طلباً:**
+- صور المنتجات + sparkline صغير لاتجاه المبيعات
+- Ranking بأرقام عربية كبيرة
 
-**أفكار إبداعية إضافية للصفحة الرئيسية:**
-- **Live Activity Feed صغير** أعلى الصفحة (شريط أفقي يمر فيه آخر 3 أحداث: طلب جديد، تسليم، تحديث) — مثل GitHub feed.
-- **Confetti Animation** عند تجاوز رقم قياسي يومي للمبيعات.
-- **Smart Greeting** بناءً على الوقت + اسم الموظف ("صباح الخير أحمد، لديك 3 طلبات تحتاج معالجة").
-- **Hero Metric** مكبّر متحرك (Counter Animation) للإيراد اليومي مع sparkline صغير.
-- **Daily Goal Progress Ring** (دائرة تقدم نحو هدف اليوم).
-- **Pull-to-refresh** (موجود) ✅
-- **Quick Actions FAB** (Floating Action Button) عائم: طلب سريع، إضافة منتج، إشعار.
+كل الكروت: glassmorphism، gradient borders، micro-animations عند hover، تتوافق مع dark theme الحالي.
 
-## 5. بوت تليغرام — استرجاع نظام "هل تقصد؟" السابق
+### 5) إصلاح Scroll-to-Top المتجمد
+- المشكلة: الأيقونة floating لكن لا تستجيب على بعض الصفحات لأن السكرول يحدث داخل container ولا على window.
+- الحل: تعديل `ScrollToTop` ليبحث عن أقرب `[data-scroll-container]` ويستخدمه، وإلا window. إضافة `data-scroll-container` على `<main>` في `Layout.jsx`.
 
-**المشكلة الحالية:**
-- البوت يُحمّل المناطق من `regions_master` (موحّد) ثم يُحاول الترجمة لكل شريك عبر `region_delivery_mappings`.
-- في صورة المستخدم: مناطق مكررة "حي 112" تظهر 8 مرات (لمدن مختلفة) لأن البحث لا يفلتر حسب city_id.
-- نتيجة: نظام "هل تقصد؟" أسوأ من السابق رغم محاولة التحسين.
+### 6) إشعار الطلب الذكي الجديد
+- `ai-order-notifications/index.ts`: تغيير العنوان إلى:
+  `🤖 طلب ذكي جديد من {اسم المستخدم الفعلي} (تليغرام)`
+- جلب الاسم من `profiles.full_name` بـ `created_by`.
+- المستلمون: المدير العام + مدير قسم الموظف (من `employee_supervisors`).
+- استخدام أيقونة `Sparkles` أو `Brain` بدل bell البدائية في `NotificationsPanel`.
 
-**التحقق:**
-- قراءة كود `loadCitiesRegionsCache` (سطر 322): يحمّل من `regions_master` بكل المدن، ثم يربط `regionExternalIdMap` حسب الشريك المختار في الإعدادات (`telegram_bot_delivery_partner`).
-- المشكلة: `regionsCache` يضم مناطق ليس لها mapping للشريك المختار (مثلاً مناطق فقط في الوسيط لا في مدن) → في "هل تقصد؟" تظهر مناطق لا يستطيع البوت استخدامها.
+### 7) StockAlertsCard لمدير القسم احمد
+- المشكلة: `canViewAlerts` يتطلب صلاحيات قد لا تكون لمدير قسم.
+- الحل: تعديل الشرط إلى `(isAdmin || isDepartmentManager || canViewStockAlerts || canManageInventory) && ownsAnyProducts`.
 
-**الحل:**
-- **فلترة `regionsCache` و `citiesCache` بعد التحميل** بحيث تحتوي فقط على مناطق/مدن لها `external_id` للشريك المختار:
-  ```
-  regionsCache = regionsCache.filter(r => regionExternalIdMap.has(r.id));
-  citiesCache = citiesCache.filter(c => cityExternalIdMap.has(c.id));
-  ```
-- نتيجة: عند اختيار "الوسيط" في تبويب "بوت" — البوت يرى فقط مدن/مناطق الوسيط (كما كان سابقاً). عند "مدن" — فقط مدن مدن.
-- **تأكيد:** تبويب "بوت" في كاش شركة التوصيل (`TelegramBotDeliveryPartnerSelector.jsx`) يعمل ويحفظ في `settings.telegram_bot_delivery_partner` ✅ — نتأكد فقط أن البوت يقرأها قبل تحميل الكاش (موجود في `getDeliveryPartnerSetting`).
-- **إعادة تشغيل/إبطال الكاش:** عند حفظ partner جديد، إرسال signal لإفراغ كاش البوت (تحديث `lastCacheLoadTime=0` عبر استدعاء endpoint refresh أو تقليل TTL إلى دقيقة واحدة بعد الحفظ — أبسط حل: زيادة `BOT_VERSION` غير ممكن من UI، لذا نضيف زر "إعادة تحميل cache البوت" في `TelegramBotDeliveryPartnerSelector` يستدعي endpoint `?refresh_cache=1`).
+### 8) إشعارات تحديث الحالة (إصلاح التكرار + يعمل والموقع مغلق)
+- `sync-order-updates/index.ts`:
+  - **منع التكرار الحقيقي**: قبل إنشاء إشعار، البحث عن إشعار سابق بنفس `order_id` ونفس `delivery_status`. إن وُجد: تخطي تماماً (لا تحديث ولا إعادة إرسال).
+  - الإشعار يُنشأ فقط عند `oldStatus !== newStatus`.
+  - استخدام `updated_at` الذي ترجعه شركة التوصيل لحفظ `delivery_status_updated_at`.
+- **العمل والموقع مغلق**: التأكد من تشغيل cron job كل 10 دقائق على `sync-order-updates` (يعمل خادمياً مستقلاً عن المتصفح). دفع Push notifications عبر `send-push-notification` (FCM/Web Push) مع subscription محفوظ — يصل حتى مع إغلاق الموقع.
+- الحذف التلقائي: التأكد من تشغيل trigger `auto_delete_returned_orders` عند `delivery_status='17'` بعد إستلام الفاتورة.
 
-## 6. ملخص الملفات المعدّلة
+### 9) الحذف التلقائي + استلام الفواتير
+- التحقق من cron `smart-invoice-sync` يعمل كل 30 دقيقة → يستلم الفواتير → trigger يحدث `receipt_received=true` → orders تكتمل تلقائياً.
 
-- `src/pages/Dashboard.jsx` — totalOrdersCount + إعادة ترتيب الكروت + Stock Alerts للمدير صاحب المنتجات
-- `src/components/dashboard/RecentOrdersCard.jsx` — تصميم جديد، 5 طلبات، وقت تغيير الحالة
-- `src/components/dashboard/TopListCard.jsx` — تصميم جديد (badges، progress bar)
-- `src/components/dashboard/StockAlertsCard.jsx` — فلترة `owner_user_id` + إزالة pulse
-- `src/components/quick-order/QuickOrderContent.jsx` — مناطق مدن من `region_delivery_mappings`
-- `src/hooks/useCitiesCache.js` — دعم متعدد الشركاء
-- `supabase/functions/sync-order-updates/index.ts` — dedup + إصلاح حقل delivery_status
-- `supabase/functions/telegram-bot/index.ts` — فلترة citiesCache/regionsCache حسب الشريك المختار
-- `src/components/cities-cache/TelegramBotDeliveryPartnerSelector.jsx` — زر إعادة تحميل cache البوت
-- (جديد) `src/components/dashboard/LiveActivityFeed.jsx`، `SmartGreeting.jsx`، `DailyGoalRing.jsx` — للأفكار الإبداعية
+---
 
-## 7. ضمانات عدم التخريب
+## الملفات المعدلة (تقريباً)
+- `supabase/functions/telegram-bot/index.ts` (حفظ internal IDs)
+- `supabase/functions/ai-order-notifications/index.ts` (اسم المستخدم + أيقونة)
+- `supabase/functions/sync-order-updates/index.ts` (منع تكرار + delivery_status_updated_at)
+- `src/components/dashboard/AiOrdersManager.jsx`, `AiOrderCard.jsx` (مترجم الشريك)
+- `src/components/quick-order/QuickOrderContent.jsx` (كاش فوري + ترتيب + popover)
+- `src/components/dashboard/RecentOrdersCard.jsx` (timeline + 5 + وقت فعلي)
+- `src/components/dashboard/StockAlertsCard.jsx` (شرط dept manager + تصميم)
+- `src/components/dashboard/TopListCard.jsx` (تصاميم Avatar/Badge/Sparkline)
+- `src/components/dashboard/IraqMapCard.jsx` (جديد — خارطة SVG تفاعلية)
+- `src/pages/Dashboard.jsx` (دمج IraqMapCard)
+- `src/components/Layout.jsx` (data-scroll-container)
+- `src/App.jsx` (ScrollToTop يدعم container)
+- `src/components/NotificationsPanel.jsx` (أيقونة احترافية)
+- migration: عمود `orders.delivery_status_updated_at` + index على `ai_orders.resolved_region_id`
 
-- لا تعديل على منطق المخزون/الكاش/الأرباح في DB
-- لا migrations جديدة (فقط قراءة من جداول موجودة: `region_delivery_mappings`, `notifications`)
-- جميع تعديلات edge functions backward-compatible
-- الأفكار الإبداعية تُضاف كمكونات منفصلة قابلة للإخفاء، لا تُكسر التصميم الحالي
-
+هل توافق على تنفيذ الخطة كاملة؟

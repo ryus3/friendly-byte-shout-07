@@ -62,48 +62,55 @@ Deno.serve(async (req) => {
 
     const creatorName = creator?.full_name || 'مستخدم';
 
-    // 🏷️ تمييز المصدر (ai_assistant vs telegram vs غيرها)
+    // 🏷️ تمييز المصدر
     const isAiAssistant = record.source === 'ai_assistant' || record.source === 'ai_chat';
     const sourceLabel = isAiAssistant ? 'المساعد الذكي' : (record.source === 'telegram' ? 'تليغرام' : 'النظام');
-    const sourceEmoji = isAiAssistant ? '🤖' : (record.source === 'telegram' ? '📨' : '📋');
+    const sourceEmoji = '✨';
 
-    // 🔔 إشعار واحد فقط لكل طلب ذكي (موحّد للمدير العام والمنشئ)
-    // العنوان يحمل اسم المنشئ والمصدر، والرسالة تحمل اسم العميل والمبلغ.
-    // الحارس الفريد في قاعدة البيانات (uniq_new_ai_order_per_user) يمنع التكرار.
-    const unifiedNotification = {
-      type: 'new_ai_order',
-      title: `${sourceEmoji} طلب ذكي جديد من ${creatorName} (${sourceLabel})`,
-      message: `عميل: ${record.customer_name || 'غير محدد'} - المبلغ: ${record.total_amount}`,
-      user_id: null, // إشعار عام يصل للمدير + يصل للمنشئ عبر فلترة العميل
-      data: {
-        ai_order_id: record.id,
-        customer_name: record.customer_name,
-        total_amount: record.total_amount,
-        creator_name: creatorName,
-        created_by: record.created_by,
-        source: record.source
-      },
-      priority: 'high',
-      is_read: false
+    const title = `${sourceEmoji} طلب ذكي جديد من ${creatorName} (${sourceLabel})`;
+    const message = `عميل: ${record.customer_name || 'غير محدد'} — المبلغ: ${Number(record.total_amount || 0).toLocaleString()} د.ع`;
+    const data = {
+      ai_order_id: record.id,
+      customer_name: record.customer_name,
+      total_amount: record.total_amount,
+      creator_name: creatorName,
+      created_by: record.created_by,
+      source: record.source,
+      icon: 'sparkles'
     };
 
-    // upsert على أساس (ai_order_id) لمنع أي تكرار حتى لو أُعيد استدعاء الـ webhook
-    const { error } = await supabase
-      .from('notifications')
-      .insert(unifiedNotification);
-
-    if (error) {
-      // لو كان الخطأ بسبب التكرار (unique violation 23505) نتجاهله بهدوء
-      const code = (error as any)?.code;
-      if (code === '23505') {
-        console.log('ℹ️ Notification already exists for this ai_order, skipped');
-      } else {
-        console.error('❌ Error saving notification:', error);
-        return new Response('Error saving notification', { status: 500, headers: corsHeaders });
+    // 1) إشعار عام للمدير العام (user_id = null)
+    const recipientsAttempted: string[] = [];
+    const insertOne = async (user_id: string | null) => {
+      const key = String(user_id);
+      if (recipientsAttempted.includes(key)) return;
+      recipientsAttempted.push(key);
+      const { error } = await supabase.from('notifications').insert({
+        type: 'new_ai_order',
+        title, message, user_id,
+        data, priority: 'high', is_read: false
+      });
+      if (error && (error as any)?.code !== '23505') {
+        console.error('❌ Error saving notification for', user_id, error);
       }
+    };
+
+    await insertOne(null);
+
+    // 2) إشعارات لمديري قسم الموظف (employee_supervisors)
+    try {
+      const { data: supervisors } = await supabase
+        .from('employee_supervisors')
+        .select('supervisor_id')
+        .eq('employee_id', record.created_by);
+      for (const sup of supervisors || []) {
+        if (sup?.supervisor_id) await insertOne(sup.supervisor_id);
+      }
+    } catch (e) {
+      console.warn('⚠️ supervisors fetch failed', e);
     }
 
-    console.log('✅ Single unified notification saved successfully');
+    console.log('✅ AI order notifications dispatched to', recipientsAttempted.length, 'recipients');
 
     return new Response(JSON.stringify({ 
       success: true, 

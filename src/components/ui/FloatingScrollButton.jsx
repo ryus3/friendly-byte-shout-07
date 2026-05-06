@@ -15,24 +15,36 @@ const FloatingScrollButton = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
 
+  // ✅ مراقبة scroll على main container أو window
   useEffect(() => {
+    const getContainer = () => document.querySelector('[data-scroll-container]') || document.querySelector('main');
     const handleScroll = () => {
+      const container = getContainer();
+      if (container && container.scrollHeight > container.clientHeight + 50) {
+        const scrolled = container.scrollTop;
+        const scrollableHeight = container.scrollHeight - container.clientHeight;
+        if (scrollableHeight < 100) { setVisible(false); return; }
+        setVisible(true);
+        setAtBottom(scrolled >= scrollableHeight - 100);
+        return;
+      }
       const scrolled = window.scrollY;
       const docHeight = document.documentElement.scrollHeight;
       const windowHeight = window.innerHeight;
       const scrollableHeight = docHeight - windowHeight;
-      
-      if (scrollableHeight < 100) {
-        setVisible(false);
-      } else {
-        setVisible(true);
-        setAtBottom(scrolled + windowHeight >= docHeight - 100);
-      }
+      if (scrollableHeight < 100) { setVisible(false); return; }
+      setVisible(true);
+      setAtBottom(scrolled + windowHeight >= docHeight - 100);
     };
 
-    window.addEventListener('scroll', handleScroll);
+    const container = getContainer();
+    container?.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('scroll', handleScroll, { passive: true });
     handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      container?.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('scroll', handleScroll);
+    };
   }, []);
 
   // Mouse dragging handlers
@@ -93,13 +105,19 @@ const FloatingScrollButton = () => {
 
   const handleClick = () => {
     if (isDragging) return;
-    
+    const container = document.querySelector('[data-scroll-container]') || document.querySelector('main');
+    if (container && container.scrollHeight > container.clientHeight + 50) {
+      if (atBottom) {
+        container.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+      }
+      return;
+    }
     if (atBottom) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
-      const scrollHeight = document.documentElement.scrollHeight;
-      const windowHeight = window.innerHeight;
-      window.scrollTo({ top: scrollHeight - windowHeight, behavior: 'smooth' });
+      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
     }
   };
 

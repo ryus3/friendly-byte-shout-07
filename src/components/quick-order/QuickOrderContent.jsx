@@ -2631,7 +2631,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                    preloadedRegionsApplied.current = false;
                  }}
                  options={(Array.isArray(cities) ? cities : []).map(c => ({ value: String(c.id), label: c.name }))}
-                 placeholder={loadingCities ? 'تحميل...' : 'اختر مدينة'}
+                 placeholder={cities.length === 0 && loadingCities ? 'تحميل...' : 'اختر مدينة'}
                  searchPlaceholder="بحث في المدن..."
                  emptyText="لا توجد مدينة بهذا الاسم"
                  className={errors.city_id ? "border-red-500" : ""}
@@ -2661,7 +2661,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                     handleSelectChange('region_id', v);
                   }}
                  options={(Array.isArray(regions) ? regions : []).map(r => ({ value: String(r.id), label: r.name }))}
-                 placeholder={loadingRegions ? 'تحميل المناطق...' : 
+                 placeholder={regions.length === 0 && loadingRegions ? 'تحميل المناطق...' : 
                    (regions.length === 0 && formData.region_id ? `المنطقة: ${formData.region_id}` : 
                    (effectiveCityId ? 'اختر منطقة' : 'اختر المدينة أولاً'))}
                  searchPlaceholder="بحث في المناطق..."
