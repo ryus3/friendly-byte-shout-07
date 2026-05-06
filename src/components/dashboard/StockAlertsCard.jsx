@@ -15,7 +15,7 @@ import devLog from '@/lib/devLogger';
 const StockAlertsCard = () => {
   const navigate = useNavigate();
   const { products, settings, refetchProducts } = useInventory();
-  const { canManageFinances, isAdmin, canViewStockAlerts, canManageInventory } = usePermissions();
+  const { canManageFinances, isAdmin, isDepartmentManager, canViewStockAlerts, canManageInventory } = usePermissions();
   const { user } = useAuth();
   
   // فلترة المنتجات حسب صلاحيات المستخدم
@@ -75,7 +75,8 @@ const StockAlertsCard = () => {
   
   // ✅ يظهر الكرت فقط لمن يمتلك منتجات (أو للأدمن)
   const ownsAnyProducts = isAdmin || (myProducts && myProducts.length > 0);
-  const canViewAlerts = (canViewStockAlerts || canManageInventory || isAdmin) && ownsAnyProducts;
+  // ✅ مدير القسم يرى تنبيهات منتجاته دائماً
+  const canViewAlerts = (canViewStockAlerts || canManageInventory || isAdmin || isDepartmentManager) && ownsAnyProducts;
   
   if (!canViewAlerts) {
     return null;
