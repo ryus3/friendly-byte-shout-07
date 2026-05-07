@@ -53,19 +53,32 @@ Deno.serve(async (req) => {
       record.source = freshRow.source;
     }
 
-    // جلب اسم المنشئ
-    const { data: creator } = await supabase
-      .from('profiles')
-      .select('full_name')
-      .eq('id', record.created_by)
-      .single();
-
-    const creatorName = creator?.full_name || 'مستخدم';
+    // جلب اسم المنشئ — جرب id ثم user_id (لاختلاف بنية profiles)
+    let creatorName = 'مستخدم';
+    try {
+      const { data: byId } = await supabase
+        .from('profiles')
+        .select('full_name, username')
+        .eq('id', record.created_by)
+        .maybeSingle();
+      let prof = byId;
+      if (!prof?.full_name && !prof?.username) {
+        const { data: byUserId } = await supabase
+          .from('profiles')
+          .select('full_name, username')
+          .eq('user_id', record.created_by)
+          .maybeSingle();
+        if (byUserId) prof = byUserId;
+      }
+      creatorName = prof?.full_name || prof?.username || 'مستخدم';
+    } catch (e) {
+      console.warn('⚠️ profile fetch failed', e);
+    }
 
     // 🏷️ تمييز المصدر
     const isAiAssistant = record.source === 'ai_assistant' || record.source === 'ai_chat';
     const sourceLabel = isAiAssistant ? 'المساعد الذكي' : (record.source === 'telegram' ? 'تليغرام' : 'النظام');
-    const sourceEmoji = '✨';
+    const sourceEmoji = '🤖';
 
     const title = `${sourceEmoji} طلب ذكي جديد من ${creatorName} (${sourceLabel})`;
     const message = `عميل: ${record.customer_name || 'غير محدد'} — المبلغ: ${Number(record.total_amount || 0).toLocaleString()} د.ع`;
