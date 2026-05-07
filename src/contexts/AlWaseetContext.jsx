@@ -1671,6 +1671,24 @@ export const AlWaseetProvider = ({ children }) => {
     return true;
   }, [user, isOrderOwner]);
   
+  // ✅ قائمة الموظفين تحت إشراف مدير القسم (للمزامنة فقط)
+  const supervisedIdsRef = useRef([]);
+  useEffect(() => {
+    const loadSupervised = async () => {
+      const uid = user?.user_id || user?.id;
+      if (!uid) { supervisedIdsRef.current = []; return; }
+      try {
+        const { data } = await supabase
+          .from('employee_supervisors')
+          .select('employee_id')
+          .eq('supervisor_id', uid)
+          .eq('is_active', true);
+        supervisedIdsRef.current = (data || []).map(d => d.employee_id);
+      } catch { supervisedIdsRef.current = []; }
+    };
+    loadSupervised();
+  }, [user?.user_id, user?.id]);
+
   // دالة مساعدة لتطبيق فصل الحسابات على جميع استعلامات الطلبات
   const scopeOrdersQuery = useCallback((query, restrictToOwnOrders = false) => {
     const userUUID = user?.user_id || user?.id;
@@ -1686,6 +1704,11 @@ export const AlWaseetProvider = ({ children }) => {
       return query;
     }
     
+    // ✅ مدير القسم: طلباته + طلبات الموظفين تحت إشرافه فقط
+    const allowedIds = [userUUID, ...(supervisedIdsRef.current || [])];
+    if (allowedIds.length > 1) {
+      return query.in('created_by', allowedIds);
+    }
     // الموظفون يرون طلباتهم فقط
     return query.eq('created_by', userUUID);
   }, [user]);
