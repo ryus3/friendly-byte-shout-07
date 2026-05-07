@@ -111,13 +111,26 @@ Deno.serve(async (req) => {
     await insertOne(null);
 
     // 2) إشعارات لمديري قسم الموظف (employee_supervisors)
+    //    🛡️ تخطي إذا المنشئ هو مدير عام/أدمن (لمنع تسرّب إشعاراته إلى مدراء أقسام)
     try {
-      const { data: supervisors } = await supabase
-        .from('employee_supervisors')
-        .select('supervisor_id')
-        .eq('employee_id', record.created_by);
-      for (const sup of supervisors || []) {
-        if (sup?.supervisor_id) await insertOne(sup.supervisor_id);
+      const { data: creatorRoles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', record.created_by);
+      const creatorIsAdmin = (creatorRoles || []).some((r: any) => 
+        ['super_admin', 'admin'].includes(String(r.role))
+      );
+      if (!creatorIsAdmin) {
+        const { data: supervisors } = await supabase
+          .from('employee_supervisors')
+          .select('supervisor_id')
+          .eq('employee_id', record.created_by)
+          .eq('is_active', true);
+        for (const sup of supervisors || []) {
+          if (sup?.supervisor_id) await insertOne(sup.supervisor_id);
+        }
+      } else {
+        console.log('🛡️ تم تخطي إشعار المشرفين لأن المنشئ مدير عام');
       }
     } catch (e) {
       console.warn('⚠️ supervisors fetch failed', e);
