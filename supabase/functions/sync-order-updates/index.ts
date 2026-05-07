@@ -402,8 +402,8 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const currentStatus = String(localOrder.delivery_status || '');
-        const newStatus = String(waseetOrder.status_id || waseetOrder.state_id || waseetOrder.status || '');
+        const currentStatus = String(localOrder.delivery_status || '').trim();
+        const newStatus = String(waseetOrder.status_id || waseetOrder.state_id || waseetOrder.status || '').trim();
 
         const updates: any = {};
         const changesList: string[] = [];
@@ -412,8 +412,8 @@ Deno.serve(async (req) => {
         let accountChanged = false;
         let addressChanged = false;
 
-        // Compare status
-        const statusChangedCheck = currentStatus !== newStatus;
+        // Compare status (مقارنة صارمة بعد التطبيع)
+        const statusChangedCheck = currentStatus !== '' && newStatus !== '' && currentStatus !== newStatus;
 
         // 🔒 حماية partial_delivery من المزامنة التلقائية
         const isPartialDelivery = localOrder.order_type === 'partial_delivery';
