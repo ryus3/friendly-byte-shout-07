@@ -1,114 +1,103 @@
+# خطة شاملة - الإصلاحات الحرجة + الثورة التصميمية
 
-## تأكيد الأرقام
-تم التحقق من قاعدة البيانات:
-- **2744 مرادف منطقة** (region_aliases) ✅ الرقم صحيح ومأخوذ من جدول `region_aliases`
-- 64 مرادف مدينة (city_aliases)
-- الوسيط: 18 مدينة، 6261 منطقة
-- مدن: 18 مدينة، 5755 منطقة
+## 1) إصلاح إشعار الطلب الذكي (اسم + أيقونة)
+**ملف:** `supabase/functions/ai-order-notifications/index.ts`
+- المشكلة: الإشعار يقول "من مستخدم" بدل اسم المنشئ الفعلي.
+- السبب: `profiles.id` لا يطابق `created_by` في كل الحالات. سنقرأ بـ `.eq('user_id', record.created_by)` كـ fallback، ونتحقق من النتيجة.
+- العنوان الجديد: `🤖 طلب ذكي جديد من {full_name}` (بدون كلمة "مستخدم" الافتراضية).
+- الأيقونة: `Sparkles` (✨) بدل bell. تحديث `NotificationsPanel.jsx` ليُرجع أيقونة `Sparkles` احترافية لـ `type === 'new_ai_order'`، و`PackageCheck` لتغيرات الحالة، و`AlertTriangle` للرفض/الإلغاء.
 
-## السؤال المهم: ترجمة المنطقة بين الشركاء (تليغرام → مدن)
+## 2) كارثة المزامنة بالهيدر (تجاوز صلاحيات مدير القسم)
+**ملف:** `supabase/functions/sync-order-updates/index.ts` + `SyncStatusIndicator.jsx` + `AlWaseetContext.jsx`
+- المشكلة: زر المزامنة يستدعي `sync-order-updates` بدون تمرير `user_id`، فتُجلب توكنات كل المستخدمين وتُزامن كل الطلبات → مدير القسم يحصل على إشعارات المدير العام.
+- الحل:
+  - إضافة باراميتر `scope_user_id` للـ edge function. عند وجوده: فلترة `delivery_partner_tokens` بـ `.eq('user_id', scope_user_id)` وفلترة `activeOrders` بـ `.eq('created_by', scope_user_id)` أو موظفين تحت إشرافه (من `employee_supervisors` إن كان مدير قسم).
+  - عند الاستدعاء اليدوي من الهيدر: تمرير `scope_user_id = current user.id`.
+  - الـ cron الخلفي يبقى بدون scope (للمدير العام فقط).
 
-**نعم سينجح**، لأن المعمارية الحالية:
-- `regions_master` يحوي المنطقة "الأم" (هوية داخلية واحدة)
-- `region_delivery_mappings` يربط نفس `region_id` بـ `external_id` لكل شريك (الوسيط/مدن)
+## 3) إشعارات تحديث الحالة (تأتي مع كل مزامنة - خطأ)
+**ملف:** `supabase/functions/sync-order-updates/index.ts`
+- المشكلة الحالية: الإشعار يُنشأ لو `oldStatus !== newStatus` لكنه أحياناً يُنشأ بسبب اختلاف format (`"3"` vs `3`).
+- الحل:
+  - مقارنة صارمة: `String(oldStatus).trim() === String(newStatus).trim()` → تخطي.
+  - إضافة فحص dedup: قبل insert، `SELECT 1 FROM notifications WHERE order_id=X AND data->>'delivery_status'=newStatus LIMIT 1` → إن وُجد، تخطي تماماً (لا تحديث ولا إعادة).
+  - حفظ `delivery_status` داخل `data` للإشعار للسماح بهذا الفحص.
+  - توجيه الإشعار لـ `created_by` فقط (الموظف صاحب الطلب) + مدير القسم إن كان موظفاً مشرفاً عليه.
 
-**كيف يعمل الترجمة عند الموافقة على طلب من تليغرام:**
-البوت يحفظ في `ai_orders` المعرّف الداخلي `region_id` (وليس external_id الوسيط فقط). عند الموافقة في "نافذة طلبات الذكاء" واختيار "مدن"، النظام يأخذ `region_id` الداخلي ويبحث في `region_delivery_mappings` بـ `delivery_partner='modon'` ليحصل على external_id الخاص بمدن. هذا هو "نظام الماستر/المترجم".
+## 4) إلغاء "ترجمة الموقع" البطيئة عند الموافقة
+**ملف:** `src/components/dashboard/AiOrdersManager.jsx` / `AiOrderCard.jsx`
+- المشكلة: المستخدم لاحظ أن إضافة منطق ترجمة `regions_master` يبطئ الموافقة.
+- الحل المُتفق عليه عالمياً:
+  - **تخزين الـ external_id الخام للشريك المصدر** في `ai_orders` كما الآن (لا تغيير).
+  - **ترتيب الشركاء/المدن/المناطق**: الترتيب القياسي = ترتيب شركة التوصيل نفسها (`external_id ASC` كرقم) - هذا ما تستخدمه `الوسيط` و`مدن` داخلياً، فلا تكرار ولا فوضى.
+  - عند الموافقة: لا ترجمة. RPC `approveAiOrder` يستخدم external_id كما هو إن طابق الشريك المختار، وإلا يُظهر تحذيراً واضحاً "هذه المنطقة من الوسيط - اختر الوسيط أو غيّر يدوياً".
 
-**المشكلة الحالية:** البوت يخزن external_id (alwaseet) فقط في `ai_orders.city_id/region_id`. سنُصلح هذا ليُخزَّن `regions_master.id` الداخلي، ثم عند الموافقة يُترجَم تلقائياً للشريك المختار.
+## 5) توجيه الإيراد حسب مالك المنتج (تحقق)
+**ملفات للفحص فقط ثم تعديل عند الحاجة:** `useFinancialSystem.js`, triggers `handle_invoice_received_*`
+- التحقق:
+  - `products.owner_user_id` يُحدد مالك المنتج.
+  - عند استلام فاتورة: trigger يقرأ `order_items.product_id → products.owner_user_id` ويوزع الإيراد على cash_source الخاص بالمالك.
+  - إذا كان المدير العام أنشأ طلباً يحوي منتجات أحمد: الإيراد يذهب لكاش أحمد، وأرباح المدير = 0 (لأنه ليس المالك).
+- الفحص بـ `supabase--read_query`: عينة طلب فيه منتج لأحمد أنشأه المدير، ثم تتبع `cash_movements` و`profits` للتأكد. إن وُجد خلل: إصلاح trigger.
 
----
+## 6) الثورة التصميمية للداشبورد (5 كروت)
+كلها glassmorphism + gradient borders + micro-animations.
 
-## الخطة المتبقية الكاملة
+### أ. خارطة العراق التفاعلية (المحافظات الأكثر طلباً) — جديد
+**ملف:** `src/components/dashboard/IraqMapCard.jsx`
+- SVG لـ 18 محافظة (paths من مصدر مفتوح).
+- Heatmap: تدرج من `hsl(var(--primary)/0.1)` إلى `hsl(var(--primary)/0.9)` حسب عدد الطلبات.
+- Hover: tooltip مع عدد الطلبات + شريط تقدم + نسبة من الإجمالي.
+- Click: فلترة لوحة الطلبات بهذه المحافظة.
+- جدول مصغر جانبي بـ Top 5 محافظات.
 
-### 1) ترجمة المدن/المناطق بين الشركاء (Master Translator)
-- `telegram-bot/index.ts`: عند مطابقة المنطقة، حفظ `regions_master.id` الداخلي في `ai_orders.resolved_region_id` و `resolved_city_id` (مع الإبقاء على external_id للعرض).
-- `AiOrdersManager.jsx` / `AiOrderCard.jsx` عند الموافقة:
-  - قراءة الشريك المختار حالياً (alwaseet/modon)
-  - استدعاء helper جديد `translateLocationToPartner(internalCityId, internalRegionId, partner)` يقرأ من `*_delivery_mappings`
-  - تمرير external_id الصحيح للشريك المختار
+### ب. الطلبات الأخيرة — Vertical Timeline
+**ملف:** `src/components/dashboard/RecentOrdersCard.jsx`
+- خط زمني عمودي بنقاط متدرجة لونياً حسب الحالة.
+- لكل طلب: avatar دائري بأحرف اسم العميل + رقم تتبع كبير + شارة حالة + وقت الحالة الفعلي من شركة التوصيل (`delivery_status_updated_at`).
+- العنوان: "مدينة - منطقة" فقط (إزالة "أقرب نقطة دالة").
+- 5 طلبات فقط، أحدث طلب له border متحرك (pulse).
 
-### 2) Quick Order: كاش فوري + ترتيب الشركة + قوائم منسدلة ملتصقة
-- `QuickOrderContent.jsx`:
-  - تحميل المدن/المناطق/الأحجام من Cache مباشرة عند تغيير الشريك (بدون انتظار API). الترتيب حسب `external_id` (ترتيب الشركة) وليس أبجدياً.
-  - حذف حالة "جاري التحميل" — عرض فوري من الذاكرة المحلية إن توفرت، وإلا fallback صامت من DB.
-  - الأحجام بالعربية: ترجمة `Normal/Large/...` عبر خريطة ثابتة.
-  - **إصلاح القوائم العائمة**: استبدال `Select` الحالي (Radix Portal) بـ `Popover` مرتبط بـ trigger أو إضافة `position="popper" sideOffset={4}` مع `onScroll` يُغلق القائمة، بحيث لا تنفصل عند التمرير.
+### ج. تنبيهات المخزون — Visual Cards
+**ملف:** `src/components/dashboard/StockAlertsCard.jsx`
+- صورة المنتج المصغرة + اسم المتغير.
+- شريط نسبة المخزون (red/orange/yellow حسب الخطورة).
+- Shimmer effect للعناصر الحرجة (< 5).
+- عرض لمدير القسم (تم سابقاً) مع منتجاته فقط.
 
-### 3) Recent Orders: 5 طلبات + وقت تغير الحالة الفعلي
-- جلب `status_changed_at` من جدول `order_status_history` (آخر تغيير للحالة من شركة التوصيل) بدلاً من `updated_at`.
-- إضافة عمود `delivery_status_updated_at` يُحدّث فقط داخل edge function عند تغير الحالة فعلاً (مأخوذ من `updated_at` الذي ترجعه شركة التوصيل، وليس `now()`).
-- عرض "العنوان: مدينة - منطقة" فقط.
-- الحدّ بـ 5 طلبات (`.slice(0,5)`).
+### د. الزبائن الأكثر طلباً
+**ملف:** `src/components/dashboard/TopListCard.jsx` (variant=customers)
+- Avatar دائري بحرفين ملونين (gradient حسب رقم الهاتف).
+- Badge ذهبي/فضي/برونزي للأول/الثاني/الثالث.
+- رقم الطلبات + إجمالي الإنفاق + نسبة نمو.
 
-### 4) ثورة تصميمية للداشبورد (الكروت الخمسة)
-**أ. المحافظات الأكثر طلباً — خارطة العراق التفاعلية:**
-- استخدام SVG لخارطة العراق (18 محافظة) مع تلوين heatmap حسب عدد الطلبات
-- Hover/Click → tooltip بإحصائيات + شريط تقدم
-- ألوان متدرجة من theme primary
+### هـ. المنتجات الأكثر طلباً
+**ملف:** `src/components/dashboard/TopListCard.jsx` (variant=products)
+- صورة المنتج + sparkline صغير لاتجاه المبيعات (آخر 7 أيام).
+- ranking بأرقام عربية كبيرة.
+- شارة تصنيف.
 
-**ب. الطلبات الأخيرة — Timeline عمودي:**
-- خط زمني بنقاط نابضة (pulse animation) لكل حالة
-- شارة حالة بتدرج لوني + رقم تتبع كبير
-- Glassmorphism card مع border متحرك للطلب الأحدث
+## 7) كاش فوري للطلب السريع + قوائم منسدلة سليمة
+**ملف:** `src/components/quick-order/QuickOrderContent.jsx`
+- المشكلة 1: "جاري التحميل" يظهر لأن البيانات تُجلب من DB حتى لو الكاش متوفر.
+- الحل:
+  - عند تغيير الشريك: قراءة فورية من `localStorage` cache key `cities_${partner}` و`regions_${partner}_${cityId}` و`sizes_${partner}` بدون `await`.
+  - إن لم يوجد: fetch صامت في الخلفية (بدون "جاري التحميل") وحفظ بالكاش.
+  - الترتيب: `external_id ASC` (ترتيب الشركة).
+  - dedup بـ `Map` على `external_id`.
+- المشكلة 2: القوائم العائمة منفصلة عن الـ trigger.
+- الحل: استبدال `Select` بمكون `SearchableSelect` موجود + إضافة `position="popper"` و `align="start"` و `sideOffset={4}` على `PopoverContent`، مع `onScrollCapture` يُغلق القائمة فقط إذا scroll الـ container الخارجي تحرك (وليس داخل القائمة) عبر فحص `e.target.closest('[data-popover]')`.
+- لا يُمس البحث (يبقى input داخل PopoverContent).
 
-**ج. تنبيهات المخزون — بطاقات بصرية:**
-- صور المنتجات المصغرة + شريط نسبة المخزون
-- ألوان تحذير متدرجة (أحمر/برتقالي/أصفر) حسب الخطورة
-- shimmer effect للعناصر الحرجة
+## التغييرات في قاعدة البيانات
+- لا migrations جديدة (نستخدم `notifications.data` لتخزين `delivery_status`).
+- إن لزم: إضافة index على `notifications(order_id, (data->>'delivery_status'))` لتسريع dedup.
 
-**د. الزبائن الأكثر طلباً:**
-- Avatar دائري بأحرف أولى ملونة + Badge ذهبي/فضي/برونزي للأول والثاني والثالث
-- نسبة مئوية للنمو
+## ترتيب التنفيذ
+1. إصلاح الإشعارات (1, 3) + scope المزامنة (2) — حرج
+2. التحقق من توجيه الإيراد (5)
+3. كاش طلب سريع (7)
+4. التصميم الإبداعي للكروت الخمسة (6)
+5. اسم منشئ الطلب الذكي (1)
 
-**هـ. المنتجات الأكثر طلباً:**
-- صور المنتجات + sparkline صغير لاتجاه المبيعات
-- Ranking بأرقام عربية كبيرة
-
-كل الكروت: glassmorphism، gradient borders، micro-animations عند hover، تتوافق مع dark theme الحالي.
-
-### 5) إصلاح Scroll-to-Top المتجمد
-- المشكلة: الأيقونة floating لكن لا تستجيب على بعض الصفحات لأن السكرول يحدث داخل container ولا على window.
-- الحل: تعديل `ScrollToTop` ليبحث عن أقرب `[data-scroll-container]` ويستخدمه، وإلا window. إضافة `data-scroll-container` على `<main>` في `Layout.jsx`.
-
-### 6) إشعار الطلب الذكي الجديد
-- `ai-order-notifications/index.ts`: تغيير العنوان إلى:
-  `🤖 طلب ذكي جديد من {اسم المستخدم الفعلي} (تليغرام)`
-- جلب الاسم من `profiles.full_name` بـ `created_by`.
-- المستلمون: المدير العام + مدير قسم الموظف (من `employee_supervisors`).
-- استخدام أيقونة `Sparkles` أو `Brain` بدل bell البدائية في `NotificationsPanel`.
-
-### 7) StockAlertsCard لمدير القسم احمد
-- المشكلة: `canViewAlerts` يتطلب صلاحيات قد لا تكون لمدير قسم.
-- الحل: تعديل الشرط إلى `(isAdmin || isDepartmentManager || canViewStockAlerts || canManageInventory) && ownsAnyProducts`.
-
-### 8) إشعارات تحديث الحالة (إصلاح التكرار + يعمل والموقع مغلق)
-- `sync-order-updates/index.ts`:
-  - **منع التكرار الحقيقي**: قبل إنشاء إشعار، البحث عن إشعار سابق بنفس `order_id` ونفس `delivery_status`. إن وُجد: تخطي تماماً (لا تحديث ولا إعادة إرسال).
-  - الإشعار يُنشأ فقط عند `oldStatus !== newStatus`.
-  - استخدام `updated_at` الذي ترجعه شركة التوصيل لحفظ `delivery_status_updated_at`.
-- **العمل والموقع مغلق**: التأكد من تشغيل cron job كل 10 دقائق على `sync-order-updates` (يعمل خادمياً مستقلاً عن المتصفح). دفع Push notifications عبر `send-push-notification` (FCM/Web Push) مع subscription محفوظ — يصل حتى مع إغلاق الموقع.
-- الحذف التلقائي: التأكد من تشغيل trigger `auto_delete_returned_orders` عند `delivery_status='17'` بعد إستلام الفاتورة.
-
-### 9) الحذف التلقائي + استلام الفواتير
-- التحقق من cron `smart-invoice-sync` يعمل كل 30 دقيقة → يستلم الفواتير → trigger يحدث `receipt_received=true` → orders تكتمل تلقائياً.
-
----
-
-## الملفات المعدلة (تقريباً)
-- `supabase/functions/telegram-bot/index.ts` (حفظ internal IDs)
-- `supabase/functions/ai-order-notifications/index.ts` (اسم المستخدم + أيقونة)
-- `supabase/functions/sync-order-updates/index.ts` (منع تكرار + delivery_status_updated_at)
-- `src/components/dashboard/AiOrdersManager.jsx`, `AiOrderCard.jsx` (مترجم الشريك)
-- `src/components/quick-order/QuickOrderContent.jsx` (كاش فوري + ترتيب + popover)
-- `src/components/dashboard/RecentOrdersCard.jsx` (timeline + 5 + وقت فعلي)
-- `src/components/dashboard/StockAlertsCard.jsx` (شرط dept manager + تصميم)
-- `src/components/dashboard/TopListCard.jsx` (تصاميم Avatar/Badge/Sparkline)
-- `src/components/dashboard/IraqMapCard.jsx` (جديد — خارطة SVG تفاعلية)
-- `src/pages/Dashboard.jsx` (دمج IraqMapCard)
-- `src/components/Layout.jsx` (data-scroll-container)
-- `src/App.jsx` (ScrollToTop يدعم container)
-- `src/components/NotificationsPanel.jsx` (أيقونة احترافية)
-- migration: عمود `orders.delivery_status_updated_at` + index على `ai_orders.resolved_region_id`
-
-هل توافق على تنفيذ الخطة كاملة؟
+هل توافق؟
