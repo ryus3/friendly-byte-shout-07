@@ -4949,7 +4949,9 @@ export const AlWaseetProvider = ({ children }) => {
 
   // ✅ المرحلة 4: تحسين الزر الدائري - يقبل الطلبات الظاهرة و onProgress
   // Perform sync with countdown - can be triggered manually even if autoSync is disabled
-  const performSyncWithCountdown = useCallback(async (visibleOrders = null, onProgress) => {
+  // ownOnly=true يمنع المدير من جر مزامنة طلبات موظفيه من زر الهيدر (الفصل العالمي الصحيح)
+  const performSyncWithCountdown = useCallback(async (visibleOrders = null, onProgress, opts = {}) => {
+    const ownOnly = opts?.ownOnly === true;
     if (activePartner === 'local' || !isLoggedIn || isSyncing) return;
 
     // Start countdown mode WITHOUT setting isSyncing to true yet
@@ -4971,37 +4973,39 @@ export const AlWaseetProvider = ({ children }) => {
     const startTime = Date.now();
     setTimeout(async () => {
       try {
-        devLog.log('[SYNC-TIMING] 🚀 بدء المزامنة:', new Date().toISOString());
+        devLog.log('[SYNC-TIMING] 🚀 بدء المزامنة:', new Date().toISOString(), ownOnly ? '(own-only)' : '');
         // NOW set syncing to true when actual sync starts
         setIsSyncing(true);
         setSyncMode('syncing');
 
         let ordersToSync = visibleOrders;
 
-        // ✅ إذا لم يتم تمرير الطلبات الظاهرة، محاولة الحصول عليها من window
-        if (!ordersToSync || ordersToSync.length === 0) {
+        // ✅ في وضع own-only: لا نلتقط طلبات window (قد تحوي طلبات موظفين عند المدير)
+        if (!ownOnly && (!ordersToSync || ordersToSync.length === 0)) {
           ordersToSync = window.__visibleOrdersForSync || null;
           if (ordersToSync && ordersToSync.length > 0) {
             devLog.log(`✅ استخدام ${ordersToSync.length} طلب ظاهر من الصفحة الحالية`);
           }
         }
 
-        // ✅ إذا لم توجد طلبات ظاهرة، جلب الطلبات النشطة (السلوك الافتراضي)
+        // ✅ إذا لم توجد طلبات ظاهرة: جلب طلباتي فقط (own-only) — استثناء الحالات النهائية 4/17
         if (!ordersToSync || ordersToSync.length === 0) {
-          const { data: activeOrders, error } = await scopeOrdersQuery(
-            supabase
-              .from('orders')
-              .select('*')
-              .eq('delivery_partner', activePartner)
-              .in('status', ['pending', 'shipped', 'delivery', 'delivered', 'partial_delivery']) // ✅ إضافة partial_delivery
-              .neq('delivery_status', '17') // ✅ استثناء الحالة 17 (نهائية)
-              .neq('status', 'returned_in_stock') // ✅ استثناء returned_in_stock (نهائية)
-              .neq('status', 'completed') // ✅ استثناء completed (نهائية)
-              .neq('status', 'cancelled') // ✅ استثناء cancelled (نهائية)
-          ).limit(200);
+          const baseQ = supabase
+            .from('orders')
+            .select('*')
+            .eq('delivery_partner', activePartner)
+            .in('status', ['pending', 'shipped', 'delivery', 'partial_delivery'])
+            .not('delivery_status', 'in', '(4,17,31,32)')
+            .eq('receipt_received', false)
+            .is('delivery_partner_invoice_id', null);
+          // ownOnly=true يجبر تقييد على المستخدم نفسه حتى للمدير
+          const { data: activeOrders, error } = await scopeOrdersQuery(baseQ, ownOnly).limit(200);
 
           if (error) throw error;
           ordersToSync = activeOrders || [];
+        } else if (ownOnly && user?.id) {
+          // فلترة دفاعية على الجانب العميل أيضاً
+          ordersToSync = (ordersToSync || []).filter(o => o.created_by === user.id);
         }
 
         if (ordersToSync && ordersToSync.length > 0) {
