@@ -621,8 +621,12 @@ export const AlWaseetProvider = ({ children }) => {
           // 5. delivery_partner_invoice_id موجود (له فاتورة) - نهائية
           
           if (order.delivery_status === '17') return false;
+          if (order.delivery_status === '4') return false; // ✅ نهائية للمزامنة الدورية - تنتقل لمسار الفاتورة
+          if (order.delivery_status === '31' || order.delivery_status === '32') return false;
           if (order.status === 'completed') return false;
           if (order.status === 'returned_in_stock') return false;
+          if (order.status === 'delivered') return false;
+          if (order.status === 'cancelled') return false;
           if (order.receipt_received === true) return false;
           if (order.delivery_partner_invoice_id) return false;
           
