@@ -734,13 +734,16 @@ Deno.serve(async (req) => {
           );
 
           if (sameOrder) {
-            const sameState = stateId && sameOrder.data?.state_id && String(sameOrder.data.state_id) === String(stateId);
+            // ✅ مقارنة موسعة: state_id أو delivery_status
+            const oldSid = sameOrder.data?.state_id ?? sameOrder.data?.delivery_status ?? null;
+            const newSid = stateId ?? (notif.data as any)?.delivery_status ?? null;
+            const sameState = oldSid !== null && newSid !== null && String(oldSid) === String(newSid);
             if (sameState) {
-              // نفس الحالة لنفس الطلب → تخطي دائماً حتى لو كان مقروءاً
+              // نفس الحالة لنفس الطلب → تخطي تماماً (لا تحديث ولا unread)
               skipped++;
               continue;
             }
-            // حالة جديدة (أو سابقاً مقروء) → حدّث الإشعار نفسه ليصبح غير مقروء بمحتوى جديد
+            // حالة جديدة فعلاً → حدّث الإشعار نفسه
             await supabase
               .from('notifications')
               .update({
