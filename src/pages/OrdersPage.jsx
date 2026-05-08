@@ -118,13 +118,15 @@ const OrdersPage = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentPage]);
 
-  // ✅ مزامنة واحدة موحدة عند دخول الصفحة عبر sync-order-updates
-  //    (تعرف الحساب/التوكن الصحيح لكل طلب وتعالج الحذف الآمن للطلبات المحذوفة من الشركة).
-  //    أزلنا syncVisibleOrdersBatch المتزامن لتقليل الضغط على API الشريك ومنع التداخل.
+  // ✅ مزامنة آمنة عند دخول الصفحة — مقصورة على المستخدم الحالي فقط
+  //    (المدير يزامن طلبات موظفيه من صفحة "متابعة الموظفين" وليس من هنا)
   useEffect(() => {
+    if (!user?.id) return;
     const deletionPassTimer = setTimeout(() => {
       import('@/integrations/supabase/client').then(({ supabase }) => {
-        supabase.functions.invoke('sync-order-updates', { body: {} })
+        supabase.functions.invoke('sync-order-updates', {
+          body: { scope_user_id: user.id, scope_mode: 'own', source: 'orders_page' }
+        })
           .then(({ data, error }) => {
             if (error) return;
             if (data?.updated > 0) {
@@ -135,7 +137,7 @@ const OrdersPage = () => {
       });
     }, 3000);
     return () => clearTimeout(deletionPassTimer);
-  }, []); // مرة واحدة عند دخول الصفحة
+  }, [user?.id]);
 
   // ❌ تعطيل Fast Sync مؤقتاً للاختبار - الاعتماد فقط على Smart Sync
   /*
