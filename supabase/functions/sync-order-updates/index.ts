@@ -234,15 +234,22 @@ Deno.serve(async (req) => {
 
     console.log(`🗺️ تم بناء خريطة بـ ${waseetOrdersMap.size} مدخل للبحث`);
 
-    // 4️⃣ جلب الطلبات المحلية النشطة من كل الشركاء النشطين
-    const { data: activeOrders, error: ordersError } = await supabase
+    // 4️⃣ جلب الطلبات المحلية النشطة (مع احترام scope إن وجد)
+    // ✅ استثناء الحالات النهائية:
+    //   17 = راجع للتاجر، 31/32 = ملغى/مرفوض → نهائية مزامنياً
+    //   4  = تم التسليم → نهائية للمزامنة الدورية حتى تأتي الفاتورة (تُحدَّث عبر مسار الفواتير فقط)
+    let ordersQ = supabase
       .from('orders')
-      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner, customer_city, customer_province, customer_address, partner_missed_count, receipt_received')
+      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner, customer_city, customer_province, customer_address, partner_missed_count, receipt_received, delivery_partner_invoice_id')
       .in('delivery_partner', activePartnerKeys)
-      .not('delivery_status', 'in', '(17,31,32)')
-      .not('status', 'in', '(completed,returned_in_stock)')
+      .not('delivery_status', 'in', '(4,17,31,32)')
+      .not('status', 'in', '(completed,returned_in_stock,delivered,cancelled)')
+      .eq('receipt_received', false)
+      .is('delivery_partner_invoice_id', null)
       .order('created_at', { ascending: false })
       .limit(1000);
+    if (allowedUserIds) ordersQ = ordersQ.in('created_by', allowedUserIds);
+    const { data: activeOrders, error: ordersError } = await ordersQ;
 
     if (ordersError) {
       console.error('❌ فشل جلب الطلبات المحلية:', ordersError);
