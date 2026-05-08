@@ -621,8 +621,12 @@ export const AlWaseetProvider = ({ children }) => {
           // 5. delivery_partner_invoice_id موجود (له فاتورة) - نهائية
           
           if (order.delivery_status === '17') return false;
+          if (order.delivery_status === '4') return false; // ✅ نهائية للمزامنة الدورية - تنتقل لمسار الفاتورة
+          if (order.delivery_status === '31' || order.delivery_status === '32') return false;
           if (order.status === 'completed') return false;
           if (order.status === 'returned_in_stock') return false;
+          if (order.status === 'delivered') return false;
+          if (order.status === 'cancelled') return false;
           if (order.receipt_received === true) return false;
           if (order.delivery_partner_invoice_id) return false;
           
@@ -1792,8 +1796,14 @@ export const AlWaseetProvider = ({ children }) => {
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
 
-  // ✅ دالة إرسال إشعارات تغيير الحالة - مفعلة الآن
-  const createOrderStatusNotification = useCallback(async (trackingNumber, stateId, statusText, orderId = null) => {
+  // ⛔ تم تعطيل قناة العميل لإشعارات تغيير الحالة لمنع الإشعارات المكررة مع كل مزامنة.
+  //    القناة الموثوقة الوحيدة الآن: edge function `sync-order-updates` بنوع `alwaseet_status_change`
+  //    والتي تطبق dedup صارم بناءً على نفس delivery_status.
+  const createOrderStatusNotification = useCallback(async (_trackingNumber, _stateId, _statusText, _orderId = null) => {
+    devLog.log('🔇 createOrderStatusNotification معطّل — الإشعار يُنشأ من edge function فقط');
+    return;
+  }, []);
+  const _legacyCreateOrderStatusNotification = useCallback(async (trackingNumber, stateId, statusText, orderId = null) => {
     devLog.log('📢 إرسال إشعار تغيير حالة:', { trackingNumber, stateId, statusText, orderId });
     
     // منع التكرار الذكي - فقط عند تغيير الحالة فعلياً
@@ -4943,7 +4953,9 @@ export const AlWaseetProvider = ({ children }) => {
 
   // ✅ المرحلة 4: تحسين الزر الدائري - يقبل الطلبات الظاهرة و onProgress
   // Perform sync with countdown - can be triggered manually even if autoSync is disabled
-  const performSyncWithCountdown = useCallback(async (visibleOrders = null, onProgress) => {
+  // ownOnly=true يمنع المدير من جر مزامنة طلبات موظفيه من زر الهيدر (الفصل العالمي الصحيح)
+  const performSyncWithCountdown = useCallback(async (visibleOrders = null, onProgress, opts = {}) => {
+    const ownOnly = opts?.ownOnly === true;
     if (activePartner === 'local' || !isLoggedIn || isSyncing) return;
 
     // Start countdown mode WITHOUT setting isSyncing to true yet
@@ -4965,37 +4977,39 @@ export const AlWaseetProvider = ({ children }) => {
     const startTime = Date.now();
     setTimeout(async () => {
       try {
-        devLog.log('[SYNC-TIMING] 🚀 بدء المزامنة:', new Date().toISOString());
+        devLog.log('[SYNC-TIMING] 🚀 بدء المزامنة:', new Date().toISOString(), ownOnly ? '(own-only)' : '');
         // NOW set syncing to true when actual sync starts
         setIsSyncing(true);
         setSyncMode('syncing');
 
         let ordersToSync = visibleOrders;
 
-        // ✅ إذا لم يتم تمرير الطلبات الظاهرة، محاولة الحصول عليها من window
-        if (!ordersToSync || ordersToSync.length === 0) {
+        // ✅ في وضع own-only: لا نلتقط طلبات window (قد تحوي طلبات موظفين عند المدير)
+        if (!ownOnly && (!ordersToSync || ordersToSync.length === 0)) {
           ordersToSync = window.__visibleOrdersForSync || null;
           if (ordersToSync && ordersToSync.length > 0) {
             devLog.log(`✅ استخدام ${ordersToSync.length} طلب ظاهر من الصفحة الحالية`);
           }
         }
 
-        // ✅ إذا لم توجد طلبات ظاهرة، جلب الطلبات النشطة (السلوك الافتراضي)
+        // ✅ إذا لم توجد طلبات ظاهرة: جلب طلباتي فقط (own-only) — استثناء الحالات النهائية 4/17
         if (!ordersToSync || ordersToSync.length === 0) {
-          const { data: activeOrders, error } = await scopeOrdersQuery(
-            supabase
-              .from('orders')
-              .select('*')
-              .eq('delivery_partner', activePartner)
-              .in('status', ['pending', 'shipped', 'delivery', 'delivered', 'partial_delivery']) // ✅ إضافة partial_delivery
-              .neq('delivery_status', '17') // ✅ استثناء الحالة 17 (نهائية)
-              .neq('status', 'returned_in_stock') // ✅ استثناء returned_in_stock (نهائية)
-              .neq('status', 'completed') // ✅ استثناء completed (نهائية)
-              .neq('status', 'cancelled') // ✅ استثناء cancelled (نهائية)
-          ).limit(200);
+          const baseQ = supabase
+            .from('orders')
+            .select('*')
+            .eq('delivery_partner', activePartner)
+            .in('status', ['pending', 'shipped', 'delivery', 'partial_delivery'])
+            .not('delivery_status', 'in', '(4,17,31,32)')
+            .eq('receipt_received', false)
+            .is('delivery_partner_invoice_id', null);
+          // ownOnly=true يجبر تقييد على المستخدم نفسه حتى للمدير
+          const { data: activeOrders, error } = await scopeOrdersQuery(baseQ, ownOnly).limit(200);
 
           if (error) throw error;
           ordersToSync = activeOrders || [];
+        } else if (ownOnly && user?.id) {
+          // فلترة دفاعية على الجانب العميل أيضاً
+          ordersToSync = (ordersToSync || []).filter(o => o.created_by === user.id);
         }
 
         if (ordersToSync && ordersToSync.length > 0) {

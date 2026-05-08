@@ -69,6 +69,25 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
+  // ✅ قراءة scope من body (لمنع المدير من مزامنة طلبات الموظفين عبر زر الهيدر)
+  let scopeUserId: string | null = null;
+  let scopeMode: 'own' | 'managed' | 'global' = 'global';
+  let invokedSource = 'cron';
+  try {
+    if (req.method !== 'GET') {
+      const body = await req.clone().json().catch(() => ({}));
+      scopeUserId = body?.scope_user_id || null;
+      const m = String(body?.scope_mode || '').toLowerCase();
+      if (m === 'own' || m === 'managed' || m === 'global') scopeMode = m as any;
+      invokedSource = String(body?.source || 'cron');
+    }
+  } catch { /* ignore */ }
+
+  // ✅ تعامل صارم: زر الهيدر/فتح الصفحة لا يجوز أن يصبح global
+  if (scopeUserId && scopeMode === 'global') scopeMode = 'own';
+
+  console.log(`🎯 scope: mode=${scopeMode} user=${scopeUserId || 'ALL'} source=${invokedSource}`);
+
   try {
     console.log('🔄 بدء فحص تحديثات طلبات AlWaseet...');
 
@@ -80,6 +99,23 @@ Deno.serve(async (req) => {
 
     const notificationsEnabled = scheduleSettings?.notifications_enabled ?? false;
     console.log(`📢 الإشعارات ${notificationsEnabled ? 'مفعّلة' : 'معطلة'}`);
+
+    // ✅ حضّر قائمة المستخدمين المسموح بهم لمزامنة طلباتهم
+    let allowedUserIds: string[] | null = null; // null = الجميع (cron فقط)
+    if (scopeUserId) {
+      if (scopeMode === 'managed') {
+        const { data: subs } = await supabase
+          .from('employee_supervisors')
+          .select('employee_id')
+          .eq('supervisor_id', scopeUserId)
+          .eq('is_active', true);
+        allowedUserIds = Array.from(new Set([scopeUserId, ...((subs || []).map((s: any) => s.employee_id))]));
+      } else {
+        // own
+        allowedUserIds = [scopeUserId];
+      }
+      console.log(`🔒 الفلترة: ${allowedUserIds.length} مستخدم مسموح`);
+    }
 
     // 0️⃣ قراءة الشركاء النشطين ديناميكياً من السجل (يدعم أي شركة جديدة تلقائياً)
     const { data: registry } = await supabase
@@ -96,12 +132,14 @@ Deno.serve(async (req) => {
     const activePartnerKeys = Object.keys(partnerBaseMap);
     console.log(`🌐 الشركاء النشطون: ${activePartnerKeys.join(', ')}`);
 
-    // 1️⃣ جلب جميع التوكنات النشطة لكل الشركات النشطة في السجل
-    const { data: allTokens, error: tokensError } = await supabase
+    // 1️⃣ جلب التوكنات النشطة (مع احترام scope إن وجد)
+    let tokensQuery = supabase
       .from('delivery_partner_tokens')
       .select('user_id, token, account_username, partner_name')
       .in('partner_name', activePartnerKeys)
       .eq('is_active', true);
+    if (allowedUserIds) tokensQuery = tokensQuery.in('user_id', allowedUserIds);
+    const { data: allTokens, error: tokensError } = await tokensQuery;
 
     if (tokensError || !allTokens || allTokens.length === 0) {
       console.error('❌ فشل جلب التوكنات:', tokensError);
@@ -196,15 +234,22 @@ Deno.serve(async (req) => {
 
     console.log(`🗺️ تم بناء خريطة بـ ${waseetOrdersMap.size} مدخل للبحث`);
 
-    // 4️⃣ جلب الطلبات المحلية النشطة من كل الشركاء النشطين
-    const { data: activeOrders, error: ordersError } = await supabase
+    // 4️⃣ جلب الطلبات المحلية النشطة (مع احترام scope إن وجد)
+    // ✅ استثناء الحالات النهائية:
+    //   17 = راجع للتاجر، 31/32 = ملغى/مرفوض → نهائية مزامنياً
+    //   4  = تم التسليم → نهائية للمزامنة الدورية حتى تأتي الفاتورة (تُحدَّث عبر مسار الفواتير فقط)
+    let ordersQ = supabase
       .from('orders')
-      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner, customer_city, customer_province, customer_address, partner_missed_count, receipt_received')
+      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner, customer_city, customer_province, customer_address, partner_missed_count, receipt_received, delivery_partner_invoice_id')
       .in('delivery_partner', activePartnerKeys)
-      .not('delivery_status', 'in', '(17,31,32)')
-      .not('status', 'in', '(completed,returned_in_stock)')
+      .not('delivery_status', 'in', '(4,17,31,32)')
+      .not('status', 'in', '(completed,returned_in_stock,delivered,cancelled)')
+      .eq('receipt_received', false)
+      .is('delivery_partner_invoice_id', null)
       .order('created_at', { ascending: false })
       .limit(1000);
+    if (allowedUserIds) ordersQ = ordersQ.in('created_by', allowedUserIds);
+    const { data: activeOrders, error: ordersError } = await ordersQ;
 
     if (ordersError) {
       console.error('❌ فشل جلب الطلبات المحلية:', ordersError);
@@ -689,13 +734,16 @@ Deno.serve(async (req) => {
           );
 
           if (sameOrder) {
-            const sameState = stateId && sameOrder.data?.state_id && String(sameOrder.data.state_id) === String(stateId);
+            // ✅ مقارنة موسعة: state_id أو delivery_status
+            const oldSid = sameOrder.data?.state_id ?? sameOrder.data?.delivery_status ?? null;
+            const newSid = stateId ?? (notif.data as any)?.delivery_status ?? null;
+            const sameState = oldSid !== null && newSid !== null && String(oldSid) === String(newSid);
             if (sameState) {
-              // نفس الحالة لنفس الطلب → تخطي دائماً حتى لو كان مقروءاً
+              // نفس الحالة لنفس الطلب → تخطي تماماً (لا تحديث ولا unread)
               skipped++;
               continue;
             }
-            // حالة جديدة (أو سابقاً مقروء) → حدّث الإشعار نفسه ليصبح غير مقروء بمحتوى جديد
+            // حالة جديدة فعلاً → حدّث الإشعار نفسه
             await supabase
               .from('notifications')
               .update({
