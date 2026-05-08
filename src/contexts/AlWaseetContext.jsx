@@ -1792,8 +1792,14 @@ export const AlWaseetProvider = ({ children }) => {
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
 
-  // ✅ دالة إرسال إشعارات تغيير الحالة - مفعلة الآن
-  const createOrderStatusNotification = useCallback(async (trackingNumber, stateId, statusText, orderId = null) => {
+  // ⛔ تم تعطيل قناة العميل لإشعارات تغيير الحالة لمنع الإشعارات المكررة مع كل مزامنة.
+  //    القناة الموثوقة الوحيدة الآن: edge function `sync-order-updates` بنوع `alwaseet_status_change`
+  //    والتي تطبق dedup صارم بناءً على نفس delivery_status.
+  const createOrderStatusNotification = useCallback(async (_trackingNumber, _stateId, _statusText, _orderId = null) => {
+    devLog.log('🔇 createOrderStatusNotification معطّل — الإشعار يُنشأ من edge function فقط');
+    return;
+  }, []);
+  const _legacyCreateOrderStatusNotification = useCallback(async (trackingNumber, stateId, statusText, orderId = null) => {
     devLog.log('📢 إرسال إشعار تغيير حالة:', { trackingNumber, stateId, statusText, orderId });
     
     // منع التكرار الذكي - فقط عند تغيير الحالة فعلياً
