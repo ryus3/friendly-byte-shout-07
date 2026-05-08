@@ -132,12 +132,14 @@ Deno.serve(async (req) => {
     const activePartnerKeys = Object.keys(partnerBaseMap);
     console.log(`🌐 الشركاء النشطون: ${activePartnerKeys.join(', ')}`);
 
-    // 1️⃣ جلب جميع التوكنات النشطة لكل الشركات النشطة في السجل
-    const { data: allTokens, error: tokensError } = await supabase
+    // 1️⃣ جلب التوكنات النشطة (مع احترام scope إن وجد)
+    let tokensQuery = supabase
       .from('delivery_partner_tokens')
       .select('user_id, token, account_username, partner_name')
       .in('partner_name', activePartnerKeys)
       .eq('is_active', true);
+    if (allowedUserIds) tokensQuery = tokensQuery.in('user_id', allowedUserIds);
+    const { data: allTokens, error: tokensError } = await tokensQuery;
 
     if (tokensError || !allTokens || allTokens.length === 0) {
       console.error('❌ فشل جلب التوكنات:', tokensError);
