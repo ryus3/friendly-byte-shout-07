@@ -69,6 +69,25 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   );
 
+  // ✅ قراءة scope من body (لمنع المدير من مزامنة طلبات الموظفين عبر زر الهيدر)
+  let scopeUserId: string | null = null;
+  let scopeMode: 'own' | 'managed' | 'global' = 'global';
+  let invokedSource = 'cron';
+  try {
+    if (req.method !== 'GET') {
+      const body = await req.clone().json().catch(() => ({}));
+      scopeUserId = body?.scope_user_id || null;
+      const m = String(body?.scope_mode || '').toLowerCase();
+      if (m === 'own' || m === 'managed' || m === 'global') scopeMode = m as any;
+      invokedSource = String(body?.source || 'cron');
+    }
+  } catch { /* ignore */ }
+
+  // ✅ تعامل صارم: زر الهيدر/فتح الصفحة لا يجوز أن يصبح global
+  if (scopeUserId && scopeMode === 'global') scopeMode = 'own';
+
+  console.log(`🎯 scope: mode=${scopeMode} user=${scopeUserId || 'ALL'} source=${invokedSource}`);
+
   try {
     console.log('🔄 بدء فحص تحديثات طلبات AlWaseet...');
 
@@ -80,6 +99,23 @@ Deno.serve(async (req) => {
 
     const notificationsEnabled = scheduleSettings?.notifications_enabled ?? false;
     console.log(`📢 الإشعارات ${notificationsEnabled ? 'مفعّلة' : 'معطلة'}`);
+
+    // ✅ حضّر قائمة المستخدمين المسموح بهم لمزامنة طلباتهم
+    let allowedUserIds: string[] | null = null; // null = الجميع (cron فقط)
+    if (scopeUserId) {
+      if (scopeMode === 'managed') {
+        const { data: subs } = await supabase
+          .from('employee_supervisors')
+          .select('employee_id')
+          .eq('supervisor_id', scopeUserId)
+          .eq('is_active', true);
+        allowedUserIds = Array.from(new Set([scopeUserId, ...((subs || []).map((s: any) => s.employee_id))]));
+      } else {
+        // own
+        allowedUserIds = [scopeUserId];
+      }
+      console.log(`🔒 الفلترة: ${allowedUserIds.length} مستخدم مسموح`);
+    }
 
     // 0️⃣ قراءة الشركاء النشطين ديناميكياً من السجل (يدعم أي شركة جديدة تلقائياً)
     const { data: registry } = await supabase
