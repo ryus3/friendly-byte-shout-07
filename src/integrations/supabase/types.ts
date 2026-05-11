@@ -8229,6 +8229,7 @@ export type Database = {
         Returns: {
           fixed_count: number
           linked_count: number
+          receipt_propagated: number
         }[]
       }
       link_orders_by_external_id: {
