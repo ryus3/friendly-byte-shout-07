@@ -353,7 +353,7 @@ export const useAlWaseetInvoices = () => {
         .from('delivery_invoices')
         .select('id, owner_user_id, partner, account_username, external_id, orders_count, orders_last_synced_at, received, received_flag, status, status_normalized')
         .eq('external_id', invoiceId)
-        .single();
+        .maybeSingle();
 
       // ✅ تحديد ما إذا كانت الفاتورة مستلمة
       const isReceivedInvoice = !!invoiceRecord && (
@@ -445,8 +445,7 @@ export const useAlWaseetInvoices = () => {
             .from('delivery_invoices')
             .select('id, external_id, raw, orders_count')
             .eq('external_id', invoiceId)
-            .limit(1)
-            .single();
+            .maybeSingle();
 
           if (invoiceError && invoiceError.code !== 'PGRST116') {
             throw invoiceError;
@@ -745,7 +744,7 @@ export const useAlWaseetInvoices = () => {
         .from('delivery_invoices')
         .select('id, orders_count')
         .eq('external_id', invoiceId)
-        .single();
+        .maybeSingle();
 
       if (invoiceError || !invoiceRecord) {
         devLog.warn(`⚠️ الفاتورة ${invoiceId} غير موجودة في قاعدة البيانات`);

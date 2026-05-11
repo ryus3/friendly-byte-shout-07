@@ -121,7 +121,7 @@ const AllEmployeesInvoicesView = () => {
           mode: 'comprehensive',
           force_refresh: true,
           sync_invoices: true,
-          sync_orders: false
+          sync_orders: true
         }
       });
       
@@ -161,7 +161,7 @@ const AllEmployeesInvoicesView = () => {
           mode: 'comprehensive',
           force_refresh: true,
           sync_invoices: true,
-          sync_orders: false
+          sync_orders: true
         }
       });
       await fetchFromDatabase();

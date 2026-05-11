@@ -64,9 +64,8 @@ export const useEmployeeInvoices = (employeeId) => {
       return;
     }
     
-  // استبعاد المدير من مزامنة الفواتير في صفحة متابعة الموظفين
-    const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
-    if (employeeId === 'all' || employeeId === ADMIN_ID) {
+    // في صفحة متابعة الموظفين: 'all' يُعالج في AllEmployeesInvoicesView
+    if (employeeId === 'all') {
       setInvoices([]);
       return;
     }
@@ -87,9 +86,34 @@ export const useEmployeeInvoices = (employeeId) => {
 
     setLoading(true);
     try {
-      devLog.log('🔍 جلب فواتير من قاعدة البيانات الموحدة للموظف:', employeeId);
-      
-      // النظام الموحد: جميع المستخدمين يجلبون من قاعدة البيانات
+      devLog.log('🔍 جلب فواتير الموظف عبر الطلبات المحلية المرتبطة:', employeeId);
+
+      // ✅ نموذج جديد: نعتبر "فاتورة الموظف" أي فاتورة لها على الأقل طلب محلي
+      //    أنشأه هذا الموظف (orders.created_by = employeeId) عبر delivery_invoice_orders.
+      //    هذا يدعم حالة حساب شركة توصيل مشترك بين المدير وموظف، حيث الفاتورة الواحدة
+      //    تظهر لكل مستخدم بحسب طلباته المحلية المرتبطة بها.
+
+      // 1) جلب كل ids الفواتير المرتبطة بطلبات هذا الموظف
+      const { data: dioRows, error: dioErr } = await supabase
+        .from('delivery_invoice_orders')
+        .select('invoice_id, order_id, orders!inner(id, created_by)')
+        .eq('orders.created_by', employeeId);
+
+      if (dioErr) {
+        console.error('خطأ في جلب روابط فواتير الموظف:', dioErr);
+        setInvoices([]);
+        return;
+      }
+
+      const invoiceIds = Array.from(new Set((dioRows || []).map(r => r.invoice_id).filter(Boolean)));
+
+      if (invoiceIds.length === 0) {
+        setInvoices([]);
+        setLastSync(now);
+        return;
+      }
+
+      // 2) جلب الفواتير + كل روابطها (سنفلتر روابط الموظف فقط عند العرض)
       let query = supabase
         .from('delivery_invoices')
         .select(`
@@ -105,6 +129,8 @@ export const useEmployeeInvoices = (employeeId) => {
           status_normalized,
           received_flag,
           owner_user_id,
+          account_username,
+          partner_name_ar,
           created_at,
           updated_at,
           delivery_invoice_orders!left(
@@ -123,12 +149,10 @@ export const useEmployeeInvoices = (employeeId) => {
             )
           )
         `)
-        .eq('partner', 'alwaseet')
+        .in('id', invoiceIds)
+        .in('partner', ['alwaseet', 'modon'])
         .order('issued_at', { ascending: false })
-        .limit(50);
-
-      // في صفحة متابعة الموظفين: فواتير الموظف المحدد فقط
-      query = query.eq('owner_user_id', employeeId);
+        .limit(100);
 
       const { data: employeeInvoices, error } = await query;
 
@@ -141,13 +165,10 @@ export const useEmployeeInvoices = (employeeId) => {
         
         // معالجة البيانات وحساب العداد الصحيح للطلبات
         const processedInvoices = (employeeInvoices || []).map(invoice => {
-          const linkedOrders = invoice.delivery_invoice_orders?.filter(dio => 
-            dio.orders && (
-              !employeeId || 
-              employeeId === '91484496-b887-44f7-9e5d-be9db5567604' || 
-              dio.orders.created_by === employeeId
-            )
-          ) || [];
+          // الطلبات المرتبطة الخاصة بهذا الموظف فقط (حتى لو الفاتورة مشتركة)
+          const linkedOrders = (invoice.delivery_invoice_orders || []).filter(dio =>
+            dio.orders && dio.orders.created_by === employeeId
+          );
           
           // التأكد من أن الحالة تعتمد على قاعدة البيانات وليس API
           const isReceived = invoice.received || invoice.received_flag || false;
