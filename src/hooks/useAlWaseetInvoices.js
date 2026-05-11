@@ -445,8 +445,7 @@ export const useAlWaseetInvoices = () => {
             .from('delivery_invoices')
             .select('id, external_id, raw, orders_count')
             .eq('external_id', invoiceId)
-            .limit(1)
-            .single();
+            .maybeSingle();
 
           if (invoiceError && invoiceError.code !== 'PGRST116') {
             throw invoiceError;
@@ -745,7 +744,7 @@ export const useAlWaseetInvoices = () => {
         .from('delivery_invoices')
         .select('id, orders_count')
         .eq('external_id', invoiceId)
-        .single();
+        .maybeSingle();
 
       if (invoiceError || !invoiceRecord) {
         devLog.warn(`⚠️ الفاتورة ${invoiceId} غير موجودة في قاعدة البيانات`);
