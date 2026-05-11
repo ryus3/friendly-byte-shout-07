@@ -166,13 +166,10 @@ export const useEmployeeInvoices = (employeeId) => {
         
         // معالجة البيانات وحساب العداد الصحيح للطلبات
         const processedInvoices = (employeeInvoices || []).map(invoice => {
-          const linkedOrders = invoice.delivery_invoice_orders?.filter(dio => 
-            dio.orders && (
-              !employeeId || 
-              employeeId === '91484496-b887-44f7-9e5d-be9db5567604' || 
-              dio.orders.created_by === employeeId
-            )
-          ) || [];
+          // الطلبات المرتبطة الخاصة بهذا الموظف فقط (حتى لو الفاتورة مشتركة)
+          const linkedOrders = (invoice.delivery_invoice_orders || []).filter(dio =>
+            dio.orders && dio.orders.created_by === employeeId
+          );
           
           // التأكد من أن الحالة تعتمد على قاعدة البيانات وليس API
           const isReceived = invoice.received || invoice.received_flag || false;
