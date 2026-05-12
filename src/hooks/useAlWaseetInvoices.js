@@ -29,7 +29,8 @@ export const useAlWaseetInvoices = () => {
     // 1) تحميل فوري من قاعدة البيانات (لا يُمسح أبداً)
     let cachedFromDb = [];
     try {
-      const { data: cached, error: cachedErr } = await supabase
+      // أ) فواتير يملكها المستخدم مباشرة
+      const { data: ownedCached } = await supabase
         .from('delivery_invoices')
         .select('*')
         .in('partner', ['alwaseet', 'modon'])
@@ -37,7 +38,41 @@ export const useAlWaseetInvoices = () => {
         .order('issued_at', { ascending: false })
         .limit(200);
 
-      if (!cachedErr && cached?.length) {
+      // ب) فواتير حساب مشترك: للمستخدم طلبات محلية مرتبطة بها (delivery_partner_invoice_id)
+      const { data: sharedOrderRows } = await supabase
+        .from('orders')
+        .select('delivery_partner_invoice_id')
+        .eq('created_by', user?.id)
+        .not('delivery_partner_invoice_id', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(500);
+
+      const sharedExternalIds = Array.from(new Set(
+        (sharedOrderRows || [])
+          .map(r => r.delivery_partner_invoice_id)
+          .filter(v => v && !v.startsWith('LOCAL-'))
+      ));
+
+      let sharedCached = [];
+      if (sharedExternalIds.length > 0) {
+        const { data: shared } = await supabase
+          .from('delivery_invoices')
+          .select('*')
+          .in('partner', ['alwaseet', 'modon'])
+          .in('external_id', sharedExternalIds)
+          .order('issued_at', { ascending: false })
+          .limit(200);
+        sharedCached = shared || [];
+      }
+
+      // دمج بدون تكرار حسب id
+      const mergedMap = new Map();
+      [...(ownedCached || []), ...sharedCached].forEach(inv => {
+        if (!mergedMap.has(inv.id)) mergedMap.set(inv.id, inv);
+      });
+      const cached = Array.from(mergedMap.values());
+
+      if (cached.length) {
         cachedFromDb = cached.map(inv => ({
           id: inv.external_id,
           external_id: inv.external_id,
@@ -257,8 +292,8 @@ export const useAlWaseetInvoices = () => {
           });
         }
 
-        // جلب الفواتير من قاعدة البيانات - كل الشركات
-        const { data: cachedInvoices, error: invoicesError } = await supabase
+        // أ) فواتير يملكها المستخدم مباشرة
+        const { data: ownedInvoices, error: invoicesError } = await supabase
           .from('delivery_invoices')
           .select('*')
           .in('partner', ['alwaseet', 'modon'])
@@ -267,6 +302,36 @@ export const useAlWaseetInvoices = () => {
           .limit(100);
 
         if (invoicesError) throw invoicesError;
+
+        // ب) فواتير حساب مشترك: للمستخدم طلبات محلية مرتبطة بها
+        const { data: linkedOrderRows } = await supabase
+          .from('orders')
+          .select('delivery_partner_invoice_id')
+          .eq('created_by', user?.id)
+          .not('delivery_partner_invoice_id', 'is', null)
+          .order('created_at', { ascending: false })
+          .limit(500);
+        const sharedExternalIds = Array.from(new Set(
+          (linkedOrderRows || [])
+            .map(r => r.delivery_partner_invoice_id)
+            .filter(v => v && !v.startsWith('LOCAL-'))
+        ));
+        let sharedInvoices = [];
+        if (sharedExternalIds.length > 0) {
+          const { data: shared } = await supabase
+            .from('delivery_invoices')
+            .select('*')
+            .in('partner', ['alwaseet', 'modon'])
+            .in('external_id', sharedExternalIds)
+            .order('issued_at', { ascending: false })
+            .limit(100);
+          sharedInvoices = shared || [];
+        }
+        const mergedMap = new Map();
+        [...(ownedInvoices || []), ...sharedInvoices].forEach(inv => {
+          if (!mergedMap.has(inv.id)) mergedMap.set(inv.id, inv);
+        });
+        const cachedInvoices = Array.from(mergedMap.values());
 
       if (cachedInvoices?.length > 0) {
           // ✅ استخدام البيانات المُخزنة مباشرة - مع إضافة حقل partner
