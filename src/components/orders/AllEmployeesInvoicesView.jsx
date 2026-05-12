@@ -68,6 +68,11 @@ const AllEmployeesInvoicesView = () => {
       }
       setEmployees(filteredEmployees);
 
+      // قائمة معرفات الموظفين المسموح لهم — (مدير القسم: موظفيه فقط، الأدمن: الجميع عدا المدير العام)
+      const allowedEmployeeIds = (filteredEmployees || [])
+        .map(e => e.user_id)
+        .filter(id => id && id !== GENERAL_MANAGER_ID);
+
       // جلب الفواتير المحفوظة — الترتيب حسب تاريخ الفاتورة من شركة التوصيل (issued_at)
       const threshold = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
       const { data: invoicesData, error: invError } = await supabase
@@ -80,30 +85,64 @@ const AllEmployeesInvoicesView = () => {
 
       if (invError) return;
 
-      // ربط الفواتير بالموظفين
-      const invoicesWithEmployees = (invoicesData || [])
-        .map(invoice => {
-          const employee = employeesData?.find(emp => emp.user_id === invoice.owner_user_id) || null;
-          return {
-            ...invoice,
-            employee_name: employee?.full_name || employee?.username || 'غير محدد',
-            employee_code: employee?.employee_code || null
-          };
-        })
-        .filter(invoice => {
-          if (invoice.owner_user_id === GENERAL_MANAGER_ID) return false;
-          if (isDepartmentManager && !isAdmin) {
-            // مدير القسم: فقط فواتير الموظفين تحت إشرافه حصراً (ليس نفسه)
-            if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) return false;
-            return supervisedEmployeeIds.includes(invoice.owner_user_id) && 
-                   invoice.owner_user_id !== user?.user_id &&
-                   invoice.owner_user_id !== user?.id;
-          }
-          return true;
-        });
+      // 🆕 منطق الفاتورة المشتركة: نجلب من orders كل الطلبات المسلَّمة المربوطة بأي فاتورة من القائمة
+      //    ونحسب أصحاب الطلبات الفعليين (created_by) لكل فاتورة. هذا يكشف الموظفين الذين شاركوا
+      //    حساب شركة توصيل واحد مع المدير. فاتورة بدون أي طلب لموظف مسموح لا تظهر هنا.
+      const invoiceExternalIds = (invoicesData || []).map(i => i.external_id).filter(Boolean);
+      const ownersByInvoice = new Map(); // external_id => Set<creator_id>
+      if (invoiceExternalIds.length > 0 && allowedEmployeeIds.length > 0) {
+        // chunked IN to avoid URL limits
+        const chunkSize = 100;
+        for (let i = 0; i < invoiceExternalIds.length; i += chunkSize) {
+          const chunk = invoiceExternalIds.slice(i, i + chunkSize);
+          const { data: ordersRows } = await supabase
+            .from('orders')
+            .select('delivery_partner_invoice_id, created_by')
+            .in('delivery_partner_invoice_id', chunk)
+            .in('created_by', allowedEmployeeIds);
+          (ordersRows || []).forEach(r => {
+            if (!r.delivery_partner_invoice_id || !r.created_by) return;
+            if (!ownersByInvoice.has(r.delivery_partner_invoice_id)) {
+              ownersByInvoice.set(r.delivery_partner_invoice_id, new Set());
+            }
+            ownersByInvoice.get(r.delivery_partner_invoice_id).add(r.created_by);
+          });
+        }
+      }
 
-      setAllInvoices(invoicesWithEmployees);
-      return { employeesData, invoicesWithEmployees };
+      // بناء قائمة العرض النهائية: صف لكل (فاتورة × موظف فعلي مرتبط بها)
+      const expanded = [];
+      (invoicesData || []).forEach(invoice => {
+        // 1) المالك الأصلي إذا كان موظفاً مسموحاً (وليس المدير العام)
+        const ownerSet = new Set();
+        if (
+          invoice.owner_user_id &&
+          invoice.owner_user_id !== GENERAL_MANAGER_ID &&
+          allowedEmployeeIds.includes(invoice.owner_user_id)
+        ) {
+          ownerSet.add(invoice.owner_user_id);
+        }
+        // 2) الموظفون الذين لديهم طلبات محلية ضمن هذه الفاتورة (الفاتورة المشتركة)
+        const linkedOwners = ownersByInvoice.get(invoice.external_id);
+        if (linkedOwners) {
+          linkedOwners.forEach(uid => ownerSet.add(uid));
+        }
+        if (ownerSet.size === 0) return;
+        ownerSet.forEach(uid => {
+          const emp = employeesData?.find(e => e.user_id === uid) || null;
+          expanded.push({
+            ...invoice,
+            // مفتاح فريد للعرض حتى لا تتعارض الفاتورة المشتركة بين موظفين
+            display_key: `${invoice.id}:${uid}`,
+            attributed_user_id: uid,
+            employee_name: emp?.full_name || emp?.username || 'غير محدد',
+            employee_code: emp?.employee_code || null,
+          });
+        });
+      });
+
+      setAllInvoices(expanded);
+      return { employeesData, invoicesWithEmployees: expanded };
     } catch (error) {
       console.error('Error fetching from database:', error);
     }
