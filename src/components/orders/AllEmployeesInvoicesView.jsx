@@ -236,11 +236,7 @@ const AllEmployeesInvoicesView = () => {
   // فلترة الفواتير مع الفترة الزمنية (محسن)
   const filteredInvoices = useMemo(() => {
     return allInvoices.filter(invoice => {
-      // المدير يرى جميع فواتير الموظفين (استبعاد فواتيره الشخصية فقط)
-      if (employeeFilter === 'all' && invoice.owner_user_id === '91484496-b887-44f7-9e5d-be9db5567604') {
-        return false;
-      }
-
+      // الفلترة الآن تعتمد على attributed_user_id (الموظف المنسوبة له الفاتورة)
       const matchesSearch = !searchTerm || 
         invoice.external_id?.toString().includes(searchTerm) ||
         invoice.employee_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -253,6 +249,7 @@ const AllEmployeesInvoicesView = () => {
       
       const matchesEmployee = 
         employeeFilter === 'all' || 
+        invoice.attributed_user_id === employeeFilter ||
         invoice.owner_user_id === employeeFilter;
 
       // فلتر الفترة الزمنية
