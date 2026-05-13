@@ -90,6 +90,7 @@ const AllEmployeesInvoicesView = () => {
       //    حساب شركة توصيل واحد مع المدير. فاتورة بدون أي طلب لموظف مسموح لا تظهر هنا.
       const invoiceExternalIds = (invoicesData || []).map(i => i.external_id).filter(Boolean);
       const ownersByInvoice = new Map(); // external_id => Set<creator_id>
+      const accountOwnersByInvoice = new Map(); // invoice id => Set<employee user_id> by shared delivery account
       if (invoiceExternalIds.length > 0 && allowedEmployeeIds.length > 0) {
         // chunked IN to avoid URL limits
         const chunkSize = 100;
@@ -108,6 +109,29 @@ const AllEmployeesInvoicesView = () => {
             ownersByInvoice.get(r.delivery_partner_invoice_id).add(r.created_by);
           });
         }
+
+        const { data: tokenRows } = await supabase
+          .from('delivery_partner_tokens')
+          .select('user_id, partner_name, account_username, normalized_username')
+          .in('user_id', allowedEmployeeIds)
+          .in('partner_name', ['alwaseet', 'modon'])
+          .eq('is_active', true);
+
+        const accountOwners = new Map();
+        (tokenRows || []).forEach(t => {
+          const username = String(t.normalized_username || t.account_username || '').trim().toLowerCase();
+          if (!username || !t.user_id) return;
+          const key = `${t.partner_name}:${username}`;
+          if (!accountOwners.has(key)) accountOwners.set(key, new Set());
+          accountOwners.get(key).add(t.user_id);
+        });
+
+        (invoicesData || []).forEach(inv => {
+          const username = String(inv.account_username || '').trim().toLowerCase();
+          const key = `${inv.partner}:${username}`;
+          const owners = accountOwners.get(key);
+          if (owners?.size) accountOwnersByInvoice.set(inv.id, owners);
+        });
       }
 
       // بناء قائمة العرض النهائية: صف لكل (فاتورة × موظف فعلي مرتبط بها)
@@ -126,6 +150,11 @@ const AllEmployeesInvoicesView = () => {
         const linkedOwners = ownersByInvoice.get(invoice.external_id);
         if (linkedOwners) {
           linkedOwners.forEach(uid => ownerSet.add(uid));
+        }
+        // 3) الفواتير المشتركة تظهر أيضاً للموظف إذا كان لديه نفس حساب شركة التوصيل محفوظاً
+        const accountOwners = accountOwnersByInvoice.get(invoice.id);
+        if (accountOwners) {
+          accountOwners.forEach(uid => ownerSet.add(uid));
         }
         if (ownerSet.size === 0) return;
         ownerSet.forEach(uid => {
