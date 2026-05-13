@@ -22,7 +22,7 @@ export const useAlWaseetInvoices = () => {
   // 🛡️ Cache-first: نعرض فواتير قاعدة البيانات أولاً، ثم نحاول API بهدوء.
   //    لا نستبدل القائمة الحالية بـ [] أبداً عند فشل API/errNum:21/CF.
   const fetchInvoices = useCallback(async (timeFilter = 'week', forceRefresh = false) => {
-    if (!isLoggedIn) return;
+    if (!user?.id) return;
 
     if (forceRefresh) setLoading(true);
 
@@ -238,7 +238,7 @@ export const useAlWaseetInvoices = () => {
     } finally {
       if (forceRefresh) setLoading(false);
     }
-  }, [token, isLoggedIn, activePartner, user?.id]);
+  }, [token, user?.id]);
 
   // Enhanced smart sync for background updates
   const smartBackgroundSync = useCallback(async () => {
@@ -266,9 +266,10 @@ export const useAlWaseetInvoices = () => {
 
     // Enhanced instant loading with smart caching - UNIFIED for all partners
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!user?.id) return;
 
     const loadInvoicesInstantly = async () => {
+      let loadedCachedCount = 0;
       // ✅ جلب جميع التوكنات النشطة للمستخدم - كل الشركات
       try {
         // جلب جميع التوكنات النشطة
@@ -333,7 +334,8 @@ export const useAlWaseetInvoices = () => {
         });
         const cachedInvoices = Array.from(mergedMap.values());
 
-      if (cachedInvoices?.length > 0) {
+        loadedCachedCount = cachedInvoices?.length || 0;
+        if (cachedInvoices?.length > 0) {
           // ✅ استخدام البيانات المُخزنة مباشرة - مع إضافة حقل partner
           const transformedInvoices = cachedInvoices.map(inv => ({
             id: inv.external_id,
@@ -374,10 +376,10 @@ export const useAlWaseetInvoices = () => {
       const timeSinceLastSync = lastSync ? Date.now() - parseInt(lastSync) : Infinity;
       const cooldownMs = SYNC_COOLDOWN_MINUTES * 60 * 1000;
 
-      if (timeSinceLastSync > cooldownMs) {
+      if (loadedCachedCount === 0 && timeSinceLastSync > cooldownMs) {
         localStorage.setItem(lastSyncKey, Date.now().toString());
         
-        // Smart background sync using edge function
+        // Smart background sync only when no cache exists; normal entry must be DB-first and quiet.
         smartBackgroundSync();
       }
     };
@@ -400,7 +402,7 @@ export const useAlWaseetInvoices = () => {
       window.removeEventListener('invoiceReceived', handleInvoiceReceived);
       window.removeEventListener('invoiceUpdated', handleInvoiceUpdated);
     };
-  }, [isLoggedIn, activePartner, fetchInvoices, user?.id]);
+  }, [fetchInvoices, user?.id]);
 
   // إصلاح fetchInvoiceOrders: للفواتير المستلمة نعتمد على القاعدة فقط (preferCache)
   const fetchInvoiceOrders = useCallback(async (invoiceId, options = {}) => {
