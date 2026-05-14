@@ -7763,6 +7763,36 @@ export type Database = {
           total_invoices: number
         }[]
       }
+      get_employee_invoices_for_view: {
+        Args: {
+          p_days_back?: number
+          p_is_admin?: boolean
+          p_limit?: number
+          p_supervisor_id?: string
+        }
+        Returns: {
+          account_username: string
+          amount: number
+          attributed_user_id: string
+          created_at: string
+          employee_code: string
+          employee_full_name: string
+          employee_username: string
+          external_id: string
+          invoice_id: string
+          issued_at: string
+          orders_count: number
+          owner_user_id: string
+          partner: string
+          partner_name_ar: string
+          received: boolean
+          received_at: string
+          received_flag: boolean
+          status: string
+          status_normalized: string
+          updated_at: string
+        }[]
+      }
       get_employee_last_sync: { Args: { p_employee_id: string }; Returns: Json }
       get_employee_pending_deductions: {
         Args: { p_employee_id: string }

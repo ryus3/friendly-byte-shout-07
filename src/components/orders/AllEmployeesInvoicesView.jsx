@@ -41,137 +41,72 @@ const AllEmployeesInvoicesView = () => {
 
   // ============ نمط Cache-First: عرض سريع + مزامنة خلفية ============
 
-  // 1️⃣ جلب البيانات المحفوظة من قاعدة البيانات (سريع جداً)
+  // 1️⃣ جلب البيانات عبر RPC موحدة (تتعامل مع منطق الفاتورة المشتركة وإسنادها للموظفين)
   const fetchFromDatabase = async () => {
     try {
-      // جلب الموظفين النشطين
+      // قائمة الموظفين للفلتر — للأدمن: الجميع، لمدير القسم: موظفوه فقط
       const { data: employeesData, error: empError } = await supabase
         .from('profiles')
         .select('id, user_id, full_name, username, employee_code')
         .eq('is_active', true)
         .neq('user_id', GENERAL_MANAGER_ID);
 
-      if (empError) return;
+      if (empError) {
+        devLog.warn('فشل جلب قائمة الموظفين:', empError.message);
+      }
 
       let filteredEmployees = employeesData || [];
       if (isDepartmentManager && !isAdmin) {
         if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) {
-          // مدير قسم بدون موظفين تحت إشرافه - لا يعرض شيء
           setEmployees([]);
           setAllInvoices([]);
           setLoading(false);
           return;
         }
-        filteredEmployees = filteredEmployees.filter(emp => 
+        filteredEmployees = filteredEmployees.filter(emp =>
           supervisedEmployeeIds.includes(emp.user_id)
         );
       }
       setEmployees(filteredEmployees);
 
-      // قائمة معرفات الموظفين المسموح لهم — (مدير القسم: موظفيه فقط، الأدمن: الجميع عدا المدير العام)
-      const allowedEmployeeIds = (filteredEmployees || [])
-        .map(e => e.user_id)
-        .filter(id => id && id !== GENERAL_MANAGER_ID);
-
-      // جلب الفواتير المحفوظة — الترتيب حسب تاريخ الفاتورة من شركة التوصيل (issued_at)
-      const threshold = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: invoicesData, error: invError } = await supabase
-        .from('delivery_invoices')
-        .select('*')
-        .in('partner', ['alwaseet', 'modon'])
-        .or(`issued_at.gte.${threshold},and(issued_at.is.null,created_at.gte.${threshold})`)
-        .order('issued_at', { ascending: false, nullsFirst: false })
-        .limit(300);
-
-      if (invError) return;
-
-      // 🆕 منطق الفاتورة المشتركة: نجلب من orders كل الطلبات المسلَّمة المربوطة بأي فاتورة من القائمة
-      //    ونحسب أصحاب الطلبات الفعليين (created_by) لكل فاتورة. هذا يكشف الموظفين الذين شاركوا
-      //    حساب شركة توصيل واحد مع المدير. فاتورة بدون أي طلب لموظف مسموح لا تظهر هنا.
-      const invoiceExternalIds = (invoicesData || []).map(i => i.external_id).filter(Boolean);
-      const ownersByInvoice = new Map(); // external_id => Set<creator_id>
-      const accountOwnersByInvoice = new Map(); // invoice id => Set<employee user_id> by shared delivery account
-      if (invoiceExternalIds.length > 0 && allowedEmployeeIds.length > 0) {
-        // chunked IN to avoid URL limits
-        const chunkSize = 100;
-        for (let i = 0; i < invoiceExternalIds.length; i += chunkSize) {
-          const chunk = invoiceExternalIds.slice(i, i + chunkSize);
-          const { data: ordersRows } = await supabase
-            .from('orders')
-            .select('delivery_partner_invoice_id, created_by')
-            .in('delivery_partner_invoice_id', chunk)
-            .in('created_by', allowedEmployeeIds);
-          (ordersRows || []).forEach(r => {
-            if (!r.delivery_partner_invoice_id || !r.created_by) return;
-            if (!ownersByInvoice.has(r.delivery_partner_invoice_id)) {
-              ownersByInvoice.set(r.delivery_partner_invoice_id, new Set());
-            }
-            ownersByInvoice.get(r.delivery_partner_invoice_id).add(r.created_by);
-          });
-        }
-
-        const { data: tokenRows } = await supabase
-          .from('delivery_partner_tokens')
-          .select('user_id, partner_name, account_username, normalized_username')
-          .in('user_id', allowedEmployeeIds)
-          .in('partner_name', ['alwaseet', 'modon'])
-          .eq('is_active', true);
-
-        const accountOwners = new Map();
-        (tokenRows || []).forEach(t => {
-          const username = String(t.normalized_username || t.account_username || '').trim().toLowerCase();
-          if (!username || !t.user_id) return;
-          const key = `${t.partner_name}:${username}`;
-          if (!accountOwners.has(key)) accountOwners.set(key, new Set());
-          accountOwners.get(key).add(t.user_id);
-        });
-
-        (invoicesData || []).forEach(inv => {
-          const username = String(inv.account_username || '').trim().toLowerCase();
-          const key = `${inv.partner}:${username}`;
-          const owners = accountOwners.get(key);
-          if (owners?.size) accountOwnersByInvoice.set(inv.id, owners);
-        });
-      }
-
-      // بناء قائمة العرض النهائية: صف لكل (فاتورة × موظف فعلي مرتبط بها)
-      const expanded = [];
-      (invoicesData || []).forEach(invoice => {
-        // 1) المالك الأصلي إذا كان موظفاً مسموحاً (وليس المدير العام)
-        const ownerSet = new Set();
-        if (
-          invoice.owner_user_id &&
-          invoice.owner_user_id !== GENERAL_MANAGER_ID &&
-          allowedEmployeeIds.includes(invoice.owner_user_id)
-        ) {
-          ownerSet.add(invoice.owner_user_id);
-        }
-        // 2) الموظفون الذين لديهم طلبات محلية ضمن هذه الفاتورة (الفاتورة المشتركة)
-        const linkedOwners = ownersByInvoice.get(invoice.external_id);
-        if (linkedOwners) {
-          linkedOwners.forEach(uid => ownerSet.add(uid));
-        }
-        // 3) الفواتير المشتركة تظهر أيضاً للموظف إذا كان لديه نفس حساب شركة التوصيل محفوظاً
-        const accountOwners = accountOwnersByInvoice.get(invoice.id);
-        if (accountOwners) {
-          accountOwners.forEach(uid => ownerSet.add(uid));
-        }
-        if (ownerSet.size === 0) return;
-        ownerSet.forEach(uid => {
-          const emp = employeesData?.find(e => e.user_id === uid) || null;
-          expanded.push({
-            ...invoice,
-            // مفتاح فريد للعرض حتى لا تتعارض الفاتورة المشتركة بين موظفين
-            display_key: `${invoice.id}:${uid}`,
-            attributed_user_id: uid,
-            employee_name: emp?.full_name || emp?.username || 'غير محدد',
-            employee_code: emp?.employee_code || null,
-          });
-        });
+      // استدعاء RPC الموحّد
+      const { data: rows, error: rpcErr } = await supabase.rpc('get_employee_invoices_for_view', {
+        p_supervisor_id: user?.id || null,
+        p_is_admin: !!isAdmin,
+        p_days_back: 90,
+        p_limit: 300,
       });
 
+      if (rpcErr) {
+        devLog.warn('فشل RPC get_employee_invoices_for_view:', rpcErr.message);
+        setAllInvoices([]);
+        return;
+      }
+
+      const expanded = (rows || []).map(r => ({
+        id: r.invoice_id,
+        external_id: r.external_id,
+        partner: r.partner,
+        partner_name_ar: r.partner_name_ar,
+        account_username: r.account_username,
+        amount: r.amount,
+        orders_count: r.orders_count,
+        issued_at: r.issued_at,
+        received: r.received,
+        received_at: r.received_at,
+        received_flag: r.received_flag,
+        status: r.status,
+        status_normalized: r.status_normalized,
+        owner_user_id: r.owner_user_id,
+        attributed_user_id: r.attributed_user_id,
+        employee_name: r.employee_full_name || r.employee_username || 'غير محدد',
+        employee_code: r.employee_code || null,
+        display_key: `${r.invoice_id}:${r.attributed_user_id}`,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+      }));
+
       setAllInvoices(expanded);
-      return { employeesData, invoicesWithEmployees: expanded };
     } catch (error) {
       console.error('Error fetching from database:', error);
     }
