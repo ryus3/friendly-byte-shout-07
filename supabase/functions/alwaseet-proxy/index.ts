@@ -258,6 +258,9 @@ Deno.serve(async (req) => {
         fallback: true,
       });
     }
+
+    // errNum 21 = invalid/expired token (للـ endpoints الأخرى فقط مثل create-order/edit-order/login).
+    if (data && (data.errNum === 21 || data.errNum === '21')) {
       console.warn(
         `[AlWaseet Proxy] TOKEN_EXPIRED (errNum:21) endpoint=${endpoint} partner=${partnerName || 'alwaseet'}`,
       );
