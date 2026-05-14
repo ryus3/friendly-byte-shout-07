@@ -234,12 +234,21 @@ Deno.serve(async (req) => {
       console.warn(
         `[AlWaseet Proxy] Pass-through errNum:21 for endpoint=${endpoint} (treated as no-data / no-permission, NOT token expiry)`,
       );
-      // statuses يُتوقع منه مصفوفة عند الواجهة، فنرجعها فارغة بشكل ناجح
-      if (endpoint === 'statuses') {
+      // statuses/citys/regions/package-sizes/merchant-orders/get-orders-by-ids-bulk:
+      // الواجهة تتوقع مصفوفة. نعيد [] بنجاح حتى لا تنهار شاشات القراءة ولا يصدر toast جلسة منتهية.
+      const ARRAY_ENDPOINTS = new Set([
+        'statuses',
+        'citys',
+        'regions',
+        'package-sizes',
+        'merchant-orders',
+        'get-orders-by-ids-bulk',
+      ]);
+      if (ARRAY_ENDPOINTS.has(endpoint)) {
         return json({ status: true, ok: true, errNum: 'S000', data: [], fallback: true });
       }
       // باقي endpoints الفواتير: نمرر الاستجابة الأصلية مع status=false ليتعامل معها العميل
-      // كـ "لا فواتير" (يرجع [] بهدوء)، تماماً كما كان السلوك قبل اسبوع.
+      // كـ "لا فواتير" (يرجع [] بهدوء).
       return json({
         status: false,
         ok: false,
@@ -249,9 +258,6 @@ Deno.serve(async (req) => {
         fallback: true,
       });
     }
-
-    // errNum 21 = invalid/expired token (للـ endpoints الأخرى فقط مثل create-order/edit-order/login).
-    if (data && (data.errNum === 21 || data.errNum === '21')) {
       console.warn(
         `[AlWaseet Proxy] TOKEN_EXPIRED (errNum:21) endpoint=${endpoint} partner=${partnerName || 'alwaseet'}`,
       );
