@@ -160,6 +160,41 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partn
   }
 }
 
+// ✅ Shared-account fallback: when one token fails to fetch invoice orders (errNum:21 / empty),
+// try every other active token registered for the same (partner, account_username).
+// This handles the case where manager + employee share an AlWaseet login and one token
+// happens to have merchant scope while the other doesn't.
+async function fetchInvoiceOrdersWithSharedAccountFallback(
+  supabase: any,
+  primaryToken: string,
+  invoiceId: string,
+  partner: string,
+  accountUsername: string | null,
+): Promise<InvoiceOrder[]> {
+  const primary = await fetchInvoiceOrdersFromAPI(primaryToken, invoiceId, partner);
+  if (primary.length > 0) return primary;
+  if (!accountUsername) return primary;
+
+  const norm = accountUsername.toLowerCase();
+  const { data: siblings } = await supabase
+    .from('delivery_partner_tokens')
+    .select('token, account_username, normalized_username')
+    .eq('partner_name', partner)
+    .eq('is_active', true)
+    .gt('expires_at', new Date().toISOString())
+    .or(`account_username.eq.${accountUsername},normalized_username.eq.${norm}`);
+
+  for (const s of (siblings || [])) {
+    if (!s?.token || s.token === primaryToken) continue;
+    const orders = await fetchInvoiceOrdersFromAPI(s.token, invoiceId, partner);
+    if (orders.length > 0) {
+      console.log(`  🔁 Shared-account fallback succeeded for invoice ${invoiceId} via ${s.account_username}`);
+      return orders;
+    }
+  }
+  return [];
+}
+
 async function renewAlWaseetTokenIfNeeded(supabase: any, tokenData: any): Promise<string | null> {
   if ((tokenData.partner_name || 'alwaseet') !== 'alwaseet') return null;
   const username = tokenData.account_username || tokenData.partner_data?.username;
@@ -320,13 +355,25 @@ serve(async (req) => {
         );
       }
 
-      let ordersFromApi = await fetchInvoiceOrdersFromAPI(tokenRow.token, String(invRow.external_id), partnerName);
+      let ordersFromApi = await fetchInvoiceOrdersWithSharedAccountFallback(
+        supabase,
+        tokenRow.token,
+        String(invRow.external_id),
+        partnerName,
+        invRow.account_username || tokenRow.account_username || null,
+      );
 
       // محاولة تجديد توكن الوسيط لمرة واحدة عند فشل الجلب وإعادة المحاولة
       if (ordersFromApi.length === 0 && partnerName === 'alwaseet') {
         const renewed = await renewAlWaseetTokenIfNeeded(supabase, tokenRow);
         if (renewed) {
-          ordersFromApi = await fetchInvoiceOrdersFromAPI(renewed, String(invRow.external_id), partnerName);
+          ordersFromApi = await fetchInvoiceOrdersWithSharedAccountFallback(
+            supabase,
+            renewed,
+            String(invRow.external_id),
+            partnerName,
+            invRow.account_username || tokenRow.account_username || null,
+          );
         }
       }
 
@@ -537,7 +584,7 @@ serve(async (req) => {
                 try {
                   if (orderDetailsFetchedForToken > 0) await new Promise(r => setTimeout(r, ORDER_DETAILS_GAP_MS));
                   orderDetailsFetchedForToken++;
-                  const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);
+                  const invoiceOrders = await fetchInvoiceOrdersWithSharedAccountFallback(supabase, tokenData.token, externalId, partnerName, accountUsername || tokenData.account_username || null);
                   
                   if (invoiceOrders.length > 0) {
                     for (const order of invoiceOrders) {
@@ -868,7 +915,7 @@ serve(async (req) => {
               try {
                 if (orderDetailsFetchedForToken > 0) await new Promise(r => setTimeout(r, ORDER_DETAILS_GAP_MS));
                 orderDetailsFetchedForToken++;
-                const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);  // ✅ تمرير partnerName
+                const invoiceOrders = await fetchInvoiceOrdersWithSharedAccountFallback(supabase, tokenData.token, externalId, partnerName, tokenData.account_username || null);
                 
                 if (invoiceOrders.length > 0) {
                   for (const order of invoiceOrders) {
