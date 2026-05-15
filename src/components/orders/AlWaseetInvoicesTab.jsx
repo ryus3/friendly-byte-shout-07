@@ -99,13 +99,30 @@ const AlWaseetInvoicesTab = () => {
     });
   }, [invoices, searchTerm, statusFilter, accountFilter, partnerFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
 
-  // ✅ تحميل تلقائي هادئ عند فتح التبويب: cache-first بدون loading indicator
-  // الـ hook نفسه يقرأ من DB أولاً، ثم يحاول API بهدوء بدون مسح القائمة عند الفشل.
+  // ❌ معطّل: الجلب المزدوج يسبب استبدال التصميم الجميل
+  // ✅ الاعتماد فقط على التحميل الفوري من DB في useAlWaseetInvoices hook
+  // hook useAlWaseetInvoices يجلب البيانات من DB تلقائياً ويعرض account_username صحيح
+  
+  /*
   useEffect(() => {
-    if (!isLoggedIn) return;
-    fetchInvoices(timeFilter, false);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn, activePartner]);
+    if (isLoggedIn && (activePartner === 'alwaseet' || activePartner === 'modon')) {
+      devLog.log('🔄 تبويب الفواتير نشط - جلب الفواتير تلقائياً');
+      fetchInvoices(timeFilter, false); // جلب الفواتير بدون loading indicator
+      
+      // استدعاء syncAllAvailableTokens في الخلفية
+      if (syncAllAvailableTokens) {
+        devLog.log('🔄 تفعيل مزامنة كل الحسابات تلقائياً');
+        syncAllAvailableTokens().then(result => {
+          if (result.success) {
+            devLog.log(`✅ مزامنة ${result.tokensSynced} حساب، تحديث ${result.totalOrdersUpdated} طلب`);
+          }
+        }).catch(err => {
+          devLog.warn('⚠️ فشل في مزامنة كل الحسابات:', err);
+        });
+      }
+    }
+  }, [isLoggedIn, activePartner, timeFilter, fetchInvoices, syncAllAvailableTokens]);
+  */
 
   const stats = getInvoiceStats();
 
