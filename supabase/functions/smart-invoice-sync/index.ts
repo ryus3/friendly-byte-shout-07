@@ -584,7 +584,7 @@ serve(async (req) => {
                 try {
                   if (orderDetailsFetchedForToken > 0) await new Promise(r => setTimeout(r, ORDER_DETAILS_GAP_MS));
                   orderDetailsFetchedForToken++;
-                  const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);
+                  const invoiceOrders = await fetchInvoiceOrdersWithSharedAccountFallback(supabase, tokenData.token, externalId, partnerName, accountUsername || tokenData.account_username || null);
                   
                   if (invoiceOrders.length > 0) {
                     for (const order of invoiceOrders) {
@@ -915,7 +915,7 @@ serve(async (req) => {
               try {
                 if (orderDetailsFetchedForToken > 0) await new Promise(r => setTimeout(r, ORDER_DETAILS_GAP_MS));
                 orderDetailsFetchedForToken++;
-                const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);  // ✅ تمرير partnerName
+                const invoiceOrders = await fetchInvoiceOrdersWithSharedAccountFallback(supabase, tokenData.token, externalId, partnerName, tokenData.account_username || null);
                 
                 if (invoiceOrders.length > 0) {
                   for (const order of invoiceOrders) {
