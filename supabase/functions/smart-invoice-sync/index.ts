@@ -355,13 +355,25 @@ serve(async (req) => {
         );
       }
 
-      let ordersFromApi = await fetchInvoiceOrdersFromAPI(tokenRow.token, String(invRow.external_id), partnerName);
+      let ordersFromApi = await fetchInvoiceOrdersWithSharedAccountFallback(
+        supabase,
+        tokenRow.token,
+        String(invRow.external_id),
+        partnerName,
+        invRow.account_username || tokenRow.account_username || null,
+      );
 
       // محاولة تجديد توكن الوسيط لمرة واحدة عند فشل الجلب وإعادة المحاولة
       if (ordersFromApi.length === 0 && partnerName === 'alwaseet') {
         const renewed = await renewAlWaseetTokenIfNeeded(supabase, tokenRow);
         if (renewed) {
-          ordersFromApi = await fetchInvoiceOrdersFromAPI(renewed, String(invRow.external_id), partnerName);
+          ordersFromApi = await fetchInvoiceOrdersWithSharedAccountFallback(
+            supabase,
+            renewed,
+            String(invRow.external_id),
+            partnerName,
+            invRow.account_username || tokenRow.account_username || null,
+          );
         }
       }
 
