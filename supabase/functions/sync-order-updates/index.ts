@@ -296,137 +296,17 @@ Deno.serve(async (req) => {
             ? successfulFetches.has(fetchKey)
             : Array.from(successfulFetches).some(k => k.startsWith(`${localOrder.delivery_partner}:`));
 
+          // 🛡️ ZERO-DELETE POLICY: لا نحذف ولا نُلغي أي طلب محلي بسبب عدم ظهوره في API.
+          // الأسباب: فلتر merchant-orders قد يستثني الطلبات المسلَّمة/المرجعة الحديثة،
+          // وفشل/تأخر شركة التوصيل قد يحدث بصمت. الحذف التلقائي تسبب بكوارث سابقاً.
+          // نكتفي بزيادة عداد رقابي للمراقبة، بدون أي تغيير على status/delivery_status.
           if (partnerHadSuccess) {
             const newCount = ((localOrder as any).partner_missed_count || 0) + 1;
-            console.log(`🚨 الطلب ${localOrder.tracking_number} غير موجود لدى ${localOrder.delivery_partner} (مرة ${newCount}/2)`);
-
-            if (newCount >= 2) {
-              // 2-strike: نتأكد من غياب أي ارتباط مالي قبل اتخاذ القرار
-              //   - بدون إيصال مستلم وبدون فاتورة وبدون أرباح موظف ⇒ حذف فعلي (الـ trigger يحرر المخزون)
-              //   - وإلا ⇒ حذف ناعم (ملغى من الشريك) للحفاظ على السجل المحاسبي
-              let canHardDelete = true;
-              let hardDeleteReason = '';
-
-              try {
-                // 1) إيصال مستلم؟
-                if ((localOrder as any).receipt_received === true) {
-                  canHardDelete = false;
-                  hardDeleteReason = 'receipt_received=true';
-                }
-
-                // 2) مرتبط بفاتورة شريك؟
-                if (canHardDelete) {
-                  const { data: linkedInv } = await supabase
-                    .from('delivery_invoice_orders')
-                    .select('id')
-                    .eq('order_id', localOrder.id)
-                    .limit(1);
-                  if (linkedInv && linkedInv.length > 0) {
-                    canHardDelete = false;
-                    hardDeleteReason = 'linked_invoice';
-                  }
-                }
-
-                // 3) أرباح موظف مدفوعة؟
-                if (canHardDelete) {
-                  const { data: paidProfits } = await supabase
-                    .from('profits')
-                    .select('id, status')
-                    .eq('order_id', localOrder.id)
-                    .in('status', ['settled', 'invoice_received'])
-                    .limit(1);
-                  if (paidProfits && paidProfits.length > 0) {
-                    canHardDelete = false;
-                    hardDeleteReason = 'profits_paid';
-                  }
-                }
-              } catch (checkErr) {
-                console.error(`⚠️ فشل فحص الارتباطات للطلب ${localOrder.tracking_number}:`, checkErr);
-                canHardDelete = false;
-                hardDeleteReason = 'check_error';
-              }
-
-              if (canHardDelete) {
-                // 🗑️ حذف فعلي — الـ trigger before delete يُحرر المخزون تلقائياً
-                console.log(`🗑️ حذف فعلي للطلب ${localOrder.tracking_number} (محذوف من ${localOrder.delivery_partner})`);
-                const { error: delErr } = await supabase
-                  .from('orders')
-                  .delete()
-                  .eq('id', localOrder.id);
-                if (delErr) {
-                  console.error(`❌ فشل الحذف الفعلي للطلب ${localOrder.tracking_number}:`, delErr);
-                } else {
-                  updatedCount++;
-                  changes.push({
-                    order_id: localOrder.id,
-                    order_number: localOrder.order_number,
-                    tracking_number: localOrder.tracking_number,
-                    changes: [`حذف فعلي — محذوف من ${localOrder.delivery_partner} (2-strike)`]
-                  });
-                  if (notificationsEnabled) {
-                    notificationsToInsert.push({
-                      user_id: localOrder.created_by,
-                      type: 'alwaseet_status_change',
-                      title: `تم حذف الطلب من ${localOrder.delivery_partner === 'modon' ? 'مدن' : 'الوسيط'}`,
-                      message: `الطلب ${localOrder.tracking_number} لم يعد موجوداً لدى شركة التوصيل وتم حذفه من النظام تلقائياً`,
-                      priority: 'high',
-                      data: {
-                        order_id: localOrder.id,
-                        order_number: localOrder.order_number,
-                        tracking_number: localOrder.tracking_number,
-                        action: 'hard_deleted'
-                      }
-                    });
-                  }
-                }
-              } else {
-                // 💼 حذف ناعم — للحفاظ على السجل المالي
-                console.log(`📦 حذف ناعم للطلب ${localOrder.tracking_number} (سبب الحماية: ${hardDeleteReason})`);
-                const updateData: any = {
-                  delivery_status: '32',
-                  status: 'cancelled',
-                  partner_missed_count: newCount,
-                  updated_at: new Date().toISOString(),
-                  notes: `${localOrder.notes || ''}\n[${new Date().toISOString()}] تم رصد حذف الطلب من ${localOrder.delivery_partner} (2-strike) — حذف ناعم: ${hardDeleteReason}`
-                };
-                const { error: cancelErr } = await supabase
-                  .from('orders')
-                  .update(updateData)
-                  .eq('id', localOrder.id);
-                if (cancelErr) {
-                  console.error(`❌ فشل تعليم الطلب ${localOrder.tracking_number} كمحذوف:`, cancelErr);
-                } else {
-                  updatedCount++;
-                  changes.push({
-                    order_id: localOrder.id,
-                    order_number: localOrder.order_number,
-                    tracking_number: localOrder.tracking_number,
-                    changes: [`ملغى من ${localOrder.delivery_partner} (محمي محاسبياً: ${hardDeleteReason})`]
-                  });
-                  if (notificationsEnabled) {
-                    notificationsToInsert.push({
-                      user_id: localOrder.created_by,
-                      type: 'alwaseet_status_change',
-                      title: `تم حذف الطلب من ${localOrder.delivery_partner === 'modon' ? 'مدن' : 'الوسيط'}`,
-                      message: `الطلب ${localOrder.tracking_number} لم يعد موجوداً لدى شركة التوصيل`,
-                      priority: 'high',
-                      data: {
-                        order_id: localOrder.id,
-                        order_number: localOrder.order_number,
-                        tracking_number: localOrder.tracking_number,
-                        delivery_status: '32'
-                      }
-                    });
-                  }
-                }
-              }
-            } else {
-              // strike 1: زيادة العداد فقط
-              await supabase
-                .from('orders')
-                .update({ partner_missed_count: newCount })
-                .eq('id', localOrder.id);
-            }
+            console.log(`👁️ مراقبة: ${localOrder.tracking_number} غير ظاهر في ${localOrder.delivery_partner} (عداد=${newCount}) — لا حذف.`);
+            await supabase
+              .from('orders')
+              .update({ partner_missed_count: newCount })
+              .eq('id', localOrder.id);
           } else {
             console.log(`⏭️ الطلب ${localOrder.tracking_number} غير موجود لكن لم يصل رد ناجح من ${localOrder.delivery_partner} - تخطي بأمان`);
           }
