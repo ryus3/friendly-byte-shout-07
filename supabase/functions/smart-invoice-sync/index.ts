@@ -15,9 +15,9 @@ const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
 // - الفجوة الزمنية بين كل استدعاء تفاصيل وآخر.
 // المنطق الجديد يعطي أولوية للفواتير التي orders_count > 0 وعدد طلباتها المخزن أقل من المتوقع
 // (سواء جديدة أو مستلمة لكن طلباتها لم تُجلب بعد).
-const MAX_INVOICES_PER_TOKEN = 25;
-const MAX_ORDER_DETAILS_PER_TOKEN = 8;
-const ORDER_DETAILS_GAP_MS = 900;
+const MAX_INVOICES_PER_TOKEN = 30;
+const MAX_ORDER_DETAILS_PER_TOKEN = 15;
+const ORDER_DETAILS_GAP_MS = 700;
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
