@@ -440,69 +440,15 @@ export const useAlWaseetInvoices = () => {
         cachedRowsCount = count || 0;
       }
 
-      // ✅ نعتمد الكاش فقط إذا كان فعلاً ممتلئاً. إذا الفاتورة مستلمة لكن الكاش فارغ والعداد > 0
-      //   نسمح بمحاولة الجلب من API لإصلاح الفجوة (السلوك الذي كان يعمل سابقاً).
+      // ✅ سياسة جديدة: عند فتح الفاتورة لا نضرب API شركة التوصيل أبداً.
+      //   نعرض ما هو محفوظ في delivery_invoice_orders. إن كان الكاش فارغاً تماماً،
+      //   نطلق self-heal خلفي صامت لمرة واحدة بدون انتظاره.
       const expectedOrders = invoiceRecord?.orders_count || 0;
       const cacheLooksComplete = cachedRowsCount > 0 && (expectedOrders === 0 || cachedRowsCount >= expectedOrders);
-      const cacheOnly = preferCache || (isReceivedInvoice && cacheLooksComplete);
+      // cacheOnly = true دائماً في مسار الفتح ما لم يُمرَّر صراحةً false
+      const cacheOnly = preferCache !== false;
 
-      if (invoiceRecord?.owner_user_id && invoiceRecord?.partner && !cacheOnly) {
-        // جلب التوكن الصحيح لصاحب الفاتورة (المدير أو الموظف)
-        const { data: tokenData } = await supabase
-          .from('delivery_partner_tokens')
-          .select('token, partner_name')
-          .eq('user_id', invoiceRecord.owner_user_id)
-          .eq('partner_name', invoiceRecord.partner)
-          .eq('is_active', true)
-          .gt('expires_at', new Date().toISOString())
-          .order('last_used_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (tokenData?.token) {
-          selectedToken = tokenData.token;
-        }
-      }
-
-      // محاولة API أولاً إذا كان التوكن متاحاً ولم نكن في وضع cacheOnly
-      if (selectedToken && !cacheOnly) {
-        try {
-          if (invoiceRecord?.partner === 'modon') {
-            const ModonAPI = await import('@/lib/modon-api');
-            invoiceData = await ModonAPI.getInvoiceOrders(selectedToken, invoiceId);
-          } else {
-            invoiceData = await AlWaseetAPI.getInvoiceOrders(selectedToken, invoiceId);
-          }
-          dataSource = 'api';
-
-          // ✅ نحفظ طلبات الفاتورة في الكاش فوراً (delivery_invoice_orders) ونشغّل الربط مع الطلبات المحلية
-          if (invoiceRecord?.id && Array.isArray(invoiceData?.orders) && invoiceData.orders.length > 0) {
-            try {
-              const ordersToInsert = invoiceData.orders.map(o => ({
-                invoice_id: invoiceRecord.id,
-                external_order_id: String(o.id),
-                raw: o,
-                status: o.status,
-                amount: o.price || o.amount || 0,
-                owner_user_id: invoiceRecord.owner_user_id || null,
-              }));
-              await supabase
-                .from('delivery_invoice_orders')
-                .upsert(ordersToInsert, { onConflict: 'invoice_id,external_order_id' });
-              await supabase
-                .from('delivery_invoices')
-                .update({ orders_last_synced_at: new Date().toISOString() })
-                .eq('id', invoiceRecord.id);
-              // ربط الطلبات المحلية تلقائياً
-              await supabase.rpc('link_invoice_orders_to_orders');
-            } catch (saveErr) {
-              devLog.warn('⚠️ فشل حفظ طلبات الفاتورة في الكاش:', saveErr?.message);
-            }
-          }
-        } catch (apiError) {
-          devLog.warn(`⚠️ getInvoiceOrders(${invoiceId}) فشل من API، سنرجع للقاعدة:`, apiError?.message);
-        }
-      }
+      // (لا نستدعي AlWaseetAPI.getInvoiceOrders هنا — تجنباً لأخطاء "فشل الجلب" المرئية)
 
       // البديل المحسن من قاعدة البيانات
       if (!invoiceData?.orders) {
@@ -510,7 +456,7 @@ export const useAlWaseetInvoices = () => {
           // البحث عن الفاتورة بـ external_id
           const { data: invoiceRecord, error: invoiceError } = await supabase
             .from('delivery_invoices')
-            .select('id, external_id, raw, orders_count')
+            .select('id, external_id, raw, orders_count, partner')
             .eq('external_id', invoiceId)
             .maybeSingle();
 
@@ -520,30 +466,16 @@ export const useAlWaseetInvoices = () => {
 
           const finalInvoiceId = invoiceRecord?.id || invoiceId;
           
-          // 🆕 Self-heal موجّه: إذا الفاتورة موجودة لكن delivery_invoice_orders فارغة، ننفذ مزامنة موجهة
-          // للـ external_id فقط عبر smart-invoice-sync (target_invoice_external_id). هذا لا يسبب
-          // موجة طلبات لأن edge function تجلب فقط طلبات هذه الفاتورة وتكتفي.
-          if (invoiceRecord?.orders_count > 0 && !cacheOnly) {
-            const { data: existingOrders, error: checkError } = await supabase
-              .from('delivery_invoice_orders')
-              .select('id')
-              .eq('invoice_id', finalInvoiceId)
-              .limit(1);
-
-            if (!checkError && (!existingOrders || existingOrders.length === 0)) {
-              devLog.warn(`🩹 self-heal موجّه للفاتورة ${invoiceId}: استدعاء smart-invoice-sync لجلب طلباتها فقط`);
-              try {
-                await supabase.functions.invoke('smart-invoice-sync', {
-                  body: {
-                    mode: 'smart',
-                    target_invoice_external_id: String(invoiceId),
-                    target_invoice_partner: invoiceRecord?.partner || 'alwaseet',
-                  }
-                });
-              } catch (selfHealErr) {
-                devLog.warn('⚠️ self-heal الموجه فشل:', selfHealErr?.message);
+          // 🆕 Self-heal صامت: إذا الكاش فارغ والـorders_count > 0 نُطلق مزامنة خلفية بدون انتظار
+          if (invoiceRecord?.orders_count > 0 && cachedRowsCount === 0) {
+            // fire-and-forget: لا await، لا toast، لا blocking
+            supabase.functions.invoke('smart-invoice-sync', {
+              body: {
+                mode: 'smart',
+                target_invoice_external_id: String(invoiceId),
+                target_invoice_partner: invoiceRecord?.partner || 'alwaseet',
               }
-            }
+            }).catch(() => {/* صامت */});
           }
 
           // جلب الطلبات المرتبطة بالفاتورة
