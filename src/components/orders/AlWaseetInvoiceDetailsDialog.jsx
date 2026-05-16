@@ -53,14 +53,19 @@ const AlWaseetInvoiceDetailsDialog = ({
       
       if (invoiceId) {
         setFetchNotice(null);
-        // ✅ نعتمد على قاعدة البيانات حصراً عند فتح الفاتورة (cache-only).
-        //   لا نستدعي API شركة التوصيل من واجهة الفتح، ولا نُظهر "فشل جلب".
-        //   الـ self-heal الخلفي يكفي لتعبئة النواقص.
-        fetchInvoiceOrders(invoiceId, { preferCache: true }).then(result => {
+        fetchInvoiceOrders(invoiceId).then(result => {
           if (result?.dataSource) {
             setDataSource(result.dataSource);
           }
-        }).catch(() => {/* صامت — لا نُظهر رسائل خطأ */});
+          // إذا الفاتورة فيها orders_count > 0 لكن لم نحصل على أي طلبات نُظهر سبباً واضحاً
+          const expected = parseInt(invoice.linked_orders_count || invoice.orders_count || invoice.delivered_orders_count) || 0;
+          const got = (result?.orders || []).length;
+          if (expected > 0 && got === 0) {
+            setFetchNotice('تعذّر جلب تفاصيل الطلبات من شركة التوصيل الآن. الفاتورة محفوظة وسيُعاد المحاولة تلقائياً عند المزامنة التالية.');
+          }
+        }).catch(() => {
+          setFetchNotice('تعذّر الاتصال بشركة التوصيل لجلب تفاصيل الطلبات. الفاتورة محفوظة.');
+        });
         loadLinkedOrders();
       }
     }
