@@ -2473,70 +2473,24 @@ export const SuperProvider = ({ children }) => {
         
         devLog.log('📦 استجابة الوسيط الكاملة:', alwaseetResult);
         
-        // معالجة qr_id - الآن من المفترض أن يحتوي على qr_id من التحسينات
-        let qrId = alwaseetResult?.qr_id || alwaseetResult?.id;
+        // ✅ معالجة qr_id - نعتمد على رد create-order مباشرة بدون استدعاءات إضافية
+        //    (alwaseet-api.js يقوم بـ fallback واحد آمن داخلياً عبر merchant-orders إذا qr_id مفقود).
+        //    تجنّب أي مزيد من المحاولات يمنع موجات الطلبات وأخطاء "جلسة شركة التوصيل" الكاذبة
+        //    التي كانت تظهر بعد نجاح إنشاء الطلب فعلياً.
+        let qrId = alwaseetResult?.qr_id || alwaseetResult?.tracking_number || alwaseetResult?.id;
         let orderId = alwaseetResult?.id || qrId;
-        
-        // Smart retry if qr_id is still missing - 3 attempts with proper delays
+
         if (!qrId || qrId === 'undefined' || qrId === 'null') {
-          devLog.log('⚠️ لم نحصل على qr_id صحيح، محاولة smart retry...');
-          const maxRetries = 3;
-          const delayBetweenRetries = 1500; // 1.5 seconds
-          
-          for (let attempt = 1; attempt <= maxRetries; attempt++) {
-            try {
-              devLog.log(`🔄 محاولة ${attempt}/${maxRetries} للحصول على qr_id...`);
-              await new Promise(resolve => setTimeout(resolve, delayBetweenRetries));
-              
-              // استخدام API الصحيح حسب شركة التوصيل
-              let recentOrders;
-              if (destination === 'modon') {
-                const ModonAPI = await import('../lib/modon-api.js');
-                recentOrders = await ModonAPI.getMerchantOrders(accountData.token);
-              } else {
-                const { getMerchantOrders } = await import('../lib/alwaseet-api.js');
-                recentOrders = await getMerchantOrders(accountData.token);
-              }
-              
-              // Advanced matching: by phone (last 10 digits), price, and recent creation
-              const customerPhoneLast10 = (normalizedPhone || '').replace(/\D/g, '').slice(-10);
-              const candidates = recentOrders.filter(order => {
-                const orderPhone = (order?.client_mobile || '').replace(/\D/g, '').slice(-10);
-                return orderPhone === customerPhoneLast10;
-              });
-              
-              // Try exact price match first, then recent order
-              let matchingOrder = candidates.find(order => parseInt(order?.price) === finalPrice);
-              if (!matchingOrder && candidates.length > 0) {
-                // Sort by creation time and take the most recent
-                matchingOrder = candidates.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
-              }
-              
-              if (matchingOrder) {
-                qrId = matchingOrder.qr_id || matchingOrder.tracking_number || matchingOrder.id;
-                orderId = matchingOrder.id || orderId;
-                devLog.log(`✅ تم استخراج qr_id في المحاولة ${attempt}:`, { qrId, orderId });
-                break;
-              }
-              
-              devLog.log(`⚠️ لم يتم العثور على طلب مطابق في المحاولة ${attempt}`);
-            } catch (retryError) {
-              devLog.warn(`❌ فشل في المحاولة ${attempt}:`, retryError.message);
-            }
-            
-            // If last attempt fails, log the issue
-            if (attempt === maxRetries) {
-              console.error('❌ فشل في جميع المحاولات للحصول على qr_id');
-            }
-          }
+          // كحلٍ أخير: استخدم id كرقم تتبع — أفضل من رفض الموافقة بعد نجاح إنشاء الطلب في الوسيط
+          qrId = orderId;
         }
-        
+
         if (!qrId || qrId === 'undefined' || qrId === 'null') {
-          throw new Error('فشل في الحصول على رقم التتبع من شركة التوصيل بعد عدة محاولات');
+          throw new Error('تعذر الحصول على رقم التتبع من شركة التوصيل بعد إنشاء الطلب');
         }
 
         devLog.log('🔍 qr_id المستخرج:', qrId);
-        devLog.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId: alwaseetResult.id });
+        devLog.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId });
 
         // إنشاء الطلب المحلي مع ربطه بشركة التوصيل - استخدام orderId بدلاً من qrId
         return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, aiOrder.id, {
