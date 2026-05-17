@@ -214,11 +214,11 @@ export const useAlWaseetInvoices = () => {
         setInvoices(filteredAndSortedInvoices);
       }
 
+      // 🛡️ لا نُظهر توست عند رفض endpoint الفواتير (errNum:21).
+      //   حسب توثيق الوسيط، Invoice APIs تقبل Merchant token فقط — الرفض هنا = "لا صلاحية
+      //   لهذا التوكن على endpoint الفواتير" وليس خطأ شركة توصيل. نعرض الكاش بصمت.
       if (forceRefresh && !anyApiSuccess && anyApiPermissionDenied) {
-        toast({
-          title: 'تعذر الجلب من شركة التوصيل',
-          description: 'تم عرض البيانات المحفوظة. الوسيط رفض الـ endpoint مؤقتاً (errNum:21).',
-        });
+        devLog.warn('ℹ️ الوسيط رفض endpoint الفواتير (errNum:21) — عرض البيانات المحفوظة بدون توست.');
       }
 
       return filteredAndSortedInvoices;
