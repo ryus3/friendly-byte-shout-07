@@ -370,18 +370,16 @@ export const useAlWaseetInvoices = () => {
         // Silent error
       }
 
-      // 2. ✅ مزامنة خلفية صامتة دائماً عند فتح التبويب (مثل ما كان قبل 26/4)
-      //    - الكاش يظهر فوراً.
-      //    - المزامنة الخلفية تكمل الفواتير الناقصة وتجلب الجديد بدون استبدال الكاش.
-      //    - cooldown قصير (60 ثانية) لمنع الضغط على API عند التنقل السريع.
+      // 2. Then update from API in background (non-blocking)
       const lastSyncKey = `${LAST_SYNC_COOLDOWN_KEY}_${user?.id}`;
       const lastSync = localStorage.getItem(lastSyncKey);
       const timeSinceLastSync = lastSync ? Date.now() - parseInt(lastSync) : Infinity;
-      const ENTRY_COOLDOWN_MS = 60 * 1000; // 60 ثانية فقط للدخول
+      const cooldownMs = SYNC_COOLDOWN_MINUTES * 60 * 1000;
 
-      if (timeSinceLastSync > ENTRY_COOLDOWN_MS) {
+      if (loadedCachedCount === 0 && timeSinceLastSync > cooldownMs) {
         localStorage.setItem(lastSyncKey, Date.now().toString());
-        // مزامنة ذكية صامتة في الخلفية حتى لو الكاش موجود — تكمل الناقص وتجلب الجديد
+        
+        // Smart background sync only when no cache exists; normal entry must be DB-first and quiet.
         smartBackgroundSync();
       }
     };

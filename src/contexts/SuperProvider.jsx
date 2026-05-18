@@ -1491,97 +1491,98 @@ export const SuperProvider = ({ children }) => {
         // ⚠️ لا تستدعي release_stock_for_order أو release_stock_item هنا!
         // تحرير المخزون يتم تلقائياً عبر trigger: auto_release_stock_on_order_delete
 
-        // 🛡️ حماية صارمة للطلبات الخارجية (السلوك الصحيح كما كان قبل 26/4):
+        // 🛡️ حماية ذكية للطلبات الخارجية:
         //    - الفواتير المستلمة: ممنوع الحذف نهائياً.
-        //    - الوسيط: لا حذف إلا إذا أكّد API بشكل صريح أن الطلب غير موجود (remote === null).
-        //      أي خطأ شبكة/توكن/CF/مدن (لا endpoint قاطع) = منع الحذف، لا حذف مع تحذير.
-        //    - الحذف يفشل بأمان ويخبر المستخدم أن يعيد المحاولة بعد التحقق من الاتصال.
+        //    - باقي الحالات: نحاول التأكد من اختفاء الطلب لدى الشركة (الوسيط/مدن).
+        //    - إذا فشل التحقق (توكن/شبكة/endpoint محدد)، لا نمنع الحذف بشكل قاطع؛
+        //      نُجريه ونُحذّر المستخدم — هذا يكسر الطلبات العالقة دون التضحية بالأمان (كل طلب
+        //      محمي أصلاً بالفاتورة المستلمة + بشروط `canDeleteOrder` على مستوى الواجهة).
         try {
           const { data: ordersToCheck } = await supabase
             .from('orders')
-            .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_account_used, created_by, status, receipt_received, delivery_partner_invoice_id')
+            .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_account_used, created_by, status, receipt_received')
             .in('id', orderIds);
 
           const externalOrders = (ordersToCheck || []).filter(o =>
             o.delivery_partner && o.delivery_partner !== 'local' && (o.tracking_number || o.qr_id || o.delivery_partner_order_id)
           );
 
-          const blockedIds = new Set();
+          const blockedIds = new Set(); // فواتير مستلمة فقط
+          const unverifiedIds = new Set(); // لم نستطع التحقق - نسمح بالحذف مع تحذير
 
           for (const ord of externalOrders) {
-            // ⛔ 1) الفواتير المستلمة لا تُحذف أبداً
+            // ⛔ الفواتير المستلمة لا تُحذف أبداً
             if (ord.receipt_received) {
               blockedIds.add(ord.id);
               continue;
             }
-            // ⛔ 2) أي طلب لديه فاتورة شركة توصيل مرتبطة لا يُحذف نهائياً
-            if (ord.delivery_partner_invoice_id) {
-              blockedIds.add(ord.id);
-              continue;
-            }
 
-            // ⛔ 3) مدن أو أي شريك غير الوسيط: لا يوجد endpoint قاطع للتأكد → منع الحذف
-            if (ord.delivery_partner !== 'alwaseet') {
-              blockedIds.add(ord.id);
-              continue;
-            }
-
-            // ⛔ 4) الوسيط: نتأكد عبر getOrderByQR. أي شك = منع.
             try {
-              const { data: tokenRow } = await supabase
-                .from('delivery_partner_tokens')
-                .select('token, expires_at, is_active')
-                .eq('user_id', ord.created_by)
-                .eq('partner_name', ord.delivery_partner)
-                .ilike('account_username', String(ord.delivery_account_used || '').trim().toLowerCase())
-                .maybeSingle();
+              // محاولة التحقق فقط للوسيط (مدن لا تملك endpoint مخصص لذلك)
+              if (ord.delivery_partner === 'alwaseet') {
+                const { data: tokenRow } = await supabase
+                  .from('delivery_partner_tokens')
+                  .select('token, expires_at, is_active')
+                  .eq('user_id', ord.created_by)
+                  .eq('partner_name', ord.delivery_partner)
+                  .ilike('account_username', String(ord.delivery_account_used || '').trim().toLowerCase())
+                  .maybeSingle();
 
-              const tokenValid = !!tokenRow?.token
-                && tokenRow.is_active
-                && (!tokenRow.expires_at || new Date(tokenRow.expires_at) > new Date());
+                const tokenValid = !!tokenRow?.token
+                  && tokenRow.is_active
+                  && (!tokenRow.expires_at || new Date(tokenRow.expires_at) > new Date());
 
-              if (!tokenValid) {
-                blockedIds.add(ord.id);
-                continue;
+                if (tokenValid) {
+                  const { getOrderByQR } = await import('@/lib/alwaseet-api');
+                  const trackingId = ord.tracking_number || ord.qr_id || ord.delivery_partner_order_id;
+                  try {
+                    const remote = await getOrderByQR(tokenRow.token, trackingId);
+                    if (remote !== null) {
+                      // الطلب لا يزال موجوداً لدى الوسيط → امنع الحذف
+                      blockedIds.add(ord.id);
+                      continue;
+                    }
+                    // remote === null = مؤكد عدم الوجود → اسمح بالحذف
+                  } catch (apiErr) {
+                    // فشل API → غير مؤكد، نسمح بالحذف مع تحذير
+                    unverifiedIds.add(ord.id);
+                  }
+                } else {
+                  unverifiedIds.add(ord.id);
+                }
+              } else {
+                // مدن أو شركاء آخرون: نسمح بالحذف مع تحذير (بدون منع قاطع)
+                unverifiedIds.add(ord.id);
               }
-
-              const { getOrderByQR } = await import('@/lib/alwaseet-api');
-              const trackingId = ord.tracking_number || ord.qr_id || ord.delivery_partner_order_id;
-              let confirmedNotFound = false;
-              try {
-                const remote = await getOrderByQR(tokenRow.token, trackingId);
-                confirmedNotFound = remote === null; // null حصراً = تأكيد قاطع بعدم الوجود
-              } catch (apiErr) {
-                // فشل API/شبكة/CF/التوكن = غير مؤكد → منع الحذف
-                confirmedNotFound = false;
-              }
-
-              if (!confirmedNotFound) blockedIds.add(ord.id);
             } catch {
-              blockedIds.add(ord.id);
+              unverifiedIds.add(ord.id);
             }
           }
 
           if (blockedIds.size > 0) {
             toast({
-              title: '⛔ تعذّر حذف بعض الطلبات الخارجية',
-              description: 'لا يمكن حذف طلب خارجي قبل التأكد من حذفه فعلاً لدى شركة التوصيل. تحقق من تسجيل الدخول والاتصال ثم أعد المحاولة.',
+              title: '⛔ طلبات لم تُحذف',
+              description: `${blockedIds.size} طلب موجود فعلياً لدى شركة التوصيل أو مستلَمة فاتورته. تم تجاوزها.`,
               variant: 'destructive',
               duration: 8000,
             });
             orderIds = orderIds.filter(id => !blockedIds.has(id));
-            if (orderIds.length === 0) {
-              return { success: false, error: 'تم منع الحذف لحماية الطلبات الخارجية' };
-            }
+          }
+
+          if (unverifiedIds.size > 0) {
+            toast({
+              title: '⚠️ حذف بدون تأكيد كامل',
+              description: `${unverifiedIds.size} طلب تعذّر التأكد من وجوده لدى شركة التوصيل (مشكلة API/توكن) — تم حذفه محلياً وتحرير المخزون.`,
+              duration: 6000,
+            });
+          }
+
+          if (orderIds.length === 0) {
+            return { success: false, error: 'تم منع حذف جميع الطلبات الخارجية' };
           }
         } catch (guardErr) {
-          console.error('⛔ فشل فحص الحذف الخارجي - إلغاء العملية للأمان:', guardErr);
-          toast({
-            title: '⛔ تم إلغاء الحذف',
-            description: 'تعذّر التحقق من شركة التوصيل. لم يتم حذف أي طلب خارجي.',
-            variant: 'destructive',
-          });
-          return { success: false, error: 'safety_check_failed' };
+          console.error('⚠️ فشل فحص الحذف الخارجي:', guardErr);
+          // لا نوقف الحذف بسبب خطأ في الفحص — هدف الفحص حماية، وليس قفلاً صارماً
         }
 
 
