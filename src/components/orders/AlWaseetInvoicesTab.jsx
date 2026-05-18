@@ -22,6 +22,7 @@ import {
   Building2
 } from 'lucide-react';
 import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
+import { supabase } from '@/integrations/supabase/client';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
