@@ -133,8 +133,23 @@ const AlWaseetInvoicesTab = () => {
 
 
   const handleRefresh = async () => {
-    await fetchInvoices(timeFilter, true); // force refresh with loading indicator
-    await syncLastTwoInvoices();
+    // ✅ السلوك الصحيح كما كان قبل 26/4:
+    //    1) مزامنة ذكية صامتة في الخلفية (تكمّل الفواتير الناقصة وتجلب الجديد)
+    //    2) ثم إعادة جلب الكاش وعرضه — بدون استدعاء syncLastTwoInvoices الذي يُخطئ مع merchant user token
+    try {
+      await supabase.functions.invoke('smart-invoice-sync', {
+        body: {
+          mode: 'smart',
+          employee_id: undefined, // كل التوكنات النشطة
+          sync_invoices: true,
+          sync_orders: true,
+          force_refresh: true,
+        }
+      });
+    } catch {
+      // فشل المزامنة لا يمنع عرض الكاش
+    }
+    await fetchInvoices(timeFilter, true);
   };
   
   const handleTimeFilterChange = async (newFilter) => {
