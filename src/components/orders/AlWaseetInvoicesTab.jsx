@@ -27,6 +27,7 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 import devLog from '@/lib/devLogger';
+import { supabase } from '@/lib/customSupabaseClient';
 
 const AlWaseetInvoicesTab = () => {
   // 🔥 v2.0.0 - فواتير موحدة لجميع شركات التوصيل (الوسيط + مدن)
