@@ -15,9 +15,12 @@ const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
 // - الفجوة الزمنية بين كل استدعاء تفاصيل وآخر.
 // المنطق الجديد يعطي أولوية للفواتير التي orders_count > 0 وعدد طلباتها المخزن أقل من المتوقع
 // (سواء جديدة أو مستلمة لكن طلباتها لم تُجلب بعد).
-const MAX_INVOICES_PER_TOKEN = 25;
-const MAX_ORDER_DETAILS_PER_TOKEN = 8;
-const ORDER_DETAILS_GAP_MS = 900;
+// 🔁 إرجاع منطق 26/4: نعالج كل فواتير الـ API ونجلب تفاصيل كل الفواتير الناقصة.
+// نُبقي فجوة آمنة بين الطلبات لتجنّب rate limit/Cloudflare، لكن بدون حد علوي صناعي
+// يترك فواتير كبيرة مثل 3343958 ناقصة عند 12/43.
+const MAX_INVOICES_PER_TOKEN = 200;
+const MAX_ORDER_DETAILS_PER_TOKEN = 200;
+const ORDER_DETAILS_GAP_MS = 700;
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
