@@ -99,30 +99,22 @@ const AlWaseetInvoicesTab = () => {
     });
   }, [invoices, searchTerm, statusFilter, accountFilter, partnerFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
 
-  // ❌ معطّل: الجلب المزدوج يسبب استبدال التصميم الجميل
-  // ✅ الاعتماد فقط على التحميل الفوري من DB في useAlWaseetInvoices hook
-  // hook useAlWaseetInvoices يجلب البيانات من DB تلقائياً ويعرض account_username صحيح
-  
-  /*
+  // ✅ إرجاع السلوك القديم: عند فتح تبويب الفواتير نُشغّل مزامنة خلفية صامتة فوراً
+  // ثم نُعيد قراءة البيانات من القاعدة. لا حاجة لضغط "تحديث" يدوياً.
   useEffect(() => {
-    if (isLoggedIn && (activePartner === 'alwaseet' || activePartner === 'modon')) {
-      devLog.log('🔄 تبويب الفواتير نشط - جلب الفواتير تلقائياً');
-      fetchInvoices(timeFilter, false); // جلب الفواتير بدون loading indicator
-      
-      // استدعاء syncAllAvailableTokens في الخلفية
-      if (syncAllAvailableTokens) {
-        devLog.log('🔄 تفعيل مزامنة كل الحسابات تلقائياً');
-        syncAllAvailableTokens().then(result => {
-          if (result.success) {
-            devLog.log(`✅ مزامنة ${result.tokensSynced} حساب، تحديث ${result.totalOrdersUpdated} طلب`);
-          }
-        }).catch(err => {
-          devLog.warn('⚠️ فشل في مزامنة كل الحسابات:', err);
-        });
+    if (!isLoggedIn) return;
+    // مزامنة خلفية صامتة (smart-invoice-sync) لا تفشل الواجهة إذا فشل API
+    (async () => {
+      try {
+        await supabase.functions.invoke('smart-invoice-sync', {
+          body: { mode: 'smart', sync_invoices: true, sync_orders: true }
+        }).catch(() => {});
+      } finally {
+        try { await fetchInvoices(timeFilter, false); } catch {}
       }
-    }
-  }, [isLoggedIn, activePartner, timeFilter, fetchInvoices, syncAllAvailableTokens]);
-  */
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoggedIn, activePartner]);
 
   const stats = getInvoiceStats();
 
@@ -133,8 +125,16 @@ const AlWaseetInvoicesTab = () => {
 
 
   const handleRefresh = async () => {
-    await fetchInvoices(timeFilter, true); // force refresh with loading indicator
-    await syncLastTwoInvoices();
+    // 1) شغّل smart-invoice-sync (يكتب delivery_invoices + delivery_invoice_orders + يربط)
+    try {
+      await supabase.functions.invoke('smart-invoice-sync', {
+        body: { mode: 'smart', sync_invoices: true, sync_orders: true, force_refresh: true }
+      });
+    } catch { /* لا نمنع التحديث بسبب خطأ شبكة */ }
+    // 2) أعد قراءة الفواتير من DB + محاولة API بهدوء
+    await fetchInvoices(timeFilter, true);
+    // 3) كاحتياط، استدعِ syncLastTwoInvoices الذي يستدعي نفس smart-invoice-sync
+    try { await syncLastTwoInvoices(); } catch {}
   };
   
   const handleTimeFilterChange = async (newFilter) => {
