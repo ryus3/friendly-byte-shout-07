@@ -898,15 +898,15 @@ serve(async (req) => {
                     if (!orderError) totalOrdersUpdated++;
                   }
                   
-                  // ✅ لا نعمل retry داخل نفس التشغيل؛ التشغيل التالي يكمل بدون تجاوز حد الوسيط.
-                  if (false && !isReceived) {
+                  // ✅ منطق 26/4: إذا snapshot ناقص نعيد المحاولة داخل نفس التشغيل، للفواتير المستلمة والمعلقة.
+                  if (expectedCount > 0) {
                     const expected = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
                     let { count: dioNow } = await supabase
                       .from('delivery_invoice_orders')
                       .select('id', { count: 'exact', head: true })
                       .eq('invoice_id', upsertedInvoice.id);
                     let haveNow = dioNow ?? 0;
-                    const delays = [5000, 10000, 20000];
+                    const delays = [3000, 7000, 12000];
                     for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
                       console.log(`  🔁 Snapshot incomplete for ${externalId}: have=${haveNow}, expected=${expected}. Retry ${attempt + 1}/${delays.length} after ${delays[attempt]}ms...`);
                       await new Promise(r => setTimeout(r, delays[attempt]));
@@ -944,6 +944,12 @@ serve(async (req) => {
                     .from('delivery_invoices')
                     .update({ orders_last_synced_at: new Date().toISOString() })
                     .eq('id', upsertedInvoice.id);
+
+                  try {
+                    await supabase.rpc('link_invoice_orders_to_orders');
+                  } catch (linkErr) {
+                    console.warn(`  ⚠️ Incremental link failed for invoice ${externalId}:`, linkErr);
+                  }
                 } else if (isReceived) {
                   // ✅ FALLBACK: إذا فشل جلب الطلبات من API وكانت الفاتورة مستلمة
                   console.log(`  ⚠️ No orders from API for received invoice ${externalId}, trying local fallback...`);
