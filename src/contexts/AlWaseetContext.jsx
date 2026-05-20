@@ -3954,51 +3954,19 @@ export const AlWaseetProvider = ({ children }) => {
             return null;
           }
           
-          devLog.warn(`❌ تأكيد: الطلب ${qrId} غير موجود في ${advancedCheck.accountsChecked} حساب (نظيف بدون أخطاء)`);
-          
-          if (localOrder && canAutoDeleteOrder(localOrder, user)) {
-            devLog.log(`⚠️ التحقق النهائي قبل حذف الطلب ${qrId} (انتظار 30 ثانية)`);
-            
-            // ⏱️ انتظار 30 ثانية للتأكد من استقرار API
-            await new Promise(resolve => setTimeout(resolve, 30000));
-            const finalCheck = await checkOrderWithAllTokens(qrId);
-            
-            // 🛡️ الفحص النهائي يجب أن يكون نظيفاً تماماً
-            if (finalCheck.hadApiError || finalCheck.accountsChecked === 0) {
-              devLog.error(`🛑 [حماية] الفحص النهائي للطلب ${qrId} فشل — لن يُحذف`);
-              try {
-                await supabase.from('order_deletion_attempts').insert({
-                  order_id: localOrder.id,
-                  order_number: localOrder.order_number,
-                  tracking_number: localOrder.tracking_number || qrId,
-                  attempt_reason: 'final check failed',
-                  api_response_status: 'api_error_final',
-                  blocked_by_safety: true,
-                  block_reason: `Final check had API errors — refused to delete`,
-                  attempted_by: user?.id
-                });
-              } catch {}
-              return null;
-            }
-            
-            if (!finalCheck.found) {
-              devLog.log(`🗑️ تأكيد نهائي قاطع: حذف الطلب ${qrId}`);
-              const deleteResult = await performAutoDelete(localOrder);
-              if (deleteResult) {
-                return { 
-                  ...deleteResult, 
-                  autoDeleted: true,
-                  apiConfirmedNotFound: true,
-                  message: `تم حذف الطلب ${localOrder.tracking_number || qrId} تلقائياً - مؤكد عدم وجوده`
-                };
-              }
-            } else {
-              devLog.log(`✅ الطلب ${qrId} موجود فعلياً بعد الفحص النهائي - لن يُحذف`);
-              remoteOrder = finalCheck.found;
-            }
-          } else {
-            devLog.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي`);
-          }
+          devLog.warn(`❌ الطلب ${qrId} غير موجود في ${advancedCheck.accountsChecked} حساب — لن يُحذف تلقائياً`);
+          try {
+            await supabase.from('order_deletion_attempts').insert({
+              order_id: localOrder?.id,
+              order_number: localOrder?.order_number,
+              tracking_number: localOrder?.tracking_number || qrId,
+              attempt_reason: 'sync check returned no result',
+              api_response_status: 'not_found_but_auto_delete_disabled',
+              blocked_by_safety: true,
+              block_reason: 'Auto-delete is disabled; absence from delivery API is not allowed to delete local orders',
+              attempted_by: user?.id
+            });
+          } catch {}
           
           if (!remoteOrder) {
             return null;
