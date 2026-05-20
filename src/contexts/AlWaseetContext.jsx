@@ -4650,12 +4650,13 @@ export const AlWaseetProvider = ({ children }) => {
       
       if (data && data.length > 0) {
         const result = data[0];
-        devLog.log(`✅ تم ربط ${result.linked_count} طلب فاتورة، تحديث ${result.updated_orders_count} طلب (${result.processing_time_ms}ms)`);
+        const updatedOrdersCount = result.updated_orders_count ?? result.fixed_count ?? 0;
+        devLog.log(`✅ تم ربط ${result.linked_count || 0} طلب فاتورة، تحديث ${updatedOrdersCount} طلب`);
         return { 
           success: true, 
-          linkedCount: result.linked_count,
-          updatedOrdersCount: result.updated_orders_count,
-          processingTimeMs: result.processing_time_ms
+          linkedCount: result.linked_count || 0,
+          updatedOrdersCount,
+          receiptPropagated: result.receipt_propagated || 0
         };
       }
       
