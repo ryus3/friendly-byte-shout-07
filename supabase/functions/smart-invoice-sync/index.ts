@@ -1026,7 +1026,7 @@ serve(async (req) => {
         console.warn('⚠️ Failed to link invoice orders:', linkError.message);
       } else if (linkResult && linkResult.length > 0) {
         linkedCount = linkResult[0].linked_count || 0;
-        updatedOrdersCount = linkResult[0].updated_orders_count || 0;
+        updatedOrdersCount = linkResult[0].fixed_count || 0;
         console.log(`🔗 Linked ${linkedCount} invoice orders, updated ${updatedOrdersCount} orders`);
       }
     } catch (linkErr) {
