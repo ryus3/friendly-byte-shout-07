@@ -4181,8 +4181,8 @@ export const AlWaseetProvider = ({ children }) => {
 
 
   // 🛡️ معطّلة: كانت تستخدم endpoint /api/alwaseet/check-order غير موجود
-  // وكانت تعتبر فشل الـ fetch دليلاً على عدم وجود الطلب → حذف خاطئ
-  // الحذف التلقائي يتم الآن فقط عبر performDeletionPassAfterStatusSync (مع double-check + circuit breaker)
+  // وكانت تعتبر فشل الـ fetch دليلاً على عدم وجود الطلب → حذف خاطئ.
+  // الحذف التلقائي ممنوع بالكامل؛ الحذف اليدوي الآمن فقط من SuperProvider.
   const performAutoCleanup = async () => {
     devLog.warn('⚠️ performAutoCleanup معطّلة لأسباب أمنية — استخدم performDeletionPassAfterStatusSync بدلاً منها');
     return;
@@ -5021,10 +5021,6 @@ export const AlWaseetProvider = ({ children }) => {
           devLog.log('[SYNC-TIMING] ✅ انتهاء syncVisibleOrdersBatch:', new Date().toISOString(), `(${syncEndTime - startTime}ms)`);
         }
 
-        // ✅ الحذف التلقائي الآمن
-        devLog.log('🧹 تمرير الحذف التلقائي الآمن...');
-        await performDeletionPassAfterStatusSync();
-        
         // ✅ ربط الفواتير بالطلبات أولاً (المرحلة 1)
         devLog.log('🔗 ربط الفواتير بالطلبات...');
         await linkInvoiceOrdersToOrders();
@@ -5312,9 +5308,7 @@ export const AlWaseetProvider = ({ children }) => {
         // المزامنة الأولية ستحدث تلقائياً عبر useEffect المخصص لذلك
         devLog.log('✅ تم الانتهاء من المهام الأولية');
         
-        // تشغيل مرور الحذف فوراً لمعالجة الطلبات المحذوفة من الوسيط
-        devLog.log('🧹 تشغيل مرور الحذف التلقائي للطلبات المحذوفة من الوسيط...');
-        await performDeletionPassAfterStatusSync();
+        devLog.log('🛡️ تم تخطي مرور الحذف التلقائي؛ المزامنة لا تحذف طلبات.');
       } catch (error) {
         console.error('❌ خطأ في المهام الأولية:', error);
       }
