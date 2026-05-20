@@ -3754,8 +3754,8 @@ export const AlWaseetProvider = ({ children }) => {
       
       devLog.log(`✅ ${message}`);
       
-      // After status sync, check for orders that need deletion (not found in remote)
-      await performDeletionPassAfterStatusSync();
+      // 🛡️ Safety-first: مزامنة الحالة لا تشغّل أي حذف تلقائي.
+      // غياب الطلب من قائمة شركة التوصيل قد يكون بسبب توكن/حساب/فلترة API، وليس دليلاً قاطعاً للحذف.
       
       return allOrders;
     } catch (error) {
@@ -5266,11 +5266,10 @@ export const AlWaseetProvider = ({ children }) => {
   }, [token]);
 
 
-  // إضافة مستمع لحدث تشغيل مرور الحذف
+  // إضافة مستمع لحدث تشغيل مرور الحذف — معطّل بالكامل للحماية
   useEffect(() => {
     const handleDeletionPassTrigger = (event) => {
-      devLog.log('🗑️ تشغيل مرور الحذف من الحدث:', event.detail?.reason);
-      performDeletionPassAfterStatusSync();
+      devLog.warn('🛡️ تم تجاهل طلب تشغيل الحذف التلقائي:', event.detail?.reason);
     };
 
     window.addEventListener('triggerDeletionPass', handleDeletionPassTrigger);
@@ -5280,8 +5279,10 @@ export const AlWaseetProvider = ({ children }) => {
     };
   }, []);
 
-  // دالة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات - استخدام نفس منطق زر "تحقق الآن"
+  // 🛡️ الحذف التلقائي معطّل بالكامل. الفحص/المزامنة يجب ألا يحذف طلبات محلية.
   const performDeletionPassAfterStatusSync = useCallback(async () => {
+    devLog.warn('🛡️ الحذف التلقائي متوقف: لن يتم حذف أي طلب من مزامنة شركة التوصيل.');
+    return { checked: 0, deleted: 0, disabled: true };
     if (!token) return;
     
     try {
