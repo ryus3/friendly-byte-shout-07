@@ -206,10 +206,10 @@ export const useAlWaseetInvoices = () => {
           return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
         });
 
-      // ⛔ لا نستبدل القائمة بـ [] إذا API فشل وكان لدينا كاش
-      if (filteredAndSortedInvoices.length === 0 && cachedFromDb.length > 0 && !anyApiSuccess) {
-        devLog.warn('⚠️ لم نتمكن من جلب الفواتير من API — نُبقي بيانات قاعدة البيانات.');
-        // نترك القائمة الحالية كما هي (دون setInvoices)
+      // ⛔ لا نستبدل القائمة بـ [] إذا لدينا كاش صالح؛ هذا سبب اختفاء الفواتير أثناء التحديث.
+      if (filteredAndSortedInvoices.length === 0 && cachedFromDb.length > 0) {
+        devLog.warn('⚠️ نتيجة الفواتير فارغة بعد API/الفلترة — نُبقي بيانات قاعدة البيانات المحفوظة.');
+        setInvoices(prev => (prev?.length ? prev : cachedFromDb));
       } else {
         setInvoices(filteredAndSortedInvoices);
       }
@@ -227,13 +227,7 @@ export const useAlWaseetInvoices = () => {
       if (cachedFromDb.length > 0 && invoices.length === 0) {
         setInvoices(cachedFromDb);
       }
-      if (forceRefresh) {
-        toast({
-          title: 'خطأ في جلب الفواتير',
-          description: error.message || 'سيتم عرض البيانات المحفوظة.',
-          variant: 'destructive'
-        });
-      }
+      if (forceRefresh) devLog.warn('⚠️ فشل تحديث الفواتير من API — تم الإبقاء على البيانات المحفوظة:', error?.message);
       return invoices;
     } finally {
       if (forceRefresh) setLoading(false);
