@@ -34,7 +34,7 @@ const AlWaseetInvoicesTab = () => {
   // 🔥 v2.0.0 - فواتير موحدة لجميع شركات التوصيل (الوسيط + مدن)
   devLog.log('🔥 النسخة الجديدة v2: فواتير موحدة لجميع الشركات');
   
-  const { isLoggedIn, activePartner, syncAllAvailableTokens } = useAlWaseet();
+  const { activePartner } = useAlWaseet();
   const { user } = useAuth();
   const { 
     invoices, 
