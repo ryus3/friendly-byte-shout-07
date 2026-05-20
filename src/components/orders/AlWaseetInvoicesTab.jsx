@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
@@ -33,7 +34,8 @@ const AlWaseetInvoicesTab = () => {
   // 🔥 v2.0.0 - فواتير موحدة لجميع شركات التوصيل (الوسيط + مدن)
   devLog.log('🔥 النسخة الجديدة v2: فواتير موحدة لجميع الشركات');
   
-  const { isLoggedIn, activePartner, syncAllAvailableTokens } = useAlWaseet();
+  const { activePartner } = useAlWaseet();
+  const { user } = useAuth();
   const { 
     invoices, 
     loading, 
@@ -103,7 +105,7 @@ const AlWaseetInvoicesTab = () => {
   // ✅ إرجاع السلوك القديم: عند فتح تبويب الفواتير نُشغّل مزامنة خلفية صامتة فوراً
   // ثم نُعيد قراءة البيانات من القاعدة. لا حاجة لضغط "تحديث" يدوياً.
   useEffect(() => {
-    if (!isLoggedIn) return;
+    if (!user?.id) return;
     // مزامنة خلفية صامتة (smart-invoice-sync) لا تفشل الواجهة إذا فشل API
     (async () => {
       try {
@@ -115,7 +117,7 @@ const AlWaseetInvoicesTab = () => {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn, activePartner]);
+  }, [user?.id, activePartner]);
 
   const stats = getInvoiceStats();
 
