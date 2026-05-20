@@ -41,69 +41,72 @@ const AllEmployeesInvoicesView = () => {
 
   // ============ نمط Cache-First: عرض سريع + مزامنة خلفية ============
 
-  // 1️⃣ جلب البيانات المحفوظة من قاعدة البيانات (سريع جداً)
+  // 1️⃣ جلب البيانات عبر RPC موحدة (تتعامل مع منطق الفاتورة المشتركة وإسنادها للموظفين)
   const fetchFromDatabase = async () => {
     try {
-      // جلب الموظفين النشطين
+      // قائمة الموظفين للفلتر — للأدمن: الجميع، لمدير القسم: موظفوه فقط
       const { data: employeesData, error: empError } = await supabase
         .from('profiles')
         .select('id, user_id, full_name, username, employee_code')
         .eq('is_active', true)
         .neq('user_id', GENERAL_MANAGER_ID);
 
-      if (empError) return;
+      if (empError) {
+        devLog.warn('فشل جلب قائمة الموظفين:', empError.message);
+      }
 
       let filteredEmployees = employeesData || [];
       if (isDepartmentManager && !isAdmin) {
         if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) {
-          // مدير قسم بدون موظفين تحت إشرافه - لا يعرض شيء
           setEmployees([]);
           setAllInvoices([]);
           setLoading(false);
           return;
         }
-        filteredEmployees = filteredEmployees.filter(emp => 
+        filteredEmployees = filteredEmployees.filter(emp =>
           supervisedEmployeeIds.includes(emp.user_id)
         );
       }
       setEmployees(filteredEmployees);
 
-      // جلب الفواتير المحفوظة — الترتيب حسب تاريخ الفاتورة من شركة التوصيل (issued_at)
-      const threshold = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
-      const { data: invoicesData, error: invError } = await supabase
-        .from('delivery_invoices')
-        .select('*')
-        .in('partner', ['alwaseet', 'modon'])
-        .or(`issued_at.gte.${threshold},and(issued_at.is.null,created_at.gte.${threshold})`)
-        .order('issued_at', { ascending: false, nullsFirst: false })
-        .limit(300);
+      // استدعاء RPC الموحّد
+      const { data: rows, error: rpcErr } = await supabase.rpc('get_employee_invoices_for_view', {
+        p_supervisor_id: user?.id || null,
+        p_is_admin: !!isAdmin,
+        p_days_back: 90,
+        p_limit: 300,
+      });
 
-      if (invError) return;
+      if (rpcErr) {
+        devLog.warn('فشل RPC get_employee_invoices_for_view:', rpcErr.message);
+        setAllInvoices([]);
+        return;
+      }
 
-      // ربط الفواتير بالموظفين
-      const invoicesWithEmployees = (invoicesData || [])
-        .map(invoice => {
-          const employee = employeesData?.find(emp => emp.user_id === invoice.owner_user_id) || null;
-          return {
-            ...invoice,
-            employee_name: employee?.full_name || employee?.username || 'غير محدد',
-            employee_code: employee?.employee_code || null
-          };
-        })
-        .filter(invoice => {
-          if (invoice.owner_user_id === GENERAL_MANAGER_ID) return false;
-          if (isDepartmentManager && !isAdmin) {
-            // مدير القسم: فقط فواتير الموظفين تحت إشرافه حصراً (ليس نفسه)
-            if (!supervisedEmployeeIds || supervisedEmployeeIds.length === 0) return false;
-            return supervisedEmployeeIds.includes(invoice.owner_user_id) && 
-                   invoice.owner_user_id !== user?.user_id &&
-                   invoice.owner_user_id !== user?.id;
-          }
-          return true;
-        });
+      const expanded = (rows || []).map(r => ({
+        id: r.invoice_id,
+        external_id: r.external_id,
+        partner: r.partner,
+        partner_name_ar: r.partner_name_ar,
+        account_username: r.account_username,
+        amount: r.amount,
+        orders_count: r.orders_count,
+        issued_at: r.issued_at,
+        received: r.received,
+        received_at: r.received_at,
+        received_flag: r.received_flag,
+        status: r.status,
+        status_normalized: r.status_normalized,
+        owner_user_id: r.owner_user_id,
+        attributed_user_id: r.attributed_user_id,
+        employee_name: r.employee_full_name || r.employee_username || 'غير محدد',
+        employee_code: r.employee_code || null,
+        display_key: `${r.invoice_id}:${r.attributed_user_id}`,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+      }));
 
-      setAllInvoices(invoicesWithEmployees);
-      return { employeesData, invoicesWithEmployees };
+      setAllInvoices(expanded);
     } catch (error) {
       console.error('Error fetching from database:', error);
     }
@@ -121,7 +124,7 @@ const AllEmployeesInvoicesView = () => {
           mode: 'comprehensive',
           force_refresh: true,
           sync_invoices: true,
-          sync_orders: false
+          sync_orders: true
         }
       });
       
@@ -161,7 +164,7 @@ const AllEmployeesInvoicesView = () => {
           mode: 'comprehensive',
           force_refresh: true,
           sync_invoices: true,
-          sync_orders: false
+          sync_orders: true
         }
       });
       await fetchFromDatabase();
@@ -197,11 +200,7 @@ const AllEmployeesInvoicesView = () => {
   // فلترة الفواتير مع الفترة الزمنية (محسن)
   const filteredInvoices = useMemo(() => {
     return allInvoices.filter(invoice => {
-      // المدير يرى جميع فواتير الموظفين (استبعاد فواتيره الشخصية فقط)
-      if (employeeFilter === 'all' && invoice.owner_user_id === '91484496-b887-44f7-9e5d-be9db5567604') {
-        return false;
-      }
-
+      // الفلترة الآن تعتمد على attributed_user_id (الموظف المنسوبة له الفاتورة)
       const matchesSearch = !searchTerm || 
         invoice.external_id?.toString().includes(searchTerm) ||
         invoice.employee_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -214,6 +213,7 @@ const AllEmployeesInvoicesView = () => {
       
       const matchesEmployee = 
         employeeFilter === 'all' || 
+        invoice.attributed_user_id === employeeFilter ||
         invoice.owner_user_id === employeeFilter;
 
       // فلتر الفترة الزمنية

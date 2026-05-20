@@ -210,8 +210,17 @@ Deno.serve(async (req) => {
     //     كـ "ليس لديك صلاحية"، وهذا لا يعني انتهاء التوكن. سابقاً عاملناه كانتهاء جلسة فأصبحت
     //     الفواتير لا تُجلب أبداً وحسابات صحيحة تظهر بدون فواتير.
     //   نُعيد الاستجابة الأصلية كما هي ليفسرها العميل (alwaseet-api.js) كـ "لا فواتير" بهدوء.
+    // 🛡️ Per Al-Waseet docs: errNum:21 على endpoints القراءة/الفواتير غالباً يعني
+    // "Merchant user token vs Merchant token" (لا صلاحية على هذا endpoint) وليس انتهاء جلسة.
+    // معاملته كـ TOKEN_EXPIRED كانت تسبب توست "انتهت صلاحية الجلسة" أثناء الموافقة على
+    // الطلبات الذكية (التي تستدعي بعدها merchant-orders/get-orders-by-ids-bulk للتأكد من qr_id).
     const PASSTHROUGH_21_ENDPOINTS = new Set([
       'statuses',
+      'merchant-orders',
+      'get-orders-by-ids-bulk',
+      'citys',
+      'regions',
+      'package-sizes',
       'get_merchant_invoices',
       'get_merchant_invoice_orders',
       'receive_merchant_invoice',
@@ -225,12 +234,21 @@ Deno.serve(async (req) => {
       console.warn(
         `[AlWaseet Proxy] Pass-through errNum:21 for endpoint=${endpoint} (treated as no-data / no-permission, NOT token expiry)`,
       );
-      // statuses يُتوقع منه مصفوفة عند الواجهة، فنرجعها فارغة بشكل ناجح
-      if (endpoint === 'statuses') {
+      // statuses/citys/regions/package-sizes/merchant-orders/get-orders-by-ids-bulk:
+      // الواجهة تتوقع مصفوفة. نعيد [] بنجاح حتى لا تنهار شاشات القراءة ولا يصدر toast جلسة منتهية.
+      const ARRAY_ENDPOINTS = new Set([
+        'statuses',
+        'citys',
+        'regions',
+        'package-sizes',
+        'merchant-orders',
+        'get-orders-by-ids-bulk',
+      ]);
+      if (ARRAY_ENDPOINTS.has(endpoint)) {
         return json({ status: true, ok: true, errNum: 'S000', data: [], fallback: true });
       }
       // باقي endpoints الفواتير: نمرر الاستجابة الأصلية مع status=false ليتعامل معها العميل
-      // كـ "لا فواتير" (يرجع [] بهدوء)، تماماً كما كان السلوك قبل اسبوع.
+      // كـ "لا فواتير" (يرجع [] بهدوء).
       return json({
         status: false,
         ok: false,

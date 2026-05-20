@@ -49,7 +49,7 @@ const AlWaseetInvoicesList = ({
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {invoices.map((invoice) => (
         <InvoiceCard
-          key={invoice.id}
+          key={invoice.display_key || invoice.id}
           invoice={invoice}
           onView={() => onViewInvoice(invoice)}
           showEmployeeName={showEmployeeName}

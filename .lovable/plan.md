@@ -1,103 +1,108 @@
-# خطة شاملة - الإصلاحات الحرجة + الثورة التصميمية
+## التشخيص المؤكد بالأرقام
 
-## 1) إصلاح إشعار الطلب الذكي (اسم + أيقونة)
-**ملف:** `supabase/functions/ai-order-notifications/index.ts`
-- المشكلة: الإشعار يقول "من مستخدم" بدل اسم المنشئ الفعلي.
-- السبب: `profiles.id` لا يطابق `created_by` في كل الحالات. سنقرأ بـ `.eq('user_id', record.created_by)` كـ fallback، ونتحقق من النتيجة.
-- العنوان الجديد: `🤖 طلب ذكي جديد من {full_name}` (بدون كلمة "مستخدم" الافتراضية).
-- الأيقونة: `Sparkles` (✨) بدل bell. تحديث `NotificationsPanel.jsx` ليُرجع أيقونة `Sparkles` احترافية لـ `type === 'new_ai_order'`، و`PackageCheck` لتغيرات الحالة، و`AlertTriangle` للرفض/الإلغاء.
+### 1) المشكلة ليست من شركة التوصيل وحدها
+- API يرجع بيانات أحياناً، لكن الكود الحالي يتعامل معها بطريقة تُفشل العرض والربط.
+- فشل Edge Function يظهر في الواجهة كـ `non-2xx status code` لأن `smart-invoice-sync` يرجع 500 عند أي استثناء بدل أن يرجع نتيجة منظمة ويحافظ على الكاش.
 
-## 2) كارثة المزامنة بالهيدر (تجاوز صلاحيات مدير القسم)
-**ملف:** `supabase/functions/sync-order-updates/index.ts` + `SyncStatusIndicator.jsx` + `AlWaseetContext.jsx`
-- المشكلة: زر المزامنة يستدعي `sync-order-updates` بدون تمرير `user_id`، فتُجلب توكنات كل المستخدمين وتُزامن كل الطلبات → مدير القسم يحصل على إشعارات المدير العام.
-- الحل:
-  - إضافة باراميتر `scope_user_id` للـ edge function. عند وجوده: فلترة `delivery_partner_tokens` بـ `.eq('user_id', scope_user_id)` وفلترة `activeOrders` بـ `.eq('created_by', scope_user_id)` أو موظفين تحت إشرافه (من `employee_supervisors` إن كان مدير قسم).
-  - عند الاستدعاء اليدوي من الهيدر: تمرير `scope_user_id = current user.id`.
-  - الـ cron الخلفي يبقى بدون scope (للمدير العام فقط).
+### 2) قبل 27/4 كان الربط يعمل لأن الطلبات المسلّمة كانت تُعلّم بالفاتورة
+فحص الطلبات المسلّمة للزبون `delivery_status = '4'`:
 
-## 3) إشعارات تحديث الحالة (تأتي مع كل مزامنة - خطأ)
-**ملف:** `supabase/functions/sync-order-updates/index.ts`
-- المشكلة الحالية: الإشعار يُنشأ لو `oldStatus !== newStatus` لكنه أحياناً يُنشأ بسبب اختلاف format (`"3"` vs `3`).
-- الحل:
-  - مقارنة صارمة: `String(oldStatus).trim() === String(newStatus).trim()` → تخطي.
-  - إضافة فحص dedup: قبل insert، `SELECT 1 FROM notifications WHERE order_id=X AND data->>'delivery_status'=newStatus LIMIT 1` → إن وُجد، تخطي تماماً (لا تحديث ولا إعادة).
-  - حفظ `delivery_status` داخل `data` للإشعار للسماح بهذا الفحص.
-  - توجيه الإشعار لـ `created_by` فقط (الموظف صاحب الطلب) + مدير القسم إن كان موظفاً مشرفاً عليه.
+```text
+قبل 27/4:
+50 طلب مسلّم
+50 لديهم delivery_partner_invoice_id
+50 receipt_received = true
 
-## 4) إلغاء "ترجمة الموقع" البطيئة عند الموافقة
-**ملف:** `src/components/dashboard/AiOrdersManager.jsx` / `AiOrderCard.jsx`
-- المشكلة: المستخدم لاحظ أن إضافة منطق ترجمة `regions_master` يبطئ الموافقة.
-- الحل المُتفق عليه عالمياً:
-  - **تخزين الـ external_id الخام للشريك المصدر** في `ai_orders` كما الآن (لا تغيير).
-  - **ترتيب الشركاء/المدن/المناطق**: الترتيب القياسي = ترتيب شركة التوصيل نفسها (`external_id ASC` كرقم) - هذا ما تستخدمه `الوسيط` و`مدن` داخلياً، فلا تكرار ولا فوضى.
-  - عند الموافقة: لا ترجمة. RPC `approveAiOrder` يستخدم external_id كما هو إن طابق الشريك المختار، وإلا يُظهر تحذيراً واضحاً "هذه المنطقة من الوسيط - اختر الوسيط أو غيّر يدوياً".
+بعد 27/4:
+106 طلب مسلّم
+3 فقط لديهم delivery_partner_invoice_id
+103 بدون فاتورة
+3 فقط receipt_received = true
+```
 
-## 5) توجيه الإيراد حسب مالك المنتج (تحقق)
-**ملفات للفحص فقط ثم تعديل عند الحاجة:** `useFinancialSystem.js`, triggers `handle_invoice_received_*`
-- التحقق:
-  - `products.owner_user_id` يُحدد مالك المنتج.
-  - عند استلام فاتورة: trigger يقرأ `order_items.product_id → products.owner_user_id` ويوزع الإيراد على cash_source الخاص بالمالك.
-  - إذا كان المدير العام أنشأ طلباً يحوي منتجات أحمد: الإيراد يذهب لكاش أحمد، وأرباح المدير = 0 (لأنه ليس المالك).
-- الفحص بـ `supabase--read_query`: عينة طلب فيه منتج لأحمد أنشأه المدير، ثم تتبع `cash_movements` و`profits` للتأكد. إن وُجد خلل: إصلاح trigger.
+هذا هو الخلل الأساسي: مسار الفاتورة بعد 27/4 لم يعد يضع رقم الفاتورة على الطلب المحلي، لذلك لا يكتمل الربط ولا الاستلام المالي.
 
-## 6) الثورة التصميمية للداشبورد (5 كروت)
-كلها glassmorphism + gradient borders + micro-animations.
+### 3) الفواتير الحديثة محفوظة لكن طلباتها ناقصة أو غير مرتبطة
+أمثلة من قاعدة البيانات الآن:
 
-### أ. خارطة العراق التفاعلية (المحافظات الأكثر طلباً) — جديد
-**ملف:** `src/components/dashboard/IraqMapCard.jsx`
-- SVG لـ 18 محافظة (paths من مصدر مفتوح).
-- Heatmap: تدرج من `hsl(var(--primary)/0.1)` إلى `hsl(var(--primary)/0.9)` حسب عدد الطلبات.
-- Hover: tooltip مع عدد الطلبات + شريط تقدم + نسبة من الإجمالي.
-- Click: فلترة لوحة الطلبات بهذه المحافظة.
-- جدول مصغر جانبي بـ Top 5 محافظات.
+```text
+3358594: المفروض 69 طلب، المحفوظ 7، المرتبط 0
+3343958: المفروض 43 طلب، المحفوظ 12، المرتبط 0
+3319023: المفروض 45 طلب، المحفوظ 43، المرتبط 3
+2618448 القديمة الصحيحة: محفوظ/مرتبط تقريباً بالكامل
+```
 
-### ب. الطلبات الأخيرة — Vertical Timeline
-**ملف:** `src/components/dashboard/RecentOrdersCard.jsx`
-- خط زمني عمودي بنقاط متدرجة لونياً حسب الحالة.
-- لكل طلب: avatar دائري بأحرف اسم العميل + رقم تتبع كبير + شارة حالة + وقت الحالة الفعلي من شركة التوصيل (`delivery_status_updated_at`).
-- العنوان: "مدينة - منطقة" فقط (إزالة "أقرب نقطة دالة").
-- 5 طلبات فقط، أحدث طلب له border متحرك (pulse).
+سبب النقص: في نسخة 24/4 كان `smart-invoice-sync` يجلب طلبات الفاتورة ويعيد المحاولة عند نقص snapshot. الآن آلية retry معطّلة فعلياً داخل `if (false && !isReceived)`، لذلك أول رد جزئي من الوسيط يصبح هو الحقيقة المخزنة.
 
-### ج. تنبيهات المخزون — Visual Cards
-**ملف:** `src/components/dashboard/StockAlertsCard.jsx`
-- صورة المنتج المصغرة + اسم المتغير.
-- شريط نسبة المخزون (red/orange/yellow حسب الخطورة).
-- Shimmer effect للعناصر الحرجة (< 5).
-- عرض لمدير القسم (تم سابقاً) مع منتجاته فقط.
+### 4) سبب اختفاء الفواتير في التبويب
+- `AlWaseetInvoicesTab` يربط بداية التحميل بـ `isLoggedIn` الخاص بتوكن شركة التوصيل، وليس جلسة Supabase. لذلك يظهر كأن الحساب غير مسجل أو لا توجد فواتير إلى أن تضغط تحديث.
+- `useAlWaseetInvoices.fetchInvoices` قد يستبدل الكاش بقائمة فارغة عند فشل/فلترة API، لذلك الفواتير تظهر ثم تختفي.
 
-### د. الزبائن الأكثر طلباً
-**ملف:** `src/components/dashboard/TopListCard.jsx` (variant=customers)
-- Avatar دائري بحرفين ملونين (gradient حسب رقم الهاتف).
-- Badge ذهبي/فضي/برونزي للأول/الثاني/الثالث.
-- رقم الطلبات + إجمالي الإنفاق + نسبة نمو.
+### 5) الحذف التلقائي الخاطئ مصدره مؤكد
+ليس من `sync-order-updates` الحالي فقط. يوجد مسار في:
 
-### هـ. المنتجات الأكثر طلباً
-**ملف:** `src/components/dashboard/TopListCard.jsx` (variant=products)
-- صورة المنتج + sparkline صغير لاتجاه المبيعات (آخر 7 أيام).
-- ranking بأرقام عربية كبيرة.
-- شارة تصنيف.
+`src/contexts/AlWaseetContext.jsx`
 
-## 7) كاش فوري للطلب السريع + قوائم منسدلة سليمة
-**ملف:** `src/components/quick-order/QuickOrderContent.jsx`
-- المشكلة 1: "جاري التحميل" يظهر لأن البيانات تُجلب من DB حتى لو الكاش متوفر.
-- الحل:
-  - عند تغيير الشريك: قراءة فورية من `localStorage` cache key `cities_${partner}` و`regions_${partner}_${cityId}` و`sizes_${partner}` بدون `await`.
-  - إن لم يوجد: fetch صامت في الخلفية (بدون "جاري التحميل") وحفظ بالكاش.
-  - الترتيب: `external_id ASC` (ترتيب الشركة).
-  - dedup بـ `Map` على `external_id`.
-- المشكلة 2: القوائم العائمة منفصلة عن الـ trigger.
-- الحل: استبدال `Select` بمكون `SearchableSelect` موجود + إضافة `position="popper"` و `align="start"` و `sideOffset={4}` على `PopoverContent`، مع `onScrollCapture` يُغلق القائمة فقط إذا scroll الـ container الخارجي تحرك (وليس داخل القائمة) عبر فحص `e.target.closest('[data-popover]')`.
-- لا يُمس البحث (يبقى input داخل PopoverContent).
+- `syncAndApplyOrders()` يستدعي بعد المزامنة:
+  `performDeletionPassAfterStatusSync()`
+- هذا المسار حذف طلبات وسجّلها في `auto_delete_log` بمصدر:
+  `delete_source = syncAndApplyOrders`
+- أمثلة محذوفة فعلياً:
+  `143136640`, `143114210`, `143010461`, `142898849`
+- السجل يقول: `لم يُعثر على الطلب في شركة التوصيل (مؤكد من API)`، لكن هذا ليس تأكيداً كافياً لأن البحث يتم عبر مسار قد يفشل بسبب التوكن/القائمة/الحساب.
 
-## التغييرات في قاعدة البيانات
-- لا migrations جديدة (نستخدم `notifications.data` لتخزين `delivery_status`).
-- إن لزم: إضافة index على `notifications(order_id, (data->>'delivery_status'))` لتسريع dedup.
+## خطة الإصلاح
 
-## ترتيب التنفيذ
-1. إصلاح الإشعارات (1, 3) + scope المزامنة (2) — حرج
-2. التحقق من توجيه الإيراد (5)
-3. كاش طلب سريع (7)
-4. التصميم الإبداعي للكروت الخمسة (6)
-5. اسم منشئ الطلب الذكي (1)
+### أولا: إيقاف الكارثة فوراً — منع الحذف التلقائي بالكامل
+تعديل `src/contexts/AlWaseetContext.jsx`:
+- منع `syncAndApplyOrders()` من استدعاء `performDeletionPassAfterStatusSync()`.
+- جعل `performDeletionPassAfterStatusSync()` لا يحذف أي طلب نهائياً، فقط يسجل محاولة فحص آمنة إن لزم.
+- الإبقاء على الحذف اليدوي فقط عبر `SuperProvider.deleteOrders` بشرطه الحالي: لا حذف إلا إذا التحقق القطعي نجح، وأي فشل API يمنع الحذف.
 
-هل توافق؟
+### ثانياً: إصلاح عرض تبويب الفواتير
+تعديل `src/components/orders/AlWaseetInvoicesTab.jsx` و `src/hooks/useAlWaseetInvoices.js`:
+- تحميل فواتير DB فوراً بناءً على جلسة Supabase `user.id` وليس `isLoggedIn` لتوكن شركة التوصيل.
+- عدم مسح قائمة الفواتير أبداً إذا فشل API أو رجع فارغاً.
+- زر تحديث يشغّل مزامنة صامتة ثم يعرض آخر كاش صحيح، لا يفرّغ الصفحة.
+
+### ثالثاً: إرجاع منطق 24/4 لجلب طلبات الفواتير
+تعديل `supabase/functions/smart-invoice-sync/index.ts`:
+- إعادة تفعيل retry عند نقص عدد `delivery_invoice_orders` عن `orders_count`.
+- retry يجب أن يعمل للفواتير المستلمة أيضاً، وليس فقط المعلقة.
+- إن بقيت الفاتورة ناقصة، تحفظ الموجود ولا تضعها كأنها مكتملة.
+- بعد كل جلب ناجح لطلبات فاتورة، تشغيل `link_invoice_orders_to_orders` مباشرة.
+
+### رابعاً: إصلاح ربط الطلبات المسلّمة بالفواتير
+تحديث دالة `link_invoice_orders_to_orders` عبر migration:
+- الإبقاء على المطابقة الصارمة: tracking / qr / delivery_partner_order_id.
+- إضافة طبقة آمنة للطلبات المسلّمة بعد 27/4:
+  - نفس حساب التوصيل `delivery_account_used = account_username`
+  - نفس الشريك
+  - الطلب مسلّم `delivery_status = '4'`
+  - داخل نافذة زمنية بعد تاريخ تسليم الطلب
+  - مطابقة رقم التتبع إن وجد في `delivery_invoice_orders`
+  - لا ربط بالهاتف/السعر إلا إذا كانت نتيجة واحدة 100% وغير متعارضة.
+- تحديث `orders.delivery_partner_invoice_id` و `receipt_received` فقط عند الربط القطعي.
+
+### خامساً: جعل Edge Function لا يكسر الواجهة
+تعديل `smart-invoice-sync`:
+- آخر `catch` يرجع `status: 200` مع `{ success:false, error }` بدلاً من 500.
+- الواجهة تعرض الكاش وتُسجل الخطأ بصمت، بدون توست أحمر يكسر تجربة المستخدم.
+
+### سادساً: تحقق بعد التنفيذ
+بعد الإصلاح سأفحص هذه الأرقام مباشرة:
+
+```text
+3358594: saved يجب أن يقترب من 69، linked للطلبات المحلية فقط
+3343958: saved يجب أن يقترب من 43، linked حسب الطلبات المحلية الموجودة
+3319023: linked يجب أن يرتفع من 3
+طلبات delivery_status=4 بعد 27/4 بدون delivery_partner_invoice_id يجب أن تنخفض جذرياً
+أي auto_delete_log جديد من syncAndApplyOrders يجب أن يتوقف تماماً
+```
+
+## الملفات/الأجزاء التي ستتغير
+- `src/contexts/AlWaseetContext.jsx`
+- `src/components/orders/AlWaseetInvoicesTab.jsx`
+- `src/hooks/useAlWaseetInvoices.js`
+- `supabase/functions/smart-invoice-sync/index.ts`
+- migration لتحديث `link_invoice_orders_to_orders` وربط الطلبات المسلّمة بأمان
