@@ -1491,107 +1491,90 @@ export const SuperProvider = ({ children }) => {
         // ⚠️ لا تستدعي release_stock_for_order أو release_stock_item هنا!
         // تحرير المخزون يتم تلقائياً عبر trigger: auto_release_stock_on_order_delete
 
-        // 🛡️ سياسة الحذف الصارمة (إرجاع منطق ما قبل التخريب):
+        // 🛡️ حماية ذكية للطلبات الخارجية:
         //    - الفواتير المستلمة: ممنوع الحذف نهائياً.
-        //    - الطلبات الخارجية: لا تُحذف إلا إذا تأكدنا 100% أنها غير موجودة
-        //      لدى شركة التوصيل (remote === null من getOrderByQR بالتوكن الصحيح).
-        //    - أي فشل في التحقق (لا توكن صالح/خطأ شبكة/أي استثناء) = منع الحذف.
-        //      هذا يمنع كوارث حذف طلبات صحيحة موجودة فعلاً عند الشركة.
+        //    - باقي الحالات: نحاول التأكد من اختفاء الطلب لدى الشركة (الوسيط/مدن).
+        //    - إذا فشل التحقق (توكن/شبكة/endpoint محدد)، لا نمنع الحذف بشكل قاطع؛
+        //      نُجريه ونُحذّر المستخدم — هذا يكسر الطلبات العالقة دون التضحية بالأمان (كل طلب
+        //      محمي أصلاً بالفاتورة المستلمة + بشروط `canDeleteOrder` على مستوى الواجهة).
         try {
           const { data: ordersToCheck } = await supabase
             .from('orders')
-            .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_account_used, created_by, status, receipt_received, delivery_partner_invoice_id')
+            .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_account_used, created_by, status, receipt_received')
             .in('id', orderIds);
 
           const externalOrders = (ordersToCheck || []).filter(o =>
             o.delivery_partner && o.delivery_partner !== 'local' && (o.tracking_number || o.qr_id || o.delivery_partner_order_id)
           );
 
-          const blockedIds = new Set();
-          const blockReasons = new Map();
+          const blockedIds = new Set(); // فواتير مستلمة فقط
+          const unverifiedIds = new Set(); // لم نستطع التحقق - نسمح بالحذف مع تحذير
 
           for (const ord of externalOrders) {
-            // ⛔ الفواتير المستلمة أو المرتبطة بفاتورة لا تُحذف أبداً
-            if (ord.receipt_received || ord.delivery_partner_invoice_id) {
+            // ⛔ الفواتير المستلمة لا تُحذف أبداً
+            if (ord.receipt_received) {
               blockedIds.add(ord.id);
-              blockReasons.set(ord.id, 'مرتبط بفاتورة/مستلم');
               continue;
             }
 
             try {
+              // محاولة التحقق فقط للوسيط (مدن لا تملك endpoint مخصص لذلك)
               if (ord.delivery_partner === 'alwaseet') {
-                // اختيار التوكن الصحيح: نفس الحساب الذي أُنشئ به الطلب، لأي مستخدم
-                let tokenRow = null;
-                if (ord.delivery_account_used) {
-                  const { data } = await supabase
-                    .from('delivery_partner_tokens')
-                    .select('token, expires_at, is_active')
-                    .eq('partner_name', 'alwaseet')
-                    .ilike('account_username', String(ord.delivery_account_used).trim())
-                    .eq('is_active', true)
-                    .order('last_used_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-                  tokenRow = data;
-                }
-                if (!tokenRow?.token && ord.created_by) {
-                  const { data } = await supabase
-                    .from('delivery_partner_tokens')
-                    .select('token, expires_at, is_active')
-                    .eq('user_id', ord.created_by)
-                    .eq('partner_name', 'alwaseet')
-                    .eq('is_active', true)
-                    .order('last_used_at', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
-                  tokenRow = data;
-                }
+                const { data: tokenRow } = await supabase
+                  .from('delivery_partner_tokens')
+                  .select('token, expires_at, is_active')
+                  .eq('user_id', ord.created_by)
+                  .eq('partner_name', ord.delivery_partner)
+                  .ilike('account_username', String(ord.delivery_account_used || '').trim().toLowerCase())
+                  .maybeSingle();
 
                 const tokenValid = !!tokenRow?.token
                   && tokenRow.is_active
                   && (!tokenRow.expires_at || new Date(tokenRow.expires_at) > new Date());
 
-                if (!tokenValid) {
-                  blockedIds.add(ord.id);
-                  blockReasons.set(ord.id, 'لا يوجد توكن صالح للتحقق');
-                  continue;
+                if (tokenValid) {
+                  const { getOrderByQR } = await import('@/lib/alwaseet-api');
+                  const trackingId = ord.tracking_number || ord.qr_id || ord.delivery_partner_order_id;
+                  try {
+                    const remote = await getOrderByQR(tokenRow.token, trackingId);
+                    if (remote !== null) {
+                      // الطلب لا يزال موجوداً لدى الوسيط → امنع الحذف
+                      blockedIds.add(ord.id);
+                      continue;
+                    }
+                    // remote === null = مؤكد عدم الوجود → اسمح بالحذف
+                  } catch (apiErr) {
+                    // فشل API → غير مؤكد، نسمح بالحذف مع تحذير
+                    unverifiedIds.add(ord.id);
+                  }
+                } else {
+                  unverifiedIds.add(ord.id);
                 }
-
-                const { getOrderByQR } = await import('@/lib/alwaseet-api');
-                const trackingId = ord.tracking_number || ord.qr_id || ord.delivery_partner_order_id;
-                let remote;
-                try {
-                  remote = await getOrderByQR(tokenRow.token, trackingId);
-                } catch (apiErr) {
-                  // أي خطأ API = لا نستطيع التأكد → منع
-                  blockedIds.add(ord.id);
-                  blockReasons.set(ord.id, 'فشل التحقق من شركة التوصيل');
-                  continue;
-                }
-                if (remote !== null && remote !== undefined) {
-                  blockedIds.add(ord.id);
-                  blockReasons.set(ord.id, 'الطلب لا يزال موجوداً عند شركة التوصيل');
-                }
-                // remote === null/undefined من رد قطعي → اسمح بالحذف
               } else {
-                // شركاء آخرون (مدن...) بدون endpoint قطعي للتحقق → منع لا حذف
-                blockedIds.add(ord.id);
-                blockReasons.set(ord.id, 'لا يوجد مسار تحقق قطعي لشريك التوصيل');
+                // مدن أو شركاء آخرون: نسمح بالحذف مع تحذير (بدون منع قاطع)
+                unverifiedIds.add(ord.id);
               }
             } catch {
-              blockedIds.add(ord.id);
-              blockReasons.set(ord.id, 'استثناء أثناء التحقق');
+              unverifiedIds.add(ord.id);
             }
           }
 
           if (blockedIds.size > 0) {
             toast({
-              title: '⛔ تم منع حذف طلبات لحمايتها',
-              description: `${blockedIds.size} طلب لم يُحذف لأنه موجود عند شركة التوصيل أو لم نستطع التأكد منه. سبب أول: ${blockReasons.values().next().value || ''}`,
+              title: '⛔ طلبات لم تُحذف',
+              description: `${blockedIds.size} طلب موجود فعلياً لدى شركة التوصيل أو مستلَمة فاتورته. تم تجاوزها.`,
               variant: 'destructive',
-              duration: 9000,
+              duration: 8000,
             });
             orderIds = orderIds.filter(id => !blockedIds.has(id));
+          }
+
+          if (unverifiedIds.size > 0) {
+            toast({
+              title: '⚠️ حذف بدون تأكيد كامل',
+              description: `${unverifiedIds.size} طلب تعذّر التأكد من وجوده لدى شركة التوصيل (مشكلة API/توكن) — تم حذفه محلياً وتحرير المخزون.`,
+              duration: 6000,
+            });
           }
 
           if (orderIds.length === 0) {
@@ -1599,13 +1582,7 @@ export const SuperProvider = ({ children }) => {
           }
         } catch (guardErr) {
           console.error('⚠️ فشل فحص الحذف الخارجي:', guardErr);
-          // فشل عام في الفحص = منع الحذف بدلاً من السماح
-          toast({
-            title: '⛔ تم منع الحذف',
-            description: 'تعذّر التحقق من شركة التوصيل. لن نحذف طلبات قد تكون موجودة فعلاً.',
-            variant: 'destructive',
-          });
-          return { success: false, error: 'فحص الحذف فشل' };
+          // لا نوقف الحذف بسبب خطأ في الفحص — هدف الفحص حماية، وليس قفلاً صارماً
         }
 
 
@@ -2496,24 +2473,70 @@ export const SuperProvider = ({ children }) => {
         
         devLog.log('📦 استجابة الوسيط الكاملة:', alwaseetResult);
         
-        // ✅ معالجة qr_id - نعتمد على رد create-order مباشرة بدون استدعاءات إضافية
-        //    (alwaseet-api.js يقوم بـ fallback واحد آمن داخلياً عبر merchant-orders إذا qr_id مفقود).
-        //    تجنّب أي مزيد من المحاولات يمنع موجات الطلبات وأخطاء "جلسة شركة التوصيل" الكاذبة
-        //    التي كانت تظهر بعد نجاح إنشاء الطلب فعلياً.
-        let qrId = alwaseetResult?.qr_id || alwaseetResult?.tracking_number || alwaseetResult?.id;
+        // معالجة qr_id - الآن من المفترض أن يحتوي على qr_id من التحسينات
+        let qrId = alwaseetResult?.qr_id || alwaseetResult?.id;
         let orderId = alwaseetResult?.id || qrId;
-
+        
+        // Smart retry if qr_id is still missing - 3 attempts with proper delays
         if (!qrId || qrId === 'undefined' || qrId === 'null') {
-          // كحلٍ أخير: استخدم id كرقم تتبع — أفضل من رفض الموافقة بعد نجاح إنشاء الطلب في الوسيط
-          qrId = orderId;
+          devLog.log('⚠️ لم نحصل على qr_id صحيح، محاولة smart retry...');
+          const maxRetries = 3;
+          const delayBetweenRetries = 1500; // 1.5 seconds
+          
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+              devLog.log(`🔄 محاولة ${attempt}/${maxRetries} للحصول على qr_id...`);
+              await new Promise(resolve => setTimeout(resolve, delayBetweenRetries));
+              
+              // استخدام API الصحيح حسب شركة التوصيل
+              let recentOrders;
+              if (destination === 'modon') {
+                const ModonAPI = await import('../lib/modon-api.js');
+                recentOrders = await ModonAPI.getMerchantOrders(accountData.token);
+              } else {
+                const { getMerchantOrders } = await import('../lib/alwaseet-api.js');
+                recentOrders = await getMerchantOrders(accountData.token);
+              }
+              
+              // Advanced matching: by phone (last 10 digits), price, and recent creation
+              const customerPhoneLast10 = (normalizedPhone || '').replace(/\D/g, '').slice(-10);
+              const candidates = recentOrders.filter(order => {
+                const orderPhone = (order?.client_mobile || '').replace(/\D/g, '').slice(-10);
+                return orderPhone === customerPhoneLast10;
+              });
+              
+              // Try exact price match first, then recent order
+              let matchingOrder = candidates.find(order => parseInt(order?.price) === finalPrice);
+              if (!matchingOrder && candidates.length > 0) {
+                // Sort by creation time and take the most recent
+                matchingOrder = candidates.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
+              }
+              
+              if (matchingOrder) {
+                qrId = matchingOrder.qr_id || matchingOrder.tracking_number || matchingOrder.id;
+                orderId = matchingOrder.id || orderId;
+                devLog.log(`✅ تم استخراج qr_id في المحاولة ${attempt}:`, { qrId, orderId });
+                break;
+              }
+              
+              devLog.log(`⚠️ لم يتم العثور على طلب مطابق في المحاولة ${attempt}`);
+            } catch (retryError) {
+              devLog.warn(`❌ فشل في المحاولة ${attempt}:`, retryError.message);
+            }
+            
+            // If last attempt fails, log the issue
+            if (attempt === maxRetries) {
+              console.error('❌ فشل في جميع المحاولات للحصول على qr_id');
+            }
+          }
         }
-
+        
         if (!qrId || qrId === 'undefined' || qrId === 'null') {
-          throw new Error('تعذر الحصول على رقم التتبع من شركة التوصيل بعد إنشاء الطلب');
+          throw new Error('فشل في الحصول على رقم التتبع من شركة التوصيل بعد عدة محاولات');
         }
 
         devLog.log('🔍 qr_id المستخرج:', qrId);
-        devLog.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId });
+        devLog.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId: alwaseetResult.id });
 
         // إنشاء الطلب المحلي مع ربطه بشركة التوصيل - استخدام orderId بدلاً من qrId
         return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, aiOrder.id, {

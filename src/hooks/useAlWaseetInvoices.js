@@ -22,15 +22,14 @@ export const useAlWaseetInvoices = () => {
   // 🛡️ Cache-first: نعرض فواتير قاعدة البيانات أولاً، ثم نحاول API بهدوء.
   //    لا نستبدل القائمة الحالية بـ [] أبداً عند فشل API/errNum:21/CF.
   const fetchInvoices = useCallback(async (timeFilter = 'week', forceRefresh = false) => {
-    if (!user?.id) return;
+    if (!isLoggedIn) return;
 
     if (forceRefresh) setLoading(true);
 
     // 1) تحميل فوري من قاعدة البيانات (لا يُمسح أبداً)
     let cachedFromDb = [];
     try {
-      // أ) فواتير يملكها المستخدم مباشرة
-      const { data: ownedCached } = await supabase
+      const { data: cached, error: cachedErr } = await supabase
         .from('delivery_invoices')
         .select('*')
         .in('partner', ['alwaseet', 'modon'])
@@ -38,41 +37,7 @@ export const useAlWaseetInvoices = () => {
         .order('issued_at', { ascending: false })
         .limit(200);
 
-      // ب) فواتير حساب مشترك: للمستخدم طلبات محلية مرتبطة بها (delivery_partner_invoice_id)
-      const { data: sharedOrderRows } = await supabase
-        .from('orders')
-        .select('delivery_partner_invoice_id')
-        .eq('created_by', user?.id)
-        .not('delivery_partner_invoice_id', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(500);
-
-      const sharedExternalIds = Array.from(new Set(
-        (sharedOrderRows || [])
-          .map(r => r.delivery_partner_invoice_id)
-          .filter(v => v && !v.startsWith('LOCAL-'))
-      ));
-
-      let sharedCached = [];
-      if (sharedExternalIds.length > 0) {
-        const { data: shared } = await supabase
-          .from('delivery_invoices')
-          .select('*')
-          .in('partner', ['alwaseet', 'modon'])
-          .in('external_id', sharedExternalIds)
-          .order('issued_at', { ascending: false })
-          .limit(200);
-        sharedCached = shared || [];
-      }
-
-      // دمج بدون تكرار حسب id
-      const mergedMap = new Map();
-      [...(ownedCached || []), ...sharedCached].forEach(inv => {
-        if (!mergedMap.has(inv.id)) mergedMap.set(inv.id, inv);
-      });
-      const cached = Array.from(mergedMap.values());
-
-      if (cached.length) {
+      if (!cachedErr && cached?.length) {
         cachedFromDb = cached.map(inv => ({
           id: inv.external_id,
           external_id: inv.external_id,
@@ -206,19 +171,19 @@ export const useAlWaseetInvoices = () => {
           return new Date(b.updated_at || b.created_at) - new Date(a.updated_at || a.created_at);
         });
 
-      // ⛔ لا نستبدل القائمة بـ [] إذا لدينا كاش صالح؛ هذا سبب اختفاء الفواتير أثناء التحديث.
-      if (filteredAndSortedInvoices.length === 0 && cachedFromDb.length > 0) {
-        devLog.warn('⚠️ نتيجة الفواتير فارغة بعد API/الفلترة — نُبقي بيانات قاعدة البيانات المحفوظة.');
-        setInvoices(prev => (prev?.length ? prev : cachedFromDb));
+      // ⛔ لا نستبدل القائمة بـ [] إذا API فشل وكان لدينا كاش
+      if (filteredAndSortedInvoices.length === 0 && cachedFromDb.length > 0 && !anyApiSuccess) {
+        devLog.warn('⚠️ لم نتمكن من جلب الفواتير من API — نُبقي بيانات قاعدة البيانات.');
+        // نترك القائمة الحالية كما هي (دون setInvoices)
       } else {
         setInvoices(filteredAndSortedInvoices);
       }
 
-      // 🛡️ لا نُظهر توست عند رفض endpoint الفواتير (errNum:21).
-      //   حسب توثيق الوسيط، Invoice APIs تقبل Merchant token فقط — الرفض هنا = "لا صلاحية
-      //   لهذا التوكن على endpoint الفواتير" وليس خطأ شركة توصيل. نعرض الكاش بصمت.
       if (forceRefresh && !anyApiSuccess && anyApiPermissionDenied) {
-        devLog.warn('ℹ️ الوسيط رفض endpoint الفواتير (errNum:21) — عرض البيانات المحفوظة بدون توست.');
+        toast({
+          title: 'تعذر الجلب من شركة التوصيل',
+          description: 'تم عرض البيانات المحفوظة. الوسيط رفض الـ endpoint مؤقتاً (errNum:21).',
+        });
       }
 
       return filteredAndSortedInvoices;
@@ -227,12 +192,18 @@ export const useAlWaseetInvoices = () => {
       if (cachedFromDb.length > 0 && invoices.length === 0) {
         setInvoices(cachedFromDb);
       }
-      if (forceRefresh) devLog.warn('⚠️ فشل تحديث الفواتير من API — تم الإبقاء على البيانات المحفوظة:', error?.message);
+      if (forceRefresh) {
+        toast({
+          title: 'خطأ في جلب الفواتير',
+          description: error.message || 'سيتم عرض البيانات المحفوظة.',
+          variant: 'destructive'
+        });
+      }
       return invoices;
     } finally {
       if (forceRefresh) setLoading(false);
     }
-  }, [token, user?.id]);
+  }, [token, isLoggedIn, activePartner, user?.id]);
 
   // Enhanced smart sync for background updates
   const smartBackgroundSync = useCallback(async () => {
@@ -260,10 +231,9 @@ export const useAlWaseetInvoices = () => {
 
     // Enhanced instant loading with smart caching - UNIFIED for all partners
   useEffect(() => {
-    if (!user?.id) return;
+    if (!isLoggedIn) return;
 
     const loadInvoicesInstantly = async () => {
-      let loadedCachedCount = 0;
       // ✅ جلب جميع التوكنات النشطة للمستخدم - كل الشركات
       try {
         // جلب جميع التوكنات النشطة
@@ -287,8 +257,8 @@ export const useAlWaseetInvoices = () => {
           });
         }
 
-        // أ) فواتير يملكها المستخدم مباشرة
-        const { data: ownedInvoices, error: invoicesError } = await supabase
+        // جلب الفواتير من قاعدة البيانات - كل الشركات
+        const { data: cachedInvoices, error: invoicesError } = await supabase
           .from('delivery_invoices')
           .select('*')
           .in('partner', ['alwaseet', 'modon'])
@@ -298,38 +268,7 @@ export const useAlWaseetInvoices = () => {
 
         if (invoicesError) throw invoicesError;
 
-        // ب) فواتير حساب مشترك: للمستخدم طلبات محلية مرتبطة بها
-        const { data: linkedOrderRows } = await supabase
-          .from('orders')
-          .select('delivery_partner_invoice_id')
-          .eq('created_by', user?.id)
-          .not('delivery_partner_invoice_id', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(500);
-        const sharedExternalIds = Array.from(new Set(
-          (linkedOrderRows || [])
-            .map(r => r.delivery_partner_invoice_id)
-            .filter(v => v && !v.startsWith('LOCAL-'))
-        ));
-        let sharedInvoices = [];
-        if (sharedExternalIds.length > 0) {
-          const { data: shared } = await supabase
-            .from('delivery_invoices')
-            .select('*')
-            .in('partner', ['alwaseet', 'modon'])
-            .in('external_id', sharedExternalIds)
-            .order('issued_at', { ascending: false })
-            .limit(100);
-          sharedInvoices = shared || [];
-        }
-        const mergedMap = new Map();
-        [...(ownedInvoices || []), ...sharedInvoices].forEach(inv => {
-          if (!mergedMap.has(inv.id)) mergedMap.set(inv.id, inv);
-        });
-        const cachedInvoices = Array.from(mergedMap.values());
-
-        loadedCachedCount = cachedInvoices?.length || 0;
-        if (cachedInvoices?.length > 0) {
+      if (cachedInvoices?.length > 0) {
           // ✅ استخدام البيانات المُخزنة مباشرة - مع إضافة حقل partner
           const transformedInvoices = cachedInvoices.map(inv => ({
             id: inv.external_id,
@@ -370,10 +309,10 @@ export const useAlWaseetInvoices = () => {
       const timeSinceLastSync = lastSync ? Date.now() - parseInt(lastSync) : Infinity;
       const cooldownMs = SYNC_COOLDOWN_MINUTES * 60 * 1000;
 
-      if (loadedCachedCount === 0 && timeSinceLastSync > cooldownMs) {
+      if (timeSinceLastSync > cooldownMs) {
         localStorage.setItem(lastSyncKey, Date.now().toString());
         
-        // Smart background sync only when no cache exists; normal entry must be DB-first and quiet.
+        // Smart background sync using edge function
         smartBackgroundSync();
       }
     };
@@ -396,7 +335,7 @@ export const useAlWaseetInvoices = () => {
       window.removeEventListener('invoiceReceived', handleInvoiceReceived);
       window.removeEventListener('invoiceUpdated', handleInvoiceUpdated);
     };
-  }, [fetchInvoices, user?.id]);
+  }, [isLoggedIn, activePartner, fetchInvoices, user?.id]);
 
   // إصلاح fetchInvoiceOrders: للفواتير المستلمة نعتمد على القاعدة فقط (preferCache)
   const fetchInvoiceOrders = useCallback(async (invoiceId, options = {}) => {
@@ -414,7 +353,7 @@ export const useAlWaseetInvoices = () => {
         .from('delivery_invoices')
         .select('id, owner_user_id, partner, account_username, external_id, orders_count, orders_last_synced_at, received, received_flag, status, status_normalized')
         .eq('external_id', invoiceId)
-        .maybeSingle();
+        .single();
 
       // ✅ تحديد ما إذا كانت الفاتورة مستلمة
       const isReceivedInvoice = !!invoiceRecord && (
@@ -506,7 +445,8 @@ export const useAlWaseetInvoices = () => {
             .from('delivery_invoices')
             .select('id, external_id, raw, orders_count')
             .eq('external_id', invoiceId)
-            .maybeSingle();
+            .limit(1)
+            .single();
 
           if (invoiceError && invoiceError.code !== 'PGRST116') {
             throw invoiceError;
@@ -805,7 +745,7 @@ export const useAlWaseetInvoices = () => {
         .from('delivery_invoices')
         .select('id, orders_count')
         .eq('external_id', invoiceId)
-        .maybeSingle();
+        .single();
 
       if (invoiceError || !invoiceRecord) {
         devLog.warn(`⚠️ الفاتورة ${invoiceId} غير موجودة في قاعدة البيانات`);

@@ -15,12 +15,9 @@ const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
 // - الفجوة الزمنية بين كل استدعاء تفاصيل وآخر.
 // المنطق الجديد يعطي أولوية للفواتير التي orders_count > 0 وعدد طلباتها المخزن أقل من المتوقع
 // (سواء جديدة أو مستلمة لكن طلباتها لم تُجلب بعد).
-// 🔁 إرجاع منطق 26/4: نعالج كل فواتير الـ API ونجلب تفاصيل كل الفواتير الناقصة.
-// نُبقي فجوة آمنة بين الطلبات لتجنّب rate limit/Cloudflare، لكن بدون حد علوي صناعي
-// يترك فواتير كبيرة مثل 3343958 ناقصة عند 12/43.
-const MAX_INVOICES_PER_TOKEN = 200;
-const MAX_ORDER_DETAILS_PER_TOKEN = 200;
-const ORDER_DETAILS_GAP_MS = 700;
+const MAX_INVOICES_PER_TOKEN = 25;
+const MAX_ORDER_DETAILS_PER_TOKEN = 8;
+const ORDER_DETAILS_GAP_MS = 900;
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
@@ -561,15 +558,15 @@ serve(async (req) => {
                       if (!orderError) employeeOrdersSynced++;
                     }
                     
-                    // ✅ منطق 26/4: إذا snapshot ناقص نعيد المحاولة داخل نفس التشغيل، للفواتير المستلمة والمعلقة.
-                    if (expectedForOrders > 0) {
+                    // ✅ لا نعمل retry داخل نفس التشغيل؛ cron/UI سيعيد المحاولة لاحقاً بدون عاصفة طلبات.
+                    if (false && !isReceived) {
                       const expected = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
                       let { count: dioNow } = await supabase
                         .from('delivery_invoice_orders')
                         .select('id', { count: 'exact', head: true })
                         .eq('invoice_id', upsertedInvoice.id);
                       let haveNow = dioNow ?? 0;
-                      const delays = [3000, 7000, 12000];
+                      const delays = [5000, 10000, 20000];
                       for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
                         console.log(`    🔁 Snapshot incomplete for ${externalId}: have=${haveNow}, expected=${expected}. Retry ${attempt + 1}/${delays.length} after ${delays[attempt]}ms...`);
                         await new Promise(r => setTimeout(r, delays[attempt]));
@@ -607,12 +604,6 @@ serve(async (req) => {
                       .from('delivery_invoices')
                       .update({ orders_last_synced_at: new Date().toISOString() })
                       .eq('id', upsertedInvoice.id);
-
-                    try {
-                      await supabase.rpc('link_invoice_orders_to_orders');
-                    } catch (linkErr) {
-                      console.warn(`    ⚠️ Incremental link failed for invoice ${externalId}:`, linkErr);
-                    }
                   } else if (isReceived) {
                     // ✅ FALLBACK: إذا فشل جلب الطلبات من API وكانت الفاتورة مستلمة
                     // نبحث عن طلبات محلية مرتبطة بهذه الفاتورة
@@ -898,15 +889,15 @@ serve(async (req) => {
                     if (!orderError) totalOrdersUpdated++;
                   }
                   
-                  // ✅ منطق 26/4: إذا snapshot ناقص نعيد المحاولة داخل نفس التشغيل، للفواتير المستلمة والمعلقة.
-                  if (expectedCount > 0) {
+                  // ✅ لا نعمل retry داخل نفس التشغيل؛ التشغيل التالي يكمل بدون تجاوز حد الوسيط.
+                  if (false && !isReceived) {
                     const expected = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
                     let { count: dioNow } = await supabase
                       .from('delivery_invoice_orders')
                       .select('id', { count: 'exact', head: true })
                       .eq('invoice_id', upsertedInvoice.id);
                     let haveNow = dioNow ?? 0;
-                    const delays = [3000, 7000, 12000];
+                    const delays = [5000, 10000, 20000];
                     for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
                       console.log(`  🔁 Snapshot incomplete for ${externalId}: have=${haveNow}, expected=${expected}. Retry ${attempt + 1}/${delays.length} after ${delays[attempt]}ms...`);
                       await new Promise(r => setTimeout(r, delays[attempt]));
@@ -944,12 +935,6 @@ serve(async (req) => {
                     .from('delivery_invoices')
                     .update({ orders_last_synced_at: new Date().toISOString() })
                     .eq('id', upsertedInvoice.id);
-
-                  try {
-                    await supabase.rpc('link_invoice_orders_to_orders');
-                  } catch (linkErr) {
-                    console.warn(`  ⚠️ Incremental link failed for invoice ${externalId}:`, linkErr);
-                  }
                 } else if (isReceived) {
                   // ✅ FALLBACK: إذا فشل جلب الطلبات من API وكانت الفاتورة مستلمة
                   console.log(`  ⚠️ No orders from API for received invoice ${externalId}, trying local fallback...`);
@@ -1026,7 +1011,7 @@ serve(async (req) => {
         console.warn('⚠️ Failed to link invoice orders:', linkError.message);
       } else if (linkResult && linkResult.length > 0) {
         linkedCount = linkResult[0].linked_count || 0;
-        updatedOrdersCount = linkResult[0].fixed_count || 0;
+        updatedOrdersCount = linkResult[0].updated_orders_count || 0;
         console.log(`🔗 Linked ${linkedCount} invoice orders, updated ${updatedOrdersCount} orders`);
       }
     } catch (linkErr) {
@@ -1064,10 +1049,9 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: message,
-        safe_cache_fallback: true
+        error: message 
       }),
-      { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

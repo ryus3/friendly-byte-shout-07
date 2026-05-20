@@ -3754,8 +3754,8 @@ export const AlWaseetProvider = ({ children }) => {
       
       devLog.log(`✅ ${message}`);
       
-      // 🛡️ Safety-first: مزامنة الحالة لا تشغّل أي حذف تلقائي.
-      // غياب الطلب من قائمة شركة التوصيل قد يكون بسبب توكن/حساب/فلترة API، وليس دليلاً قاطعاً للحذف.
+      // After status sync, check for orders that need deletion (not found in remote)
+      await performDeletionPassAfterStatusSync();
       
       return allOrders;
     } catch (error) {
@@ -3954,19 +3954,51 @@ export const AlWaseetProvider = ({ children }) => {
             return null;
           }
           
-          devLog.warn(`❌ الطلب ${qrId} غير موجود في ${advancedCheck.accountsChecked} حساب — لن يُحذف تلقائياً`);
-          try {
-            await supabase.from('order_deletion_attempts').insert({
-              order_id: localOrder?.id,
-              order_number: localOrder?.order_number,
-              tracking_number: localOrder?.tracking_number || qrId,
-              attempt_reason: 'sync check returned no result',
-              api_response_status: 'not_found_but_auto_delete_disabled',
-              blocked_by_safety: true,
-              block_reason: 'Auto-delete is disabled; absence from delivery API is not allowed to delete local orders',
-              attempted_by: user?.id
-            });
-          } catch {}
+          devLog.warn(`❌ تأكيد: الطلب ${qrId} غير موجود في ${advancedCheck.accountsChecked} حساب (نظيف بدون أخطاء)`);
+          
+          if (localOrder && canAutoDeleteOrder(localOrder, user)) {
+            devLog.log(`⚠️ التحقق النهائي قبل حذف الطلب ${qrId} (انتظار 30 ثانية)`);
+            
+            // ⏱️ انتظار 30 ثانية للتأكد من استقرار API
+            await new Promise(resolve => setTimeout(resolve, 30000));
+            const finalCheck = await checkOrderWithAllTokens(qrId);
+            
+            // 🛡️ الفحص النهائي يجب أن يكون نظيفاً تماماً
+            if (finalCheck.hadApiError || finalCheck.accountsChecked === 0) {
+              devLog.error(`🛑 [حماية] الفحص النهائي للطلب ${qrId} فشل — لن يُحذف`);
+              try {
+                await supabase.from('order_deletion_attempts').insert({
+                  order_id: localOrder.id,
+                  order_number: localOrder.order_number,
+                  tracking_number: localOrder.tracking_number || qrId,
+                  attempt_reason: 'final check failed',
+                  api_response_status: 'api_error_final',
+                  blocked_by_safety: true,
+                  block_reason: `Final check had API errors — refused to delete`,
+                  attempted_by: user?.id
+                });
+              } catch {}
+              return null;
+            }
+            
+            if (!finalCheck.found) {
+              devLog.log(`🗑️ تأكيد نهائي قاطع: حذف الطلب ${qrId}`);
+              const deleteResult = await performAutoDelete(localOrder);
+              if (deleteResult) {
+                return { 
+                  ...deleteResult, 
+                  autoDeleted: true,
+                  apiConfirmedNotFound: true,
+                  message: `تم حذف الطلب ${localOrder.tracking_number || qrId} تلقائياً - مؤكد عدم وجوده`
+                };
+              }
+            } else {
+              devLog.log(`✅ الطلب ${qrId} موجود فعلياً بعد الفحص النهائي - لن يُحذف`);
+              remoteOrder = finalCheck.found;
+            }
+          } else {
+            devLog.log(`🔒 الطلب ${qrId} محمي من الحذف التلقائي`);
+          }
           
           if (!remoteOrder) {
             return null;
@@ -4149,8 +4181,8 @@ export const AlWaseetProvider = ({ children }) => {
 
 
   // 🛡️ معطّلة: كانت تستخدم endpoint /api/alwaseet/check-order غير موجود
-  // وكانت تعتبر فشل الـ fetch دليلاً على عدم وجود الطلب → حذف خاطئ.
-  // الحذف التلقائي ممنوع بالكامل؛ الحذف اليدوي الآمن فقط من SuperProvider.
+  // وكانت تعتبر فشل الـ fetch دليلاً على عدم وجود الطلب → حذف خاطئ
+  // الحذف التلقائي يتم الآن فقط عبر performDeletionPassAfterStatusSync (مع double-check + circuit breaker)
   const performAutoCleanup = async () => {
     devLog.warn('⚠️ performAutoCleanup معطّلة لأسباب أمنية — استخدم performDeletionPassAfterStatusSync بدلاً منها');
     return;
@@ -4650,13 +4682,12 @@ export const AlWaseetProvider = ({ children }) => {
       
       if (data && data.length > 0) {
         const result = data[0];
-        const updatedOrdersCount = result.updated_orders_count ?? result.fixed_count ?? 0;
-        devLog.log(`✅ تم ربط ${result.linked_count || 0} طلب فاتورة، تحديث ${updatedOrdersCount} طلب`);
+        devLog.log(`✅ تم ربط ${result.linked_count} طلب فاتورة، تحديث ${result.updated_orders_count} طلب (${result.processing_time_ms}ms)`);
         return { 
           success: true, 
-          linkedCount: result.linked_count || 0,
-          updatedOrdersCount,
-          receiptPropagated: result.receipt_propagated || 0
+          linkedCount: result.linked_count,
+          updatedOrdersCount: result.updated_orders_count,
+          processingTimeMs: result.processing_time_ms
         };
       }
       
@@ -4990,6 +5021,10 @@ export const AlWaseetProvider = ({ children }) => {
           devLog.log('[SYNC-TIMING] ✅ انتهاء syncVisibleOrdersBatch:', new Date().toISOString(), `(${syncEndTime - startTime}ms)`);
         }
 
+        // ✅ الحذف التلقائي الآمن
+        devLog.log('🧹 تمرير الحذف التلقائي الآمن...');
+        await performDeletionPassAfterStatusSync();
+        
         // ✅ ربط الفواتير بالطلبات أولاً (المرحلة 1)
         devLog.log('🔗 ربط الفواتير بالطلبات...');
         await linkInvoiceOrdersToOrders();
@@ -5231,10 +5266,11 @@ export const AlWaseetProvider = ({ children }) => {
   }, [token]);
 
 
-  // إضافة مستمع لحدث تشغيل مرور الحذف — معطّل بالكامل للحماية
+  // إضافة مستمع لحدث تشغيل مرور الحذف
   useEffect(() => {
     const handleDeletionPassTrigger = (event) => {
-      devLog.warn('🛡️ تم تجاهل طلب تشغيل الحذف التلقائي:', event.detail?.reason);
+      devLog.log('🗑️ تشغيل مرور الحذف من الحدث:', event.detail?.reason);
+      performDeletionPassAfterStatusSync();
     };
 
     window.addEventListener('triggerDeletionPass', handleDeletionPassTrigger);
@@ -5244,11 +5280,151 @@ export const AlWaseetProvider = ({ children }) => {
     };
   }, []);
 
-  // 🛡️ الحذف التلقائي معطّل بالكامل. الفحص/المزامنة يجب ألا يحذف طلبات محلية.
+  // دالة للتحقق من الطلبات المحذوفة بعد مزامنة الحالات - استخدام نفس منطق زر "تحقق الآن"
   const performDeletionPassAfterStatusSync = useCallback(async () => {
-    devLog.warn('🛡️ الحذف التلقائي متوقف: لن يتم حذف أي طلب من مزامنة شركة التوصيل.');
-    return { checked: 0, deleted: 0, disabled: true };
-  }, []);
+    if (!token) return;
+    
+    try {
+      devLog.log('🔍 فحص الطلبات للحذف التلقائي - استخدام نفس منطق زر "تحقق الآن"...');
+      
+      // جلب الطلبات المحلية المرشحة للحذف مع تأمين فصل الحسابات - فقط طلبات المستخدم الحالي
+      // ✅ الحماية الأمنية: حتى المدير يحصل على طلباته فقط للحذف
+      // ✅ نفحص جميع الشركاء (alwaseet + modon) وحالات pending/delivery (ليست نهائية)
+      const { data: localOrders, error } = await scopeOrdersQuery(
+        supabase
+          .from('orders')
+          .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_status, status, receipt_received, customer_name, created_by, created_at, order_items(*)')
+          .in('delivery_partner', ['alwaseet', 'modon'])
+          .eq('receipt_received', false)
+          .in('status', ['pending', 'delivery', 'shipped'])
+          .not('delivery_status', 'in', '(4,17,31,32)')
+          .or('tracking_number.not.is.null,qr_id.not.is.null,delivery_partner_order_id.not.is.null'),
+        true // restrictToOwnOrders = true لضمان حذف المستخدم لطلباته فقط
+      ).limit(50);
+      
+      devLog.log('🔍 طلبات الوسيط المرشحة للفحص:', localOrders?.map(o => ({
+        order_number: o.order_number,
+        tracking_number: o.tracking_number,
+        delivery_partner_order_id: o.delivery_partner_order_id,
+        qr_id: o.qr_id,
+        status: o.status
+      })));
+        
+      if (error) {
+        console.error('❌ خطأ في جلب الطلبات المحلية:', error);
+        return;
+      }
+      
+      if (!localOrders?.length) {
+        devLog.log('✅ لا توجد طلبات مرشحة للفحص');
+        return;
+      }
+      
+      devLog.log(`🔍 سيتم فحص ${localOrders.length} طلب باستخدام syncOrderByQR...`);
+      
+      let checkedCount = 0;
+      let deletedCount = 0;
+      let consecutiveFailures = 0;
+      let consecutiveDeletions = 0;
+      
+      // 🛡️ حماية حاسمة: حدود صارمة لمنع الحذف الجماعي الخاطئ
+      const MAX_DELETIONS_PER_RUN = 3;          // لا تحذف أكثر من 3 طلبات في تشغيل واحد
+      const MAX_CONSECUTIVE_FAILURES = 3;        // إذا فشل API 3 مرات متتالية → توقف
+      const MAX_CONSECUTIVE_DELETIONS = 2;       // إذا حُذف طلبان متتاليان → توقف للمراجعة
+      
+      // استخدام نفس منطق زر "تحقق الآن" - استدعاء syncOrderByQR لكل طلب
+      for (const localOrder of localOrders) {
+        // 🛡️ Circuit Breaker: إيقاف عند تجاوز الحدود
+        if (deletedCount >= MAX_DELETIONS_PER_RUN) {
+          devLog.warn(`🛑 [حماية] توقف الحذف: تم بلوغ الحد الأقصى (${MAX_DELETIONS_PER_RUN}) في هذا التشغيل`);
+          break;
+        }
+        if (consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
+          console.error(`🛑 [حماية] توقف الفحص: ${MAX_CONSECUTIVE_FAILURES} فشل متتالي في API — احتمال انقطاع/حظر`);
+          break;
+        }
+        if (consecutiveDeletions >= MAX_CONSECUTIVE_DELETIONS) {
+          devLog.warn(`🛑 [حماية] توقف الحذف: ${MAX_CONSECUTIVE_DELETIONS} حذف متتالي — مراجعة يدوية مطلوبة`);
+          break;
+        }
+
+        // توسيع البحث عن المعرف ليشمل جميع المصادر المحتملة
+        const trackingNumber = localOrder.delivery_partner_order_id || localOrder.tracking_number || localOrder.qr_id;
+        if (!trackingNumber) {
+          devLog.warn(`⚠️ لا يوجد معرف صالح للطلب ${localOrder.order_number} (ID: ${localOrder.id})`);
+          continue;
+        }
+        
+        try {
+          devLog.log(`🔄 فحص الطلب ${trackingNumber} (رقم: ${localOrder.order_number})...`);
+          
+          // استدعاء نفس الدالة المستخدمة في زر "تحقق الآن"
+          const syncResult = await syncOrderByQR(trackingNumber);
+          checkedCount++;
+          consecutiveFailures = 0; // إعادة العداد عند النجاح
+          
+          // 🛡️ التحقق الصارم: الحذف فقط إذا API استجاب بشكل قاطع بأن الطلب غير موجود
+          // syncResult.autoDeleted يجب أن يكون مضموناً من API ناجح + رد قاطع بعدم الوجود
+          if (syncResult?.autoDeleted === true && syncResult?.apiConfirmedNotFound === true) {
+            deletedCount++;
+            consecutiveDeletions++;
+            devLog.log(`🗑️ تم حذف الطلب ${trackingNumber} تلقائياً (مؤكد من API)`);
+            
+            // ✅ تسجيل الحذف في auto_delete_log
+            const orderAge = Math.round(
+              (Date.now() - new Date(localOrder.created_at).getTime()) / 60000
+            );
+            
+            try {
+              await supabase.from('auto_delete_log').insert({
+                order_id: localOrder.id,
+                order_number: localOrder.order_number,
+                tracking_number: localOrder.tracking_number,
+                qr_id: localOrder.qr_id,
+                delivery_partner_order_id: localOrder.delivery_partner_order_id,
+                deleted_by: user?.id,
+                delete_source: 'syncAndApplyOrders',
+                reason: {
+                  message: 'لم يُعثر على الطلب في شركة التوصيل (مؤكد من API)',
+                  timestamp: new Date().toISOString()
+                },
+                order_status: localOrder.status,
+                delivery_status: localOrder.delivery_status,
+                order_age_minutes: orderAge,
+                order_data: localOrder
+              });
+            } catch (logError) {
+              console.error('⚠️ فشل تسجيل الحذف:', logError);
+            }
+          } else if (syncResult?.autoDeleted === true) {
+            // 🛡️ تخطي الحذف إن لم يكن هناك تأكيد قاطع من API
+            devLog.warn(`⚠️ [حماية] تم تخطي حذف الطلب ${trackingNumber} - لا يوجد تأكيد قاطع من API`);
+            consecutiveDeletions = 0;
+          } else if (syncResult) {
+            devLog.log(`✅ تم تحديث الطلب ${trackingNumber} بنجاح`);
+            consecutiveDeletions = 0; // إعادة عداد الحذف المتتالي
+          } else {
+            devLog.log(`ℹ️ لا توجد تحديثات للطلب ${trackingNumber}`);
+            consecutiveDeletions = 0;
+          }
+          
+        } catch (error) {
+          consecutiveFailures++;
+          console.error(`❌ خطأ في فحص الطلب ${trackingNumber} (فشل ${consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}):`, error);
+          // 🛡️ لا نحذف عند فشل API — هذا حماية حاسمة
+        }
+      }
+      
+      devLog.log(`✅ انتهاء الفحص التلقائي: تم فحص ${checkedCount} طلب، حذف ${deletedCount} طلب`);
+      
+      if (deletedCount > 0) {
+        devLog.log(`🗑️ إجمالي الطلبات المحذوفة تلقائياً: ${deletedCount}`);
+      }
+      
+    } catch (error) {
+      console.error('❌ خطأ في فحص الطلبات للحذف التلقائي:', error);
+    }
+  }, [token, syncOrderByQR]);
 
   // تحميل التوكن عند تسجيل الدخول الأولي
   useEffect(() => {
@@ -5277,7 +5453,9 @@ export const AlWaseetProvider = ({ children }) => {
         // المزامنة الأولية ستحدث تلقائياً عبر useEffect المخصص لذلك
         devLog.log('✅ تم الانتهاء من المهام الأولية');
         
-        devLog.log('🛡️ تم تخطي مرور الحذف التلقائي؛ المزامنة لا تحذف طلبات.');
+        // تشغيل مرور الحذف فوراً لمعالجة الطلبات المحذوفة من الوسيط
+        devLog.log('🧹 تشغيل مرور الحذف التلقائي للطلبات المحذوفة من الوسيط...');
+        await performDeletionPassAfterStatusSync();
       } catch (error) {
         console.error('❌ خطأ في المهام الأولية:', error);
       }

@@ -23,19 +23,16 @@ import {
 } from 'lucide-react';
 import { useAlWaseetInvoices } from '@/hooks/useAlWaseetInvoices';
 import { useAlWaseet } from '@/contexts/AlWaseetContext';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 import devLog from '@/lib/devLogger';
-import { supabase } from '@/lib/customSupabaseClient';
 
 const AlWaseetInvoicesTab = () => {
   // 🔥 v2.0.0 - فواتير موحدة لجميع شركات التوصيل (الوسيط + مدن)
   devLog.log('🔥 النسخة الجديدة v2: فواتير موحدة لجميع الشركات');
   
-  const { activePartner } = useAlWaseet();
-  const { user } = useAuth();
+  const { isLoggedIn, activePartner, syncAllAvailableTokens } = useAlWaseet();
   const { 
     invoices, 
     loading, 
@@ -102,22 +99,30 @@ const AlWaseetInvoicesTab = () => {
     });
   }, [invoices, searchTerm, statusFilter, accountFilter, partnerFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
 
-  // ✅ إرجاع السلوك القديم: عند فتح تبويب الفواتير نُشغّل مزامنة خلفية صامتة فوراً
-  // ثم نُعيد قراءة البيانات من القاعدة. لا حاجة لضغط "تحديث" يدوياً.
+  // ❌ معطّل: الجلب المزدوج يسبب استبدال التصميم الجميل
+  // ✅ الاعتماد فقط على التحميل الفوري من DB في useAlWaseetInvoices hook
+  // hook useAlWaseetInvoices يجلب البيانات من DB تلقائياً ويعرض account_username صحيح
+  
+  /*
   useEffect(() => {
-    if (!user?.id) return;
-    // مزامنة خلفية صامتة (smart-invoice-sync) لا تفشل الواجهة إذا فشل API
-    (async () => {
-      try {
-        await supabase.functions.invoke('smart-invoice-sync', {
-          body: { mode: 'smart', sync_invoices: true, sync_orders: true }
-        }).catch(() => {});
-      } finally {
-        try { await fetchInvoices(timeFilter, false); } catch {}
+    if (isLoggedIn && (activePartner === 'alwaseet' || activePartner === 'modon')) {
+      devLog.log('🔄 تبويب الفواتير نشط - جلب الفواتير تلقائياً');
+      fetchInvoices(timeFilter, false); // جلب الفواتير بدون loading indicator
+      
+      // استدعاء syncAllAvailableTokens في الخلفية
+      if (syncAllAvailableTokens) {
+        devLog.log('🔄 تفعيل مزامنة كل الحسابات تلقائياً');
+        syncAllAvailableTokens().then(result => {
+          if (result.success) {
+            devLog.log(`✅ مزامنة ${result.tokensSynced} حساب، تحديث ${result.totalOrdersUpdated} طلب`);
+          }
+        }).catch(err => {
+          devLog.warn('⚠️ فشل في مزامنة كل الحسابات:', err);
+        });
       }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id, activePartner]);
+    }
+  }, [isLoggedIn, activePartner, timeFilter, fetchInvoices, syncAllAvailableTokens]);
+  */
 
   const stats = getInvoiceStats();
 
@@ -128,16 +133,8 @@ const AlWaseetInvoicesTab = () => {
 
 
   const handleRefresh = async () => {
-    // 1) شغّل smart-invoice-sync (يكتب delivery_invoices + delivery_invoice_orders + يربط)
-    try {
-      await supabase.functions.invoke('smart-invoice-sync', {
-        body: { mode: 'smart', sync_invoices: true, sync_orders: true, force_refresh: true }
-      });
-    } catch { /* لا نمنع التحديث بسبب خطأ شبكة */ }
-    // 2) أعد قراءة الفواتير من DB + محاولة API بهدوء
-    await fetchInvoices(timeFilter, true);
-    // 3) كاحتياط، استدعِ syncLastTwoInvoices الذي يستدعي نفس smart-invoice-sync
-    try { await syncLastTwoInvoices(); } catch {}
+    await fetchInvoices(timeFilter, true); // force refresh with loading indicator
+    await syncLastTwoInvoices();
   };
   
   const handleTimeFilterChange = async (newFilter) => {

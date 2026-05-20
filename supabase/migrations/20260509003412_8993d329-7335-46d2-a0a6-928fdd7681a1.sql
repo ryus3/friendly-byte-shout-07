@@ -1,2 +1,0 @@
-ALTER TABLE public.delivery_invoice_orders
-  DROP CONSTRAINT IF EXISTS delivery_invoice_orders_invoice_external_key;
