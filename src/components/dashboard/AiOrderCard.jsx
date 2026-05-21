@@ -606,12 +606,10 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                   <AlertDialogCancel>إلغاء</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={async () => {
-                      // تحديث فوري optimistic
-                      window.dispatchEvent(new CustomEvent('aiOrderUpdated', { detail: { ...order, status: 'approved' } }));
+                      // ⏳ لا نُخفي الطلب قبل التأكد من نجاح الإنشاء الفعلي في شركة التوصيل
                       toast({ title: 'جاري الموافقة...', description: 'تتم معالجة الطلب الذكي', variant: 'default' });
-                      
+
                       try {
-                        // تحقق من صحة الوجهة
                         if (!orderDestination) {
                           toast({
                             title: "خطأ",
@@ -621,7 +619,6 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                           return;
                         }
 
-                        // تحقق من وجود حساب محدد للشركات غير المحلية
                         if (orderDestination.destination !== 'local' && !orderDestination.account) {
                           toast({
                             title: "خطأ",
@@ -632,8 +629,8 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                         }
 
                         const res = await approveAiOrder?.(
-                          order.id, 
-                          orderDestination.destination, 
+                          order.id,
+                          orderDestination.destination,
                           orderDestination.account
                         );
                         devLog.log('🔍 نتيجة الموافقة:', res);
@@ -643,14 +640,11 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                           const orderTypeText = orderDestination.destination === 'local' ? 'طلب عادي' : 'طلب توصيل';
                           toast({ title: 'تمت الموافقة', description: `تم تحويل الطلب الذكي إلى ${orderTypeText} بنجاح`, variant: 'success' });
                         } else {
-                          // استرجاع البيانات في حالة الفشل
-                          window.dispatchEvent(new CustomEvent('aiOrderUpdated', { detail: order }));
+                          // ❌ الفشل: الطلب يبقى ظاهراً كما هو (لم نُخفه أصلاً)، نعرض السبب الفعلي
                           toast({ title: 'فشلت الموافقة', description: res?.error || 'حدث خطأ أثناء معالجة الطلب', variant: 'destructive' });
                         }
                       } catch (error) {
-                        // استرجاع البيانات في حالة الخطأ
-                        window.dispatchEvent(new CustomEvent('aiOrderUpdated', { detail: order }));
-                        toast({ title: 'خطأ في الشبكة', description: 'تعذر الاتصال بالخادم', variant: 'destructive' });
+                        toast({ title: 'خطأ في الشبكة', description: error?.message || 'تعذر الاتصال بالخادم', variant: 'destructive' });
                       }
                     }}
                   >
