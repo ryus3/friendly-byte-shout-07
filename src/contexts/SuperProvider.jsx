@@ -2485,26 +2485,77 @@ export const SuperProvider = ({ children }) => {
         devLog.log(`💰 السعر المرسل لـ ${partnerName}:`, aiOrder.total_amount || finalPrice, '(AI Order total_amount:', aiOrder.total_amount, ', Calculated finalPrice:', finalPrice, ')');
 
         // إنشاء الطلب في شركة التوصيل - اختيار API حسب الوجهة
+        // ✅ مع إعادة محاولة آمنة عند TOKEN_EXPIRED من create-order: تجديد التوكن مرة واحدة بنفس بيانات الحساب المحفوظة
         let alwaseetResult;
-        if (destination === 'modon') {
-          const ModonAPI = await import('../lib/modon-api.js');
-          alwaseetResult = await ModonAPI.createModonOrder(updatedPayload, accountData.token);
-        } else {
+        let activeToken = accountData.token;
+
+        const tryCreateOrder = async (tokenToUse) => {
+          if (destination === 'modon') {
+            const ModonAPI = await import('../lib/modon-api.js');
+            return await ModonAPI.createModonOrder(updatedPayload, tokenToUse);
+          }
           const { createAlWaseetOrder: createAlWaseetOrderApi } = await import('../lib/alwaseet-api.js');
-          alwaseetResult = await createAlWaseetOrderApi(updatedPayload, accountData.token);
+          return await createAlWaseetOrderApi(updatedPayload, tokenToUse);
+        };
+
+        try {
+          alwaseetResult = await tryCreateOrder(activeToken);
+        } catch (createErr) {
+          // ✅ TOKEN_EXPIRED على create-order تحديداً = الوسيط رفض التوكن فعلاً
+          //    نحاول تجديد التوكن مرة واحدة من بيانات الحساب المحفوظة، ثم إعادة الإنشاء.
+          if (createErr?.isTokenExpired && destination === 'alwaseet') {
+            try {
+              const { data: accRow } = await supabase
+                .from('delivery_partner_tokens')
+                .select('account_username, partner_data')
+                .eq('user_id', createdBy)
+                .eq('partner_name', 'alwaseet')
+                .ilike('account_username', actualAccount)
+                .eq('is_active', true)
+                .maybeSingle();
+
+              const savedPassword = accRow?.partner_data?.password;
+              if (savedPassword) {
+                devLog.log('🔄 محاولة تجديد توكن الوسيط بعد رفضه على create-order...');
+                const { loginToWaseet } = await import('../lib/alwaseet-api.js');
+                const fresh = await loginToWaseet(accRow.account_username, savedPassword);
+                if (fresh?.token) {
+                  const newExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+                  await supabase
+                    .from('delivery_partner_tokens')
+                    .update({ token: fresh.token, expires_at: newExpiry, last_used_at: new Date().toISOString() })
+                    .eq('user_id', createdBy)
+                    .eq('partner_name', 'alwaseet')
+                    .ilike('account_username', actualAccount);
+                  activeToken = fresh.token;
+                  alwaseetResult = await tryCreateOrder(activeToken);
+                  devLog.log('✅ نجح إنشاء الطلب بعد تجديد التوكن تلقائياً');
+                } else {
+                  throw createErr;
+                }
+              } else {
+                return {
+                  success: false,
+                  error: `انتهت صلاحية جلسة الوسيط للحساب "${actualAccount}". افتح إدارة شركات التوصيل وسجّل الدخول مجدداً لهذا الحساب.`
+                };
+              }
+            } catch (renewErr) {
+              return {
+                success: false,
+                error: `انتهت صلاحية جلسة الوسيط للحساب "${actualAccount}" وتعذّر التجديد التلقائي. سجّل الدخول يدوياً من إدارة شركات التوصيل.`
+              };
+            }
+          } else {
+            throw createErr;
+          }
         }
-        
+
         devLog.log('📦 استجابة الوسيط الكاملة:', alwaseetResult);
         
-        // ✅ معالجة qr_id - نعتمد على رد create-order مباشرة بدون استدعاءات إضافية
-        //    (alwaseet-api.js يقوم بـ fallback واحد آمن داخلياً عبر merchant-orders إذا qr_id مفقود).
-        //    تجنّب أي مزيد من المحاولات يمنع موجات الطلبات وأخطاء "جلسة شركة التوصيل" الكاذبة
-        //    التي كانت تظهر بعد نجاح إنشاء الطلب فعلياً.
         let qrId = alwaseetResult?.qr_id || alwaseetResult?.tracking_number || alwaseetResult?.id;
         let orderId = alwaseetResult?.id || qrId;
 
         if (!qrId || qrId === 'undefined' || qrId === 'null') {
-          // كحلٍ أخير: استخدم id كرقم تتبع — أفضل من رفض الموافقة بعد نجاح إنشاء الطلب في الوسيط
           qrId = orderId;
         }
 
@@ -2515,7 +2566,6 @@ export const SuperProvider = ({ children }) => {
         devLog.log('🔍 qr_id المستخرج:', qrId);
         devLog.log('✅ تم إنشاء طلب الوسيط بنجاح:', { qrId, orderId });
 
-        // إنشاء الطلب المحلي مع ربطه بشركة التوصيل - استخدام orderId بدلاً من qrId
         return await createLocalOrderWithDeliveryPartner(aiOrder, enrichedItems, aiOrder.id, {
           delivery_partner: destination === 'modon' ? 'modon' : 'alwaseet',
           delivery_partner_order_id: String(orderId || qrId),
@@ -2527,7 +2577,10 @@ export const SuperProvider = ({ children }) => {
         }, foundCityName, foundRegionName);
       } catch (err) {
         console.error('❌ فشل في إنشاء طلب شركة التوصيل:', err);
-        return { success: false, error: `فشل في إنشاء طلب شركة التوصيل: ${err.message}` };
+        const msg = err?.message || 'خطأ غير معروف';
+        // رسالة نظيفة بدون تكرار البادئة إذا كانت الرسالة الأصلية واضحة للمستخدم
+        const isUserFacing = msg.includes('الوسيط') || msg.includes('مدن') || msg.includes('انته') || msg.includes('حساب') || msg.includes('سجّل');
+        return { success: false, error: isUserFacing ? msg : `فشل إنشاء طلب التوصيل: ${msg}` };
       }
       }
 
