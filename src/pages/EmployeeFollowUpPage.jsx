@@ -677,18 +677,16 @@ const totalPagesOrders = Math.ceil(filteredOrders.length / ITEMS_PER_PAGE);
 const startIndexOrders = (currentPage - 1) * ITEMS_PER_PAGE;
 const paginatedOrders = filteredOrders.slice(startIndexOrders, startIndexOrders + ITEMS_PER_PAGE);
 
-// ✅ الطلبات القابلة للمزامنة - فقط النشطة (ليست مكتملة أو مرجعة)
+// ✅ الطلبات القابلة للمزامنة - فلترة موحّدة (مطابقة للنسخة المستقرة):
+//   استبعاد delivery_status 4 (مسلّم) و 17 (راجع للتاجر) فقط.
+//   كل ما عدا ذلك يدخل المزامنة بما فيها "تحتاج معالجة / راجع / ملغى".
 const syncableOrders = useMemo(() => {
   if (!filteredOrders || !Array.isArray(filteredOrders)) return [];
   
   return filteredOrders.filter(order => {
-    // فقط طلبات الوسيط
-    if (order.delivery_partner !== 'alwaseet') return false;
-    
-    // استبعاد الطلبات المرجعة فقط (delivery_status = 17) - النهائية الوحيدة
-    // الحالة 4 (تم التسليم) ليست نهائية - قد يحدث إرجاع أو تسليم جزئي بعدها
-    if (order.delivery_status === '17') return false;
-    
+    if (order.delivery_partner !== 'alwaseet' && order.delivery_partner !== 'modon') return false;
+    if (order.status === 'completed' || order.status === 'returned_in_stock') return false;
+    if (order.delivery_status === '4' || order.delivery_status === '17') return false;
     return true;
   });
 }, [filteredOrders]);
