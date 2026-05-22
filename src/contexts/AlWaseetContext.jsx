@@ -609,30 +609,19 @@ export const AlWaseetProvider = ({ children }) => {
     
     const syncPromise = (async () => {
       try {
-        // ✅ فلترة ذكية - استبعاد الحالات النهائية فقط
+        // ✅ فلترة موحّدة مع باقي النظام:
+        //   - استبعاد delivery_status 4 (مسلّم - ينتظر الفاتورة فقط، لا يتغيّر بعدها)
+        //   - استبعاد delivery_status 17 (راجع للتاجر - نهائي)
+        //   - استبعاد status المحلية النهائية: completed / returned_in_stock
+        //   - السماح بمزامنة كل ما عدا ذلك بما فيها حالات "تحتاج معالجة / راجع / ملغى"
         const syncableOrders = visibleOrders.filter(order => {
           if (!order.created_by || !order.delivery_partner || order.delivery_partner === 'local') return false;
           
-          // ✅ استبعاد الحالات النهائية والطلبات المستلمة فواتيرها:
-          // 1. delivery_status = '17' (راجع للتاجر) - نهائية
-          // 2. status = 'completed' (مكتمل) - نهائية
-          // 3. status = 'returned_in_stock' (راجع للمخزن) - نهائية
-          // 4. receipt_received = true (استلمت الفاتورة) - نهائية
-          // 5. delivery_partner_invoice_id موجود (له فاتورة) - نهائية
-          
-          if (order.delivery_status === '17') return false;
-          if (order.delivery_status === '4') return false; // ✅ نهائية للمزامنة الدورية - تنتقل لمسار الفاتورة
-          if (order.delivery_status === '31' || order.delivery_status === '32') return false;
+          if (order.delivery_status === '4' || order.delivery_status === 4) return false;
+          if (order.delivery_status === '17' || order.delivery_status === 17) return false;
           if (order.status === 'completed') return false;
           if (order.status === 'returned_in_stock') return false;
-          if (order.status === 'delivered') return false;
-          if (order.status === 'cancelled') return false;
-          if (order.receipt_received === true) return false;
-          if (order.delivery_partner_invoice_id) return false;
           
-          // ✅ السماح بمزامنة جميع الحالات الأخرى بما فيها:
-          // - delivery_status = '4' (مسلّم) ← ليست نهائية، قد يحدث تحديثات
-          // - delivery_status = '1','2','3' (معلق، جاري التوصيل، في المستودع)
           return true;
         });
 
