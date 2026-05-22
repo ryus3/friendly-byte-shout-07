@@ -2501,48 +2501,72 @@ export const SuperProvider = ({ children }) => {
         try {
           alwaseetResult = await tryCreateOrder(activeToken);
         } catch (createErr) {
-          // ✅ TOKEN_EXPIRED على create-order تحديداً = الوسيط رفض التوكن فعلاً
-          //    نحاول تجديد التوكن مرة واحدة من بيانات الحساب المحفوظة، ثم إعادة الإنشاء.
+          // ✅ TOKEN_EXPIRED على create-order: تجديد ذكي متعدد المراحل قبل إظهار أي خطأ.
+          //    1) محاولة استخدام أي توكن نشط آخر لنفس الحساب/المستخدم.
+          //    2) إعادة تسجيل الدخول التلقائي بالبريد/كلمة المرور المحفوظة.
+          //    3) إعادة تسجيل الدخول لأي صف فعّال آخر لنفس account_username.
           if (createErr?.isTokenExpired && destination === 'alwaseet') {
+            let recovered = false;
             try {
-              const { data: accRow } = await supabase
+              // 1) جرّب توكنات أخرى نشطة لنفس الحساب (نفس account_username)
+              const { data: altTokens } = await supabase
                 .from('delivery_partner_tokens')
-                .select('account_username, partner_data')
-                .eq('user_id', createdBy)
+                .select('id, token, expires_at, account_username, partner_data, user_id')
                 .eq('partner_name', 'alwaseet')
                 .ilike('account_username', actualAccount)
                 .eq('is_active', true)
-                .maybeSingle();
+                .gt('expires_at', new Date().toISOString())
+                .order('user_id', { ascending: createdBy ? false : true });
 
-              const savedPassword = accRow?.partner_data?.password;
-              if (savedPassword) {
-                devLog.log('🔄 محاولة تجديد توكن الوسيط بعد رفضه على create-order...');
-                const { loginToWaseet } = await import('../lib/alwaseet-api.js');
-                const fresh = await loginToWaseet(accRow.account_username, savedPassword);
-                if (fresh?.token) {
-                  const newExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-                  await supabase
-                    .from('delivery_partner_tokens')
-                    .update({ token: fresh.token, expires_at: newExpiry, last_used_at: new Date().toISOString() })
-                    .eq('user_id', createdBy)
-                    .eq('partner_name', 'alwaseet')
-                    .ilike('account_username', actualAccount);
-                  activeToken = fresh.token;
-                  alwaseetResult = await tryCreateOrder(activeToken);
-                  devLog.log('✅ نجح إنشاء الطلب بعد تجديد التوكن تلقائياً');
-                } else {
-                  throw createErr;
-                }
-              } else {
-                return {
-                  success: false,
-                  error: `انتهت صلاحية جلسة الوسيط للحساب "${actualAccount}". افتح إدارة شركات التوصيل وسجّل الدخول مجدداً لهذا الحساب.`
-                };
+              for (const row of (altTokens || [])) {
+                if (!row?.token || row.token === activeToken) continue;
+                try {
+                  alwaseetResult = await tryCreateOrder(row.token);
+                  activeToken = row.token;
+                  recovered = true;
+                  devLog.log('✅ نجح إنشاء الطلب باستخدام توكن بديل نشط لنفس الحساب');
+                  break;
+                } catch (_e) { /* جرّب التالي */ }
               }
-            } catch (renewErr) {
+
+              // 2) إن لم ينجح: تجديد تلقائي عبر كلمة المرور المحفوظة لأي صف لنفس الحساب
+              if (!recovered) {
+                const { data: pwRows } = await supabase
+                  .from('delivery_partner_tokens')
+                  .select('account_username, partner_data, user_id')
+                  .eq('partner_name', 'alwaseet')
+                  .ilike('account_username', actualAccount)
+                  .order('user_id', { ascending: createdBy ? false : true });
+
+                const { loginToWaseet } = await import('../lib/alwaseet-api.js');
+                for (const accRow of (pwRows || [])) {
+                  const savedPassword = accRow?.partner_data?.password;
+                  if (!savedPassword) continue;
+                  try {
+                    devLog.log('🔄 تجديد تلقائي لتوكن الوسيط من كلمة المرور المحفوظة...');
+                    const fresh = await loginToWaseet(accRow.account_username, savedPassword);
+                    if (fresh?.token) {
+                      const newExpiry = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+                      await supabase
+                        .from('delivery_partner_tokens')
+                        .update({ token: fresh.token, expires_at: newExpiry, last_used_at: new Date().toISOString(), is_active: true })
+                        .eq('partner_name', 'alwaseet')
+                        .ilike('account_username', actualAccount);
+                      activeToken = fresh.token;
+                      alwaseetResult = await tryCreateOrder(activeToken);
+                      recovered = true;
+                      devLog.log('✅ نجح إنشاء الطلب بعد تجديد التوكن تلقائياً');
+                      break;
+                    }
+                  } catch (_e) { /* جرّب التالي */ }
+                }
+              }
+            } catch (_e) { /* fall through */ }
+
+            if (!recovered) {
               return {
                 success: false,
-                error: `انتهت صلاحية جلسة الوسيط للحساب "${actualAccount}" وتعذّر التجديد التلقائي. سجّل الدخول يدوياً من إدارة شركات التوصيل.`
+                error: `تعذّر إتمام الموافقة عبر الحساب "${actualAccount}" مؤقتاً. سيتم إعادة المحاولة تلقائياً، أو سجّل الدخول يدوياً من إدارة شركات التوصيل.`
               };
             }
           } else {

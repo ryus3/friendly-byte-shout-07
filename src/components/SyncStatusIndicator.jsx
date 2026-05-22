@@ -37,14 +37,14 @@ const SyncStatusIndicator = ({ className }) => {
     setSyncProgress({ syncing: true, current: 0, total: 0 });
 
     try {
-      // ✅ الزر العالمي: مزامنة طلبات المستخدم الحالي فقط (لا يجوز جر طلبات الموظفين هنا)
+      // ✅ زر الهيدر: يحترم نطاق المستخدم (أدمن=الكل، مدير قسم=موظفيه، موظف=طلباته)
       await performSyncWithCountdown(null, (progress) => {
         setSyncProgress({ 
           syncing: true, 
           current: progress?.processedOrders || 0, 
           total: progress?.totalOrders || 0 
         });
-      }, { ownOnly: true });
+      });
     } catch (error) {
       console.error('[SyncStatusIndicator] خطأ في المزامنة:', error);
     }

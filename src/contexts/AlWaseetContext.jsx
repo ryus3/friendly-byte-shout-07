@@ -609,30 +609,19 @@ export const AlWaseetProvider = ({ children }) => {
     
     const syncPromise = (async () => {
       try {
-        // ✅ فلترة ذكية - استبعاد الحالات النهائية فقط
+        // ✅ فلترة موحّدة مع باقي النظام:
+        //   - استبعاد delivery_status 4 (مسلّم - ينتظر الفاتورة فقط، لا يتغيّر بعدها)
+        //   - استبعاد delivery_status 17 (راجع للتاجر - نهائي)
+        //   - استبعاد status المحلية النهائية: completed / returned_in_stock
+        //   - السماح بمزامنة كل ما عدا ذلك بما فيها حالات "تحتاج معالجة / راجع / ملغى"
         const syncableOrders = visibleOrders.filter(order => {
           if (!order.created_by || !order.delivery_partner || order.delivery_partner === 'local') return false;
           
-          // ✅ استبعاد الحالات النهائية والطلبات المستلمة فواتيرها:
-          // 1. delivery_status = '17' (راجع للتاجر) - نهائية
-          // 2. status = 'completed' (مكتمل) - نهائية
-          // 3. status = 'returned_in_stock' (راجع للمخزن) - نهائية
-          // 4. receipt_received = true (استلمت الفاتورة) - نهائية
-          // 5. delivery_partner_invoice_id موجود (له فاتورة) - نهائية
-          
-          if (order.delivery_status === '17') return false;
-          if (order.delivery_status === '4') return false; // ✅ نهائية للمزامنة الدورية - تنتقل لمسار الفاتورة
-          if (order.delivery_status === '31' || order.delivery_status === '32') return false;
+          if (order.delivery_status === '4' || order.delivery_status === 4) return false;
+          if (order.delivery_status === '17' || order.delivery_status === 17) return false;
           if (order.status === 'completed') return false;
           if (order.status === 'returned_in_stock') return false;
-          if (order.status === 'delivered') return false;
-          if (order.status === 'cancelled') return false;
-          if (order.receipt_received === true) return false;
-          if (order.delivery_partner_invoice_id) return false;
           
-          // ✅ السماح بمزامنة جميع الحالات الأخرى بما فيها:
-          // - delivery_status = '4' (مسلّم) ← ليست نهائية، قد يحدث تحديثات
-          // - delivery_status = '1','2','3' (معلق، جاري التوصيل، في المستودع)
           return true;
         });
 
@@ -4961,18 +4950,16 @@ export const AlWaseetProvider = ({ children }) => {
           }
         }
 
-        // ✅ إذا لم توجد طلبات ظاهرة: جلب طلباتي فقط (own-only) — استثناء الحالات النهائية 4/17
+        // ✅ إذا لم توجد طلبات ظاهرة: جلب الطلبات حسب نطاق المستخدم (الأدمن يرى الكل،
+        //    مدير القسم يرى موظفيه، الموظف يرى طلباته فقط). استثناء النهائي فقط (4/17).
         if (!ordersToSync || ordersToSync.length === 0) {
           const baseQ = supabase
             .from('orders')
             .select('*')
             .eq('delivery_partner', activePartner)
-            .in('status', ['pending', 'shipped', 'delivery', 'partial_delivery'])
-            .not('delivery_status', 'in', '(4,17,31,32)')
-            .eq('receipt_received', false)
-            .is('delivery_partner_invoice_id', null);
-          // ownOnly=true يجبر تقييد على المستخدم نفسه حتى للمدير
-          const { data: activeOrders, error } = await scopeOrdersQuery(baseQ, ownOnly).limit(200);
+            .not('delivery_status', 'in', '(4,17)')
+            .not('status', 'in', '(completed,returned_in_stock)');
+          const { data: activeOrders, error } = await scopeOrdersQuery(baseQ, ownOnly).limit(500);
 
           if (error) throw error;
           ordersToSync = activeOrders || [];
