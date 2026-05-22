@@ -4950,18 +4950,16 @@ export const AlWaseetProvider = ({ children }) => {
           }
         }
 
-        // ✅ إذا لم توجد طلبات ظاهرة: جلب طلباتي فقط (own-only) — استثناء الحالات النهائية 4/17
+        // ✅ إذا لم توجد طلبات ظاهرة: جلب الطلبات حسب نطاق المستخدم (الأدمن يرى الكل،
+        //    مدير القسم يرى موظفيه، الموظف يرى طلباته فقط). استثناء النهائي فقط (4/17).
         if (!ordersToSync || ordersToSync.length === 0) {
           const baseQ = supabase
             .from('orders')
             .select('*')
             .eq('delivery_partner', activePartner)
-            .in('status', ['pending', 'shipped', 'delivery', 'partial_delivery'])
-            .not('delivery_status', 'in', '(4,17,31,32)')
-            .eq('receipt_received', false)
-            .is('delivery_partner_invoice_id', null);
-          // ownOnly=true يجبر تقييد على المستخدم نفسه حتى للمدير
-          const { data: activeOrders, error } = await scopeOrdersQuery(baseQ, ownOnly).limit(200);
+            .not('delivery_status', 'in', '(4,17)')
+            .not('status', 'in', '(completed,returned_in_stock)');
+          const { data: activeOrders, error } = await scopeOrdersQuery(baseQ, ownOnly).limit(500);
 
           if (error) throw error;
           ordersToSync = activeOrders || [];
