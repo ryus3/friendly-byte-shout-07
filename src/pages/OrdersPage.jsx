@@ -569,41 +569,39 @@ const OrdersPage = () => {
     setCurrentPage(1);
   }, [filters.status, filters.searchTerm, filters.period]);
 
-  // ✅ الطلبات القابلة للمزامنة - فقط النشطة (ليست مكتملة أو مرجعة)
+  // ✅ الطلبات القابلة للمزامنة - فلترة موحّدة:
+  //   استبعاد delivery_status 4 (مسلّم) و 17 (راجع للتاجر) فقط — لا تتغير بعدها.
+  //   كل ما عدا ذلك بما فيها "تحتاج معالجة / راجع / ملغى" يدخل المزامنة.
   const syncableOrders = useMemo(() => {
     if (!filteredOrders || !Array.isArray(filteredOrders)) return [];
-    
     return filteredOrders.filter(order => {
-      // فقط طلبات الوسيط
-      if (order.delivery_partner !== 'alwaseet') return false;
-      
-      // ✅ استبعاد الحالات النهائية
-      const terminalStatuses = ['completed', 'returned_in_stock'];
-      if (terminalStatuses.includes(order.status)) return false;
-      
-      // ✅ استبعاد delivery_status = '17' فقط (راجع للتاجر) - النهائية الوحيدة
-      // الحالة 4 (تم التسليم) ليست نهائية - قد يحدث إرجاع أو تسليم جزئي بعدها
-      if (order.delivery_status === '17') return false;
-      
+      if (order.delivery_partner !== 'alwaseet' && order.delivery_partner !== 'modon') return false;
+      if (order.status === 'completed' || order.status === 'returned_in_stock') return false;
+      if (order.delivery_status === '4' || order.delivery_status === '17') return false;
       return true;
     });
   }, [filteredOrders]);
 
-  // ✅ مزامنة مرة واحدة فقط عند فتح الصفحة - للطلبات الظاهرة فقط
+  // ✅ مزامنة فعلية عند فتح الصفحة للطلبات الظاهرة (سلوك أبريل)
+  const hasSyncedOnLoadRef = useRef(false);
   useEffect(() => {
-    const performInitialSync = async () => {
-      if (!syncableOrders || syncableOrders.length === 0) {
-        return;
+    if (hasSyncedOnLoadRef.current) return;
+    if (!syncableOrders || syncableOrders.length === 0) return;
+    if (!syncVisibleOrdersBatch) return;
+    hasSyncedOnLoadRef.current = true;
+    const timer = setTimeout(async () => {
+      try {
+        devLog.log(`🔄 [OrdersPage] مزامنة دخول للصفحة: ${syncableOrders.length} طلب`);
+        const res = await syncVisibleOrdersBatch(syncableOrders);
+        if (res?.updatedCount > 0 && refreshOrders) {
+          await refreshOrders();
+        }
+      } catch (e) {
+        devLog.warn('⚠️ [OrdersPage] فشل مزامنة الدخول:', e?.message);
       }
-      
-      // ✅ تم إزالة syncAndApplyOrders لأنه يسبب حذف خاطئ
-      // المزامنة تتم الآن عبر syncVisibleOrdersBatch فقط في useEffect أعلاه
-      devLog.log(`✅ [OrdersPage] تم تحميل ${syncableOrders.length} طلب ظاهر نشط`);
-    };
-    
-    // مزامنة مرة واحدة فقط عند تحميل الصفحة
-    performInitialSync();
-  }, []); // ✅ dependencies فارغة = مرة واحدة فقط عند فتح الصفحة
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, [syncableOrders, syncVisibleOrdersBatch, refreshOrders]);
 
   // ✅ المرحلة 4: تخزين الطلبات الظاهرة في window للوصول إليها من performSyncWithCountdown
   useEffect(() => {
