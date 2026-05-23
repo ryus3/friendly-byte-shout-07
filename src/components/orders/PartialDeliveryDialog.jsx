@@ -148,20 +148,9 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
 
       // 4️⃣ معالجة الحسابات المالية (باستخدام السعر المخصص إن وُجد)
       const finalPrice = customPrice ?? expectedPrice;
-      const originalTotal = Number(order.total_amount) + Number(order.delivery_fee);
 
-      // ✅ Validation: السعر النهائي لا يجب أن يتجاوز الطلب الأصلي
-      if (finalPrice > originalTotal) {
-        toast({
-          title: 'خطأ: سعر غير منطقي!',
-          description: `السعر النهائي (${finalPrice.toLocaleString()}) لا يمكن أن يكون أكبر من الطلب الأصلي (${originalTotal.toLocaleString()})`,
-          variant: 'destructive'
-        });
-        setLoading(false);
-        return;
-      }
-
-      // ✅ Validation: السعر يجب أن يكون للمنتجات المُسلّمة + التوصيل فقط
+      // ✅ الحد الأدنى فقط: سعر المنتجات المُسلّمة + التوصيل
+      // ✅ السماح بأي قيمة أعلى (مثلاً شركة التوصيل أضافت رسوماً إضافية → تُعتبر زيادة)
       const deliveredItemsTotal = items
         .filter(item => selectedItems.includes(item.id))
         .reduce((sum, item) => sum + (item.unit_price * item.quantity), 0);
@@ -171,7 +160,7 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
       if (finalPrice < minExpectedPrice) {
         toast({
           title: 'تحذير: سعر منخفض!',
-          description: `السعر النهائي (${finalPrice.toLocaleString()}) أقل من المتوقع (${minExpectedPrice.toLocaleString()}). هل أنت متأكد؟`,
+          description: `السعر النهائي (${finalPrice.toLocaleString()}) أقل من الحد الأدنى (${minExpectedPrice.toLocaleString()}).`,
           variant: 'warning'
         });
       }
