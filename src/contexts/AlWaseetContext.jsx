@@ -1121,16 +1121,7 @@ export const AlWaseetProvider = ({ children }) => {
                     
                     // ✅ إشعار للطلبات العادية (التي يتم تخطيها في handleReturnStatusChange)
                     if (returnResult.skipped) {
-                      // dedup: تحديث الإشعار الموجود لنفس الطلب بدل التكرار
-                      const { data: existingReturn } = await supabase
-                        .from('notifications')
-                        .select('id')
-                        .eq('user_id', localOrder.created_by)
-                        .eq('type', 'order_returned')
-                        .eq('related_order_id', localOrder.id)
-                        .limit(1);
-
-                      const notifPayload = {
+                      await supabase.from('notifications').insert({
                         user_id: localOrder.created_by,
                         title: '📦 طلب مُرجع من شركة التوصيل',
                         message: `تم إرجاع الطلب ${localOrder.tracking_number} (${localOrder.customer_name}) من شركة التوصيل - الحالة 17`,
@@ -1141,17 +1132,8 @@ export const AlWaseetProvider = ({ children }) => {
                           delivery_status: '17',
                           order_type: localOrder.order_type || 'regular'
                         }
-                      };
-
-                      if (existingReturn && existingReturn.length > 0) {
-                        await supabase
-                          .from('notifications')
-                          .update({ ...notifPayload, is_read: false, created_at: new Date().toISOString(), updated_at: new Date().toISOString() })
-                          .eq('id', existingReturn[0].id);
-                      } else {
-                        await supabase.from('notifications').insert(notifPayload);
-                      }
-                      devLog.log('✅ [RETURN-17] تم إرسال/تحديث إشعار للطلب العادي المُرجع');
+                      });
+                      devLog.log('✅ [RETURN-17] تم إرسال إشعار للطلب العادي المُرجع');
                     }
                   } else {
                     console.error('❌ [RETURN-17] خطأ في معالجة الحالة 17:', returnResult.error);
@@ -1871,13 +1853,11 @@ export const AlWaseetProvider = ({ children }) => {
     // البحث عن الإشعار الموجود وتحديثه أو إنشاء جديد
     try {
       // البحث المحسن عن الإشعار الموجود باستخدام عدة معايير
-      // ✅ Cross-type dedup: نبحث عن أي إشعار حالة سابق لنفس الطلب (order_status_update أو alwaseet_status_change)
       const { data: existingNotifications, error: searchError } = await supabase
         .from('notifications')
-        .select('id, type')
-        .in('type', ['order_status_update', 'alwaseet_status_change'])
+        .select('id')
+        .eq('type', 'order_status_update')
         .or(`data->>'order_number'.eq.${trackingNumber},data->>'tracking_number'.eq.${trackingNumber},message.like.%${trackingNumber}%`)
-        .order('created_at', { ascending: false })
         .limit(1);
         
       if (searchError) {
