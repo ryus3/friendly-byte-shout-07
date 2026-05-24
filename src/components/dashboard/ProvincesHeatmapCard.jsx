@@ -116,43 +116,62 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
       <CardContent className="flex-1 flex flex-col p-4 pt-0 relative">
         {/* Real Iraq map outline with overlaid markers — glassmorphism */}
         <div className="relative w-full max-w-[300px] mx-auto aspect-square">
-          {/* Aurora mesh backdrop */}
-          <div className="pointer-events-none absolute -inset-6 opacity-70">
-            <div className="absolute top-4 left-8 w-32 h-32 rounded-full bg-primary/25 blur-3xl" />
-            <div className="absolute bottom-2 right-6 w-28 h-28 rounded-full bg-cyan-400/20 blur-3xl" />
-            <div className="absolute top-1/3 right-1/4 w-20 h-20 rounded-full bg-fuchsia-400/15 blur-3xl" />
+          {/* Soft aurora backdrop (subtle so borders read crisp) */}
+          <div className="pointer-events-none absolute -inset-8 opacity-35">
+            <div className="absolute top-6 left-10 w-32 h-32 rounded-full bg-sky-400/30 blur-3xl" />
+            <div className="absolute bottom-4 right-8 w-28 h-28 rounded-full bg-cyan-300/20 blur-3xl" />
+            <div className="absolute top-1/3 right-1/3 w-20 h-20 rounded-full bg-blue-400/15 blur-2xl" />
           </div>
 
-          {/* Glass-filled country shape with luminous edges */}
-          <div
-            className="absolute inset-0 backdrop-blur-md"
-            style={{
-              WebkitMaskImage: "url('/iraq-map.svg')",
-              WebkitMaskRepeat: 'no-repeat',
-              WebkitMaskPosition: 'center',
-              WebkitMaskSize: 'contain',
-              maskImage: "url('/iraq-map.svg')",
-              maskRepeat: 'no-repeat',
-              maskPosition: 'center',
-              maskSize: 'contain',
-              background:
-                'linear-gradient(160deg, hsl(var(--primary) / 0.18) 0%, hsl(var(--primary) / 0.04) 45%, hsl(199 89% 60% / 0.10) 100%)',
-              boxShadow: 'inset 0 0 30px hsl(var(--primary) / 0.15)',
-            }}
-          />
+          {/* Inline SVG: very transparent sky fill + crisp luminous border + graticule */}
+          <svg
+            viewBox="0 0 1024 1024"
+            className="absolute inset-0 w-full h-full"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <defs>
+              <linearGradient id="iraqSkyFill" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0%"   stopColor="hsl(199 95% 70%)" stopOpacity="0.10" />
+                <stop offset="50%"  stopColor="hsl(199 95% 60%)" stopOpacity="0.05" />
+                <stop offset="100%" stopColor="hsl(210 95% 55%)" stopOpacity="0.08" />
+              </linearGradient>
+              <linearGradient id="iraqStroke" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor="hsl(199 100% 80%)" />
+                <stop offset="100%" stopColor="hsl(210 100% 70%)" />
+              </linearGradient>
+              <clipPath id="iraqClip">
+                <g transform="translate(0,1024) scale(0.1,-0.1)">
+                  <path d={IRAQ_PATH_D} />
+                </g>
+              </clipPath>
+            </defs>
 
-          {/* Luminous border outline */}
-          <img
-            src="/iraq-map.svg"
-            alt="خريطة العراق"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-            style={{
-              filter:
-                'invert(46%) sepia(91%) saturate(2500%) hue-rotate(195deg) brightness(115%) contrast(95%) drop-shadow(0 0 6px hsl(var(--primary) / 0.85)) drop-shadow(0 0 14px hsl(var(--primary) / 0.45)) drop-shadow(0 0 22px hsl(199 89% 60% / 0.35))',
-              opacity: 0.9,
-              mixBlendMode: 'screen',
-            }}
-          />
+            {/* Country shape: very transparent sky fill with crisp luminous border */}
+            <g transform="translate(0,1024) scale(0.1,-0.1)">
+              <path
+                d={IRAQ_PATH_D}
+                fill="url(#iraqSkyFill)"
+                stroke="url(#iraqStroke)"
+                strokeWidth="12"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+                style={{ filter: 'drop-shadow(0 0 4px hsl(199 100% 75% / 0.9)) drop-shadow(0 0 12px hsl(199 100% 65% / 0.55)) drop-shadow(0 0 24px hsl(210 100% 60% / 0.35))' }}
+              />
+            </g>
+
+            {/* Graticule: faint lat/lng grid clipped to country */}
+            <g clipPath="url(#iraqClip)" opacity="0.18">
+              {[0,1,2,3,4,5,6,7,8].map((i) => (
+                <line key={`gv-${i}`} x1={i * 128} y1="0" x2={i * 128} y2="1024"
+                      stroke="hsl(199 100% 80%)" strokeWidth="0.6" />
+              ))}
+              {[0,1,2,3,4,5,6,7,8].map((i) => (
+                <line key={`gh-${i}`} x1="0" y1={i * 128} x2="1024" y2={i * 128}
+                      stroke="hsl(199 100% 80%)" strokeWidth="0.6" />
+              ))}
+            </g>
+          </svg>
+
 
 
           {/* Markers overlay */}
