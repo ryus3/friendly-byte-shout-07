@@ -391,6 +391,10 @@ const InvoiceSyncSettings = () => {
               </Button>
             </div>
 
+            {/* مؤشر التقدم الحي */}
+            {syncProgress && <SyncProgressStepper progress={syncProgress} />}
+
+
             {/* حالة الكرونات */}
             <div className="space-y-2">
               <Label className="text-sm font-medium">حالة المهام المجدولة (الخلفية)</Label>
