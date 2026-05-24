@@ -356,12 +356,12 @@ serve(async (req) => {
         .eq('invoice_id', invRow.id);
 
       const expected = Number(invRow.orders_count || 0);
-      const haveNow = cachedCount ?? 0;
+      const initialCached = cachedCount ?? 0;
 
       // إن كانت كاملة، لا حاجة للمزامنة الموجهة
-      if (expected > 0 && haveNow >= expected) {
+      if (expected > 0 && initialCached >= expected) {
         return new Response(
-          JSON.stringify({ success: true, mode: 'targeted', invoices_synced: 0, orders_updated: 0, already_complete: true }),
+          JSON.stringify({ success: true, mode: 'targeted', invoices_synced: 0, orders_updated: 0, already_complete: true, cached_orders: initialCached, expected_orders: expected }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
