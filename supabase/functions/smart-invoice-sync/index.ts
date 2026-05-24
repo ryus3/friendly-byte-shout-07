@@ -164,34 +164,60 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partn
   }
 }
 
-// ✅ NEW: جلب merchant-orders كاملة لبناء خريطة من id الداخلي إلى tracking_number/qr_id الحقيقي
-// شركة التوصيل ترسل في الفاتورة id=140xxxxxx، بينما الطلب المحلي يستخدم tracking=143xxxxxx.
-// بدون هذه الخريطة لا يمكن الربط بدقة 100%.
-async function fetchMerchantOrdersIndex(token: string, partner: string): Promise<Map<string, { tracking?: string; qr?: string }>> {
-  const map = new Map<string, { tracking?: string; qr?: string }>();
+// ✅ جلب merchant-orders كاملة كقائمة خام (نُستخدم منها كل من index + fallback).
+async function fetchMerchantOrdersList(token: string, partner: string): Promise<any[]> {
   try {
     const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
     const { response, data } = await fetchDeliveryJson(`${baseUrl}/merchant-orders?token=${encodeURIComponent(token)}`, token);
-    if (!response.ok) return map;
+    if (!response.ok) return [];
     const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    for (const o of list) {
-      const id = o?.id != null ? String(o.id) : null;
-      const tracking = o?.tracking_number != null ? String(o.tracking_number) : undefined;
-      const qr = o?.qr_id != null ? String(o.qr_id) : undefined;
-      if (id) map.set(id, { tracking, qr });
-    }
-    console.log(`📚 merchant-orders index built for ${partner}: ${map.size} entries`);
+    return list;
   } catch (e) {
-    console.warn(`⚠️ fetchMerchantOrdersIndex(${partner}) failed:`, (e as any)?.message);
+    console.warn(`⚠️ fetchMerchantOrdersList(${partner}) failed:`, (e as any)?.message);
+    return [];
   }
+}
+
+async function fetchMerchantOrdersIndex(token: string, partner: string): Promise<Map<string, { tracking?: string; qr?: string }>> {
+  const map = new Map<string, { tracking?: string; qr?: string }>();
+  const list = await fetchMerchantOrdersList(token, partner);
+  for (const o of list) {
+    const id = o?.id != null ? String(o.id) : null;
+    const tracking = o?.tracking_number != null ? String(o.tracking_number) : undefined;
+    const qr = o?.qr_id != null ? String(o.qr_id) : undefined;
+    if (id) map.set(id, { tracking, qr });
+  }
+  if (list.length) console.log(`📚 merchant-orders index for ${partner}: ${map.size} entries`);
   return map;
+}
+
+// ✅ فلترة طلبات التاجر بحسب رقم الفاتورة (Fallback عند رفض/نقص endpoint التفاصيل)
+function filterOrdersByInvoice(list: any[], invoiceExternalId: string): InvoiceOrder[] {
+  const target = String(invoiceExternalId);
+  return list
+    .filter((o) => {
+      const mid = o?.merchant_invoice_id ?? o?.invoice_id ?? o?.merchantInvoiceId;
+      return mid != null && String(mid) === target;
+    })
+    .map((o) => ({ ...o })) as InvoiceOrder[];
+}
+
+function mergeOrdersById(a: InvoiceOrder[], b: InvoiceOrder[]): InvoiceOrder[] {
+  const map = new Map<string, InvoiceOrder>();
+  for (const o of [...a, ...b]) {
+    const id = (o as any)?.id != null ? String((o as any).id) : null;
+    if (!id) continue;
+    if (!map.has(id)) map.set(id, o);
+    else map.set(id, { ...map.get(id)!, ...o });
+  }
+  return Array.from(map.values());
 }
 
 // إثراء طلبات الفاتورة بمعرفات tracking/qr من merchant-orders index
 function enrichInvoiceOrders(invoiceOrders: InvoiceOrder[], idx: Map<string, { tracking?: string; qr?: string }>): InvoiceOrder[] {
   if (!idx || idx.size === 0) return invoiceOrders;
   return invoiceOrders.map(o => {
-    const idStr = o?.id != null ? String(o.id) : null;
+    const idStr = (o as any)?.id != null ? String((o as any).id) : null;
     const found = idStr ? idx.get(idStr) : null;
     if (!found) return o;
     return { ...o, tracking_number: (o as any).tracking_number || found.tracking, qr_id: (o as any).qr_id || found.qr };
