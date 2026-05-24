@@ -928,7 +928,7 @@ serve(async (req) => {
               try {
                 if (orderDetailsFetchedForToken > 0) await new Promise(r => setTimeout(r, ORDER_DETAILS_GAP_MS));
                 orderDetailsFetchedForToken++;
-                const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);  // ✅ تمرير partnerName
+                const invoiceOrders = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName), ordersIndexSmart);
                 
                 if (invoiceOrders.length > 0) {
                   for (const order of invoiceOrders) {
