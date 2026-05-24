@@ -70,7 +70,7 @@ const NotificationTemplates = () => {
 
   const getTypeLabel = (type) => {
     const labels = {
-      ai_order: '🤖 طلب تليجرام جديد',
+      ai_order: 'طلب تليجرام جديد',
       delivery_update: '📦 تحديث حالة التوصيل',
       new_registration: '👥 موظف جديد',
       order_created: '📦 طلب جديد'
@@ -152,7 +152,7 @@ const NotificationTemplates = () => {
                     value={template.title_template}
                     onChange={(e) => updateTemplate(template.id, 'title_template', e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="مثال: 🤖 طلب جديد #{order_id}"
+                    placeholder="مثال: طلب جديد #{order_id}"
                   />
                 </div>
 

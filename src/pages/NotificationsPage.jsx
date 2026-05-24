@@ -484,8 +484,8 @@ const NotificationsPage = () => {
                                           }
                                         }
                                         
-                                         // العنوان الافتراضي
-                                         return notification.title || 'إشعار جديد';
+                                          // العنوان الافتراضي — مع إزالة 🤖 من الإشعارات القديمة
+                                          return String(notification.title || 'إشعار جديد').replace(/🤖\s*/g, '').trim() || 'إشعار جديد';
                                        })()}
                                          maxWidth="200px"
                                          className={cn(

@@ -880,20 +880,23 @@ const NotificationsPanel = () => {
                                     
                                     // العنوان الافتراضي
                                     return notification.title || 'إشعار جديد';
-                                  })();
-                                  
-                                  // استخدام ScrollingText للعناوين الطويلة
-                                  return titleText.length > 18 ? (
-                                    <ScrollingText 
-                                      text={titleText} 
-                                      className={cn("font-semibold text-sm leading-tight", colors.text)}
-                                      maxWidth="160px"
-                                    />
-                                  ) : (
-                                    <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
-                                      {titleText}
-                                    </h3>
-                                  );
+                                   })();
+                                   
+                                   // إزالة الإيموجي البدائي 🤖 من العناوين القديمة — الأيقونة الاحترافية تظهر يساراً
+                                   const cleanTitleText = String(titleText || '').replace(/🤖\s*/g, '').trim() || 'إشعار جديد';
+                                   
+                                   // استخدام ScrollingText للعناوين الطويلة
+                                   return cleanTitleText.length > 18 ? (
+                                     <ScrollingText 
+                                       text={cleanTitleText} 
+                                       className={cn("font-semibold text-sm leading-tight", colors.text)}
+                                       maxWidth="160px"
+                                     />
+                                   ) : (
+                                     <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
+                                       {cleanTitleText}
+                                     </h3>
+                                   );
                                 })()}
                                 <div className="flex items-center gap-1">
                                   {!(notification.is_read || notification.read) && (

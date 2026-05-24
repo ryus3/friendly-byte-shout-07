@@ -1,89 +1,63 @@
+## الهدف
+1) إزالة إيموجي 🤖 البدائي من إشعارات الطلب الذكي ووضع أيقونة احترافية (AiOrderIcon) فقط.
+2) تأكيد أن الإشعارات من مصدر واحد (جدول `notifications`) ويتم تحديث نفس السجل دون تكرار.
+3) تأكيد أن كرت "طلبات الذكاء الاصطناعي" والرقم الخارجي يتحدثان لحظياً (Realtime) عند وصول طلب جديد، بدون تأخير، في `pos.ryusbrand.com`.
 
-# الخطة النهائية — نظام إشعارات عالمي موحّد
+---
 
-## التشخيص الفعلي (من فحص الكود والـ DB)
+## 1) إزالة 🤖 بشكل جذري (Frontend + Backend + Legacy data)
 
-1. **آخر إشعار `alwaseet_status_change` كان في 2026-05-23 15:00** — رغم أن المزامنة التلقائية ركضت بعدها (20:58) ومستخدمون ضغطوا "تحقق الآن" على طلبات وتحديثوا حالاتها فعلياً.
+**المشكلة:** الصورة المرفقة تُظهر `🤖` بجانب "(تليغرام)" لأن العنوان القديم محفوظ في DB يحتوي الإيموجي (تم إنشاؤه قبل الإصلاح السابق).
 
-2. **السبب الجذري:** في `src/contexts/AlWaseetContext.jsx` (سطر 1809) دالة `createOrderStatusNotification` **مُعطّلة بالكامل** (تعيد `return;` فوراً). أي:
-   - زر الهيدر الدوار → يحدّث الحالة في DB لكن **لا يُنشئ إشعاراً**.
-   - دخول صفحة الطلبات/متابعة الموظفين (`syncVisibleOrdersBatch`) → نفس الشيء.
-   - زر "تحقق الآن" داخل تفاصيل الطلب → نفس الشيء.
-   - فقط **cron الخلفي** عبر edge function `sync-order-updates` يُنشئ إشعارات — وهذا يعمل ضمن ساعات 08-20 بغداد فقط، ولفئة محدودة من الطلبات في كل دورة.
+**الحل:**
+- **Render-time stripping** في `NotificationsPanel.jsx` و `NotificationsPage.jsx`: عند عرض عنوان الإشعار من نوع `ai_order` / `new_ai_order`، نزيل الإيموجي 🤖 (وأي إيموجي روبوت بدائي) من النص قبل العرض. الأيقونة الاحترافية `AiOrderIcon` ستظهر يساراً وحدها.
+- **Edge function** `ai-order-notifications/index.ts`: مؤكد بالفعل لا يضع 🤖. لا تغيير.
+- **القوالب** `NotificationTemplates.jsx` و `PushNotificationControl.jsx`: استبدال `🤖` في القيم الافتراضية والـ placeholder بنص نظيف بدون إيموجي.
 
-   النتيجة: المستخدم يرى الحالة تتغير في الواجهة لكن **بدون أي إشعار**.
+النتيجة: لا يظهر 🤖 في أي إشعار جديد أو قديم، فقط أيقونة `AiOrderIcon` الاحترافية المتدرجة.
 
-3. **أيقونة "🤖" في عنوان الإشعار:** في `supabase/functions/ai-order-notifications/index.ts` السطر 81-83 يُكتب العنوان بـ `🤖 طلب ذكي جديد...` (emoji نصّي داخل العنوان). هذا هو ما يراه المستخدم في الـ screenshot — بجانب الأيقونة الاحترافية الجديدة (الدماغ المتدرّج) الموجودة بالفعل في `NotificationsPanel.jsx`. النتيجة: ازدواجية بصرية بدائية.
+---
 
-4. **`AiOrderCard.jsx`** (سطر 7، 74) لا يزال يستخدم `Bot` من lucide-react لمصدر `ai_assistant`/`ai_chat`، وليس الأيقونة الاحترافية.
+## 2) تأكيد "مصدر واحد + تحديث نفس الإشعار"
 
-## التغييرات المطلوبة
+**حالة النظام (تم في الجولة السابقة):**
+- جدول `notifications` هو المصدر الوحيد.
+- `sync-order-updates` edge function + `AlWaseetContext.createOrderStatusNotification` يستخدمان نفس منطق dedup: بحث خلال 7 أيام عن `alwaseet_status_change` بنفس `order_id`/`tracking_number` → إن وُجد بحالة مختلفة: UPDATE (يصبح `is_read=false`)، وإلا INSERT.
+- `NotificationsContext` يحسب `is_read` من `read_at < updated_at`.
+- Realtime يتعامل مع INSERT/UPDATE/DELETE محلياً بدون refetch.
 
-### 1) المصدر الموحّد لإشعارات تغيير الحالة (Source of Truth)
+**ما سنفعله للتأكيد:**
+- مراجعة سريعة للكود للتأكد من عدم وجود مسار ثانٍ ينشئ إشعار حالة (لا triggers من DB، لا hooks مكررة).
+- توثيق ذلك بتعليق واحد في رأس `createOrderStatusNotification` و `sync-order-updates` يوضح القاعدة (single source + same row update). لا تغيير سلوكي.
 
-نُنشئ دالة موحّدة `upsertAlwaseetStatusNotification({ orderId, userId, trackingNumber, oldState, newState, statusText, city, province, account, priority })` داخل `AlWaseetContext.jsx` تطبّق **نفس منطق dedup الموجود في edge function** بالضبط:
+---
 
-```text
-1. ابحث عن notification type='alwaseet_status_change' لنفس user_id خلال آخر 7 أيام
-2. fitler يدوي: data.order_id === orderId || data.tracking_number === trackingNumber
-3. إذا وُجد ونفس state_id → return (تخطي تام)
-4. إذا وُجد وحالة مختلفة → update (is_read=false, created_at=now, message/title/data جديدة)
-5. إذا لم يوجد → insert جديد
-```
+## 3) كرت "طلبات الذكاء الاصطناعي" — تحديث فوري
 
-العنوان والرسالة بنفس صيغة edge function: `"${city} - ${province} | ${statusText}"` و `"${statusText} ${tracking_number}"`.
+**الحالة الحالية:**
+- `SuperProvider` يشترك بقناة realtime على جدول `ai_orders` ويعالج INSERT/UPDATE/DELETE محلياً (`prev.aiOrders` mutation).
+- `stats.aiOrdersCount` مشتق من `aiOrders.length` → يتحدث تلقائياً.
+- `useInstantNotifications` يضمن وصول الإشعار في نفس اللحظة.
 
-### 2) تفعيل المصدر الموحّد في جميع نقاط مزامنة العميل
+**ما سنفعله:**
+- التأكد أن `ai_orders` مُضاف لـ `supabase_realtime` publication و `REPLICA IDENTITY FULL` (إن لم يكن).
+- إن لم يكن: migration بسيط لتفعيلهما → يضمن وصول INSERT لحظياً على `pos.ryusbrand.com` بدون انتظار polling.
+- لا تغيير في UI؛ الكرت + الرقم الخارجي يحدّثان نفسهما تلقائياً من حالة `aiOrders`.
 
-كل موضع داخل `AlWaseetContext.jsx` يكتشف فيه تغيّر `delivery_status` لطلب يجب أن يستدعي `upsertAlwaseetStatusNotification` بعد نجاح `UPDATE orders`:
-- داخل `syncVisibleOrdersBatch` (المزامنة عند فتح الصفحات + الزر الدوار).
-- داخل `forceSyncSingleOrder` (زر "تحقق الآن").
-- داخل أي حلقة `for localOrder of …` تكتشف `localOrder.status !== newStatus` (حول السطر 1180).
+---
 
-نحذف الـ `return;` المبكّر من `createOrderStatusNotification` ونجعلها alias رفيع للدالة الموحّدة.
+## الملفات المتأثرة
+- `src/components/NotificationsPanel.jsx` — تنظيف العنوان من 🤖 عند العرض
+- `src/pages/NotificationsPage.jsx` — نفس الشيء
+- `src/pages/NotificationTemplates.jsx` — إزالة 🤖 من القوالب الافتراضية
+- `src/pages/PushNotificationControl.jsx` — إزالة 🤖 من تسميات القنوات
+- `src/contexts/AlWaseetContext.jsx` — تعليق توثيقي (بدون تغيير سلوكي)
+- `supabase/functions/sync-order-updates/index.ts` — تعليق توثيقي
+- Migration (شرطي): تفعيل realtime لـ `ai_orders` إن لم يكن مفعّلاً
 
-### 3) منع التكرار مع edge function (cron)
+---
 
-ما دامت كل من العميل والـ edge function تستعمل **نفس** قاعدة dedup (search + same state → skip) على **نفس** الحقول (`type='alwaseet_status_change'`, `user_id`, `data.order_id`)، لن يحدث تكرار. أول من يصل يُنشئ، الباقي يُحدِّث أو يتخطّى.
-
-### 4) إزالة الـ 🤖 من العنوان النصّي
-
-في `supabase/functions/ai-order-notifications/index.ts`:
-- حذف `const sourceEmoji = '🤖';`
-- العنوان يصبح: `طلب ذكي جديد من ${creatorName} (${sourceLabel})` — بدون emoji.
-- الاعتماد على `AiOrderIcon` (الدماغ المتدرّج) الذي يعرضه `NotificationsPanel.jsx` تلقائياً عبر `iconMap[type='new_ai_order']`.
-
-### 5) استبدال أيقونة `Bot` في `AiOrderCard.jsx`
-
-- استيراد `AiOrderIcon` من `@/components/icons/AiOrderIcon`.
-- استبدال `icon: Bot` في `getSourceIcon` (سطر 74) لمصادر `ai_chat`/`ai_assistant` بـ `AiOrderIcon`.
-- إبقاء `Send` للتليغرام (مناسب) و `Smartphone` للويب.
-
-### 6) صفحة الإشعارات `NotificationsPage` و `NotificationsPanel`
-
-- لا تغيير منطقي: يستخدمان `iconMap` الموحّد الذي يربط `new_ai_order` و `ai_order` بـ `AiOrderIcon` (موجود بالفعل).
-- التأكد فقط أن `NotificationsHandler.jsx` يستخدم الأيقونة الجديدة عند عرض toast فوري للطلبات الذكية بدلاً من emoji.
-
-## الملفات التي ستُعدَّل (5 ملفات فقط)
-
-| الملف | التغيير |
-|------|---------|
-| `src/contexts/AlWaseetContext.jsx` | إضافة `upsertAlwaseetStatusNotification` موحّدة + استدعاؤها في كل مكان يتغيّر فيه `delivery_status` (3 مواضع داخل `syncVisibleOrdersBatch` و `forceSyncSingleOrder`). |
-| `supabase/functions/ai-order-notifications/index.ts` | حذف `sourceEmoji='🤖'` من العنوان. |
-| `src/components/dashboard/AiOrderCard.jsx` | استبدال `Bot` بـ `AiOrderIcon` لمصادر `ai_*`. |
-| `src/contexts/NotificationsHandler.jsx` | تأكيد استخدام أيقونة احترافية في toast (إن استعمل emoji). |
-| `src/utils/NotificationService.js` | إزالة أي 🤖 emoji من عناوين الإشعارات الموحدة (السطر 154 المنطقة). |
-
-## ضمانات النهائية ("عالمية كالمواقع الكبرى")
-
-- **مصدر واحد للحقيقة:** نفس دالة dedup منطقياً بين العميل وedge function → لا تكرار أبداً.
-- **التحديث في المكان:** الإشعار نفسه يُحدَّث ويصبح `is_read=false` عند تغيّر الحالة الفعلي — كما في Slack/Linear.
-- **بدون استدعاءات زائدة:** لا realtime parallel channels، لا dispatch زائدة — فقط استعلام-تحديث/إدراج واحد لكل تغيّر حالة فعلي.
-- **جاهز للتطبيق الحقيقي:** الإشعارات في DB → القناة الموجودة في `NotificationsContext` تلتقطها realtime → push notification (في التطبيق المستقبلي) يُغذّى من نفس السجل.
-
-## ما لن نلمسه
-
-- لا تغيير على قاعدة البيانات.
-- لا تغيير على منطق المزامنة نفسه ولا فلاتر الاستبعاد.
-- لا تغيير على `AiOrderIcon` (موجودة وممتازة).
-- لا triggers جديدة.
+## التحقق بعد التنفيذ
+1) فتح لوحة الإشعارات → التأكد أن إشعارات "طلب ذكي" تظهر بدون 🤖، فقط الأيقونة الاحترافية.
+2) إنشاء طلب ذكي عبر التليغرام → التأكد من ظهور الكرت + زيادة الرقم الخارجي خلال أقل من ثانية على `pos.ryusbrand.com`.
+3) تغيير حالة طلب الوسيط مرتين → التأكد أن نفس صف الإشعار يُحدَّث (لا تكرار)، ويصبح غير مقروء بعد كل تغيير.
