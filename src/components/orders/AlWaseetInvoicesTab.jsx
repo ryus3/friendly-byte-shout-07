@@ -129,15 +129,30 @@ const AlWaseetInvoicesTab = () => {
 
 
   const handleRefresh = async () => {
-    // ✅ تحديث موحد واحترافي: مزامنة واحدة فقط ثم إعادة قراءة من قاعدة البيانات.
-    // لا نستدعي عدة مسارات متداخلة (smart-sync + fetch + syncLastTwoInvoices) لأنها كانت
-    // تسبب ظهور الفواتير ثم اختفائها مع كل استدعاء فاشل.
+    // ✅ تحديث موحد واحترافي مع نتيجة واضحة للمستخدم
+    toast({ title: '🔄 جاري تحديث الفواتير...', description: 'يتم جلب الفواتير وطلباتها من شركة التوصيل', duration: 2500 });
+    let synced = 0, ordersUp = 0, linked = 0, errMsg = null;
     try {
-      await supabase.functions.invoke('smart-invoice-sync', {
-        body: { mode: 'smart', sync_invoices: true, sync_orders: true, force_refresh: true }
+      const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
+        body: { mode: 'comprehensive', sync_invoices: true, sync_orders: true, force_refresh: true, employee_id: user?.id }
       });
-    } catch { /* لا نمنع التحديث بسبب خطأ شبكة */ }
+      if (error) errMsg = error.message;
+      synced = data?.invoices_synced || 0;
+      ordersUp = data?.orders_updated || 0;
+      linked = data?.linked_count || 0;
+    } catch (e) {
+      errMsg = e?.message || 'فشل الاتصال بخدمة المزامنة';
+    }
     await fetchInvoices(timeFilter, true);
+    if (errMsg) {
+      toast({ title: '⚠️ تعذّر التحديث', description: errMsg, variant: 'destructive' });
+    } else {
+      toast({
+        title: '✅ تم التحديث',
+        description: `الفواتير: ${synced} | طلبات محفوظة: ${ordersUp} | روابط محلية: ${linked}`,
+        variant: 'success'
+      });
+    }
   };
   
   const handleTimeFilterChange = async (newFilter) => {
