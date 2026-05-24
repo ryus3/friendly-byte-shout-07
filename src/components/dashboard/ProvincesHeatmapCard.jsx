@@ -118,12 +118,29 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
           <svg viewBox="0 0 100 100" className="w-full h-full">
             {/* Faint outline frame */}
             <defs>
-              <radialGradient id="iraq-glow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.08" />
+              <radialGradient id="iraq-glow" cx="50%" cy="50%" r="55%">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.14" />
                 <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
               </radialGradient>
+              <linearGradient id="iraq-fill" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.14" />
+                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.04" />
+              </linearGradient>
             </defs>
             <rect x="0" y="0" width="100" height="100" fill="url(#iraq-glow)" />
+
+            {/* Iraq stylized country silhouette */}
+            <motion.path
+              initial={{ pathLength: 0, opacity: 0 }}
+              animate={{ pathLength: 1, opacity: 1 }}
+              transition={{ duration: 1.6, ease: 'easeInOut' }}
+              d="M34,4 L46,5 L56,8 L66,14 L70,20 L66,26 L70,32 L73,42 L75,52 L77,62 L79,74 L82,86 L74,93 L62,96 L50,96 L38,93 L28,86 L20,74 L14,62 L9,50 L11,38 L15,28 L21,20 L28,12 Z"
+              fill="url(#iraq-fill)"
+              stroke="hsl(var(--primary))"
+              strokeOpacity="0.55"
+              strokeWidth="0.5"
+              strokeLinejoin="round"
+            />
 
             {/* Connection lines from baghdad */}
             {IRAQ_PROVINCES.filter(p => p.key !== 'baghdad').map(p => {
