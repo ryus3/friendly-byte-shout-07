@@ -410,14 +410,20 @@ export const useAlWaseetInvoices = () => {
       const cacheOnly = preferCache || (isReceivedInvoice && cacheLooksComplete);
 
       if (invoiceRecord?.owner_user_id && invoiceRecord?.partner && !cacheOnly) {
-        // جلب التوكن الصحيح لصاحب الفاتورة (المدير أو الموظف)
-        const { data: tokenData } = await supabase
+        // جلب التوكن الصحيح لصاحب الفاتورة + نفس account_username (لا نخلط الحسابات)
+        let tokenQuery = supabase
           .from('delivery_partner_tokens')
-          .select('token, partner_name')
+          .select('token, partner_name, account_username')
           .eq('user_id', invoiceRecord.owner_user_id)
           .eq('partner_name', invoiceRecord.partner)
           .eq('is_active', true)
-          .gt('expires_at', new Date().toISOString())
+          .gt('expires_at', new Date().toISOString());
+
+        if (invoiceRecord.account_username) {
+          tokenQuery = tokenQuery.ilike('account_username', invoiceRecord.account_username);
+        }
+
+        const { data: tokenData } = await tokenQuery
           .order('last_used_at', { ascending: false })
           .limit(1)
           .maybeSingle();
