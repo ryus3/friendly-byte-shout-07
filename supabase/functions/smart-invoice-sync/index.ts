@@ -19,9 +19,10 @@ const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
 // نُبقي فجوة آمنة بين الطلبات لتجنّب rate limit/Cloudflare، لكن بدون حد علوي صناعي
 // يترك فواتير كبيرة مثل 3343958 ناقصة عند 12/43.
 const MAX_INVOICES_PER_TOKEN = 200;
-// 🛡️ لا حد علوي صناعي لتفاصيل الطلبات داخل الدورة: كل فاتورة ناقصة تُجلب كاملة.
-const MAX_ORDER_DETAILS_PER_TOKEN = 100000;
-const ORDER_DETAILS_GAP_MS = 500;
+// 🛡️ حد آمن لمعالجة تفاصيل الفواتير في كل دورة، لمنع موجة جلب ضخمة عند وجود
+// مئات الفواتير الناقصة. الفواتير المتبقية تُعالج في الدورات التالية تلقائياً.
+const MAX_ORDER_DETAILS_PER_TOKEN = 25;
+const ORDER_DETAILS_GAP_MS = 600;
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
@@ -164,34 +165,60 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partn
   }
 }
 
-// ✅ NEW: جلب merchant-orders كاملة لبناء خريطة من id الداخلي إلى tracking_number/qr_id الحقيقي
-// شركة التوصيل ترسل في الفاتورة id=140xxxxxx، بينما الطلب المحلي يستخدم tracking=143xxxxxx.
-// بدون هذه الخريطة لا يمكن الربط بدقة 100%.
-async function fetchMerchantOrdersIndex(token: string, partner: string): Promise<Map<string, { tracking?: string; qr?: string }>> {
-  const map = new Map<string, { tracking?: string; qr?: string }>();
+// ✅ جلب merchant-orders كاملة كقائمة خام (نُستخدم منها كل من index + fallback).
+async function fetchMerchantOrdersList(token: string, partner: string): Promise<any[]> {
   try {
     const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
     const { response, data } = await fetchDeliveryJson(`${baseUrl}/merchant-orders?token=${encodeURIComponent(token)}`, token);
-    if (!response.ok) return map;
+    if (!response.ok) return [];
     const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
-    for (const o of list) {
-      const id = o?.id != null ? String(o.id) : null;
-      const tracking = o?.tracking_number != null ? String(o.tracking_number) : undefined;
-      const qr = o?.qr_id != null ? String(o.qr_id) : undefined;
-      if (id) map.set(id, { tracking, qr });
-    }
-    console.log(`📚 merchant-orders index built for ${partner}: ${map.size} entries`);
+    return list;
   } catch (e) {
-    console.warn(`⚠️ fetchMerchantOrdersIndex(${partner}) failed:`, (e as any)?.message);
+    console.warn(`⚠️ fetchMerchantOrdersList(${partner}) failed:`, (e as any)?.message);
+    return [];
   }
+}
+
+async function fetchMerchantOrdersIndex(token: string, partner: string): Promise<Map<string, { tracking?: string; qr?: string }>> {
+  const map = new Map<string, { tracking?: string; qr?: string }>();
+  const list = await fetchMerchantOrdersList(token, partner);
+  for (const o of list) {
+    const id = o?.id != null ? String(o.id) : null;
+    const tracking = o?.tracking_number != null ? String(o.tracking_number) : undefined;
+    const qr = o?.qr_id != null ? String(o.qr_id) : undefined;
+    if (id) map.set(id, { tracking, qr });
+  }
+  if (list.length) console.log(`📚 merchant-orders index for ${partner}: ${map.size} entries`);
   return map;
+}
+
+// ✅ فلترة طلبات التاجر بحسب رقم الفاتورة (Fallback عند رفض/نقص endpoint التفاصيل)
+function filterOrdersByInvoice(list: any[], invoiceExternalId: string): InvoiceOrder[] {
+  const target = String(invoiceExternalId);
+  return list
+    .filter((o) => {
+      const mid = o?.merchant_invoice_id ?? o?.invoice_id ?? o?.merchantInvoiceId;
+      return mid != null && String(mid) === target;
+    })
+    .map((o) => ({ ...o })) as InvoiceOrder[];
+}
+
+function mergeOrdersById(a: InvoiceOrder[], b: InvoiceOrder[]): InvoiceOrder[] {
+  const map = new Map<string, InvoiceOrder>();
+  for (const o of [...a, ...b]) {
+    const id = (o as any)?.id != null ? String((o as any).id) : null;
+    if (!id) continue;
+    if (!map.has(id)) map.set(id, o);
+    else map.set(id, { ...map.get(id)!, ...o });
+  }
+  return Array.from(map.values());
 }
 
 // إثراء طلبات الفاتورة بمعرفات tracking/qr من merchant-orders index
 function enrichInvoiceOrders(invoiceOrders: InvoiceOrder[], idx: Map<string, { tracking?: string; qr?: string }>): InvoiceOrder[] {
   if (!idx || idx.size === 0) return invoiceOrders;
   return invoiceOrders.map(o => {
-    const idStr = o?.id != null ? String(o.id) : null;
+    const idStr = (o as any)?.id != null ? String((o as any).id) : null;
     const found = idStr ? idx.get(idStr) : null;
     if (!found) return o;
     return { ...o, tracking_number: (o as any).tracking_number || found.tracking, qr_id: (o as any).qr_id || found.qr };
@@ -329,12 +356,12 @@ serve(async (req) => {
         .eq('invoice_id', invRow.id);
 
       const expected = Number(invRow.orders_count || 0);
-      const haveNow = cachedCount ?? 0;
+      const initialCached = cachedCount ?? 0;
 
       // إن كانت كاملة، لا حاجة للمزامنة الموجهة
-      if (expected > 0 && haveNow >= expected) {
+      if (expected > 0 && initialCached >= expected) {
         return new Response(
-          JSON.stringify({ success: true, mode: 'targeted', invoices_synced: 0, orders_updated: 0, already_complete: true }),
+          JSON.stringify({ success: true, mode: 'targeted', invoices_synced: 0, orders_updated: 0, already_complete: true, cached_orders: initialCached, expected_orders: expected }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -359,71 +386,102 @@ serve(async (req) => {
         );
       }
 
-      const ordersIndexTargeted = await fetchMerchantOrdersIndex(tokenRow.token, partnerName);
-      let ordersFromApi = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenRow.token, String(invRow.external_id), partnerName), ordersIndexTargeted);
+      // 1) جلب قائمة merchant-orders مرة واحدة (تُستخدم للإثراء + كـ Fallback)
+      let merchantOrdersList = await fetchMerchantOrdersList(tokenRow.token, partnerName);
+      let activeToken = tokenRow.token;
 
-      // محاولة تجديد توكن الوسيط لمرة واحدة عند فشل الجلب وإعادة المحاولة
-      if (ordersFromApi.length === 0 && partnerName === 'alwaseet') {
+      // إذا كانت القائمة فارغة وقد يكون التوكن منتهي، جدّد مرة واحدة
+      if (merchantOrdersList.length === 0 && partnerName === 'alwaseet') {
         const renewed = await renewAlWaseetTokenIfNeeded(supabase, tokenRow);
         if (renewed) {
-          const renewedIndex = await fetchMerchantOrdersIndex(renewed, partnerName);
-          ordersFromApi = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(renewed, String(invRow.external_id), partnerName), renewedIndex);
+          activeToken = renewed;
+          merchantOrdersList = await fetchMerchantOrdersList(renewed, partnerName);
         }
       }
 
+      const ordersIndexTargeted = new Map<string, { tracking?: string; qr?: string }>();
+      for (const o of merchantOrdersList) {
+        const id = o?.id != null ? String(o.id) : null;
+        if (id) ordersIndexTargeted.set(id, {
+          tracking: o?.tracking_number != null ? String(o.tracking_number) : undefined,
+          qr: o?.qr_id != null ? String(o.qr_id) : undefined,
+        });
+      }
+
+      // 2) جلب طلبات الفاتورة من endpoint التفاصيل
+      let ordersFromInvoiceEndpoint = enrichInvoiceOrders(
+        await fetchInvoiceOrdersFromAPI(activeToken, String(invRow.external_id), partnerName),
+        ordersIndexTargeted
+      );
+
+      // 3) Fallback: فلترة من merchant-orders بحسب merchant_invoice_id
+      const ordersFromMerchantList = filterOrdersByInvoice(merchantOrdersList, String(invRow.external_id));
+
+      // 4) دمج المصدرين بدون تكرار
+      let ordersFromApi = mergeOrdersById(ordersFromInvoiceEndpoint, ordersFromMerchantList);
+
       let writtenOrders = 0;
+      let writeFailures = 0;
+      let lastWriteError: string | null = null;
       const writeBatch = async (list: InvoiceOrder[]) => {
         for (const order of list) {
           const { error: orderError } = await supabase
             .from('delivery_invoice_orders')
             .upsert({
               invoice_id: invRow.id,
-              external_order_id: String(order.id),
+              external_order_id: String((order as any).id),
               raw: order,
-              status: order.status,
-              amount: order.price || order.amount || 0,
+              status: (order as any).status,
+              amount: (order as any).price || (order as any).amount || 0,
               owner_user_id: invRow.owner_user_id,
             }, { onConflict: 'invoice_id,external_order_id', ignoreDuplicates: false });
-          if (!orderError) writtenOrders++;
+          if (!orderError) {
+            writtenOrders++;
+          } else {
+            writeFailures++;
+            lastWriteError = orderError.message;
+            console.warn(`  ❌ upsert dio failed for order ${(order as any).id}: ${orderError.message}`);
+          }
         }
       };
 
-      if (ordersFromApi.length > 0) {
-        await writeBatch(ordersFromApi);
+      if (ordersFromApi.length > 0) await writeBatch(ordersFromApi);
 
-        // 🔁 Retry loop until cache reaches expected count (snapshot may be partial)
-        const delays = [2500, 6000, 12000];
-        let { count: dioAfter } = await supabase
+      // 5) إعادة محاولة endpoint التفاصيل إذا بقيت ناقصة (snapshot قد يكون جزئياً)
+      const delays = [2500, 6000];
+      let { count: dioAfter } = await supabase
+        .from('delivery_invoice_orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('invoice_id', invRow.id);
+      let haveNow = dioAfter ?? 0;
+      for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
+        console.log(`  🔁 targeted retry ${attempt + 1}/${delays.length}: have=${haveNow}, expected=${expected}`);
+        await new Promise(r => setTimeout(r, delays[attempt]));
+        const retry = enrichInvoiceOrders(
+          await fetchInvoiceOrdersFromAPI(activeToken, String(invRow.external_id), partnerName),
+          ordersIndexTargeted
+        );
+        if (retry.length > 0) await writeBatch(retry);
+        const { count: c } = await supabase
           .from('delivery_invoice_orders')
           .select('id', { count: 'exact', head: true })
           .eq('invoice_id', invRow.id);
-        let haveNow = dioAfter ?? 0;
-        for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
-          console.log(`  🔁 targeted retry ${attempt + 1}/${delays.length}: have=${haveNow}, expected=${expected}`);
-          await new Promise(r => setTimeout(r, delays[attempt]));
-          const retry = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenRow.token, String(invRow.external_id), partnerName), ordersIndexTargeted);
-          if (retry.length > 0) await writeBatch(retry);
-          const { count: c } = await supabase
-            .from('delivery_invoice_orders')
-            .select('id', { count: 'exact', head: true })
-            .eq('invoice_id', invRow.id);
-          haveNow = c ?? 0;
-        }
-
-        // ✅ Only bump orders_last_synced_at when cache is actually complete
-        if (expected === 0 || haveNow >= expected) {
-          await supabase
-            .from('delivery_invoices')
-            .update({ orders_last_synced_at: new Date().toISOString() })
-            .eq('id', invRow.id);
-        } else {
-          console.log(`  ⏳ targeted invoice ${invRow.external_id} still incomplete: ${haveNow}/${expected} — orders_last_synced_at NOT bumped`);
-        }
-
-        try {
-          await supabase.rpc('link_invoice_orders_to_orders');
-        } catch { /* silent */ }
+        haveNow = c ?? 0;
       }
+
+      const isComplete = expected === 0 || haveNow >= expected;
+      if (isComplete) {
+        await supabase
+          .from('delivery_invoices')
+          .update({ orders_last_synced_at: new Date().toISOString() })
+          .eq('id', invRow.id);
+      } else {
+        console.log(`  ⏳ targeted invoice ${invRow.external_id} still incomplete: ${haveNow}/${expected}`);
+      }
+
+      try {
+        await supabase.rpc('link_invoice_orders_to_orders');
+      } catch { /* silent */ }
 
       return new Response(
         JSON.stringify({
@@ -431,9 +489,14 @@ serve(async (req) => {
           mode: 'targeted',
           target_invoice: invRow.external_id,
           expected_orders: expected,
-          cached_before: haveNow,
+          cached_orders: haveNow,
           orders_updated: writtenOrders,
-          orders_returned_from_api: ordersFromApi.length,
+          orders_from_invoice_endpoint: ordersFromInvoiceEndpoint.length,
+          orders_from_merchant_list: ordersFromMerchantList.length,
+          merchant_orders_list_size: merchantOrdersList.length,
+          is_complete: isComplete,
+          write_failures: writeFailures,
+          last_write_error: lastWriteError,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
