@@ -471,24 +471,11 @@ serve(async (req) => {
       let writeFailures = 0;
       let lastWriteError: string | null = null;
       const writeBatch = async (list: InvoiceOrder[]) => {
-        for (const order of list) {
-          const { error: orderError } = await supabase
-            .from('delivery_invoice_orders')
-            .upsert({
-              invoice_id: invRow.id,
-              external_order_id: String((order as any).id),
-              raw: order,
-              status: (order as any).status,
-              amount: (order as any).price || (order as any).amount || 0,
-              owner_user_id: invRow.owner_user_id,
-            }, { onConflict: 'invoice_id,external_order_id', ignoreDuplicates: false });
-          if (!orderError) {
-            writtenOrders++;
-          } else {
-            writeFailures++;
-            lastWriteError = orderError.message;
-            console.warn(`  ❌ upsert dio failed for order ${(order as any).id}: ${orderError.message}`);
-          }
+        const { written, error } = await batchUpsertInvoiceOrders(supabase, invRow.id, list, invRow.owner_user_id);
+        writtenOrders += written;
+        if (error) {
+          writeFailures += Math.max(0, (list?.length || 0) - written);
+          lastWriteError = error;
         }
       };
 
