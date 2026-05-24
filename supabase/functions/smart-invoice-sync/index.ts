@@ -1189,7 +1189,13 @@ serve(async (req) => {
       console.log(`✅ Smart sync complete for employee ${targetEmployeeId}: ${totalInvoicesSynced} invoices (${newInvoicesCount} new)`);
     }
 
+    await reportProgress(supabase, run_id, 'orders', `تم جلب ${totalInvoicesSynced} فاتورة و ${totalOrdersUpdated} طلب`, {
+      invoices_synced: totalInvoicesSynced,
+      orders_updated: totalOrdersUpdated,
+    });
+
     // ✅ Link invoice orders to local orders
+    await reportProgress(supabase, run_id, 'linking', 'ربط الفواتير بالطلبات المحلية...');
     let linkedCount = 0;
     let updatedOrdersCount = 0;
     try {
