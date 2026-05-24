@@ -231,7 +231,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
           </TabsContent>
 
           <TabsContent value="profits" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 mt-0 max-w-full">
-            <InvoiceProfitsTab invoice={invoice} linkedOrders={linkedOrders} />
+            <InvoiceProfitsTab invoice={invoice} linkedOrders={linkedOrders} viewerUserId={viewerUserId} />
           </TabsContent>
         </Tabs>
       </DialogContent>
