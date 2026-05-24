@@ -225,6 +225,53 @@ function enrichInvoiceOrders(invoiceOrders: InvoiceOrder[], idx: Map<string, { t
   });
 }
 
+/**
+ * ✅ Batch + dedup upsert into delivery_invoice_orders.
+ * - Deduplicates by external_order_id (the partial unique key with invoice_id).
+ * - One single .upsert() call per invoice → eliminates the
+ *   "ON CONFLICT DO UPDATE command cannot affect row a second time" Postgres error
+ *   that occurs when the same conflict target row appears more than once in a payload
+ *   (which used to happen because we merged orders from multiple endpoints).
+ * Returns number of rows written (best-effort: API returns inserted/updated rows).
+ */
+async function batchUpsertInvoiceOrders(
+  supabase: any,
+  invoiceDbId: string,
+  invoiceOrders: InvoiceOrder[],
+  ownerUserId: string | null,
+): Promise<{ written: number; error: string | null }> {
+  if (!invoiceDbId || !invoiceOrders || invoiceOrders.length === 0) {
+    return { written: 0, error: null };
+  }
+  const dedup = new Map<string, any>();
+  for (const order of invoiceOrders) {
+    const extId = String((order as any)?.id ?? (order as any)?.tracking_number ?? '').trim();
+    if (!extId) continue;
+    // last write wins → keeps the most recent payload for the same external_order_id
+    dedup.set(extId, {
+      invoice_id: invoiceDbId,
+      external_order_id: extId,
+      raw: order,
+      status: (order as any).status ?? null,
+      amount: (order as any).price || (order as any).amount || 0,
+      owner_user_id: ownerUserId,
+    });
+  }
+  const rows = Array.from(dedup.values());
+  if (rows.length === 0) return { written: 0, error: null };
+
+  const { data, error } = await supabase
+    .from('delivery_invoice_orders')
+    .upsert(rows, { onConflict: 'invoice_id,external_order_id', ignoreDuplicates: false })
+    .select('id');
+
+  if (error) {
+    console.warn(`  ❌ batchUpsertInvoiceOrders failed (invoice=${invoiceDbId}, rows=${rows.length}): ${error.message}`);
+    return { written: 0, error: error.message };
+  }
+  return { written: (data?.length ?? rows.length), error: null };
+}
+
 async function renewAlWaseetTokenIfNeeded(supabase: any, tokenData: any): Promise<string | null> {
   if ((tokenData.partner_name || 'alwaseet') !== 'alwaseet') return null;
   const username = tokenData.account_username || tokenData.partner_data?.username;
