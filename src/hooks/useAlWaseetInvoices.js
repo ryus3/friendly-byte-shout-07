@@ -379,11 +379,20 @@ export const useAlWaseetInvoices = () => {
       let selectedToken = token;
 
       // ✅ جلب معلومات الفاتورة + حالة الاستلام + عدد روابط الطلبات الموجودة
-      const { data: invoiceRecord } = await supabase
+      let invoiceRecordQuery = supabase
         .from('delivery_invoices')
         .select('id, owner_user_id, partner, account_username, external_id, orders_count, orders_last_synced_at, received, received_flag, status, status_normalized')
-        .eq('external_id', invoiceId)
-        .maybeSingle();
+        .eq('external_id', String(invoiceId));
+
+      if (options?.partner) {
+        invoiceRecordQuery = invoiceRecordQuery.eq('partner', options.partner);
+      }
+
+      const { data: invoiceRecords } = await invoiceRecordQuery
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const invoiceRecord = invoiceRecords?.[0];
 
       // ✅ تحديد ما إذا كانت الفاتورة مستلمة
       const isReceivedInvoice = !!invoiceRecord && (
@@ -489,11 +498,20 @@ export const useAlWaseetInvoices = () => {
       if (!invoiceData?.orders) {
         try {
           // البحث عن الفاتورة بـ external_id
-          const { data: invoiceRecord2, error: invoiceError } = await supabase
+          let invoiceRecord2Query = supabase
             .from('delivery_invoices')
             .select('id, external_id, raw, orders_count, partner')
-            .eq('external_id', invoiceId)
-            .maybeSingle();
+            .eq('external_id', String(invoiceId));
+
+          if (options?.partner) {
+            invoiceRecord2Query = invoiceRecord2Query.eq('partner', options.partner);
+          }
+
+          const { data: invoiceRecord2Rows, error: invoiceError } = await invoiceRecord2Query
+            .order('created_at', { ascending: false })
+            .limit(1);
+
+          const invoiceRecord2 = invoiceRecord2Rows?.[0];
 
           if (invoiceError && invoiceError.code !== 'PGRST116') {
             throw invoiceError;
