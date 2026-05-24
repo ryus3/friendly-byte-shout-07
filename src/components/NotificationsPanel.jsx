@@ -584,7 +584,13 @@ const NotificationsPanel = () => {
     const m = msg.match(/\b(\d{6,})\b/);
     return m ? m[1] : null;
   };
-  const merged = notifications.filter(n => n.type !== 'welcome');
+  const isInvalidStatusNotification = (notification) => {
+    if (notification.type !== 'alwaseet_status_change') return false;
+    const statusCode = notification.data?.state_id || notification.data?.delivery_status || parseAlwaseetStateIdFromMessage(notification.message);
+    return !statusCode || ['undefined', 'null', ''].includes(String(statusCode));
+  };
+
+  const merged = notifications.filter(n => n.type !== 'welcome' && !isInvalidStatusNotification(n));
   
   const uniqueMap = new Map();
   for (const n of merged) {
