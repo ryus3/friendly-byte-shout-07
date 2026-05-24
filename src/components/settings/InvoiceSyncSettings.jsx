@@ -39,6 +39,8 @@ const InvoiceSyncSettings = () => {
   const [employees, setEmployees] = useState([]);
   const [discrepancies, setDiscrepancies] = useState([]);
   const [tokens, setTokens] = useState([]);
+  const [syncProgress, setSyncProgress] = useState(null);
+  const [currentRunId, setCurrentRunId] = useState(null);
 
   // الإعدادات الموحّدة (مرآة لـ auto_sync_schedule_settings)
   const [u, setU] = useState({
