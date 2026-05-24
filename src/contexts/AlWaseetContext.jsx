@@ -1860,15 +1860,13 @@ export const AlWaseetProvider = ({ children }) => {
       };
       const priority = (newSid === '4' || newSid === '17') ? 'high' : 'normal';
 
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data: existing } = await supabase
         .from('notifications')
         .select('id, data, is_read')
         .eq('user_id', orderRow.created_by)
         .eq('type', 'alwaseet_status_change')
-        .gte('created_at', sevenDaysAgo)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
 
       const sameOrder = (existing || []).find((n) =>
         n.data?.order_id === orderRow.id ||
