@@ -132,28 +132,43 @@ const AlWaseetInvoicesTab = () => {
   const handleRefresh = async () => {
     if (refreshing) return;
     setRefreshing(true);
-    // ✅ تحديث موحد واحترافي مع نتيجة واضحة للمستخدم
-    toast({ title: '🔄 جاري تحديث الفواتير...', description: 'يتم جلب الفواتير وطلباتها من شركة التوصيل', duration: 2500 });
-    let synced = 0, ordersUp = 0, linked = 0, errMsg = null;
+    toast({ title: '🔄 جاري تحديث الفواتير...', description: 'مزامنة الفواتير الجديدة والمعلقة والناقصة فقط', duration: 2500 });
+    let synced = 0, ordersUp = 0, errMsg = null;
     try {
+      // ✅ smart فقط بدون force_refresh: المستلمة الكاملة لا تُعاد مزامنتها.
+      // الكاش الناقص يُعالج تدريجياً ضمن MAX_ORDER_DETAILS_PER_TOKEN لكل دورة.
       const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { mode: 'comprehensive', sync_invoices: true, sync_orders: true, force_refresh: true, employee_id: user?.id }
+        body: { mode: 'smart', sync_invoices: true, sync_orders: true, force_refresh: false, employee_id: user?.id }
       });
       if (error) errMsg = error.message;
       synced = data?.invoices_synced || 0;
       ordersUp = data?.orders_updated || 0;
-      linked = data?.linked_count || 0;
     } catch (e) {
       errMsg = e?.message || 'فشل الاتصال بخدمة المزامنة';
     }
     try { await fetchInvoices(timeFilter, true); } catch {}
+
+    // عرض عدد الفواتير الناقصة المتبقية من القاعدة مباشرة
+    let remainingIncomplete = 0;
+    try {
+      const { data: incRows } = await supabase
+        .from('delivery_invoices')
+        .select('id, orders_count, delivery_invoice_orders(count)')
+        .eq('partner', 'alwaseet')
+        .gt('orders_count', 0);
+      remainingIncomplete = (incRows || []).filter((r) => {
+        const cached = r.delivery_invoice_orders?.[0]?.count ?? 0;
+        return cached < (r.orders_count || 0);
+      }).length;
+    } catch {}
+
     setRefreshing(false);
     if (errMsg) {
       toast({ title: '⚠️ تعذّر التحديث', description: errMsg, variant: 'destructive' });
     } else {
       toast({
-        title: '✅ تم التحديث',
-        description: `الفواتير: ${synced} | طلبات محفوظة: ${ordersUp} | روابط محلية: ${linked}`,
+        title: remainingIncomplete > 0 ? '✅ تم التحديث (بعضها لم يكتمل بعد)' : '✅ تم التحديث',
+        description: `فواتير معالجة: ${synced} | طلبات محفوظة: ${ordersUp}${remainingIncomplete > 0 ? ` | ناقصة بعد التحديث: ${remainingIncomplete} (تكتمل تدريجياً)` : ''}`,
         variant: 'success'
       });
     }
