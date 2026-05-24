@@ -19,8 +19,9 @@ const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
 // نُبقي فجوة آمنة بين الطلبات لتجنّب rate limit/Cloudflare، لكن بدون حد علوي صناعي
 // يترك فواتير كبيرة مثل 3343958 ناقصة عند 12/43.
 const MAX_INVOICES_PER_TOKEN = 200;
-const MAX_ORDER_DETAILS_PER_TOKEN = 200;
-const ORDER_DETAILS_GAP_MS = 700;
+// 🛡️ لا حد علوي صناعي لتفاصيل الطلبات داخل الدورة: كل فاتورة ناقصة تُجلب كاملة.
+const MAX_ORDER_DETAILS_PER_TOKEN = 100000;
+const ORDER_DETAILS_GAP_MS = 500;
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
@@ -304,14 +305,15 @@ serve(async (req) => {
         );
       }
 
-      // اختيار توكن مالك الفاتورة بنفس الشريك
+      // اختيار توكن مالك الفاتورة بنفس الشريك ونفس account_username
       const { data: tokenRow } = await supabase
         .from('delivery_partner_tokens')
-        .select('id, token, account_username, partner_data, partner_name, user_id')
+        .select('id, token, account_username, partner_data, partner_name, user_id, normalized_username')
         .eq('user_id', invRow.owner_user_id)
         .eq('partner_name', partnerName)
         .eq('is_active', true)
         .gt('expires_at', new Date().toISOString())
+        .ilike('account_username', invRow.account_username || '%')
         .order('last_used_at', { ascending: false })
         .limit(1)
         .maybeSingle();
