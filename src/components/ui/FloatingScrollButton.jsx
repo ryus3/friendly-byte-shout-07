@@ -1,23 +1,26 @@
 import { useState, useEffect } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
-// Floating scroll button component - cache bust
-import { Button } from '@/components/ui/button';
 
 const FloatingScrollButton = () => {
   const [visible, setVisible] = useState(true);
   const [atBottom, setAtBottom] = useState(false);
-  
+
   // Draggable state - يحفظ الموقع في localStorage
   const [position, setPosition] = useState(() => {
-    const saved = localStorage.getItem('floatingButtonPosition');
-    return saved ? JSON.parse(saved) : { x: window.innerWidth - 80, y: window.innerHeight - 200 };
+    try {
+      const saved = localStorage.getItem('floatingButtonPosition');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return { x: window.innerWidth - 72, y: window.innerHeight - 180 };
   });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [hasMoved, setHasMoved] = useState(false);
 
   // ✅ مراقبة scroll على main container أو window
   useEffect(() => {
-    const getContainer = () => document.querySelector('[data-scroll-container]') || document.querySelector('main');
+    const getContainer = () =>
+      document.querySelector('[data-scroll-container]') || document.querySelector('main');
     const handleScroll = () => {
       const container = getContainer();
       if (container && container.scrollHeight > container.clientHeight + 50) {
@@ -47,54 +50,44 @@ const FloatingScrollButton = () => {
     };
   }, []);
 
-  // Mouse dragging handlers
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;
     setIsDragging(true);
-    setDragOffset({
-      x: e.clientX - position.x,
-      y: e.clientY - position.y
-    });
+    setHasMoved(false);
+    setDragOffset({ x: e.clientX - position.x, y: e.clientY - position.y });
   };
 
-  // Touch dragging handlers
   const handleTouchStart = (e) => {
     setIsDragging(true);
+    setHasMoved(false);
     const touch = e.touches[0];
-    setDragOffset({
-      x: touch.clientX - position.x,
-      y: touch.clientY - position.y
-    });
+    setDragOffset({ x: touch.clientX - position.x, y: touch.clientY - position.y });
   };
 
-  // Track dragging movement
   useEffect(() => {
     const handleMove = (e) => {
       if (!isDragging) return;
-      
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      
-      const newX = Math.max(0, Math.min(clientX - dragOffset.x, window.innerWidth - 56));
-      const newY = Math.max(0, Math.min(clientY - dragOffset.y, window.innerHeight - 56));
-      
+      const newX = Math.max(8, Math.min(clientX - dragOffset.x, window.innerWidth - 56));
+      const newY = Math.max(8, Math.min(clientY - dragOffset.y, window.innerHeight - 56));
+      if (Math.abs(newX - position.x) > 3 || Math.abs(newY - position.y) > 3) setHasMoved(true);
       setPosition({ x: newX, y: newY });
     };
 
     const handleEnd = () => {
       if (isDragging) {
         setIsDragging(false);
-        localStorage.setItem('floatingButtonPosition', JSON.stringify(position));
+        try { localStorage.setItem('floatingButtonPosition', JSON.stringify(position)); } catch {}
       }
     };
 
     if (isDragging) {
       window.addEventListener('mousemove', handleMove);
       window.addEventListener('mouseup', handleEnd);
-      window.addEventListener('touchmove', handleMove);
+      window.addEventListener('touchmove', handleMove, { passive: false });
       window.addEventListener('touchend', handleEnd);
     }
-
     return () => {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleEnd);
@@ -103,22 +96,21 @@ const FloatingScrollButton = () => {
     };
   }, [isDragging, dragOffset, position]);
 
-  const handleClick = () => {
-    if (isDragging) return;
-    const container = document.querySelector('[data-scroll-container]') || document.querySelector('main');
+  const handleClick = (e) => {
+    if (hasMoved) { e.preventDefault(); return; }
+    const container =
+      document.querySelector('[data-scroll-container]') || document.querySelector('main');
     if (container && container.scrollHeight > container.clientHeight + 50) {
-      if (atBottom) {
-        container.scrollTo({ top: 0, behavior: 'smooth' });
-      } else {
-        container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
-      }
+      container.scrollTo({
+        top: atBottom ? 0 : container.scrollHeight,
+        behavior: 'smooth'
+      });
       return;
     }
-    if (atBottom) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      window.scrollTo({ top: document.documentElement.scrollHeight, behavior: 'smooth' });
-    }
+    window.scrollTo({
+      top: atBottom ? 0 : document.documentElement.scrollHeight,
+      behavior: 'smooth'
+    });
   };
 
   if (!visible) return null;
@@ -132,36 +124,64 @@ const FloatingScrollButton = () => {
         zIndex: 9999,
         cursor: isDragging ? 'grabbing' : 'grab',
         userSelect: 'none',
-        touchAction: 'none'
+        touchAction: 'none',
       }}
       onMouseDown={handleMouseDown}
       onTouchStart={handleTouchStart}
+      onClick={handleClick}
+      role="button"
+      aria-label={atBottom ? 'الصعود للأعلى' : 'النزول للأسفل'}
+      className="group"
     >
-      <Button
-        onClick={handleClick}
-        size="icon"
+      {/* Outer soft glow */}
+      <div
+        className={`absolute inset-0 rounded-full blur-xl opacity-60 transition-all duration-500 ${
+          atBottom
+            ? 'bg-[radial-gradient(circle,hsl(217_91%_60%/0.55),transparent_70%)]'
+            : 'bg-[radial-gradient(circle,hsl(270_91%_65%/0.55),transparent_70%)]'
+        } group-hover:opacity-90 group-hover:scale-125`}
+        style={{ width: 56, height: 56 }}
+      />
+
+      {/* Glass capsule */}
+      <div
         className={`
-          w-14 h-14 rounded-2xl
-          bg-white/10 dark:bg-black/10
-          backdrop-blur-md
-          border border-white/20 dark:border-white/10
-          shadow-2xl shadow-black/20 dark:shadow-white/10
-          transition-all duration-300
-          hover:scale-110 hover:bg-white/20 dark:hover:bg-black/20
-          active:scale-95
-          ${atBottom 
-            ? 'text-blue-500 dark:text-blue-400' 
-            : 'text-purple-500 dark:text-purple-400'
-          }
+          relative w-14 h-14 rounded-full
+          bg-white/15 dark:bg-white/[0.06]
+          backdrop-blur-2xl backdrop-saturate-150
+          border border-white/40 dark:border-white/15
+          shadow-[0_8px_32px_-4px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.45)]
+          dark:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.15)]
+          transition-all duration-300 ease-out
+          group-hover:scale-110 group-active:scale-95
+          overflow-hidden
+          flex items-center justify-center
         `}
-        aria-label={atBottom ? 'الصعود للأعلى' : 'النزول للأسفل'}
       >
-        {atBottom ? (
-          <ArrowUp className="w-6 h-6" />
-        ) : (
-          <ArrowDown className="w-6 h-6 animate-bounce" />
-        )}
-      </Button>
+        {/* Iridescent gradient sheen */}
+        <div
+          className={`absolute inset-0 rounded-full opacity-80 transition-all duration-500 ${
+            atBottom
+              ? 'bg-gradient-to-br from-sky-400/40 via-blue-500/20 to-indigo-600/30'
+              : 'bg-gradient-to-br from-fuchsia-400/40 via-violet-500/25 to-indigo-600/30'
+          }`}
+        />
+
+        {/* Top highlight (glass reflection) */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-3 rounded-b-full bg-gradient-to-b from-white/55 to-transparent blur-[1px]" />
+
+        {/* Conic shimmer ring on hover */}
+        <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.35),transparent_30%)] animate-[spin_3s_linear_infinite]" />
+
+        {/* Icon */}
+        <div className="relative z-10 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
+          {atBottom ? (
+            <ArrowUp className="w-6 h-6" strokeWidth={2.5} />
+          ) : (
+            <ArrowDown className="w-6 h-6 animate-bounce" strokeWidth={2.5} />
+          )}
+        </div>
+      </div>
     </div>
   );
 };
