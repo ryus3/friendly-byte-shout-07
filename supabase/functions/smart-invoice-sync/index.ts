@@ -595,8 +595,13 @@ serve(async (req) => {
       }
 
       console.log(`📋 Found ${tokens?.length || 0} active tokens to sync`);
+      const totalTokens = tokens?.length || 0;
+      await reportProgress(supabase, run_id, 'invoices', `جلب الفواتير من ${totalTokens} حساب توصيل...`);
 
+      let tokenIdx = 0;
       for (const tokenData of tokens || []) {
+        tokenIdx++;
+        await reportProgress(supabase, run_id, 'invoices', `معالجة الحساب ${tokenIdx} من ${totalTokens}...`);
         const employeeId = tokenData.user_id;
         const accountUsername = tokenData.account_username || 'unknown';
         const partnerName = tokenData.partner_name || 'alwaseet';  // ✅ تحديد الشركة
