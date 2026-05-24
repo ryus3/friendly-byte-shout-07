@@ -134,35 +134,41 @@ const SyncProgressStepper = ({ progress }) => {
           })}
         </div>
 
-        {/* رسالة الحالة */}
-        {progress.message && (
+        {/* رسالة الحالة + العنصر الحالي */}
+        {(progress.message || progress.current_item) && (
           <motion.div
-            key={progress.message}
+            key={`${progress.message}-${progress.current_item || ''}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-xs text-muted-foreground text-center pt-2 border-t border-border/50"
+            className="text-xs text-muted-foreground text-center pt-2 border-t border-border/50 space-y-1"
           >
-            {progress.message}
+            {progress.message && <div className="truncate">{progress.message}</div>}
+            {progress.current_item && (
+              <div className="font-mono text-[10px] text-primary/70 truncate">
+                ⟳ {progress.current_item}
+              </div>
+            )}
           </motion.div>
         )}
 
-        {/* عدّادات */}
-        {(progress.invoices_synced > 0 || progress.orders_updated > 0 || progress.linked_count > 0) && (
+        {/* عدّادات بأرقام متحرّكة */}
+        {(invCount > 0 || ordCount > 0 || linkCount > 0) && (
           <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/50">
             <div className="text-center">
-              <div className="text-lg font-bold text-blue-500">{progress.invoices_synced || 0}</div>
+              <div className="text-lg font-bold text-blue-500 tabular-nums">{invCount}</div>
               <div className="text-[10px] text-muted-foreground">فواتير</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-purple-500">{progress.orders_updated || 0}</div>
+              <div className="text-lg font-bold text-purple-500 tabular-nums">{ordCount}</div>
               <div className="text-[10px] text-muted-foreground">طلبات</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-emerald-500">{progress.linked_count || 0}</div>
+              <div className="text-lg font-bold text-emerald-500 tabular-nums">{linkCount}</div>
               <div className="text-[10px] text-muted-foreground">روابط</div>
             </div>
           </div>
         )}
+
       </motion.div>
     </AnimatePresence>
   );
