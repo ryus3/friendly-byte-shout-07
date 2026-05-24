@@ -1,59 +1,92 @@
-# خطة شاملة - التأكد والإصلاحات النهائية
 
-## 1) المزامنة التلقائية والكرون (تأكيد)
+## 1) إصلاح وتقوية المزامنة الشاملة (Zero-error + Progress حقيقي)
 
-الكرون يعمل فعلياً:
-- `smart-invoice-sync-morning` — 06:00 يومياً
-- `smart-invoice-sync-evening` — 20:45 يومياً
-- `sync-order-updates-scheduled` — كل دقيقة (ضمن 08:00–20:00 بغداد)
-- `cleanup-background-sync-logs` — يومياً 02:00
+**المشكلة الحالية:** زر "مزامنة شاملة الآن" في `InvoiceSyncSettings.jsx` يستدعي `smart-invoice-sync` بنداء واحد طويل، ويظهر فقط Spinner بدون نسبة تقدم. لا يوجد بث للمراحل.
 
-**سأضيف** فحص تحقق نهائي:
-- التأكد أن كرون `smart-invoice-sync` يستخدم `mode: 'smart'` بدون `force_refresh` (نفس منطق زر التحديث الجديد).
-- التأكد أن `link_invoice_orders_to_orders` تُستدعى بعد كل upsert (بالفعل موجودة في الإيدج فانكشن بعد batchUpsert).
-- التحقق من أن الكرون يعمل عند إغلاق الموقع (pg_cron مستقل عن الواجهة) — مؤكد.
+**الحل (5 مراحل مرئية مع %):**
 
-## 2) توجيه الإشعار لمالك المنتج (أحمد)
+- إضافة جدول حالة فوري (Realtime) `sync_progress_events` لبث المراحل:
+  ```text
+  (run_id, stage, current, total, message, status, updated_at)
+  ```
+  مع RLS للقراءة فقط للمصادَّق عليهم.
+- داخل `smart-invoice-sync` edge function: بعد كل مرحلة (فواتير → طلبات → ربط → تسوية → تنظيف) نُحدِّث الصف المقابل بنسبة التقدم الحقيقية.
+- في الواجهة، عند الضغط على "مزامنة شاملة":
+  1. إنشاء `run_id` (uuid) ثم استدعاء الـ function بـ `run_id`.
+  2. اشتراك Realtime على الصفوف التي تطابق `run_id`.
+  3. عرض **Stepper بـ 5 مراحل** + شريط تقدم كلي بنسبة % + Toast علوي عائم (`OrdersSyncProgress` المعاد استخدامه).
+  4. زر إلغاء (يضع `status='cancelled'`).
 
-**الفحص**: حالياً إشعار "وصول فاتورة/طلب مكتمل" قد يذهب لمنشئ الطلب أو المدير.
+**تحقق نهائي (لا أخطاء):**
+- إضافة فحص idempotency لمنع تشغيل مزامنتين متوازيتين (lock في `auto_sync_schedule_settings`).
+- في حال فشل أي مرحلة → تسجيل واضح + متابعة باقي المراحل (Soft-fail) + إظهار المرحلة الفاشلة بالأحمر.
+- معالجة timeout (إذا لم يصل تحديث خلال 90 ثانية → عرض "تأخر — تابع في الخلفية").
 
-**الإصلاح**: تعديل دالة الإشعارات في `smart-invoice-sync` و triggers قاعدة البيانات لتقرأ `owner_user_id` من `products` المرتبطة بالطلب، وتُرسل الإشعار لكل مالك منتج فعلي (أحمد لمنتجاته)، وليس للمدير العام. مع fallback للمدير فقط إذا لم يوجد owner.
+**الملفات المعدّلة:**
+- Migration جديدة: جدول `sync_progress_events` + RLS + publication realtime.
+- `supabase/functions/smart-invoice-sync/index.ts`: قبول `run_id` وبث 5 مراحل.
+- `src/components/settings/InvoiceSyncSettings.jsx`: استبدال زر runFullSync بمنطق Realtime + Stepper.
+- مكوّن جديد `src/components/settings/SyncProgressStepper.jsx`.
 
-## 3) الإيرادات حسب سعر شركة التوصيل (خصم/زيادة)
+---
 
-**نعم كلامك صحيح**. السعر الفعلي = `delivery_partner_invoice_amount` (أو `price` من API الفاتورة) وليس `final_amount` المحلي.
+## 2) ثورة تصميمية للوحة التحكم (Bento Grid عالمي)
 
-ملاحظة الحركة `+-5000`: الطلب 142143592 لديه `final_amount=0` و `total_amount=-5000` (سعر شركة التوصيل كان 0 لكن أجور التوصيل 5000 خُصمت). الحركة `in` بقيمة `-5000` تعني **خصم 5000 د.ع من الكاش بسبب الفرق السلبي** (الزبون استلم جزء فقط أو إرجاع وأجور توصيل أُخذت).
+**الإلهام:** Apple Health · Linear · Vercel Analytics · Arc Browser — توزيع Bento بأحجام مختلفة، حواف زجاجية ناعمة، تدرّجات Midnight Indigo + لمسات ذهبية، حركات micro-interactions أنيقة.
 
-**الإصلاح**:
-- توحيد منطق الإيراد ليأخذ السعر من فاتورة الوسيط دائماً (`delivery_partner_invoice_amount` أو `price` من `delivery_invoice_orders.raw`).
-- عرض الحركات السالبة بلون أحمر واضح (بدل +-) مع وصف: "تسوية فرق سعر التوصيل" بدل "إيراد".
-- منع ظهور `+-` بتنسيق الأرقام: عرض `-5,000 د.ع` للسالب و `+5,000 د.ع` للموجب.
+**الأقسام المعاد تصميمها (داخل `ManagerDashboardSection`):**
 
-## 4) نافذة الفاتورة - منع التمرير الأفقي
+```text
++--------------------------------------------------+
+|  Hero KPI (إيراد اليوم/الشهر، عداد متحرك)        |  ← خانة كبيرة 2x1
++----------------------+---------------------------+
+|  المخزون (Donut +    |  آخر الطلبات (Timeline    |
+|  تنبيهات حية)        |   أنيق + Avatars)        |
++----------------------+---------------------------+
+|  أكثر المنتجات طلباً | المحافظات (خريطة          |
+|  (Bar افقي + صور)   |  حرارية عراقية SVG)       |
++----------------------+---------------------------+
+|  أفضل الزبائن (قائمة فاخرة برتب ذهبية + شارات)   |
++--------------------------------------------------+
+```
 
-في `InvoiceDetailsDialog` (نافذة "عرض التفاصيل"): إضافة `overflow-x-hidden` على المحتوى، و `max-w-full` على البطاقات، وتقليل padding على الموبايل، ولفّ النصوص الطويلة (`break-words`, `truncate` للأرقام الطويلة مثل tracking_number).
+**اللغة البصرية الموحَّدة:**
+- خلفية: تدرّج Midnight Indigo (`#0a0a1a → #1e1e5a`) مع طبقات Glass (backdrop-blur + border بشفافية 10%).
+- بطاقات: `rounded-3xl`, ظل ناعم متعدد الطبقات, hover lift خفيف (`-translate-y-0.5`).
+- خط: Space Grotesk للعناوين، DM Sans للأرقام/النصوص (إضافة في `index.html` + `tailwind.config`).
+- لمسة Aurora: شعاع متدرّج أعلى Hero KPI بحركة `animate-pulse` بطيئة.
+- Micro-animations: عدّاد أرقام (CountUp), دوران بسيط للأيقونات عند hover, fade-in تدريجي للبطاقات.
+- جميع الألوان عبر tokens HSL في `index.css` (لا hex مباشر في المكونات).
 
-## 5) إعادة تصميم الزر العائم (زجاجي احترافي)
+**المكونات الجديدة/المعاد بناؤها:**
+- `src/components/dashboard/HeroRevenueCard.jsx` (Bento كبير + CountUp + Aurora).
+- `src/components/dashboard/InventoryDonutCard.jsx` (Donut SVG + تنبيهات).
+- `src/components/dashboard/RecentOrdersTimeline.jsx` (بديل أنيق لـ `RecentOrdersCard`).
+- `src/components/dashboard/TopProductsBarCard.jsx` (شريط أفقي + صور مصغّرة).
+- `src/components/dashboard/ProvincesHeatmapCard.jsx` (SVG العراق + تظليل حراري).
+- `src/components/dashboard/TopCustomersLuxuryList.jsx` (قائمة فاخرة برتب).
+- `src/components/dashboard/UnifiedDashboard.jsx` و `ManagerDashboardSection.jsx`: تجميعها داخل Bento responsive (grid-cols-1 md:2 lg:4).
 
-تصميم جديد لـ `FloatingScrollButton.jsx`:
-- **Glassmorphism حقيقي**: `backdrop-blur-2xl`, طبقة gradient شفافة (`from-primary/30 via-purple-500/20 to-blue-500/30`).
-- **حلقة متوهجة** خارجية (`ring-2 ring-white/40 ring-offset-2`) + glow ناعم (`shadow-[0_8px_32px_rgba(99,102,241,0.4)]`).
-- **أيقونة متحركة** داخل دائرة gradient، مع pulse خفيف وتدرّج لوني عند الـ hover.
-- **شكل**: دائري كامل `rounded-full` بحجم `w-12 h-12` (أصغر وأناقة)، مع طبقة highlight علوية لإيهام الزجاج.
-- يحتفظ بالـ drag والـ scroll up/down.
+**Tokens مضافة في `index.css`:**
+```css
+--gradient-midnight: linear-gradient(135deg, hsl(240 60% 6%), hsl(245 60% 24%));
+--gradient-aurora: linear-gradient(120deg, hsl(245 100% 70%/.4), hsl(280 100% 70%/.3), hsl(190 100% 70%/.3));
+--shadow-glass: 0 8px 32px hsl(240 60% 4% / .35), inset 0 1px 0 hsl(0 0% 100% / .06);
+--surface-glass: hsl(240 30% 12% / .55);
+```
 
-## التغييرات التقنية
+---
 
-| ملف | تغيير |
-|---|---|
-| `supabase/functions/smart-invoice-sync/index.ts` | توجيه الإشعار حسب `products.owner_user_id`؛ استخدام سعر فاتورة الوسيط |
-| migration جديد | تحديث trigger الإشعارات + دالة `notify_invoice_received` لاستخدام owner_user_id |
-| `src/components/orders/InvoiceDetailsDialog.jsx` (أو ما يعادله) | `overflow-x-hidden`, `break-words`, تنسيق أرقام |
-| `src/components/cash/CashMovementsList.jsx` | تنسيق `-5,000` بدل `+-5,000`، وصف أوضح للتسويات السالبة |
-| `src/components/ui/FloatingScrollButton.jsx` | تصميم زجاجي احترافي |
+## ملخّص الملفات
 
-## ما لن أغيّره
-- منطق الكرون الحالي (يعمل).
-- منطق `link_invoice_orders_to_orders` (مُصلح في الجولة السابقة).
-- منطق reserved stock / completion gate.
+| المجال | الملف | النوع |
+|---|---|---|
+| المزامنة | Migration: `sync_progress_events` | جديد |
+| المزامنة | `smart-invoice-sync/index.ts` | تعديل |
+| المزامنة | `InvoiceSyncSettings.jsx` | تعديل |
+| المزامنة | `SyncProgressStepper.jsx` | جديد |
+| التصميم | 6 بطاقات Dashboard | جديد |
+| التصميم | `UnifiedDashboard.jsx` + `ManagerDashboardSection.jsx` | تعديل |
+| التصميم | `index.css` + `tailwind.config.js` | tokens جديدة |
+
+بعد موافقتك أبدأ التنفيذ مباشرة بدون أسئلة إضافية.
