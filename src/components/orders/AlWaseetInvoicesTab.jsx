@@ -358,22 +358,7 @@ const AlWaseetInvoicesTab = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {/* Linked Accounts Info */}
-          {uniqueAccounts.length > 0 && (
-            <motion.div 
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-2 p-3 mb-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/20 dark:to-purple-950/20 rounded-lg border border-blue-200 dark:border-blue-800"
-            >
-              <Users className="h-5 w-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
-              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                {uniqueAccounts.length} حساب مربوط: 
-                <span className="font-mono font-bold mr-2 text-primary">
-                  {uniqueAccounts.join(' • ')}
-                </span>
-              </span>
-            </motion.div>
-          )}
+          {/* Linked Accounts Info — أُزيلت لعرض حسابات المستخدم فقط داخل فلتر الحسابات أدناه */}
 
           <div className="space-y-4 mb-6">
             {/* Time Filter, Status Filter, Partner Filter, and Account Filter */}
