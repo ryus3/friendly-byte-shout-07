@@ -164,6 +164,40 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partn
   }
 }
 
+// ✅ NEW: جلب merchant-orders كاملة لبناء خريطة من id الداخلي إلى tracking_number/qr_id الحقيقي
+// شركة التوصيل ترسل في الفاتورة id=140xxxxxx، بينما الطلب المحلي يستخدم tracking=143xxxxxx.
+// بدون هذه الخريطة لا يمكن الربط بدقة 100%.
+async function fetchMerchantOrdersIndex(token: string, partner: string): Promise<Map<string, { tracking?: string; qr?: string }>> {
+  const map = new Map<string, { tracking?: string; qr?: string }>();
+  try {
+    const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
+    const { response, data } = await fetchDeliveryJson(`${baseUrl}/merchant-orders?token=${encodeURIComponent(token)}`, token);
+    if (!response.ok) return map;
+    const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+    for (const o of list) {
+      const id = o?.id != null ? String(o.id) : null;
+      const tracking = o?.tracking_number != null ? String(o.tracking_number) : undefined;
+      const qr = o?.qr_id != null ? String(o.qr_id) : undefined;
+      if (id) map.set(id, { tracking, qr });
+    }
+    console.log(`📚 merchant-orders index built for ${partner}: ${map.size} entries`);
+  } catch (e) {
+    console.warn(`⚠️ fetchMerchantOrdersIndex(${partner}) failed:`, (e as any)?.message);
+  }
+  return map;
+}
+
+// إثراء طلبات الفاتورة بمعرفات tracking/qr من merchant-orders index
+function enrichInvoiceOrders(invoiceOrders: InvoiceOrder[], idx: Map<string, { tracking?: string; qr?: string }>): InvoiceOrder[] {
+  if (!idx || idx.size === 0) return invoiceOrders;
+  return invoiceOrders.map(o => {
+    const idStr = o?.id != null ? String(o.id) : null;
+    const found = idStr ? idx.get(idStr) : null;
+    if (!found) return o;
+    return { ...o, tracking_number: (o as any).tracking_number || found.tracking, qr_id: (o as any).qr_id || found.qr };
+  });
+}
+
 async function renewAlWaseetTokenIfNeeded(supabase: any, tokenData: any): Promise<string | null> {
   if ((tokenData.partner_name || 'alwaseet') !== 'alwaseet') return null;
   const username = tokenData.account_username || tokenData.partner_data?.username;
