@@ -108,6 +108,24 @@ const InvoiceSyncSettings = () => {
 
   useEffect(() => { fetchAllData(); }, [fetchAllData]);
 
+  // 🚀 اشتراك Realtime لتتبع تقدم المزامنة
+  useEffect(() => {
+    if (!currentRunId) return;
+    const channel = supabase
+      .channel(`sync-progress-${currentRunId}`)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'sync_progress_events',
+        filter: `run_id=eq.${currentRunId}`,
+      }, (payload) => {
+        const row = payload.new || payload.old;
+        if (row) setSyncProgress(row);
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [currentRunId]);
+
   // ============ Actions ============
 
   const saveInvoiceSchedule = async () => {
