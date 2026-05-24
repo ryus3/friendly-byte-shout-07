@@ -862,7 +862,7 @@ export const useAlWaseetInvoices = () => {
                   id, order_number, tracking_number, customer_name, customer_phone,
                   customer_address, customer_city, delivery_partner, delivery_partner_order_id,
                   delivery_partner_invoice_id, status, delivery_status, total_amount, discount,
-                  delivery_fee, sales_amount, final_amount, receipt_received, created_at, updated_at
+                  delivery_fee, sales_amount, final_amount, receipt_received, created_by, created_at, updated_at
                 )
               `)
               .eq('invoice_id', invoiceRecord.id);
