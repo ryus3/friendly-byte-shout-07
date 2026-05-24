@@ -1243,17 +1243,28 @@ export const SuperProvider = ({ children }) => {
         return { success: false, error: orderErr.message };
       }
 
-      // ✅ إدراج عناصر الطلب - تجاهل للإرجاع (سلة فارغة)
-      // نقل تعريف itemsRows خارج block الشرط لتجنب خطأ "Can't find variable"
-      const itemsRows = items.length > 0 ? items.map(it => ({
-        order_id: createdOrder.id,
-        product_id: it.product_id,
-        variant_id: it.variant_id || null,
-        quantity: it.quantity,
-        unit_price: it.unit_price,
-        total_price: it.total_price,
-        item_direction: it.item_direction || null // ✅ حفظ اتجاه العناصر (incoming للإرجاع)
-      })) : [];
+      // ✅ إدراج عناصر الطلب - دمج المكررات (نفس variant_id) لتفادي خرق unique_order_item_variant
+      const _itemsMap = new Map();
+      (items || []).forEach(it => {
+        const dir = it.item_direction || null;
+        const key = `${it.product_id || 'p'}::${it.variant_id || 'v'}::${dir || 'std'}`;
+        const prev = _itemsMap.get(key);
+        if (prev) {
+          prev.quantity += (it.quantity || 0);
+          prev.total_price = (prev.unit_price || 0) * prev.quantity;
+        } else {
+          _itemsMap.set(key, {
+            order_id: createdOrder.id,
+            product_id: it.product_id,
+            variant_id: it.variant_id || null,
+            quantity: it.quantity,
+            unit_price: it.unit_price,
+            total_price: it.total_price,
+            item_direction: dir,
+          });
+        }
+      });
+      const itemsRows = items.length > 0 ? Array.from(_itemsMap.values()) : [];
 
       if (items.length > 0) {
         const { error: itemsErr } = await supabase.from('order_items').insert(itemsRows);
