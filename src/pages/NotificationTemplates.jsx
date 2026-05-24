@@ -70,7 +70,7 @@ const NotificationTemplates = () => {
 
   const getTypeLabel = (type) => {
     const labels = {
-      ai_order: '🤖 طلب تليجرام جديد',
+      ai_order: 'طلب تليجرام جديد',
       delivery_update: '📦 تحديث حالة التوصيل',
       new_registration: '👥 موظف جديد',
       order_created: '📦 طلب جديد'
