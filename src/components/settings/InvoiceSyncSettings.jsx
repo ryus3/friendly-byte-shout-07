@@ -18,6 +18,7 @@ import {
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { toZonedTime, format as formatTz } from 'date-fns-tz';
+import SyncProgressStepper from './SyncProgressStepper';
 
 /**
  * 🚀 لوحة التحكم الموحّدة لكل المزامنات (المعيار العالمي)
