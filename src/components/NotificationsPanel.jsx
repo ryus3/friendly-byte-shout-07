@@ -584,37 +584,7 @@ const NotificationsPanel = () => {
     const m = msg.match(/\b(\d{6,})\b/);
     return m ? m[1] : null;
   };
-  const merged = [
-    ...notifications.filter(n => {
-      // فلترة الإشعارات القديمة وإزالة إشعارات الوسيط غير المهمة
-      if (n.type === 'welcome') return false;
-      
-      if (n.type === 'alwaseet_status_change') {
-        const importantCodes = ['3','4','14','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','44'];
-        const statusCode = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message);
-        
-        // السماح فقط بالحالات المهمة
-        if (!statusCode || !importantCodes.includes(String(statusCode))) {
-          return false;
-        }
-      }
-      
-      return true;
-    }),
-    ...systemNotifications.filter(n => {
-      // تطبيق نفس الفلترة لإشعارات النظام
-      if (n.type === 'alwaseet_status_change') {
-        const importantCodes = ['3','4','14','16','17','18','19','20','21','22','23','24','25','26','27','28','29','30','31','32','33','34','35','36','37','38','39','40','41','42','44'];
-        const statusCode = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message);
-        
-        if (!statusCode || !importantCodes.includes(String(statusCode))) {
-          return false;
-        }
-      }
-      
-      return true;
-    })
-  ];
+  const merged = notifications.filter(n => n.type !== 'welcome');
   
   const uniqueMap = new Map();
   for (const n of merged) {
@@ -626,11 +596,11 @@ const NotificationsPanel = () => {
       const orderId = n.data?.order_id;
       const sid = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message) || n.data?.status_id;
       
-      if (orderId && sid) {
-        // استخدام order_id + state_id للدمج الدقيق
-        uniqueKey = `status_change_${orderId}_${sid}`;
-      } else if (tracking && sid) {
-        uniqueKey = `status_change_${tracking}_${sid}`;
+      if (orderId) {
+        // إشعار واحد فقط لكل طلب؛ عند تغير الحالة يتم تحديث نفس الصف
+        uniqueKey = `status_change_${orderId}`;
+      } else if (tracking) {
+        uniqueKey = `status_change_${tracking}`;
       } else if (tracking) {
         uniqueKey = `status_change_${tracking}_${(n.message || '').slice(0, 32)}`;
       }
