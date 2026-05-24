@@ -73,7 +73,7 @@ const SyncProgressStepper = ({ progress }) => {
               {isFailed ? 'فشلت المزامنة' : isDone ? 'اكتملت المزامنة' : 'جاري المزامنة الشاملة...'}
             </span>
           </div>
-          <span className="text-sm font-mono font-bold text-primary">{pct}%</span>
+          <span className="text-sm font-mono font-bold text-primary tabular-nums">{animatedPct}%</span>
         </div>
 
         {/* شريط التقدم */}
