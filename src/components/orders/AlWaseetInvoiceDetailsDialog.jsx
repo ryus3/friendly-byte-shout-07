@@ -334,7 +334,7 @@ const WaseetOrderRow = ({ order, linked }) => {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-1 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className="font-mono text-[11px]">#{order.qr_id || order.id}</Badge>
+            <Badge variant="outline" className="font-mono text-[11px] max-w-full truncate">#{order.qr_id || order.id}</Badge>
             {linked ? (
               <Badge className="h-5 px-1.5 text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 <Link2 className="h-3 w-3 ml-1" />مرتبط
