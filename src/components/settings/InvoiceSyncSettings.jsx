@@ -181,16 +181,37 @@ const InvoiceSyncSettings = () => {
 
   const runFullSync = async () => {
     setSyncing(true);
+    const runId = (crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+    setCurrentRunId(runId);
+    setSyncProgress({
+      run_id: runId, stage: 'init', stage_index: 0, total_stages: 5,
+      percentage: 3, status: 'running', message: 'بدء المزامنة الشاملة...',
+      invoices_synced: 0, orders_updated: 0, linked_count: 0,
+    });
+
+    // إنشاء صف ابتدائي ليصل عبر Realtime فوراً
+    try {
+      await supabase.from('sync_progress_events').upsert({
+        run_id: runId, stage: 'init', stage_index: 0, total_stages: 5,
+        percentage: 3, status: 'running', message: 'بدء المزامنة الشاملة...',
+      }, { onConflict: 'run_id' });
+    } catch { /* تجاهل */ }
+
     try {
       const { data, error } = await supabase.functions.invoke('smart-invoice-sync', {
-        body: { mode: 'comprehensive', sync_invoices: true, sync_orders: true, force_refresh: false, run_reconciliation: true }
+        body: { mode: 'comprehensive', sync_invoices: true, sync_orders: true, force_refresh: false, run_reconciliation: true, run_id: runId }
       });
       if (error) throw error;
       toast({ title: '✅ اكتملت المزامنة', description: `فواتير: ${data?.invoices_synced || 0} | طلبات: ${data?.orders_updated || 0}` });
       fetchAllData();
     } catch (e) {
       toast({ title: '❌ خطأ في المزامنة', description: e.message, variant: 'destructive' });
-    } finally { setSyncing(false); }
+      setSyncProgress(prev => prev ? { ...prev, status: 'failed', message: e.message } : prev);
+    } finally {
+      setSyncing(false);
+      // إخفاء المؤشر بعد 6 ثواني من الانتهاء
+      setTimeout(() => { setSyncProgress(null); setCurrentRunId(null); }, 6000);
+    }
   };
 
   const runOrdersSync = async () => {
