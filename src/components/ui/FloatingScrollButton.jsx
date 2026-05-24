@@ -69,8 +69,8 @@ const FloatingScrollButton = () => {
       if (!isDragging) return;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const newX = Math.max(8, Math.min(clientX - dragOffset.x, window.innerWidth - 56));
-      const newY = Math.max(8, Math.min(clientY - dragOffset.y, window.innerHeight - 56));
+      const newX = Math.max(8, Math.min(clientX - dragOffset.x, window.innerWidth - 44));
+      const newY = Math.max(8, Math.min(clientY - dragOffset.y, window.innerHeight - 44));
       if (Math.abs(newX - position.x) > 3 || Math.abs(newY - position.y) > 3) setHasMoved(true);
       setPosition({ x: newX, y: newY });
     };
