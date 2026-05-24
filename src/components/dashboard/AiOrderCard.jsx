@@ -71,7 +71,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
       case 'ai_chat':
       case 'ai_assistant':
         return {
-          icon: Bot,
+          icon: AiOrderIcon,
           label: 'المساعد الذكي'
         };
       case 'web':
