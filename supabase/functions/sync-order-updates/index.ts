@@ -325,7 +325,12 @@ Deno.serve(async (req) => {
         }
 
         const currentStatus = String(localOrder.delivery_status || '').trim();
-        const newStatus = String(waseetOrder.status_id || waseetOrder.state_id || waseetOrder.status || '').trim();
+        const rawStatus = waseetOrder.status_id ?? waseetOrder.state_id ?? waseetOrder.status ?? '';
+        const newStatus = String(rawStatus).trim();
+        const hasValidRemoteStatus = newStatus !== '' && newStatus !== 'undefined' && newStatus !== 'null' && Boolean(ALWASEET_STATUS_DEFINITIONS[newStatus]);
+        if (newStatus && !hasValidRemoteStatus) {
+          console.warn(`⚠️ تجاهل حالة غير صالحة للطلب ${localOrder.tracking_number}: ${newStatus}`);
+        }
 
         const updates: any = {};
         const changesList: string[] = [];
@@ -335,7 +340,7 @@ Deno.serve(async (req) => {
         let addressChanged = false;
 
         // Compare status (مقارنة صارمة بعد التطبيع)
-        const statusChangedCheck = currentStatus !== '' && newStatus !== '' && currentStatus !== newStatus;
+        const statusChangedCheck = currentStatus !== '' && hasValidRemoteStatus && currentStatus !== newStatus;
 
         // 🔒 حماية partial_delivery من المزامنة التلقائية
         const isPartialDelivery = localOrder.order_type === 'partial_delivery';
@@ -486,7 +491,7 @@ Deno.serve(async (req) => {
           if (notificationsEnabled && statusChanged) {
             // بناء رسالة الإشعار: مدينة - منطقة | نص الحالة بالعربي رقم_التتبع
             const statusConfig = statusChanged ? getStatusConfig(newStatus) : null;
-            const statusText = statusConfig?.text || '';
+            const statusText = newStatus === '4' ? 'تم التسليم' : (statusConfig?.text || '');
             const tracking = localOrder.tracking_number || localOrder.order_number || '';
             const cityPart = localOrder.customer_province || localOrder.customer_city || '';
             const regionPart = localOrder.customer_city && localOrder.customer_province ? localOrder.customer_city : '';
@@ -589,22 +594,25 @@ Deno.serve(async (req) => {
         try {
           const orderId = (notif.data as any)?.order_id;
           const stateId = (notif.data as any)?.state_id ?? null;
+          const stateText = stateId === null ? '' : String(stateId);
+          if (!stateText || stateText === 'undefined' || stateText === 'null') {
+            console.warn('⚠️ تخطي إشعار بحالة غير صالحة:', notif.data);
+            skipped++;
+            continue;
+          }
           if (!orderId) {
             await supabase.from('notifications').insert(notif);
             inserted++;
             continue;
           }
 
-          // ابحث عن أحدث إشعار alwaseet_status_change لنفس الطلب (آخر 7 أيام)
-          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
           const { data: existing } = await supabase
             .from('notifications')
             .select('id, data, is_read')
             .eq('user_id', notif.user_id)
             .eq('type', 'alwaseet_status_change')
-            .gte('created_at', sevenDaysAgo)
             .order('created_at', { ascending: false })
-            .limit(20);
+            .limit(50);
 
           const sameOrder = (existing || []).find((n: any) => 
             (n.data?.order_id === orderId) || (n.data?.tracking_number && n.data?.tracking_number === (notif.data as any)?.tracking_number)

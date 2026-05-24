@@ -1828,8 +1828,14 @@ export const AlWaseetProvider = ({ children }) => {
         return;
       }
 
+      const newSid = String(stateId);
+      if (!newSid || newSid === 'undefined' || newSid === 'null') {
+        devLog.warn('🔇 status notif skipped: invalid stateId', { trackingNumber, stateId });
+        return;
+      }
+
       const statusConfig = getStatusConfig(Number(stateId));
-      const finalStatusText = statusConfig?.text || statusText || '';
+      const finalStatusText = newSid === '4' ? 'تم التسليم' : (statusConfig?.text || statusText || '');
       const tracking = orderRow.tracking_number || trackingNumber || '';
       const cityPart = orderRow.customer_province || orderRow.customer_city || '';
       const regionPart = orderRow.customer_city && orderRow.customer_province ? orderRow.customer_city : '';
@@ -1840,7 +1846,6 @@ export const AlWaseetProvider = ({ children }) => {
         : (finalStatusText || 'تحديث حالة الطلب');
       const notificationMessage = `${finalStatusText} ${tracking}`.trim();
 
-      const newSid = String(stateId);
       const notificationData = {
         order_id: orderRow.id,
         order_number: orderRow.tracking_number,
@@ -1855,15 +1860,13 @@ export const AlWaseetProvider = ({ children }) => {
       };
       const priority = (newSid === '4' || newSid === '17') ? 'high' : 'normal';
 
-      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data: existing } = await supabase
         .from('notifications')
         .select('id, data, is_read')
         .eq('user_id', orderRow.created_by)
         .eq('type', 'alwaseet_status_change')
-        .gte('created_at', sevenDaysAgo)
         .order('created_at', { ascending: false })
-        .limit(20);
+        .limit(50);
 
       const sameOrder = (existing || []).find((n) =>
         n.data?.order_id === orderRow.id ||

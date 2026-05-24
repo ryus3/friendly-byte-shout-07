@@ -21,6 +21,7 @@ import { NotificationSettings } from '@/components/notifications/NotificationSet
 import ScrollingText from '@/components/ui/scrolling-text';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
 import { getStatusForComponent } from '@/lib/order-status-translator';
+import AiOrderIcon from '@/components/icons/AiOrderIcon';
 
 // أيقونات نظيفة بدون رموز مزعجة
 const StockWarningIcon = () => (
@@ -64,6 +65,8 @@ const iconMap = {
   order_status_changed: <SystemIcon />,
   order_status_update: <SystemIcon />,
   alwaseet_status_change: <SystemIcon />,
+  ai_order: <AiOrderIcon className="w-4 h-4 md:w-5 md:h-5" />,
+  new_ai_order: <AiOrderIcon className="w-4 h-4 md:w-5 md:h-5" />,
   new_order: <OrderIcon />,
   new_registration: <UserRegistrationIcon />,
   system: <SystemIcon />,
@@ -71,7 +74,7 @@ const iconMap = {
   Package: <StockWarningIcon />,
   CheckCircle: <OrderSuccessIcon />,
   UserPlus: <UserRegistrationIcon />,
-  Bot: <SystemIcon />,
+  Bot: <AiOrderIcon className="w-4 h-4 md:w-5 md:h-5" />,
   Bell: <SystemIcon />,
 };
 
@@ -126,24 +129,27 @@ const NotificationsPage = () => {
     return m ? m[1] : null;
   };
 
+  const isInvalidStatusNotification = (notification) => {
+    if (notification.type !== 'alwaseet_status_change') return false;
+    const statusCode = notification.data?.state_id || notification.data?.delivery_status || parseAlwaseetStateIdFromMessage(notification.message);
+    return !statusCode || ['undefined', 'null', ''].includes(String(statusCode));
+  };
+
   // دمج الإشعارات ومنع التكرار (نفس منطق NotificationsPanel)
   const uniqueMap = new Map();
-  notifications.forEach(n => {
+  notifications.filter(n => n.type !== 'welcome' && !isInvalidStatusNotification(n)).forEach(n => {
     let uniqueKey = n.id;
     
     // إشعارات الوسيط - دمج محسن لمنع التكرار
     if (n.type === 'alwaseet_status_change' || n.type === 'order_status_update') {
       const tracking = n.data?.tracking_number || n.data?.order_number || parseTrackingFromMessage(n.message);
       const orderId = n.data?.order_id;
-      const sid = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message) || n.data?.status_id;
       
-      if (orderId && sid) {
-        // استخدام order_id + state_id للدمج الدقيق
-        uniqueKey = `status_change_${orderId}_${sid}`;
-      } else if (tracking && sid) {
-        uniqueKey = `status_change_${tracking}_${sid}`;
+      if (orderId) {
+        // إشعار واحد لكل طلب؛ يتحدث عند تغير الحالة
+        uniqueKey = `status_change_${orderId}`;
       } else if (tracking) {
-        uniqueKey = `status_change_${tracking}_${(n.message || '').slice(0, 32)}`;
+        uniqueKey = `status_change_${tracking}`;
       }
     }
     
@@ -177,7 +183,16 @@ const NotificationsPage = () => {
     }
   });
 
-  const uniqueNotifications = Array.from(uniqueMap.values());
+  const getNotificationDisplayTime = (notification) => {
+    const createdTime = new Date(notification.created_at);
+    const updatedTime = notification.updated_at ? new Date(notification.updated_at) : null;
+    return updatedTime && updatedTime > createdTime ? updatedTime : createdTime;
+  };
+
+  const uniqueNotifications = Array.from(uniqueMap.values()).sort((a, b) => {
+    if (a.is_read !== b.is_read) return a.is_read ? 1 : -1;
+    return getNotificationDisplayTime(b).getTime() - getNotificationDisplayTime(a).getTime();
+  });
 
   const filteredNotifications = uniqueNotifications.filter(notification => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
