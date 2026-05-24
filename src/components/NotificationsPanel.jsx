@@ -353,11 +353,11 @@ const typeColorMap = {
     dot: 'bg-yellow-500'
   },
   ai_order: { 
-    bg: 'bg-card ai-smart-border', 
-    border: '',
-    text: 'text-foreground', 
+    bg: 'bg-gradient-to-r from-violet-50 to-purple-100 dark:from-violet-950/30 dark:to-purple-900/30', 
+    border: 'border-r-4 border-violet-500 dark:border-violet-400',
+    text: 'text-violet-900 dark:text-violet-100', 
     icon: 'text-violet-600 dark:text-violet-400',
-    dot: 'bg-gradient-to-br from-violet-500 to-pink-500'
+    dot: 'bg-violet-500'
   },
   new_registration: { 
     bg: 'bg-purple-50/80 dark:bg-purple-900/10 backdrop-blur-sm', 
