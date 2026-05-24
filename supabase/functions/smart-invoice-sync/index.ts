@@ -404,14 +404,17 @@ serve(async (req) => {
       mode = 'smart', 
       employee_id, 
       sync_invoices = true, 
-      sync_orders = true,  // ✅ تفعيل افتراضي - مهم للربط التلقائي
+      sync_orders = true,
       force_refresh = false,
       run_reconciliation = true,
       target_invoice_external_id,
       target_invoice_partner,
+      run_id,
     } = body;
 
-    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, ForceRefresh: ${force_refresh}, Target: ${target_invoice_external_id || '-'}`);
+    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, ForceRefresh: ${force_refresh}, Target: ${target_invoice_external_id || '-'}, RunId: ${run_id || '-'}`);
+
+    await reportProgress(supabase, run_id, 'init', 'بدء المزامنة الشاملة...');
 
     // 🆕 وضع الجلب الموجه لفاتورة واحدة فقط (يُستدعى من واجهة فتح تفاصيل الفاتورة).
     // لا يلمس باقي الفواتير، ولا يعيد المزامنة العامة، ولا يُعدّ "موجة طلبات".
