@@ -273,46 +273,29 @@ export const useAlWaseetInvoices = () => {
           });
         }
 
-        // أ) فواتير يملكها المستخدم مباشرة
+        // أ) فواتير يملكها المستخدم مباشرة (مفلترة بحسابات المستخدم لاحقاً)
         const { data: ownedInvoices, error: invoicesError } = await supabase
           .from('delivery_invoices')
           .select('*')
           .in('partner', ['alwaseet', 'modon'])
           .eq('owner_user_id', user?.id)
           .order('issued_at', { ascending: false })
-          .limit(100);
+          .limit(200);
 
         if (invoicesError) throw invoicesError;
 
-        // ب) فواتير حساب مشترك: للمستخدم طلبات محلية مرتبطة بها
-        const { data: linkedOrderRows } = await supabase
-          .from('orders')
-          .select('delivery_partner_invoice_id')
-          .eq('created_by', user?.id)
-          .not('delivery_partner_invoice_id', 'is', null)
-          .order('created_at', { ascending: false })
-          .limit(500);
-        const sharedExternalIds = Array.from(new Set(
-          (linkedOrderRows || [])
-            .map(r => r.delivery_partner_invoice_id)
-            .filter(v => v && !v.startsWith('LOCAL-'))
-        ));
-        let sharedInvoices = [];
-        if (sharedExternalIds.length > 0) {
-          const { data: shared } = await supabase
-            .from('delivery_invoices')
-            .select('*')
-            .in('partner', ['alwaseet', 'modon'])
-            .in('external_id', sharedExternalIds)
-            .order('issued_at', { ascending: false })
-            .limit(100);
-          sharedInvoices = shared || [];
-        }
-        const mergedMap = new Map();
-        [...(ownedInvoices || []), ...sharedInvoices].forEach(inv => {
-          if (!mergedMap.has(inv.id)) mergedMap.set(inv.id, inv);
+        // مجموعة حسابات المستخدم النشطة (partner::username)
+        const accountKeys = new Set(
+          (allTokens || [])
+            .map(t => `${t.partner_name}::${(t.account_username || '').toLowerCase()}`)
+            .filter(k => k.split('::')[1])
+        );
+
+        const cachedInvoices = (ownedInvoices || []).filter(inv => {
+          if (!inv.account_username) return true;
+          const key = `${inv.partner}::${(inv.account_username || '').toLowerCase()}`;
+          return accountKeys.size === 0 ? true : accountKeys.has(key);
         });
-        const cachedInvoices = Array.from(mergedMap.values());
 
         loadedCachedCount = cachedInvoices?.length || 0;
         if (cachedInvoices?.length > 0) {
