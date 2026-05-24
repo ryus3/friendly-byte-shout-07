@@ -6789,6 +6789,7 @@ export type Database = {
       }
       sync_progress_events: {
         Row: {
+          current_item: string | null
           finished_at: string | null
           invoices_synced: number
           linked_count: number
@@ -6805,6 +6806,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          current_item?: string | null
           finished_at?: string | null
           invoices_synced?: number
           linked_count?: number
@@ -6821,6 +6823,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          current_item?: string | null
           finished_at?: string | null
           invoices_synced?: number
           linked_count?: number
