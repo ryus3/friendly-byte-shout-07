@@ -353,7 +353,14 @@ const typeColorMap = {
     dot: 'bg-yellow-500'
   },
   ai_order: { 
-    bg: 'bg-card ai-smart-border', 
+    bg: 'bg-gradient-to-r from-violet-50/80 to-fuchsia-50/80 dark:from-violet-950/20 dark:to-fuchsia-950/20 backdrop-blur-sm ai-smart-border', 
+    border: '',
+    text: 'text-foreground', 
+    icon: 'text-violet-600 dark:text-violet-400',
+    dot: 'bg-gradient-to-br from-violet-500 to-pink-500'
+  },
+  new_ai_order: { 
+    bg: 'bg-gradient-to-r from-violet-50/80 to-fuchsia-50/80 dark:from-violet-950/20 dark:to-fuchsia-950/20 backdrop-blur-sm ai-smart-border', 
     border: '',
     text: 'text-foreground', 
     icon: 'text-violet-600 dark:text-violet-400',
