@@ -1,93 +1,144 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 
+/**
+ * 🧭 زر سكرول عائم احترافي:
+ * - يكتشف الحاوية المتمرّرة فعلياً (window, document.scrollingElement, main, [data-scroll-container], أي عنصر بـoverflow auto/scroll له ارتفاع قابل للتمرير).
+ * - السحب لا يبتلع النقرة (عتبة 8px).
+ * - مخفي حتى يثبت وجود ارتفاع قابل للتمرير.
+ */
 const FloatingScrollButton = () => {
-  const [visible, setVisible] = useState(true);
+  const [visible, setVisible] = useState(false);
   const [atBottom, setAtBottom] = useState(false);
+  const scrollTargetRef = useRef(null); // العنصر/النافذة التي نتمرّر عليها
 
-  // Draggable state - يحفظ الموقع في localStorage
   const [position, setPosition] = useState(() => {
     try {
       const saved = localStorage.getItem('floatingButtonPosition');
       if (saved) return JSON.parse(saved);
     } catch {}
-    return { x: window.innerWidth - 72, y: window.innerHeight - 180 };
+    return { x: window.innerWidth - 60, y: window.innerHeight - 160 };
   });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-  const [hasMoved, setHasMoved] = useState(false);
+  const hasMovedRef = useRef(false);
 
-  // ✅ مراقبة scroll على main container أو window
-  useEffect(() => {
-    const getContainer = () =>
-      document.querySelector('[data-scroll-container]') || document.querySelector('main');
-    const handleScroll = () => {
-      const container = getContainer();
-      if (container && container.scrollHeight > container.clientHeight + 50) {
-        const scrolled = container.scrollTop;
-        const scrollableHeight = container.scrollHeight - container.clientHeight;
-        if (scrollableHeight < 100) { setVisible(false); return; }
-        setVisible(true);
-        setAtBottom(scrolled >= scrollableHeight - 100);
-        return;
+  // 🔍 كشف الحاوية المتمررة فعلياً
+  const detectScrollTarget = useCallback(() => {
+    const candidates = [];
+    const explicit = document.querySelector('[data-scroll-container]');
+    if (explicit) candidates.push(explicit);
+    const mainEl = document.querySelector('main');
+    if (mainEl) candidates.push(mainEl);
+    // عناصر بـoverflow auto/scroll
+    document.querySelectorAll('div').forEach((el) => {
+      if (candidates.length > 8) return;
+      const cs = getComputedStyle(el);
+      if ((cs.overflowY === 'auto' || cs.overflowY === 'scroll') && el.scrollHeight - el.clientHeight > 100) {
+        candidates.push(el);
       }
-      const scrolled = window.scrollY;
-      const docHeight = document.documentElement.scrollHeight;
-      const windowHeight = window.innerHeight;
-      const scrollableHeight = docHeight - windowHeight;
-      if (scrollableHeight < 100) { setVisible(false); return; }
+    });
+    for (const el of candidates) {
+      if (el && el.scrollHeight - el.clientHeight > 100) return el;
+    }
+    // افتراضي: window
+    const docEl = document.scrollingElement || document.documentElement;
+    if (docEl && docEl.scrollHeight - window.innerHeight > 100) return window;
+    return null;
+  }, []);
+
+  const getMetrics = useCallback((target) => {
+    if (!target) return null;
+    if (target === window) {
+      const docEl = document.scrollingElement || document.documentElement;
+      const scrollTop = window.scrollY || docEl.scrollTop;
+      const scrollable = docEl.scrollHeight - window.innerHeight;
+      return { scrollTop, scrollable };
+    }
+    return { scrollTop: target.scrollTop, scrollable: target.scrollHeight - target.clientHeight };
+  }, []);
+
+  useEffect(() => {
+    let target = detectScrollTarget();
+    scrollTargetRef.current = target;
+
+    const update = () => {
+      // إعادة الكشف إن لم يعد ساري المفعول
+      if (!target || (target !== window && !document.body.contains(target))) {
+        target = detectScrollTarget();
+        scrollTargetRef.current = target;
+      }
+      const m = getMetrics(target);
+      if (!m || m.scrollable < 100) { setVisible(false); return; }
       setVisible(true);
-      setAtBottom(scrolled + windowHeight >= docHeight - 100);
+      setAtBottom(m.scrollTop >= m.scrollable - 100);
     };
 
-    const container = getContainer();
-    container?.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => {
-      container?.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('scroll', handleScroll);
+    const attach = (t) => {
+      if (!t) return;
+      (t === window ? window : t).addEventListener('scroll', update, { passive: true });
     };
-  }, []);
+    const detach = (t) => {
+      if (!t) return;
+      (t === window ? window : t).removeEventListener('scroll', update);
+    };
+
+    attach(target);
+    window.addEventListener('resize', update);
+    update();
+
+    // إعادة الكشف الدوري للحالات التي تتغير فيها بنية DOM (تغيير صفحة)
+    const interval = setInterval(() => {
+      const next = detectScrollTarget();
+      if (next !== scrollTargetRef.current) {
+        detach(scrollTargetRef.current);
+        scrollTargetRef.current = next;
+        target = next;
+        attach(next);
+      }
+      update();
+    }, 1500);
+
+    return () => {
+      detach(scrollTargetRef.current);
+      window.removeEventListener('resize', update);
+      clearInterval(interval);
+    };
+  }, [detectScrollTarget, getMetrics]);
+
+  const startDrag = (clientX, clientY) => {
+    setIsDragging(true);
+    hasMovedRef.current = false;
+    setDragOffset({ x: clientX - position.x, y: clientY - position.y });
+  };
 
   const handleMouseDown = (e) => {
     if (e.button !== 0) return;
-    setIsDragging(true);
-    setHasMoved(false);
-    setDragOffset({ x: e.clientX - position.x, y: e.clientY - position.y });
+    startDrag(e.clientX, e.clientY);
   };
-
   const handleTouchStart = (e) => {
-    setIsDragging(true);
-    setHasMoved(false);
-    const touch = e.touches[0];
-    setDragOffset({ x: touch.clientX - position.x, y: touch.clientY - position.y });
+    const t = e.touches[0];
+    startDrag(t.clientX, t.clientY);
   };
 
   useEffect(() => {
+    if (!isDragging) return;
     const handleMove = (e) => {
-      if (!isDragging) return;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const newX = Math.max(8, Math.min(clientX - dragOffset.x, window.innerWidth - 44));
-      const newY = Math.max(8, Math.min(clientY - dragOffset.y, window.innerHeight - 44));
-      if (Math.abs(newX - position.x) > 3 || Math.abs(newY - position.y) > 3) setHasMoved(true);
+      const newX = Math.max(8, Math.min(clientX - dragOffset.x, window.innerWidth - 40));
+      const newY = Math.max(8, Math.min(clientY - dragOffset.y, window.innerHeight - 40));
+      if (Math.abs(newX - position.x) > 8 || Math.abs(newY - position.y) > 8) hasMovedRef.current = true;
       setPosition({ x: newX, y: newY });
     };
-
     const handleEnd = () => {
-      if (isDragging) {
-        setIsDragging(false);
-        try { localStorage.setItem('floatingButtonPosition', JSON.stringify(position)); } catch {}
-      }
+      setIsDragging(false);
+      try { localStorage.setItem('floatingButtonPosition', JSON.stringify(position)); } catch {}
     };
-
-    if (isDragging) {
-      window.addEventListener('mousemove', handleMove);
-      window.addEventListener('mouseup', handleEnd);
-      window.addEventListener('touchmove', handleMove, { passive: false });
-      window.addEventListener('touchend', handleEnd);
-    }
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleEnd);
+    window.addEventListener('touchmove', handleMove, { passive: false });
+    window.addEventListener('touchend', handleEnd);
     return () => {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleEnd);
@@ -97,20 +148,19 @@ const FloatingScrollButton = () => {
   }, [isDragging, dragOffset, position]);
 
   const handleClick = (e) => {
-    if (hasMoved) { e.preventDefault(); return; }
-    const container =
-      document.querySelector('[data-scroll-container]') || document.querySelector('main');
-    if (container && container.scrollHeight > container.clientHeight + 50) {
-      container.scrollTo({
-        top: atBottom ? 0 : container.scrollHeight,
-        behavior: 'smooth'
-      });
-      return;
+    if (hasMovedRef.current) { e.preventDefault(); return; }
+    const target = scrollTargetRef.current || detectScrollTarget();
+    if (!target) return;
+    const m = getMetrics(target);
+    if (!m) return;
+    const dest = atBottom ? 0 : (target === window
+      ? (document.scrollingElement || document.documentElement).scrollHeight
+      : target.scrollHeight);
+    if (target === window) {
+      window.scrollTo({ top: atBottom ? 0 : dest, behavior: 'smooth' });
+    } else {
+      target.scrollTo({ top: atBottom ? 0 : target.scrollHeight, behavior: 'smooth' });
     }
-    window.scrollTo({
-      top: atBottom ? 0 : document.documentElement.scrollHeight,
-      behavior: 'smooth'
-    });
   };
 
   if (!visible) return null;
@@ -133,52 +183,49 @@ const FloatingScrollButton = () => {
       aria-label={atBottom ? 'الصعود للأعلى' : 'النزول للأسفل'}
       className="group"
     >
-      {/* Outer soft glow */}
+      {/* Outer soft glow — أصغر وأشف */}
       <div
-        className={`absolute inset-0 rounded-full blur-xl opacity-40 transition-all duration-500 ${
+        className={`absolute inset-0 rounded-full blur-lg opacity-25 transition-all duration-500 ${
           atBottom
-            ? 'bg-[radial-gradient(circle,hsl(217_91%_60%/0.45),transparent_70%)]'
-            : 'bg-[radial-gradient(circle,hsl(270_91%_65%/0.45),transparent_70%)]'
-        } group-hover:opacity-70 group-hover:scale-125`}
-        style={{ width: 44, height: 44 }}
+            ? 'bg-[radial-gradient(circle,hsl(217_91%_60%/0.40),transparent_70%)]'
+            : 'bg-[radial-gradient(circle,hsl(270_91%_65%/0.40),transparent_70%)]'
+        } group-hover:opacity-50 group-hover:scale-110`}
+        style={{ width: 40, height: 40 }}
       />
 
-      {/* Glass capsule */}
+      {/* Glass capsule — أصغر وأشف */}
       <div
         className={`
-          relative w-11 h-11 rounded-full
-          bg-white/10 dark:bg-white/[0.04]
+          relative w-10 h-10 rounded-full
+          bg-white/[0.06] dark:bg-white/[0.03]
           backdrop-blur-2xl backdrop-saturate-150
-          border border-white/30 dark:border-white/10
-          shadow-[0_6px_24px_-4px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.35)]
-          dark:shadow-[0_6px_24px_-4px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.12)]
+          border border-white/20 dark:border-white/10
+          shadow-[0_4px_16px_-4px_rgba(0,0,0,0.15),inset_0_1px_0_0_rgba(255,255,255,0.25)]
+          dark:shadow-[0_4px_16px_-4px_rgba(0,0,0,0.4),inset_0_1px_0_0_rgba(255,255,255,0.08)]
           transition-all duration-300 ease-out
           group-hover:scale-110 group-active:scale-95
           overflow-hidden
           flex items-center justify-center
         `}
       >
-        {/* Iridescent gradient sheen */}
+        {/* تدرج رقيق */}
         <div
-          className={`absolute inset-0 rounded-full opacity-50 transition-all duration-500 ${
+          className={`absolute inset-0 rounded-full opacity-35 transition-all duration-500 ${
             atBottom
-              ? 'bg-gradient-to-br from-sky-400/30 via-blue-500/15 to-indigo-600/20'
-              : 'bg-gradient-to-br from-fuchsia-400/30 via-violet-500/18 to-indigo-600/20'
+              ? 'bg-gradient-to-br from-sky-400/25 via-blue-500/10 to-indigo-600/15'
+              : 'bg-gradient-to-br from-fuchsia-400/25 via-violet-500/12 to-indigo-600/15'
           }`}
         />
 
-        {/* Top highlight (glass reflection) */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-2 rounded-b-full bg-gradient-to-b from-white/40 to-transparent blur-[1px]" />
-
-        {/* Conic shimmer ring on hover */}
-        <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.25),transparent_30%)] animate-[spin_3s_linear_infinite]" />
+        {/* Highlight علوي */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-7 h-1.5 rounded-b-full bg-gradient-to-b from-white/30 to-transparent blur-[1px]" />
 
         {/* Icon */}
-        <div className="relative z-10 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
+        <div className="relative z-10 text-white/95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]">
           {atBottom ? (
-            <ArrowUp className="w-5 h-5" strokeWidth={2.5} />
+            <ArrowUp className="w-4 h-4" strokeWidth={2.5} />
           ) : (
-            <ArrowDown className="w-5 h-5 animate-bounce" strokeWidth={2.5} />
+            <ArrowDown className="w-4 h-4 animate-bounce" strokeWidth={2.5} />
           )}
         </div>
       </div>
