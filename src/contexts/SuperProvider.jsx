@@ -2817,15 +2817,28 @@ export const SuperProvider = ({ children }) => {
         throw createErr;
       }
 
-      // إدراج عناصر الطلب
-      const orderItemsRows = normalizedItems.map(it => ({
-        order_id: createdOrder.id,
-        product_id: it.product_id,
-        variant_id: it.variant_id,
-        quantity: it.quantity,
-        unit_price: it.unit_price || 0,
-        total_price: it.quantity * (it.unit_price || 0)
-      }));
+      // ✅ إدراج عناصر الطلب — دمج العناصر المكررة بنفس variant_id لتفادي خرق unique_order_item_variant
+      const aggregatedItemsMap = new Map();
+      normalizedItems.forEach(it => {
+        const key = `${it.product_id || 'p'}::${it.variant_id || 'v'}`;
+        const prev = aggregatedItemsMap.get(key);
+        const unitPrice = it.unit_price || 0;
+        const qty = it.quantity || 0;
+        if (prev) {
+          prev.quantity += qty;
+          prev.total_price = prev.quantity * (prev.unit_price || unitPrice);
+        } else {
+          aggregatedItemsMap.set(key, {
+            order_id: createdOrder.id,
+            product_id: it.product_id,
+            variant_id: it.variant_id,
+            quantity: qty,
+            unit_price: unitPrice,
+            total_price: qty * unitPrice,
+          });
+        }
+      });
+      const orderItemsRows = Array.from(aggregatedItemsMap.values());
       const { error: itemsErr } = await supabase.from('order_items').insert(orderItemsRows);
       if (itemsErr) {
         await supabase.from('orders').delete().eq('id', createdOrder.id);
