@@ -6,31 +6,34 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 /**
- * IRAQ_PROVINCES — approximate centroids on a 0-100 / 0-100 canvas.
- * Manually tuned for a clean schematic map (not geographically exact).
+ * IRAQ_PROVINCES — coords projected from real (lat, lng) onto a 0-100 grid
+ * matching Iraq's bounding box: lng 38.79 → 48.57, lat 29.06 → 37.38.
+ * x = (lng - 38.79) / 9.78 * 100
+ * y = (37.38 - lat) / 8.32 * 100
+ *
+ * Then mapped into the visible Iraq silhouette area inside the background SVG.
  */
 const IRAQ_PROVINCES = [
-  { key: 'dahuk',       name: 'دهوك',         x: 38, y: 8  },
-  { key: 'nineveh',     name: 'نينوى',        x: 28, y: 18 },
-  { key: 'erbil',       name: 'أربيل',        x: 48, y: 14 },
-  { key: 'kirkuk',      name: 'كركوك',        x: 50, y: 26 },
-  { key: 'sulaymaniyah',name: 'السليمانية',   x: 64, y: 22 },
-  { key: 'salahuddin',  name: 'صلاح الدين',   x: 42, y: 34 },
-  { key: 'diyala',      name: 'ديالى',        x: 58, y: 38 },
-  { key: 'anbar',       name: 'الأنبار',      x: 22, y: 42 },
-  { key: 'baghdad',     name: 'بغداد',        x: 48, y: 46 },
-  { key: 'babil',       name: 'بابل',         x: 46, y: 56 },
-  { key: 'karbala',     name: 'كربلاء',       x: 36, y: 58 },
-  { key: 'najaf',       name: 'النجف',        x: 32, y: 68 },
-  { key: 'wasit',       name: 'واسط',         x: 60, y: 56 },
-  { key: 'qadisiyyah',  name: 'القادسية',     x: 46, y: 68 },
-  { key: 'maysan',      name: 'ميسان',        x: 66, y: 70 },
-  { key: 'muthanna',    name: 'المثنى',       x: 40, y: 80 },
-  { key: 'dhiqar',      name: 'ذي قار',       x: 54, y: 78 },
-  { key: 'basra',       name: 'البصرة',       x: 68, y: 86 },
+  { key: 'dahuk',        name: 'دهوك',         x: 42.9, y: 6.1  },
+  { key: 'nineveh',      name: 'نينوى',        x: 44.4, y: 12.5 },
+  { key: 'erbil',        name: 'أربيل',        x: 53.4, y: 14.3 },
+  { key: 'sulaymaniyah', name: 'السليمانية',   x: 68.0, y: 21.9 },
+  { key: 'kirkuk',       name: 'كركوك',        x: 57.3, y: 23.0 },
+  { key: 'salahuddin',   name: 'صلاح الدين',   x: 50.0, y: 33.3 },
+  { key: 'anbar',        name: 'الأنبار',      x: 30.0, y: 45.0 },
+  { key: 'diyala',       name: 'ديالى',        x: 59.8, y: 43.6 },
+  { key: 'baghdad',      name: 'بغداد',        x: 57.0, y: 48.9 },
+  { key: 'karbala',      name: 'كربلاء',       x: 53.5, y: 57.2 },
+  { key: 'babil',        name: 'بابل',         x: 57.6, y: 59.0 },
+  { key: 'wasit',        name: 'واسط',         x: 71.9, y: 58.5 },
+  { key: 'najaf',        name: 'النجف',        x: 52.0, y: 66.5 },
+  { key: 'qadisiyyah',   name: 'القادسية',     x: 62.7, y: 64.8 },
+  { key: 'maysan',       name: 'ميسان',        x: 80.4, y: 66.7 },
+  { key: 'dhiqar',       name: 'ذي قار',       x: 70.4, y: 76.2 },
+  { key: 'muthanna',     name: 'المثنى',       x: 60.4, y: 78.0 },
+  { key: 'basra',        name: 'البصرة',       x: 86.0, y: 84.7 },
 ];
 
-// Map common Arabic name variations → canonical key
 const NAME_ALIASES = {
   'بغداد': 'baghdad',
   'البصرة': 'basra', 'بصرة': 'basra',
@@ -57,7 +60,6 @@ const normalize = (s) => String(s || '').trim().replace(/\s+/g, ' ');
 const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
   const [hover, setHover] = useState(null);
 
-  // Build {key: count} from incoming items
   const heatMap = useMemo(() => {
     const m = new Map();
     (items || []).forEach((it) => {
@@ -92,7 +94,6 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
 
   return (
     <Card className="glass-effect h-full border-border/60 flex flex-col overflow-hidden relative">
-      {/* Background aurora */}
       <div className="pointer-events-none absolute inset-0 opacity-60">
         <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-primary/20 blur-3xl" />
         <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-cyan-500/10 blur-3xl" />
@@ -113,36 +114,43 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col p-4 pt-0 relative">
-        {/* Map */}
-        <div className="relative w-full aspect-[3/4] max-w-[280px] mx-auto">
-          <svg viewBox="0 0 100 100" className="w-full h-full">
-            {/* Faint outline frame */}
-            <defs>
-              <radialGradient id="iraq-glow" cx="50%" cy="50%" r="55%">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.14" />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0" />
-              </radialGradient>
-              <linearGradient id="iraq-fill" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity="0.14" />
-                <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity="0.04" />
-              </linearGradient>
-            </defs>
-            <rect x="0" y="0" width="100" height="100" fill="url(#iraq-glow)" />
+        {/* Real Iraq map outline with overlaid markers */}
+        <div className="relative w-full max-w-[300px] mx-auto aspect-square">
+          {/* Country silhouette (real SVG) */}
+          <div
+            className="absolute inset-0"
+            style={{
+              backgroundImage: "url('/iraq-map.svg')",
+              backgroundRepeat: 'no-repeat',
+              backgroundPosition: 'center',
+              backgroundSize: 'contain',
+              filter: 'drop-shadow(0 0 18px hsl(var(--primary) / 0.35))',
+              WebkitMaskImage: "url('/iraq-map.svg')",
+              WebkitMaskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'center',
+              WebkitMaskSize: 'contain',
+              maskImage: "url('/iraq-map.svg')",
+              maskRepeat: 'no-repeat',
+              maskPosition: 'center',
+              maskSize: 'contain',
+              background: 'linear-gradient(160deg, hsl(var(--primary) / 0.22), hsl(var(--primary) / 0.06))',
+            }}
+          />
+          {/* Border outline on top */}
+          <img
+            src="/iraq-map.svg"
+            alt="خريطة العراق"
+            className="absolute inset-0 w-full h-full object-contain opacity-50 dark:opacity-60 pointer-events-none"
+            style={{ filter: 'invert(46%) sepia(91%) saturate(2500%) hue-rotate(195deg) brightness(105%) contrast(95%)', mixBlendMode: 'screen' }}
+          />
 
-            {/* Iraq stylized country silhouette */}
-            <motion.path
-              initial={{ pathLength: 0, opacity: 0 }}
-              animate={{ pathLength: 1, opacity: 1 }}
-              transition={{ duration: 1.6, ease: 'easeInOut' }}
-              d="M34,4 L46,5 L56,8 L66,14 L70,20 L66,26 L70,32 L73,42 L75,52 L77,62 L79,74 L82,86 L74,93 L62,96 L50,96 L38,93 L28,86 L20,74 L14,62 L9,50 L11,38 L15,28 L21,20 L28,12 Z"
-              fill="url(#iraq-fill)"
-              stroke="hsl(var(--primary))"
-              strokeOpacity="0.55"
-              strokeWidth="0.5"
-              strokeLinejoin="round"
-            />
-
-            {/* Connection lines from baghdad */}
+          {/* Markers overlay */}
+          <svg
+            viewBox="0 0 100 100"
+            className="absolute inset-0 w-full h-full"
+            preserveAspectRatio="none"
+          >
+            {/* Connection lines from Baghdad */}
             {IRAQ_PROVINCES.filter(p => p.key !== 'baghdad').map(p => {
               const b = IRAQ_PROVINCES.find(x => x.key === 'baghdad');
               const heat = getHeat(p.key);
@@ -152,26 +160,26 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
                   key={`line-${p.key}`}
                   x1={b.x} y1={b.y} x2={p.x} y2={p.y}
                   stroke="hsl(var(--primary))"
-                  strokeOpacity={heat * 0.25}
-                  strokeWidth="0.2"
+                  strokeOpacity={heat * 0.3}
+                  strokeWidth="0.25"
+                  strokeDasharray="0.6,0.6"
                 />
               );
             })}
 
-            {/* Province dots */}
             {IRAQ_PROVINCES.map((p) => {
               const heat = getHeat(p.key);
               const isHover = hover === p.key;
-              const baseR = 2.2;
-              const r = baseR + heat * 4.2 + (isHover ? 1 : 0);
-              const fillOpacity = 0.15 + heat * 0.85;
+              const baseR = 1.6;
+              const r = baseR + heat * 3.6 + (isHover ? 0.8 : 0);
+              const fillOpacity = 0.25 + heat * 0.75;
               return (
                 <g key={p.key}>
                   {heat > 0 && (
                     <motion.circle
                       cx={p.x} cy={p.y}
                       initial={{ r: 0, opacity: 0 }}
-                      animate={{ r: r + 2.5, opacity: heat * 0.25 }}
+                      animate={{ r: r + 2.2, opacity: heat * 0.3 }}
                       transition={{ duration: 0.8, delay: 0.1 }}
                       fill="hsl(var(--primary))"
                     />
@@ -182,9 +190,9 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
                     animate={{ r }}
                     transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 0.05 }}
                     fill={heat > 0 ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))'}
-                    fillOpacity={heat > 0 ? fillOpacity : 0.25}
-                    stroke={isHover ? 'hsl(var(--primary))' : 'transparent'}
-                    strokeWidth="0.4"
+                    fillOpacity={heat > 0 ? fillOpacity : 0.4}
+                    stroke={isHover ? 'hsl(var(--primary))' : 'rgba(255,255,255,0.4)'}
+                    strokeWidth="0.3"
                     style={{ cursor: 'pointer' }}
                     onMouseEnter={() => setHover(p.key)}
                     onMouseLeave={() => setHover(null)}
@@ -195,7 +203,6 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
             })}
           </svg>
 
-          {/* Hover tooltip */}
           {hovered && (
             <motion.div
               initial={{ opacity: 0, y: 4 }}
