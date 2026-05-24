@@ -1803,12 +1803,109 @@ export const AlWaseetProvider = ({ children }) => {
   const [correctionComplete, setCorrectionComplete] = useLocalStorage('orders_correction_complete', false);
   const [lastNotificationStatus, setLastNotificationStatus] = useLocalStorage('last_notification_status', {});
 
-  // ⛔ تم تعطيل قناة العميل لإشعارات تغيير الحالة لمنع الإشعارات المكررة مع كل مزامنة.
-  //    القناة الموثوقة الوحيدة الآن: edge function `sync-order-updates` بنوع `alwaseet_status_change`
-  //    والتي تطبق dedup صارم بناءً على نفس delivery_status.
-  const createOrderStatusNotification = useCallback(async (_trackingNumber, _stateId, _statusText, _orderId = null) => {
-    devLog.log('🔇 createOrderStatusNotification معطّل — الإشعار يُنشأ من edge function فقط');
-    return;
+  // ✅ المصدر الموحّد لإشعارات تغيير حالة طلبات الوسيط
+  //    يطابق منطق dedup في edge function sync-order-updates بالضبط:
+  //    - البحث في آخر 7 أيام عن alwaseet_status_change لنفس user_id + مطابقة order_id/tracking
+  //    - نفس state_id → skip تماماً (لا تكرار، لا unread)
+  //    - state_id مختلف → update الإشعار نفسه (is_read=false, created_at=now)
+  //    - لا يوجد → insert جديد
+  //    العميل وedge function يتشاركان نفس قاعدة Dedup → مصدر واحد للحقيقة.
+  const createOrderStatusNotification = useCallback(async (trackingNumber, stateId, statusText, orderId = null) => {
+    try {
+      if (!orderId) {
+        devLog.log('🔇 status notif skipped: no orderId', { trackingNumber, stateId });
+        return;
+      }
+
+      const { data: orderRow } = await supabase
+        .from('orders')
+        .select('id, created_by, tracking_number, customer_city, customer_province, delivery_account_used')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (!orderRow || !orderRow.created_by) {
+        devLog.log('🔇 status notif skipped: order/created_by missing', { orderId });
+        return;
+      }
+
+      const statusConfig = getStatusConfig(Number(stateId));
+      const finalStatusText = statusConfig?.text || statusText || '';
+      const tracking = orderRow.tracking_number || trackingNumber || '';
+      const cityPart = orderRow.customer_province || orderRow.customer_city || '';
+      const regionPart = orderRow.customer_city && orderRow.customer_province ? orderRow.customer_city : '';
+      const locationLabel = [cityPart, regionPart].filter(Boolean).join(' - ');
+
+      const notificationTitle = locationLabel
+        ? `${locationLabel} | ${finalStatusText}`
+        : (finalStatusText || 'تحديث حالة الطلب');
+      const notificationMessage = `${finalStatusText} ${tracking}`.trim();
+
+      const newSid = String(stateId);
+      const notificationData = {
+        order_id: orderRow.id,
+        order_number: orderRow.tracking_number,
+        tracking_number: orderRow.tracking_number,
+        employee_id: orderRow.created_by,
+        customer_city: orderRow.customer_city,
+        customer_province: orderRow.customer_province,
+        account: orderRow.delivery_account_used,
+        state_id: newSid,
+        delivery_status: newSid,
+        status_text: finalStatusText,
+      };
+      const priority = (newSid === '4' || newSid === '17') ? 'high' : 'normal';
+
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      const { data: existing } = await supabase
+        .from('notifications')
+        .select('id, data, is_read')
+        .eq('user_id', orderRow.created_by)
+        .eq('type', 'alwaseet_status_change')
+        .gte('created_at', sevenDaysAgo)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      const sameOrder = (existing || []).find((n) =>
+        n.data?.order_id === orderRow.id ||
+        (n.data?.tracking_number && n.data?.tracking_number === orderRow.tracking_number)
+      );
+
+      if (sameOrder) {
+        const oldSid = sameOrder.data?.state_id ?? sameOrder.data?.delivery_status ?? null;
+        if (oldSid !== null && String(oldSid) === newSid) {
+          devLog.log('🔄 status notif skipped (same state):', { tracking, newSid });
+          return;
+        }
+        const { error: updErr } = await supabase
+          .from('notifications')
+          .update({
+            title: notificationTitle,
+            message: notificationMessage,
+            priority,
+            data: notificationData,
+            is_read: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', sameOrder.id);
+        if (updErr) devLog.error('❌ status notif update error:', updErr);
+        else devLog.log('🔄 status notif updated:', { tracking, oldSid, newSid });
+      } else {
+        const { error: insErr } = await supabase.from('notifications').insert({
+          user_id: orderRow.created_by,
+          type: 'alwaseet_status_change',
+          title: notificationTitle,
+          message: notificationMessage,
+          priority,
+          data: notificationData,
+          is_read: false,
+        });
+        if (insErr) devLog.error('❌ status notif insert error:', insErr);
+        else devLog.log('🆕 status notif inserted:', { tracking, newSid });
+      }
+    } catch (e) {
+      devLog.error('❌ createOrderStatusNotification error:', e);
+    }
   }, []);
   const _legacyCreateOrderStatusNotification = useCallback(async (trackingNumber, stateId, statusText, orderId = null) => {
     devLog.log('📢 إرسال إشعار تغيير حالة:', { trackingNumber, stateId, statusText, orderId });
