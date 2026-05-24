@@ -594,15 +594,12 @@ const NotificationsPanel = () => {
     if (n.type === 'alwaseet_status_change' || n.type === 'order_status_update') {
       const tracking = n.data?.tracking_number || parseTrackingFromMessage(n.message) || n.data?.order_number;
       const orderId = n.data?.order_id;
-      const sid = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message) || n.data?.status_id;
       
       if (orderId) {
         // إشعار واحد فقط لكل طلب؛ عند تغير الحالة يتم تحديث نفس الصف
         uniqueKey = `status_change_${orderId}`;
       } else if (tracking) {
         uniqueKey = `status_change_${tracking}`;
-      } else if (tracking) {
-        uniqueKey = `status_change_${tracking}_${(n.message || '').slice(0, 32)}`;
       }
     }
     
