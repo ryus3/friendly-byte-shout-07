@@ -67,7 +67,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, invoice?.id, invoice?.external_id, isReceived]);
+  }, [isOpen, invoice?.id, invoice?.external_id, isReceived, viewerUserId]);
 
   const loadLinkedOrders = async () => {
     const invoiceId = invoice?.external_id || invoice?.id;
