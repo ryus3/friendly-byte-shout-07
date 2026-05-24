@@ -550,7 +550,6 @@ const AlWaseetInvoicesTab = () => {
         isOpen={detailsDialogOpen}
         onClose={() => setDetailsDialogOpen(false)}
         invoice={selectedInvoice}
-        viewerUserId={user?.id}
       />
     </div>
   );
