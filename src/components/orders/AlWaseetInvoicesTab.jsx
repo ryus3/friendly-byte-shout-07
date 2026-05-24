@@ -128,16 +128,15 @@ const AlWaseetInvoicesTab = () => {
 
 
   const handleRefresh = async () => {
-    // 1) شغّل smart-invoice-sync (يكتب delivery_invoices + delivery_invoice_orders + يربط)
+    // ✅ تحديث موحد واحترافي: مزامنة واحدة فقط ثم إعادة قراءة من قاعدة البيانات.
+    // لا نستدعي عدة مسارات متداخلة (smart-sync + fetch + syncLastTwoInvoices) لأنها كانت
+    // تسبب ظهور الفواتير ثم اختفائها مع كل استدعاء فاشل.
     try {
       await supabase.functions.invoke('smart-invoice-sync', {
         body: { mode: 'smart', sync_invoices: true, sync_orders: true, force_refresh: true }
       });
     } catch { /* لا نمنع التحديث بسبب خطأ شبكة */ }
-    // 2) أعد قراءة الفواتير من DB + محاولة API بهدوء
     await fetchInvoices(timeFilter, true);
-    // 3) كاحتياط، استدعِ syncLastTwoInvoices الذي يستدعي نفس smart-invoice-sync
-    try { await syncLastTwoInvoices(); } catch {}
   };
   
   const handleTimeFilterChange = async (newFilter) => {
