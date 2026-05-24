@@ -725,49 +725,31 @@ serve(async (req) => {
                   if (invoiceOrders.length > 0) {
                     const { written } = await batchUpsertInvoiceOrders(supabase, upsertedInvoice.id, invoiceOrders, employeeId);
                     employeeOrdersSynced += written;
-                  }
-                  {
-                    
+
                     // ✅ منطق 26/4: إذا snapshot ناقص نعيد المحاولة داخل نفس التشغيل، للفواتير المستلمة والمعلقة.
-                    if (expectedForOrders > 0) {
-                      const expected = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
-                      let { count: dioNow } = await supabase
+                    const expected = Number(invoice.delivered_orders_count || invoice.orders_count || invoice.ordersCount || 0);
+                    let { count: dioNow } = await supabase
+                      .from('delivery_invoice_orders')
+                      .select('id', { count: 'exact', head: true })
+                      .eq('invoice_id', upsertedInvoice.id);
+                    let haveNow = dioNow ?? 0;
+                    const delays = [3000, 7000, 12000];
+                    for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
+                      console.log(`    🔁 Snapshot incomplete for ${externalId}: have=${haveNow}, expected=${expected}. Retry ${attempt + 1}/${delays.length} after ${delays[attempt]}ms...`);
+                      await new Promise(r => setTimeout(r, delays[attempt]));
+                      const retryOrders = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName), ordersIndex);
+                      if (retryOrders.length > 0) {
+                        const { written: rWritten } = await batchUpsertInvoiceOrders(supabase, upsertedInvoice.id, retryOrders, employeeId);
+                        employeeOrdersSynced += rWritten;
+                      } else {
+                        console.log(`    ⚠️ Retry ${attempt + 1} returned 0 orders for ${externalId} (API rate-limit/issue)`);
+                      }
+                      const { count: dioAfter } = await supabase
                         .from('delivery_invoice_orders')
                         .select('id', { count: 'exact', head: true })
                         .eq('invoice_id', upsertedInvoice.id);
-                      let haveNow = dioNow ?? 0;
-                      const delays = [3000, 7000, 12000];
-                      for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
-                        console.log(`    🔁 Snapshot incomplete for ${externalId}: have=${haveNow}, expected=${expected}. Retry ${attempt + 1}/${delays.length} after ${delays[attempt]}ms...`);
-                        await new Promise(r => setTimeout(r, delays[attempt]));
-                        const retryOrders = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName), ordersIndex);
-                        if (retryOrders.length > 0) {
-                          for (const order of retryOrders) {
-                            const { error: rErr } = await supabase
-                              .from('delivery_invoice_orders')
-                              .upsert({
-                                invoice_id: upsertedInvoice.id,
-                                external_order_id: String(order.id),
-                                raw: order,
-                                status: order.status,
-                                amount: order.price || order.amount || 0,
-                                owner_user_id: employeeId,
-                              }, {
-                                onConflict: 'invoice_id,external_order_id',
-                                ignoreDuplicates: false,
-                              });
-                            if (!rErr) employeeOrdersSynced++;
-                          }
-                        } else {
-                          console.log(`    ⚠️ Retry ${attempt + 1} returned 0 orders for ${externalId} (API rate-limit/issue)`);
-                        }
-                        const { count: dioAfter } = await supabase
-                          .from('delivery_invoice_orders')
-                          .select('id', { count: 'exact', head: true })
-                          .eq('invoice_id', upsertedInvoice.id);
-                        haveNow = dioAfter ?? 0;
-                        console.log(`    📊 After retry ${attempt + 1} for ${externalId}: have=${haveNow}, expected=${expected}`);
-                      }
+                      haveNow = dioAfter ?? 0;
+                      console.log(`    📊 After retry ${attempt + 1} for ${externalId}: have=${haveNow}, expected=${expected}`);
                     }
 
                     // ✅ لا نعلن أن الفاتورة "متزامنة" إلا إذا الكاش مكتمل فعلاً
@@ -791,34 +773,36 @@ serve(async (req) => {
                     }
                   } else if (isReceived) {
                     // ✅ FALLBACK: إذا فشل جلب الطلبات من API وكانت الفاتورة مستلمة
-                    // نبحث عن طلبات محلية مرتبطة بهذه الفاتورة
                     console.log(`    ⚠️ No orders from API for received invoice ${externalId}, trying local fallback...`);
-                    
                     const { data: localOrders } = await supabase
                       .from('orders')
                       .select('id, tracking_number, final_amount')
                       .eq('delivery_partner_invoice_id', externalId)
                       .in('delivery_status', ['4', '5', '21']);
-                    
                     if (localOrders && localOrders.length > 0) {
                       console.log(`    🔄 Found ${localOrders.length} local orders for invoice ${externalId}`);
+                      const dedup = new Map<string, any>();
                       for (const order of localOrders) {
-                        const { error: fallbackError } = await supabase
+                        const extId = String(order.tracking_number ?? '').trim();
+                        if (!extId) continue;
+                        dedup.set(extId, {
+                          invoice_id: upsertedInvoice.id,
+                          external_order_id: extId,
+                          order_id: order.id,
+                          amount: order.final_amount || 0,
+                          status: 'delivered',
+                          owner_user_id: employeeId,
+                          raw: { id: extId, fallback: true },
+                        });
+                      }
+                      const rows = Array.from(dedup.values());
+                      if (rows.length > 0) {
+                        const { data, error: fbErr } = await supabase
                           .from('delivery_invoice_orders')
-                          .upsert({
-                            invoice_id: upsertedInvoice.id,
-                            external_order_id: order.tracking_number,
-                            order_id: order.id,
-                            amount: order.final_amount || 0,
-                            status: 'delivered',
-                            owner_user_id: employeeId,
-                            raw: { id: order.tracking_number, fallback: true },
-                          }, {
-                            onConflict: 'invoice_id,external_order_id',
-                            ignoreDuplicates: false,
-                          });
-                        
-                        if (!fallbackError) employeeOrdersSynced++;
+                          .upsert(rows, { onConflict: 'invoice_id,external_order_id', ignoreDuplicates: false })
+                          .select('id');
+                        if (!fbErr) employeeOrdersSynced += (data?.length ?? rows.length);
+                        else console.warn(`    ❌ fallback batch upsert failed: ${fbErr.message}`);
                       }
                     }
                   }
