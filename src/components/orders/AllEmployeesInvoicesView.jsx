@@ -213,8 +213,7 @@ const AllEmployeesInvoicesView = () => {
       
       const matchesEmployee = 
         employeeFilter === 'all' || 
-        invoice.attributed_user_id === employeeFilter ||
-        invoice.owner_user_id === employeeFilter;
+        invoice.attributed_user_id === employeeFilter;
 
       // فلتر الفترة الزمنية
       let matchesTimePeriod = true;
