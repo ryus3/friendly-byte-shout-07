@@ -325,7 +325,12 @@ Deno.serve(async (req) => {
         }
 
         const currentStatus = String(localOrder.delivery_status || '').trim();
-        const newStatus = String(waseetOrder.status_id || waseetOrder.state_id || waseetOrder.status || '').trim();
+        const rawStatus = waseetOrder.status_id ?? waseetOrder.state_id ?? waseetOrder.status ?? '';
+        const newStatus = String(rawStatus).trim();
+        const hasValidRemoteStatus = newStatus !== '' && newStatus !== 'undefined' && newStatus !== 'null' && Boolean(ALWASEET_STATUS_DEFINITIONS[newStatus]);
+        if (newStatus && !hasValidRemoteStatus) {
+          console.warn(`⚠️ تجاهل حالة غير صالحة للطلب ${localOrder.tracking_number}: ${newStatus}`);
+        }
 
         const updates: any = {};
         const changesList: string[] = [];
@@ -335,7 +340,7 @@ Deno.serve(async (req) => {
         let addressChanged = false;
 
         // Compare status (مقارنة صارمة بعد التطبيع)
-        const statusChangedCheck = currentStatus !== '' && newStatus !== '' && currentStatus !== newStatus;
+        const statusChangedCheck = currentStatus !== '' && hasValidRemoteStatus && currentStatus !== newStatus;
 
         // 🔒 حماية partial_delivery من المزامنة التلقائية
         const isPartialDelivery = localOrder.order_type === 'partial_delivery';
