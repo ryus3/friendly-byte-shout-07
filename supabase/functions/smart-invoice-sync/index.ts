@@ -19,9 +19,10 @@ const MODON_API_BASE = 'https://mcht.modon-express.net/v1/merchant';
 // نُبقي فجوة آمنة بين الطلبات لتجنّب rate limit/Cloudflare، لكن بدون حد علوي صناعي
 // يترك فواتير كبيرة مثل 3343958 ناقصة عند 12/43.
 const MAX_INVOICES_PER_TOKEN = 200;
-// 🛡️ لا حد علوي صناعي لتفاصيل الطلبات داخل الدورة: كل فاتورة ناقصة تُجلب كاملة.
-const MAX_ORDER_DETAILS_PER_TOKEN = 100000;
-const ORDER_DETAILS_GAP_MS = 500;
+// 🛡️ حد آمن لمعالجة تفاصيل الفواتير في كل دورة، لمنع موجة جلب ضخمة عند وجود
+// مئات الفواتير الناقصة. الفواتير المتبقية تُعالج في الدورات التالية تلقائياً.
+const MAX_ORDER_DETAILS_PER_TOKEN = 25;
+const ORDER_DETAILS_GAP_MS = 600;
 
 interface SyncRequest {
   mode: 'smart' | 'comprehensive';
