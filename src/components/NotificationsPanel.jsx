@@ -919,7 +919,8 @@ const NotificationsPanel = () => {
                                     <div className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></div>
                                   )}
                                 </div>
-                             <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
+                              </div>
+                              <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
                                <Clock className="w-2.5 h-2.5" />
                                {formatRelativeTime(notification.created_at, notification.updated_at)}
                              </p>
