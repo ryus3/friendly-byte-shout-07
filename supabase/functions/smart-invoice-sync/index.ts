@@ -31,10 +31,45 @@ interface SyncRequest {
   sync_orders?: boolean;
   force_refresh?: boolean;
   run_reconciliation?: boolean;
-  // 🆕 وضع موجه: عند فتح فاتورة من الواجهة وكانت طلباتها ناقصة، نمرر external_id الخاص بها
-  // لتُعالج فوراً بدون انتظار الميزانية، بدون تأثير على باقي الفواتير.
   target_invoice_external_id?: string;
   target_invoice_partner?: 'alwaseet' | 'modon';
+  run_id?: string;
+}
+
+const STAGES = [
+  { key: 'init',     label: 'تهيئة المزامنة',                pct: 5   },
+  { key: 'invoices', label: 'جلب الفواتير من شركات التوصيل', pct: 35  },
+  { key: 'orders',   label: 'جلب تفاصيل الطلبات',            pct: 70  },
+  { key: 'linking',  label: 'ربط الفواتير بالطلبات المحلية', pct: 90  },
+  { key: 'done',     label: 'اكتمل',                          pct: 100 },
+];
+
+async function reportProgress(
+  supabase: any,
+  runId: string | undefined,
+  stageKey: string,
+  message: string,
+  extra: Record<string, any> = {},
+) {
+  if (!runId) return;
+  try {
+    const idx = STAGES.findIndex(s => s.key === stageKey);
+    const stage = STAGES[idx >= 0 ? idx : 0];
+    await supabase.from('sync_progress_events').upsert({
+      run_id: runId,
+      stage: stage.key,
+      stage_index: idx >= 0 ? idx : 0,
+      total_stages: STAGES.length,
+      percentage: stage.pct,
+      message,
+      status: stageKey === 'done' ? 'completed' : (stageKey === 'failed' ? 'failed' : 'running'),
+      updated_at: new Date().toISOString(),
+      ...(stageKey === 'done' ? { finished_at: new Date().toISOString() } : {}),
+      ...extra,
+    }, { onConflict: 'run_id' });
+  } catch (e) {
+    console.warn('reportProgress failed:', (e as any)?.message);
+  }
 }
 
 interface Invoice {
