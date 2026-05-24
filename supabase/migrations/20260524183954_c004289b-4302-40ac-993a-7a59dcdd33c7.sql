@@ -1,0 +1,1 @@
+DROP INDEX IF EXISTS public.unique_order_item_variant;
