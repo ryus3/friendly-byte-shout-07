@@ -1243,28 +1243,16 @@ export const SuperProvider = ({ children }) => {
         return { success: false, error: orderErr.message };
       }
 
-      // ✅ إدراج عناصر الطلب - دمج المكررات (نفس variant_id) لتفادي خرق unique_order_item_variant
-      const _itemsMap = new Map();
-      (items || []).forEach(it => {
-        const dir = it.item_direction || null;
-        const key = `${it.product_id || 'p'}::${it.variant_id || 'v'}::${dir || 'std'}`;
-        const prev = _itemsMap.get(key);
-        if (prev) {
-          prev.quantity += (it.quantity || 0);
-          prev.total_price = (prev.unit_price || 0) * prev.quantity;
-        } else {
-          _itemsMap.set(key, {
-            order_id: createdOrder.id,
-            product_id: it.product_id,
-            variant_id: it.variant_id || null,
-            quantity: it.quantity,
-            unit_price: it.unit_price,
-            total_price: it.total_price,
-            item_direction: dir,
-          });
-        }
-      });
-      const itemsRows = items.length > 0 ? Array.from(_itemsMap.values()) : [];
+      // ✅ إدراج عناصر الطلب — يُسمح بتكرار نفس المنتج كصفوف منفصلة
+      const itemsRows = (items || []).map(it => ({
+        order_id: createdOrder.id,
+        product_id: it.product_id,
+        variant_id: it.variant_id || null,
+        quantity: it.quantity,
+        unit_price: it.unit_price,
+        total_price: it.total_price,
+        item_direction: it.item_direction || null,
+      }));
 
       if (items.length > 0) {
         const { error: itemsErr } = await supabase.from('order_items').insert(itemsRows);
@@ -2828,28 +2816,19 @@ export const SuperProvider = ({ children }) => {
         throw createErr;
       }
 
-      // ✅ إدراج عناصر الطلب — دمج العناصر المكررة بنفس variant_id لتفادي خرق unique_order_item_variant
-      const aggregatedItemsMap = new Map();
-      normalizedItems.forEach(it => {
-        const key = `${it.product_id || 'p'}::${it.variant_id || 'v'}`;
-        const prev = aggregatedItemsMap.get(key);
+      // ✅ إدراج عناصر الطلب — يُسمح بتكرار نفس المنتج كصفوف منفصلة
+      const orderItemsRows = normalizedItems.map(it => {
         const unitPrice = it.unit_price || 0;
         const qty = it.quantity || 0;
-        if (prev) {
-          prev.quantity += qty;
-          prev.total_price = prev.quantity * (prev.unit_price || unitPrice);
-        } else {
-          aggregatedItemsMap.set(key, {
-            order_id: createdOrder.id,
-            product_id: it.product_id,
-            variant_id: it.variant_id,
-            quantity: qty,
-            unit_price: unitPrice,
-            total_price: qty * unitPrice,
-          });
-        }
+        return {
+          order_id: createdOrder.id,
+          product_id: it.product_id,
+          variant_id: it.variant_id,
+          quantity: qty,
+          unit_price: unitPrice,
+          total_price: qty * unitPrice,
+        };
       });
-      const orderItemsRows = Array.from(aggregatedItemsMap.values());
       const { error: itemsErr } = await supabase.from('order_items').insert(orderItemsRows);
       if (itemsErr) {
         await supabase.from('orders').delete().eq('id', createdOrder.id);

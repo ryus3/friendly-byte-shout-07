@@ -1,112 +1,55 @@
-# خطة الحل الشاملة
+## 1. السماح بتكرار نفس المنتج في الطلب
 
-## 1) المزامنة الشاملة — حقيقية، سريعة، احترافية
-
-**المشكلة:** التقدّم يقفز من 3% إلى 100% لأن الـedge function يبثّ فقط عند نهاية كل مرحلة (5 نقاط ثابتة)، ولا تُحدَّث النسبة داخل المرحلة. كذلك يجلب 200 فاتورة لكل توكن دفعة واحدة + 25 تفصيل = بطيء.
+**المشكلة:** قيد فريد `unique_order_item_variant` يمنع تكرار نفس المتغير في طلب واحد، مما يفشل الطلبات الذكية بـ 3 منتجات متشابهة.
 
 **الحل:**
+- ترحيل قاعدة بيانات: حذف `DROP INDEX unique_order_item_variant`.
+- إزالة منطق الدمج `aggregatedItemsMap` في `src/contexts/SuperProvider.jsx` (السطر ~2831 ومسار الذكي ~1246) لإبقاء كل صف عنصر مستقلاً.
+- التأكد أن دوال الحجز/الخصم تتعامل مع الكميات تراكمياً (التراجع عبر استدعاءات RPC الموجودة لكل صف).
 
-### أ. تقدّم حقيقي (داخل كل مرحلة)
-- توسيع `reportProgress` لتقبل `current/total` داخل المرحلة، وحساب النسبة الفعلية:
-  `pct = stage.start + (current/total) * (stage.end - stage.start)`.
-- بثّ بعد كل: فاتورة جُلبت، طلب فاتورة جُلب، طلب مرتبط. (throttle 300ms لتجنّب ضغط Realtime).
-- إضافة `current_item` نصّياً ("فاتورة 3343958 - 12/43") لرؤية ما يحدث.
+## 2. خريطة العراق — مظهر زجاجي بحواف مضيئة
 
-### ب. سرعة "طيارة"
-- خفض `MAX_INVOICES_PER_TOKEN` من 200 → **40** (الأحدث + الناقص فقط).
-- خفض `ORDER_DETAILS_GAP_MS` من 600 → **150** ms (الـproxy يتحمل).
-- موازاة جلب الفواتير من توكنات مختلفة (Promise.all على مستوى التوكن).
-- إلغاء `force_refresh` تلقائياً: الاكتفاء بالناقص فقط في المزامنة اليدوية.
-- Lock عبر `auto_sync_schedule_settings` (`sync_running=true` + `started_at`) لمنع التشغيل المتوازي. يُفرَّغ بعد 5 دقائق تلقائياً (stale lock cleanup).
+**الملف:** `src/components/dashboard/ProvincesHeatmapCard.jsx`
 
-### ج. عرض الواجهة
-- `SyncProgressStepper`: استبدال شريط القفز بشريط ناعم spring + رقم متحرك (CountUp). إضافة نص "الجاري الآن" تحت الشريط.
-- زر إلغاء حقيقي (يضع `status='cancelled'` في DB والـfunction يتوقف عند الفحص بين كل تكرار).
+- استبدال خلفية الـ mask المملوءة بـ:
+  - طبقة زجاجية شفافة `bg-white/5 backdrop-blur-xl`.
+  - حدود مضيئة باستخدام `filter: drop-shadow()` متعدد الطبقات (توهج primary + cyan خارجي).
+  - حد داخلي رفيع `stroke` على outline الـ SVG بدلاً من تعبئة كاملة.
+- إضافة طبقة gradient mesh خفيفة خلف الخريطة (نقاط ضوء aurora).
+- markers تبقى كما هي لكن مع حلقة زجاجية محيطة (`ring` نصف شفاف).
 
----
+## 3. فلترة الطلبات المحلية المرتبطة حسب المشاهد
 
-## 2) ثورة تصميمية — Bento Dashboard عالمي
+**المشكلة:** `linkInvoiceWithLocalOrders` ترجع كل الطلبات المرتبطة بالفاتورة بدون فلترة حسب من يفتحها. لذلك يرى أحمد طلبات المدير المحلية، والمدير في صفحة متابعة أحمد يرى طلباته هو.
 
-**الإلهام:** Apple Health + Linear + Vercel Analytics + Stripe Dashboard. توزيع Bento بأحجام مختلفة، Glassmorphism، حركات micro، خط Space Grotesk.
+**القاعدة المطلوبة:**
+- موظف يفتح الفاتورة → يرى فقط الطلبات حيث `orders.created_by = auth.uid()`.
+- مدير يفتح الفاتورة من صفحته العادية → يرى طلباته المحلية فقط.
+- مدير يفتح الفاتورة من صفحة متابعة موظف معين → يرى طلبات ذلك الموظف فقط (`created_by = employeeId`).
 
-### التخطيط (Mobile-First → Desktop Bento)
+**التنفيذ:**
 
-```text
-┌──────────────────────────────────────────────────┐
-│  HERO: إيرادات اليوم/الشهر (CountUp + Aurora)    │ 2×1
-├──────────────────────────┬───────────────────────┤
-│  المخزون (Donut SVG)     │  آخر الطلبات          │
-│  + 3 تنبيهات حية          │  Timeline أنيق        │
-├──────────────────────────┼───────────────────────┤
-│  أكثر المنتجات (شريط أفقي│  المحافظات            │
-│  + صور مصغّرة + نسب %)   │  🗺 خريطة العراق SVG  │
-│                          │  حرارية + Tooltip      │
-├──────────────────────────┴───────────────────────┤
-│  أفضل الزبائن (قائمة فاخرة برتب ذهبية + شارات)   │
-└──────────────────────────────────────────────────┘
-```
+أ. `src/hooks/useAlWaseetInvoices.js` — تعديل `linkInvoiceWithLocalOrders(invoiceId, viewerUserId)`:
+   - إضافة معامل ثانٍ `viewerUserId`.
+   - فلترة النتيجة: `linkedWithOrders.filter(item => item.orders.created_by === viewerUserId)`.
+   - إذا `viewerUserId` فارغ → السلوك الحالي (للمدير في العرض العام).
 
-### الخريطة العراقية (الفكرة الإبداعية المميزة)
-- SVG inline لـ18 محافظة (paths فعلية، ليست صورة).
-- تظليل حراري حسب عدد الطلبات: مدرّج من `--surface-glass` إلى `--primary-glow`.
-- Hover → Tooltip بالاسم + عدد الطلبات + قيمتها.
-- Click → فلتر مباشر على قائمة الطلبات.
-- المحافظات بدون طلبات تبقى رمادية شفافة.
-- على الموبايل: الخريطة قابلة للتكبير (pinch) + بطاقة جانبية بأعلى 5 محافظات.
+ب. `src/components/orders/AlWaseetInvoiceDetailsDialog.jsx`:
+   - استقبال prop جديد `viewerUserId`.
+   - تمريره إلى `linkInvoiceWithLocalOrders`.
 
-### بطاقات بإبداع عالمي
-- **HeroRevenue:** خلفية Aurora متحركة (CSS conic-gradient + animate)، رقم بـCountUp 60fps، Sparkline صغيرة لآخر 7 أيام.
-- **InventoryDonut:** Donut SVG ثنائي الطبقات (متوفر/منخفض/نفذ)، الرقم في المركز يدور عند الـhover.
-- **RecentOrdersTimeline:** خط زمني عمودي بنقاط ملوّنة حسب الحالة + Avatars دائرية للزبون + شارة المدينة.
-- **TopProductsBar:** شريط أفقي متدرّج (نسبة بصرية)، صورة المنتج 32×32 rounded-xl يسار النص.
-- **ProvincesHeatmap:** الخريطة المذكورة أعلاه.
-- **TopCustomersLuxury:** قائمة برتب 🥇🥈🥉 ذهبية، شارة "VIP" للأكثر من 5 طلبات، آخر طلب بـ"منذ ٢ يوم".
+ج. الاستدعاءات:
+   - `EmployeeDeliveryInvoicesTab.jsx`: تمرير `viewerUserId={employeeId}` (يعمل لكل من الموظف الذي يرى نفسه، والمدير الذي يفتح متابعة موظف).
+   - `AllEmployeesInvoicesView.jsx` (عرض المدير العام): تمرير `viewerUserId={user.id}` أو ترك null لإظهار كل الروابط (سنختار `user.id` لكي يرى المدير طلباته المحلية المرتبطة فقط، توافقاً مع المنطق).
 
-### Design Tokens (في `index.css`)
-```css
---gradient-midnight: linear-gradient(135deg, hsl(240 60% 6%), hsl(245 60% 18%));
---gradient-aurora: linear-gradient(120deg, hsl(245 100% 70%/.4), hsl(280 100% 70%/.3), hsl(190 100% 70%/.3));
---shadow-glass: 0 8px 32px hsl(240 60% 4%/.35), inset 0 1px 0 hsl(0 0% 100%/.06);
---surface-glass: hsl(240 30% 12%/.55);
---gold-rank: hsl(45 90% 60%);
-```
+د. تحديث عداد الطلبات المرتبطة في الواجهة (linkedCount) ليعكس الكمية المفلترة، مع إبقاء `cachedCount` (إجمالي طلبات شركة التوصيل) كما هو.
 
-### Typography
-- إضافة Space Grotesk (عناوين) + DM Sans (أرقام/نصوص) في `index.html`.
-- إضافتهما في `tailwind.config.js` تحت `fontFamily`.
+## الملفات المعدّلة
 
----
-
-## 3) إصلاح زر السكرول العائم
-
-**المشكلة:** الزر يظهر دائماً (`visible=true` افتراضياً) ويعتمد فقط على `[data-scroll-container]`/`main`. لكن الصفحة الرئيسية تستخدم body scroll أو حاوية مختلفة، لذلك `scrollTo` يستهدف عنصراً لا يتحرك.
-
-**الحل:**
-- اكتشاف الحاوية المتمررة فعلياً: المرور على `document.scrollingElement`، `main`، `[data-scroll-container]`، وأي عنصر بـ`overflow-y:auto` ذو scroll فعّال.
-- اختبار `scrollHeight > clientHeight` على كل واحد واختيار الأول الذي يتمرر فعلاً.
-- ضبط `scrollTo` على نفس العنصر المكتشف.
-- منع الـdrag من ابتلاع الـclick: زيادة عتبة الحركة من 3px → 8px، وضبط `touchAction:'none'` فقط أثناء الـdrag.
-- جعله مخفياً افتراضياً (`visible=false`) ويظهر فقط بعد فحص أول scroll يثبت وجود ارتفاع قابل للتمرير.
-
----
-
-## 📂 الملفات المتأثرة
-
-| المجال | الملف | النوع |
-|---|---|---|
-| المزامنة | `supabase/functions/smart-invoice-sync/index.ts` | تعديل (throttle progress + سرعة) |
-| المزامنة | `src/components/settings/SyncProgressStepper.jsx` | تحسين (CountUp + current_item) |
-| المزامنة | `src/components/settings/InvoiceSyncSettings.jsx` | تعديل (زر إلغاء) |
-| المزامنة | Migration: lock + cancel فيلد | جديد |
-| التصميم | `src/index.css` | tokens جديدة |
-| التصميم | `tailwind.config.js` + `index.html` | خطوط |
-| التصميم | `dashboard/HeroRevenueCard.jsx` | جديد |
-| التصميم | `dashboard/InventoryDonutCard.jsx` | جديد |
-| التصميم | `dashboard/RecentOrdersTimeline.jsx` | جديد |
-| التصميم | `dashboard/TopProductsBarCard.jsx` | جديد |
-| التصميم | `dashboard/ProvincesHeatmapCard.jsx` (+SVG العراق) | جديد |
-| التصميم | `dashboard/TopCustomersLuxuryList.jsx` | جديد |
-| التصميم | `dashboard/UnifiedDashboard.jsx` + `ManagerDashboardSection.jsx` | تعديل (Bento) |
-| السكرول | `src/components/ui/FloatingScrollButton.jsx` | إصلاح |
-
-بعد موافقتك أبدأ التنفيذ مباشرة.
+- `supabase/migrations/<new>.sql` — حذف قيد التكرار.
+- `src/contexts/SuperProvider.jsx` — إزالة الدمج في مسارين.
+- `src/components/dashboard/ProvincesHeatmapCard.jsx` — تصميم زجاجي.
+- `src/hooks/useAlWaseetInvoices.js` — معامل المشاهد + فلترة.
+- `src/components/orders/AlWaseetInvoiceDetailsDialog.jsx` — تمرير المشاهد.
+- `src/components/orders/EmployeeDeliveryInvoicesTab.jsx` — تمرير `employeeId`.
+- `src/components/orders/AllEmployeesInvoicesView.jsx` — تمرير `user.id`.

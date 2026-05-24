@@ -479,6 +479,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
             setSelectedInvoice(null);
           }}
           invoice={selectedInvoice}
+          viewerUserId={employeeId && employeeId !== 'all' ? employeeId : null}
         />
       )}
     </div>

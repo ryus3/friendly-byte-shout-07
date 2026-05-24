@@ -28,7 +28,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import InvoiceProfitsTab from './InvoiceProfitsTab';
 import { cn } from '@/lib/utils';
 
-const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice }) => {
+const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId = null }) => {
   const {
     invoiceOrders,
     loading,
@@ -67,14 +67,14 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice }) => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, invoice?.id, invoice?.external_id, isReceived]);
+  }, [isOpen, invoice?.id, invoice?.external_id, isReceived, viewerUserId]);
 
   const loadLinkedOrders = async () => {
     const invoiceId = invoice?.external_id || invoice?.id;
     if (!invoiceId) return;
     setLoadingLinked(true);
     try {
-      const linked = await linkInvoiceWithLocalOrders(invoiceId);
+      const linked = await linkInvoiceWithLocalOrders(invoiceId, viewerUserId);
       setLinkedOrders(linked);
     } catch (error) {
       console.error('Error loading linked orders:', error);
