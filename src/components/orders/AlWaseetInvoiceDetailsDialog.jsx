@@ -53,7 +53,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
       const invoiceId = invoice.external_id || invoice.id;
       if (invoiceId) {
         setFetchNotice(null);
-        fetchInvoiceOrders(invoiceId).then(result => {
+        fetchInvoiceOrders(invoiceId, { partner: invoice?.partner }).then(result => {
           if (result?.dataSource) setDataSource(result.dataSource);
           const expected = parseInt(invoice.linked_orders_count || invoice.orders_count || invoice.delivered_orders_count) || 0;
           const got = (result?.orders || []).length;
