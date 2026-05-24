@@ -45,6 +45,11 @@ const SyncProgressStepper = ({ progress }) => {
   const isFailed = progress.status === 'failed';
   const isDone = progress.status === 'completed';
   const pct = Math.min(100, Math.max(0, progress.percentage || 0));
+  const animatedPct = useCountUp(pct, 350);
+  const invCount = useCountUp(progress.invoices_synced || 0, 350);
+  const ordCount = useCountUp(progress.orders_updated || 0, 350);
+  const linkCount = useCountUp(progress.linked_count || 0, 350);
+
 
   return (
     <AnimatePresence>
