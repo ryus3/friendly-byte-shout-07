@@ -128,7 +128,10 @@ const AlWaseetInvoicesTab = () => {
   };
 
 
+  const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
     // ✅ تحديث موحد واحترافي مع نتيجة واضحة للمستخدم
     toast({ title: '🔄 جاري تحديث الفواتير...', description: 'يتم جلب الفواتير وطلباتها من شركة التوصيل', duration: 2500 });
     let synced = 0, ordersUp = 0, linked = 0, errMsg = null;
@@ -143,7 +146,8 @@ const AlWaseetInvoicesTab = () => {
     } catch (e) {
       errMsg = e?.message || 'فشل الاتصال بخدمة المزامنة';
     }
-    await fetchInvoices(timeFilter, true);
+    try { await fetchInvoices(timeFilter, true); } catch {}
+    setRefreshing(false);
     if (errMsg) {
       toast({ title: '⚠️ تعذّر التحديث', description: errMsg, variant: 'destructive' });
     } else {
@@ -360,12 +364,12 @@ const AlWaseetInvoicesTab = () => {
             <div className="flex gap-2">
               <Button 
                 onClick={handleRefresh} 
-                disabled={loading}
+                disabled={refreshing}
                 size="sm"
                 className="inline-flex items-center gap-2"
               >
                 <span>تحديث</span>
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               </Button>
             </div>
             <span className="text-right text-lg font-bold">
