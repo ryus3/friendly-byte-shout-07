@@ -907,11 +907,18 @@ const NotificationsPanel = () => {
                                    );
                                 })()}
                                 <div className="flex items-center gap-1">
+                                  {(notificationType === 'ai_order' || notificationType === 'new_ai_order') && (
+                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-bold tracking-wide text-white bg-gradient-to-r from-violet-500 via-indigo-500 to-sky-500 shadow-sm">
+                                      <svg viewBox="0 0 24 24" className="w-2.5 h-2.5" fill="currentColor" aria-hidden="true">
+                                        <path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/>
+                                      </svg>
+                                      Telegram
+                                    </span>
+                                  )}
                                   {!(notification.is_read || notification.read) && (
                                     <div className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></div>
                                   )}
                                 </div>
-                             </div>
                              <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
                                <Clock className="w-2.5 h-2.5" />
                                {formatRelativeTime(notification.created_at, notification.updated_at)}
