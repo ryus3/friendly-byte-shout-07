@@ -21,6 +21,7 @@ import { NotificationSettings } from '@/components/notifications/NotificationSet
 import ScrollingText from '@/components/ui/scrolling-text';
 import { getStatusConfig } from '@/lib/alwaseet-statuses';
 import { getStatusForComponent } from '@/lib/order-status-translator';
+import AiOrderIcon from '@/components/icons/AiOrderIcon';
 
 // أيقونات نظيفة بدون رموز مزعجة
 const StockWarningIcon = () => (
@@ -64,6 +65,8 @@ const iconMap = {
   order_status_changed: <SystemIcon />,
   order_status_update: <SystemIcon />,
   alwaseet_status_change: <SystemIcon />,
+  ai_order: <AiOrderIcon className="w-4 h-4 md:w-5 md:h-5" />,
+  new_ai_order: <AiOrderIcon className="w-4 h-4 md:w-5 md:h-5" />,
   new_order: <OrderIcon />,
   new_registration: <UserRegistrationIcon />,
   system: <SystemIcon />,
@@ -71,7 +74,7 @@ const iconMap = {
   Package: <StockWarningIcon />,
   CheckCircle: <OrderSuccessIcon />,
   UserPlus: <UserRegistrationIcon />,
-  Bot: <SystemIcon />,
+  Bot: <AiOrderIcon className="w-4 h-4 md:w-5 md:h-5" />,
   Bell: <SystemIcon />,
 };
 
