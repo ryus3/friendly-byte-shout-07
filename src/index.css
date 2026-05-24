@@ -109,6 +109,7 @@
 }
 .ai-smart-border {
   position: relative;
+  overflow: hidden;
 }
 .ai-smart-border::before {
   content: '';
@@ -117,11 +118,11 @@
   right: 0;
   bottom: 0;
   width: 4px;
-  background: linear-gradient(180deg, #8b5cf6, #ec4899, #6366f1, #8b5cf6);
+  background: linear-gradient(180deg, #8b5cf6 0%, #ec4899 35%, #6366f1 70%, #22d3ee 100%);
   background-size: 100% 300%;
   animation: ai-border-flow 4s ease-in-out infinite;
-  border-radius: 2px;
   pointer-events: none;
+  z-index: 1;
 }
 
 @layer base {
