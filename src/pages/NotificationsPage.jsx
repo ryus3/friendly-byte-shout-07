@@ -129,9 +129,15 @@ const NotificationsPage = () => {
     return m ? m[1] : null;
   };
 
+  const isInvalidStatusNotification = (notification) => {
+    if (notification.type !== 'alwaseet_status_change') return false;
+    const statusCode = notification.data?.state_id || notification.data?.delivery_status || parseAlwaseetStateIdFromMessage(notification.message);
+    return !statusCode || ['undefined', 'null', ''].includes(String(statusCode));
+  };
+
   // دمج الإشعارات ومنع التكرار (نفس منطق NotificationsPanel)
   const uniqueMap = new Map();
-  notifications.forEach(n => {
+  notifications.filter(n => n.type !== 'welcome' && !isInvalidStatusNotification(n)).forEach(n => {
     let uniqueKey = n.id;
     
     // إشعارات الوسيط - دمج محسن لمنع التكرار
