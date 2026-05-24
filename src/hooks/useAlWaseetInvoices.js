@@ -780,7 +780,7 @@ export const useAlWaseetInvoices = () => {
   }, [token, fetchInvoices, fetchInvoiceOrders, user?.id, user?.user_id]);
 
   // ✅ FIXED: Link invoice with local orders - directly from database
-  const linkInvoiceWithLocalOrders = useCallback(async (invoiceId) => {
+  const linkInvoiceWithLocalOrders = useCallback(async (invoiceId, viewerUserId = null) => {
     if (!invoiceId) return [];
 
     try {
@@ -883,15 +883,18 @@ export const useAlWaseetInvoices = () => {
         }
       }
 
-      // تحويل البيانات للصيغة المتوقعة
-      const formattedOrders = linkedWithOrders.map(item => ({
+      // تحويل البيانات للصيغة المتوقعة + فلترة حسب المشاهد إن وجد
+      const sourceLinked = viewerUserId
+        ? linkedWithOrders.filter(item => item.orders?.created_by === viewerUserId)
+        : linkedWithOrders;
+      const formattedOrders = sourceLinked.map(item => ({
         ...item.orders,
         invoice_link_id: item.id,
         invoice_amount: item.amount,
         invoice_status: item.status
       }));
 
-      devLog.log(`✅ تم جلب ${formattedOrders.length} طلب مرتبط من قاعدة البيانات`);
+      devLog.log(`✅ تم جلب ${formattedOrders.length} طلب مرتبط${viewerUserId ? ` (مفلتر للمستخدم ${viewerUserId})` : ''}`);
       return formattedOrders;
       
     } catch (error) {
