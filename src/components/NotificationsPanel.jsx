@@ -890,17 +890,17 @@ const NotificationsPanel = () => {
                                    const cleanTitleText = String(titleText || '').replace(/🤖\s*/g, '').trim() || 'إشعار جديد';
                                    
                                     // استخدام ScrollingText للعناوين الطويلة
-                                    return cleanTitleText.length > 22 ? (
-                                      <ScrollingText 
-                                        text={cleanTitleText} 
-                                        className={cn("font-semibold text-sm leading-tight", colors.text)}
-                                        maxWidth="200px"
-                                      />
-                                    ) : (
-                                      <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
-                                        {cleanTitleText}
-                                      </h3>
-                                    );
+                                     return cleanTitleText.length > 22 ? (
+                                       <ScrollingText 
+                                         text={cleanTitleText} 
+                                         className={cn("font-semibold text-sm leading-tight", colors.text)}
+                                         maxWidth="170px"
+                                       />
+                                     ) : (
+                                       <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
+                                         {cleanTitleText}
+                                       </h3>
+                                     );
                                  })()}
                                </div>
                                <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
