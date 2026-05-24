@@ -102,6 +102,28 @@
   animation-play-state: paused;
 }
 
+/* ✨ شريط جانبي بتدرّج لوني متحرّك لإشعار الطلب الذكي */
+@keyframes ai-border-flow {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+.ai-smart-border {
+  position: relative;
+}
+.ai-smart-border::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 4px;
+  background: linear-gradient(180deg, #8b5cf6, #ec4899, #6366f1, #8b5cf6);
+  background-size: 100% 300%;
+  animation: ai-border-flow 4s ease-in-out infinite;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
 @layer base {
   :root {
     --background: 220 40% 98%;
