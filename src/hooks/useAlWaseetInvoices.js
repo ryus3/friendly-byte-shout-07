@@ -866,9 +866,11 @@ export const useAlWaseetInvoices = () => {
               `)
               .eq('invoice_id', invoiceRecord.id);
             
-            const refreshedFormatted = (refreshedOrders || [])
-              .filter(item => item.orders)
-              .map(item => ({
+            const refreshedSource = (refreshedOrders || []).filter(item => item.orders);
+            const refreshedFiltered = viewerUserId
+              ? refreshedSource.filter(item => item.orders?.created_by === viewerUserId)
+              : refreshedSource;
+            const refreshedFormatted = refreshedFiltered.map(item => ({
                 ...item.orders,
                 invoice_link_id: item.id,
                 invoice_amount: item.amount,
