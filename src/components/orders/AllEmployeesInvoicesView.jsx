@@ -489,6 +489,7 @@ const AllEmployeesInvoicesView = () => {
           setDetailsDialogOpen(false);
           setSelectedInvoice(null);
         }}
+        viewerUserId={employeeFilter !== 'all' ? employeeFilter : null}
       />
     </div>
   );
