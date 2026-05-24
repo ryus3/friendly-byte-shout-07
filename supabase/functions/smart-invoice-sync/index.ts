@@ -1221,6 +1221,12 @@ serve(async (req) => {
 
     console.log(`✅ Sync complete - Invoices: ${totalInvoicesSynced}, New: ${newInvoicesCount}, StatusChanged: ${statusChangedCount}, Orders: ${totalOrdersUpdated}, Linked: ${linkedCount}`);
 
+    await reportProgress(supabase, run_id, 'done', `اكتمل: ${totalInvoicesSynced} فاتورة، ${totalOrdersUpdated} طلب، ${linkedCount} ربط`, {
+      invoices_synced: totalInvoicesSynced,
+      orders_updated: totalOrdersUpdated,
+      linked_count: linkedCount,
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -1231,6 +1237,7 @@ serve(async (req) => {
         orders_updated: totalOrdersUpdated,
         linked_count: linkedCount,
         employee_results: employeeResults,
+        run_id,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -1239,6 +1246,27 @@ serve(async (req) => {
     console.error('❌ Smart Invoice Sync Error:', error);
 
     const message = error instanceof Error ? error.message : 'Unknown error';
+    try {
+      const body = await req.clone().json().catch(() => ({}));
+      const runId = (body as any)?.run_id;
+      if (runId) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const sb = createClient(supabaseUrl, supabaseServiceKey);
+        await sb.from('sync_progress_events').upsert({
+          run_id: runId,
+          stage: 'failed',
+          stage_index: 0,
+          total_stages: STAGES.length,
+          percentage: 100,
+          status: 'failed',
+          message: `فشل: ${message}`,
+          finished_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'run_id' });
+      }
+    } catch { /* silent */ }
+
     return new Response(
       JSON.stringify({ 
         success: false, 
