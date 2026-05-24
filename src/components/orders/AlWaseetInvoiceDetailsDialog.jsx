@@ -53,7 +53,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
       const invoiceId = invoice.external_id || invoice.id;
       if (invoiceId) {
         setFetchNotice(null);
-        fetchInvoiceOrders(invoiceId).then(result => {
+        fetchInvoiceOrders(invoiceId, { partner: invoice?.partner }).then(result => {
           if (result?.dataSource) setDataSource(result.dataSource);
           const expected = parseInt(invoice.linked_orders_count || invoice.orders_count || invoice.delivered_orders_count) || 0;
           const got = (result?.orders || []).length;
@@ -74,7 +74,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
     if (!invoiceId) return;
     setLoadingLinked(true);
     try {
-      const linked = await linkInvoiceWithLocalOrders(invoiceId, viewerUserId);
+      const linked = await linkInvoiceWithLocalOrders(invoiceId, viewerUserId, { partner: invoice?.partner });
       setLinkedOrders(linked);
     } catch (error) {
       console.error('Error loading linked orders:', error);
@@ -85,12 +85,26 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
 
   const amount = parseFloat(invoice?.amount || invoice?.merchant_price) || 0;
   const expectedCount = parseInt(invoice?.linked_orders_count || invoice?.orders_count || invoice?.delivered_orders_count) || 0;
-  const cachedCount = invoiceOrders.length;
+  const linkedExternalIds = useMemo(() => new Set((linkedOrders || []).flatMap(o => [
+    o.invoice_external_order_id,
+    o.delivery_partner_order_id,
+    o.tracking_number,
+  ].filter(Boolean).map(String))), [linkedOrders]);
+  const scopedInvoiceOrders = useMemo(() => {
+    if (!viewerUserId) return invoiceOrders;
+    if (!linkedExternalIds.size) return [];
+    return (invoiceOrders || []).filter(order => linkedExternalIds.has(String(order.qr_id || order.id || '')));
+  }, [invoiceOrders, linkedExternalIds, viewerUserId]);
+  const cachedCount = scopedInvoiceOrders.length;
   const linkedCount = linkedOrders.length;
   const completion = expectedCount > 0 ? Math.min(100, Math.round((cachedCount / expectedCount) * 100)) : 0;
   const linkRate = cachedCount > 0 ? Math.min(100, Math.round((linkedCount / cachedCount) * 100)) : 0;
 
-  const linkedTrackings = useMemo(() => new Set(linkedOrders.map(o => String(o.tracking_number || ''))), [linkedOrders]);
+  const linkedTrackings = useMemo(() => new Set((linkedOrders || []).flatMap(o => [
+    o.tracking_number,
+    o.delivery_partner_order_id,
+    o.invoice_external_order_id,
+  ].filter(Boolean).map(String))), [linkedOrders]);
 
   if (!invoice) return null;
 
@@ -198,7 +212,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
               <SectionHeader
                 icon={<Package className="h-4 w-4 text-sky-500" />}
                 title="طلبات شركة التوصيل"
-                count={cachedCount}
+                  count={cachedCount}
                 right={
                   <Badge variant="outline" className="gap-1 text-[10px] font-medium">
                     {isReceived || dataSource !== 'api' ? (
@@ -211,14 +225,14 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
               />
               {loading ? (
                 <SkeletonRows />
-              ) : invoiceOrders.length === 0 ? (
+              ) : scopedInvoiceOrders.length === 0 ? (
                 <EmptyState
-                  text={fetchNotice || 'لا توجد طلبات في هذه الفاتورة'}
+                  text={fetchNotice || 'لا توجد طلبات شركة توصيل مطابقة لطلبات هذا المستخدم'}
                   sub={fetchNotice ? `العدد المتوقع: ${expectedCount}` : null}
                 />
               ) : (
                 <div className="grid sm:grid-cols-2 gap-2">
-                  {invoiceOrders.map((order) => (
+                  {scopedInvoiceOrders.map((order) => (
                     <WaseetOrderRow
                       key={order.id}
                       order={order}
