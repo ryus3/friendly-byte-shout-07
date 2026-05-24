@@ -491,7 +491,7 @@ Deno.serve(async (req) => {
           if (notificationsEnabled && statusChanged) {
             // بناء رسالة الإشعار: مدينة - منطقة | نص الحالة بالعربي رقم_التتبع
             const statusConfig = statusChanged ? getStatusConfig(newStatus) : null;
-            const statusText = statusConfig?.text || '';
+            const statusText = newStatus === '4' ? 'تم التسليم' : (statusConfig?.text || '');
             const tracking = localOrder.tracking_number || localOrder.order_number || '';
             const cityPart = localOrder.customer_province || localOrder.customer_city || '';
             const regionPart = localOrder.customer_city && localOrder.customer_province ? localOrder.customer_city : '';
@@ -594,6 +594,12 @@ Deno.serve(async (req) => {
         try {
           const orderId = (notif.data as any)?.order_id;
           const stateId = (notif.data as any)?.state_id ?? null;
+          const stateText = stateId === null ? '' : String(stateId);
+          if (!stateText || stateText === 'undefined' || stateText === 'null') {
+            console.warn('⚠️ تخطي إشعار بحالة غير صالحة:', notif.data);
+            skipped++;
+            continue;
+          }
           if (!orderId) {
             await supabase.from('notifications').insert(notif);
             inserted++;
