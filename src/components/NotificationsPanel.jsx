@@ -882,30 +882,28 @@ const NotificationsPanel = () => {
                                    // إزالة الإيموجي البدائي 🤖 من العناوين القديمة — الأيقونة الاحترافية تظهر يساراً
                                    const cleanTitleText = String(titleText || '').replace(/🤖\s*/g, '').trim() || 'إشعار جديد';
                                    
-                                   // استخدام ScrollingText للعناوين الطويلة
-                                   return cleanTitleText.length > 18 ? (
-                                     <ScrollingText 
-                                       text={cleanTitleText} 
-                                       className={cn("font-semibold text-sm leading-tight", colors.text)}
-                                       maxWidth="160px"
-                                     />
-                                   ) : (
-                                     <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
-                                       {cleanTitleText}
-                                     </h3>
-                                   );
-                                })()}
-                                 <div className="flex items-center gap-1 flex-shrink-0">
-                                   {!(notification.is_read || notification.read) && (
-                                     <div className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></div>
-                                   )}
-                                 </div>
-                              </div>
-                              <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
-                               <Clock className="w-2.5 h-2.5" />
-                               {formatRelativeTime(notification.created_at, notification.updated_at)}
-                             </p>
-                          </div>
+                                    // استخدام ScrollingText للعناوين الطويلة
+                                    return cleanTitleText.length > 22 ? (
+                                      <ScrollingText 
+                                        text={cleanTitleText} 
+                                        className={cn("font-semibold text-sm leading-tight", colors.text)}
+                                        maxWidth="200px"
+                                      />
+                                    ) : (
+                                      <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
+                                        {cleanTitleText}
+                                      </h3>
+                                    );
+                                 })()}
+                               </div>
+                               <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
+                                {!(notification.is_read || notification.read) && (
+                                  <span className={cn("w-2 h-2 rounded-full animate-pulse flex-shrink-0", colors.dot)}></span>
+                                )}
+                                <Clock className="w-2.5 h-2.5" />
+                                {formatRelativeTime(notification.created_at, notification.updated_at)}
+                              </p>
+                           </div>
                           <div className="text-xs text-foreground font-medium line-clamp-1 mb-1.5">
                             {(() => {
                                // تنسيق موحد للإشعارات المتعلقة بالطلبات - استخدام النظام الموحد
