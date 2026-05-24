@@ -29,6 +29,7 @@ import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 import devLog from '@/lib/devLogger';
 import { supabase } from '@/lib/customSupabaseClient';
+import { toast } from '@/hooks/use-toast';
 
 const AlWaseetInvoicesTab = () => {
   // 🔥 v2.0.0 - فواتير موحدة لجميع شركات التوصيل (الوسيط + مدن)
