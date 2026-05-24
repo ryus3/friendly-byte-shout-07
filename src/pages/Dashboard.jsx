@@ -923,11 +923,8 @@ const Dashboard = () => {
                       itemIcon={TrendingUp}
                       onViewAll={() => setTopProductsOpen(true)}
                     />
-                    <TopListCard 
-                      title="المحافظات الأكثر طلباً" 
+                    <ProvincesHeatmapCard 
                       items={dashboardData.topProvinces} 
-                      titleIcon={MapPin} 
-                      itemIcon={MapPin}
                       onViewAll={() => setTopProvincesOpen(true)}
                     />
                     <TopListCard 
