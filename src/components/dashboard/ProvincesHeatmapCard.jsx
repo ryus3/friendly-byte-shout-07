@@ -94,7 +94,10 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
 
   return (
     <Card className="glass-effect h-full border-border/60 flex flex-col overflow-hidden relative">
-      <div className="pointer-events-none absolute inset-0 bg-card/20" />
+      <div className="pointer-events-none absolute inset-0 opacity-60">
+        <div className="absolute top-0 right-0 w-40 h-40 rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute bottom-0 left-0 w-32 h-32 rounded-full bg-cyan-500/10 blur-3xl" />
+      </div>
 
       <CardHeader className="relative">
         <CardTitle className="flex items-center justify-between gap-3 text-lg text-foreground">
@@ -111,13 +114,18 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col p-4 pt-0 relative">
-        {/* Real Iraq map outline — transparent glass, neutral borders */}
+        {/* Real Iraq map outline with overlaid markers — glassmorphism */}
         <div className="relative w-full max-w-[300px] mx-auto aspect-square">
-          <div className="pointer-events-none absolute inset-4 rounded-[2rem] border border-border/20 bg-background/5 backdrop-blur-sm" />
+          {/* Aurora mesh backdrop */}
+          <div className="pointer-events-none absolute -inset-6 opacity-70">
+            <div className="absolute top-4 left-8 w-32 h-32 rounded-full bg-primary/25 blur-3xl" />
+            <div className="absolute bottom-2 right-6 w-28 h-28 rounded-full bg-cyan-400/20 blur-3xl" />
+            <div className="absolute top-1/3 right-1/4 w-20 h-20 rounded-full bg-fuchsia-400/15 blur-3xl" />
+          </div>
 
-          {/* Glass-filled country shape — almost transparent, no blue fill */}
+          {/* Glass-filled country shape with luminous edges */}
           <div
-            className="absolute inset-0"
+            className="absolute inset-0 backdrop-blur-md"
             style={{
               WebkitMaskImage: "url('/iraq-map.svg')",
               WebkitMaskRepeat: 'no-repeat',
@@ -128,26 +136,23 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
               maskPosition: 'center',
               maskSize: 'contain',
               background:
-                'linear-gradient(145deg, hsl(var(--foreground) / 0.075) 0%, hsl(var(--background) / 0.035) 48%, hsl(var(--foreground) / 0.05) 100%)',
-              backdropFilter: 'blur(8px) saturate(1.15)',
-              WebkitBackdropFilter: 'blur(8px) saturate(1.15)',
-              boxShadow: 'inset 0 0 28px hsl(var(--foreground) / 0.075)',
+                'linear-gradient(160deg, hsl(var(--primary) / 0.18) 0%, hsl(var(--primary) / 0.04) 45%, hsl(199 89% 60% / 0.10) 100%)',
+              boxShadow: 'inset 0 0 30px hsl(var(--primary) / 0.15)',
             }}
           />
 
-          {/* Soft luminous border outline only — neutral, not sky-blue */}
+          {/* Luminous border outline */}
           <img
             src="/iraq-map.svg"
             alt="خريطة العراق"
             className="absolute inset-0 w-full h-full object-contain pointer-events-none"
             style={{
               filter:
-                'brightness(0) invert(1) drop-shadow(0 0 1px hsl(var(--foreground) / 0.55)) drop-shadow(0 0 9px hsl(var(--foreground) / 0.18))',
-              opacity: 0.24,
+                'invert(46%) sepia(91%) saturate(2500%) hue-rotate(195deg) brightness(115%) contrast(95%) drop-shadow(0 0 6px hsl(var(--primary) / 0.85)) drop-shadow(0 0 14px hsl(var(--primary) / 0.45)) drop-shadow(0 0 22px hsl(199 89% 60% / 0.35))',
+              opacity: 0.9,
               mixBlendMode: 'screen',
             }}
           />
-
 
 
           {/* Markers overlay */}

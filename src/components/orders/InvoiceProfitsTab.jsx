@@ -16,7 +16,7 @@ import { usePermissions } from '@/hooks/usePermissions';
  *  التكلفة = SUM(order_items.quantity * cost_price من المتغير/المنتج)
  *  الربح = الإيراد - التكلفة
  */
-const InvoiceProfitsTab = ({ invoice, linkedOrders = [], viewerUserId = null }) => {
+const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   const { user } = useAuth();
   const { isAdmin, isDepartmentManager } = usePermissions();
 
@@ -36,17 +36,11 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [], viewerUserId = null }) 
   );
 
   // جلب order_id من delivery_invoice_orders إذا لم تكن الروابط ممررة
-  // إذا كان هناك viewerUserId محدد، نفلتر الطلبات حسب created_by
   useEffect(() => {
     let cancelled = false;
     const resolve = async () => {
       if (orderIdsFromProps.length > 0) {
         setResolvedOrderIds(orderIdsFromProps);
-        return;
-      }
-      // إذا الفاتورة مفتوحة بسياق موظف محدد ولا توجد طلبات مفلترة، لا نُرجع كل طلبات الفاتورة
-      if (viewerUserId) {
-        setResolvedOrderIds([]);
         return;
       }
       const externalId = invoice?.external_id || invoice?.id;
@@ -66,7 +60,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [], viewerUserId = null }) 
         }
         const { data: dio } = await supabase
           .from('delivery_invoice_orders')
-          .select('order_id, orders:order_id(created_by)')
+          .select('order_id')
           .eq('invoice_id', invRow.id)
           .not('order_id', 'is', null);
         const ids = Array.from(new Set((dio || []).map(r => r.order_id).filter(Boolean)));
@@ -77,7 +71,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [], viewerUserId = null }) 
     };
     resolve();
     return () => { cancelled = true; };
-  }, [orderIdsFromProps, invoice?.external_id, invoice?.id, viewerUserId]);
+  }, [orderIdsFromProps, invoice?.external_id, invoice?.id]);
 
   useEffect(() => {
     let cancelled = false;

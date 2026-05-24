@@ -379,20 +379,11 @@ export const useAlWaseetInvoices = () => {
       let selectedToken = token;
 
       // ✅ جلب معلومات الفاتورة + حالة الاستلام + عدد روابط الطلبات الموجودة
-      let invoiceRecordQuery = supabase
+      const { data: invoiceRecord } = await supabase
         .from('delivery_invoices')
         .select('id, owner_user_id, partner, account_username, external_id, orders_count, orders_last_synced_at, received, received_flag, status, status_normalized')
-        .eq('external_id', String(invoiceId));
-
-      if (options?.partner) {
-        invoiceRecordQuery = invoiceRecordQuery.eq('partner', options.partner);
-      }
-
-      const { data: invoiceRecords } = await invoiceRecordQuery
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      const invoiceRecord = invoiceRecords?.[0];
+        .eq('external_id', invoiceId)
+        .maybeSingle();
 
       // ✅ تحديد ما إذا كانت الفاتورة مستلمة
       const isReceivedInvoice = !!invoiceRecord && (
@@ -498,20 +489,11 @@ export const useAlWaseetInvoices = () => {
       if (!invoiceData?.orders) {
         try {
           // البحث عن الفاتورة بـ external_id
-          let invoiceRecord2Query = supabase
+          const { data: invoiceRecord2, error: invoiceError } = await supabase
             .from('delivery_invoices')
             .select('id, external_id, raw, orders_count, partner')
-            .eq('external_id', String(invoiceId));
-
-          if (options?.partner) {
-            invoiceRecord2Query = invoiceRecord2Query.eq('partner', options.partner);
-          }
-
-          const { data: invoiceRecord2Rows, error: invoiceError } = await invoiceRecord2Query
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-          const invoiceRecord2 = invoiceRecord2Rows?.[0];
+            .eq('external_id', invoiceId)
+            .maybeSingle();
 
           if (invoiceError && invoiceError.code !== 'PGRST116') {
             throw invoiceError;
@@ -798,28 +780,18 @@ export const useAlWaseetInvoices = () => {
   }, [token, fetchInvoices, fetchInvoiceOrders, user?.id, user?.user_id]);
 
   // ✅ FIXED: Link invoice with local orders - directly from database
-  const linkInvoiceWithLocalOrders = useCallback(async (invoiceId, viewerUserId = null, options = {}) => {
+  const linkInvoiceWithLocalOrders = useCallback(async (invoiceId, viewerUserId = null) => {
     if (!invoiceId) return [];
 
     try {
-      const normalizedViewerId = viewerUserId ? String(viewerUserId) : null;
       devLog.log(`🔗 جلب الطلبات المرتبطة بالفاتورة ${invoiceId} من قاعدة البيانات مباشرة`);
       
       // أولاً: جلب internal ID للفاتورة من external_id
-      let invoiceQuery = supabase
+      const { data: invoiceRecord, error: invoiceError } = await supabase
         .from('delivery_invoices')
-        .select('id, orders_count, partner')
-        .eq('external_id', String(invoiceId));
-
-      if (options?.partner) {
-        invoiceQuery = invoiceQuery.eq('partner', options.partner);
-      }
-
-      const { data: invoiceRows, error: invoiceError } = await invoiceQuery
-        .order('created_at', { ascending: false })
-        .limit(1);
-
-      const invoiceRecord = invoiceRows?.[0];
+        .select('id, orders_count')
+        .eq('external_id', invoiceId)
+        .maybeSingle();
 
       if (invoiceError || !invoiceRecord) {
         devLog.warn(`⚠️ الفاتورة ${invoiceId} غير موجودة في قاعدة البيانات`);
@@ -854,7 +826,6 @@ export const useAlWaseetInvoices = () => {
             sales_amount,
             final_amount,
             receipt_received,
-            created_by,
             created_at,
             updated_at
           )
@@ -890,19 +861,18 @@ export const useAlWaseetInvoices = () => {
                   id, order_number, tracking_number, customer_name, customer_phone,
                   customer_address, customer_city, delivery_partner, delivery_partner_order_id,
                   delivery_partner_invoice_id, status, delivery_status, total_amount, discount,
-                  delivery_fee, sales_amount, final_amount, receipt_received, created_by, created_at, updated_at
+                  delivery_fee, sales_amount, final_amount, receipt_received, created_at, updated_at
                 )
               `)
               .eq('invoice_id', invoiceRecord.id);
             
             const refreshedSource = (refreshedOrders || []).filter(item => item.orders);
-            const refreshedFiltered = normalizedViewerId
-              ? refreshedSource.filter(item => String(item.orders?.created_by || '') === normalizedViewerId)
+            const refreshedFiltered = viewerUserId
+              ? refreshedSource.filter(item => item.orders?.created_by === viewerUserId)
               : refreshedSource;
             const refreshedFormatted = refreshedFiltered.map(item => ({
                 ...item.orders,
                 invoice_link_id: item.id,
-                invoice_external_order_id: item.external_order_id,
                 invoice_amount: item.amount,
                 invoice_status: item.status
               }));
@@ -916,18 +886,17 @@ export const useAlWaseetInvoices = () => {
       }
 
       // تحويل البيانات للصيغة المتوقعة + فلترة حسب المشاهد إن وجد
-      const sourceLinked = normalizedViewerId
-        ? linkedWithOrders.filter(item => String(item.orders?.created_by || '') === normalizedViewerId)
+      const sourceLinked = viewerUserId
+        ? linkedWithOrders.filter(item => item.orders?.created_by === viewerUserId)
         : linkedWithOrders;
       const formattedOrders = sourceLinked.map(item => ({
         ...item.orders,
         invoice_link_id: item.id,
-        invoice_external_order_id: item.external_order_id,
         invoice_amount: item.amount,
         invoice_status: item.status
       }));
 
-      devLog.log(`✅ تم جلب ${formattedOrders.length} طلب مرتبط${normalizedViewerId ? ` (مفلتر للمستخدم ${normalizedViewerId})` : ''}`);
+      devLog.log(`✅ تم جلب ${formattedOrders.length} طلب مرتبط${viewerUserId ? ` (مفلتر للمستخدم ${viewerUserId})` : ''}`);
       return formattedOrders;
       
     } catch (error) {
