@@ -359,13 +359,15 @@ serve(async (req) => {
         );
       }
 
-      let ordersFromApi = await fetchInvoiceOrdersFromAPI(tokenRow.token, String(invRow.external_id), partnerName);
+      const ordersIndexTargeted = await fetchMerchantOrdersIndex(tokenRow.token, partnerName);
+      let ordersFromApi = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenRow.token, String(invRow.external_id), partnerName), ordersIndexTargeted);
 
       // محاولة تجديد توكن الوسيط لمرة واحدة عند فشل الجلب وإعادة المحاولة
       if (ordersFromApi.length === 0 && partnerName === 'alwaseet') {
         const renewed = await renewAlWaseetTokenIfNeeded(supabase, tokenRow);
         if (renewed) {
-          ordersFromApi = await fetchInvoiceOrdersFromAPI(renewed, String(invRow.external_id), partnerName);
+          const renewedIndex = await fetchMerchantOrdersIndex(renewed, partnerName);
+          ordersFromApi = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(renewed, String(invRow.external_id), partnerName), renewedIndex);
         }
       }
 
