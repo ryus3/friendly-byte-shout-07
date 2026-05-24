@@ -29,48 +29,35 @@ export const useAlWaseetInvoices = () => {
     // 1) تحميل فوري من قاعدة البيانات (لا يُمسح أبداً)
     let cachedFromDb = [];
     try {
-      // أ) فواتير يملكها المستخدم مباشرة
+      // ✅ جلب حسابات المستخدم النشطة فقط (alwaseet + modon)
+      const { data: myTokens } = await supabase
+        .from('delivery_partner_tokens')
+        .select('partner_name, account_username, normalized_username')
+        .eq('user_id', user?.id)
+        .in('partner_name', ['alwaseet', 'modon'])
+        .eq('is_active', true);
+
+      const accountKeys = new Set(
+        (myTokens || [])
+          .map(t => `${t.partner_name}::${(t.normalized_username || t.account_username || '').toLowerCase()}`)
+          .filter(k => k.split('::')[1])
+      );
+
+      // فواتير يملكها المستخدم مباشرة (owner_user_id)
       const { data: ownedCached } = await supabase
         .from('delivery_invoices')
         .select('*')
         .in('partner', ['alwaseet', 'modon'])
         .eq('owner_user_id', user?.id)
         .order('issued_at', { ascending: false })
-        .limit(200);
+        .limit(300);
 
-      // ب) فواتير حساب مشترك: للمستخدم طلبات محلية مرتبطة بها (delivery_partner_invoice_id)
-      const { data: sharedOrderRows } = await supabase
-        .from('orders')
-        .select('delivery_partner_invoice_id')
-        .eq('created_by', user?.id)
-        .not('delivery_partner_invoice_id', 'is', null)
-        .order('created_at', { ascending: false })
-        .limit(500);
-
-      const sharedExternalIds = Array.from(new Set(
-        (sharedOrderRows || [])
-          .map(r => r.delivery_partner_invoice_id)
-          .filter(v => v && !v.startsWith('LOCAL-'))
-      ));
-
-      let sharedCached = [];
-      if (sharedExternalIds.length > 0) {
-        const { data: shared } = await supabase
-          .from('delivery_invoices')
-          .select('*')
-          .in('partner', ['alwaseet', 'modon'])
-          .in('external_id', sharedExternalIds)
-          .order('issued_at', { ascending: false })
-          .limit(200);
-        sharedCached = shared || [];
-      }
-
-      // دمج بدون تكرار حسب id
-      const mergedMap = new Map();
-      [...(ownedCached || []), ...sharedCached].forEach(inv => {
-        if (!mergedMap.has(inv.id)) mergedMap.set(inv.id, inv);
+      // دمج + تصفية صارمة على حسابات المستخدم فقط
+      const cached = (ownedCached || []).filter(inv => {
+        if (!inv.account_username) return true; // فواتيره الخاصة بدون اسم حساب — مقبولة
+        const key = `${inv.partner}::${(inv.account_username || '').toLowerCase()}`;
+        return accountKeys.size === 0 ? true : accountKeys.has(key);
       });
-      const cached = Array.from(mergedMap.values());
 
       if (cached.length) {
         cachedFromDb = cached.map(inv => ({
@@ -81,7 +68,6 @@ export const useAlWaseetInvoices = () => {
           orders_count: inv.orders_count,
           status: inv.status,
           merchant_id: inv.merchant_id,
-          // ✅ updated_at = تاريخ الفاتورة الفعلي من شركة التوصيل (issued_at في DB)
           updated_at: inv.issued_at,
           issued_at: inv.issued_at,
           created_at: inv.issued_at,
