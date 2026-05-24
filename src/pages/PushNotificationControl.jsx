@@ -171,7 +171,7 @@ const PushNotificationControl = () => {
 
   const getPreferenceLabel = (key) => {
     const labels = {
-      ai_orders: '🤖 طلبات تليجرام',
+      ai_orders: '🧠 طلبات تليجرام',
       regular_orders: '📦 الطلبات العادية',
       delivery_updates: '🚚 تحديثات التوصيل',
       new_registrations: '👥 الموظفين الجدد'
