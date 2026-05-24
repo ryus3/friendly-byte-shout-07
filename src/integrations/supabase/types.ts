@@ -6787,6 +6787,57 @@ export type Database = {
           },
         ]
       }
+      sync_progress_events: {
+        Row: {
+          finished_at: string | null
+          invoices_synced: number
+          linked_count: number
+          message: string | null
+          orders_updated: number
+          percentage: number
+          run_id: string
+          stage: string
+          stage_index: number
+          started_at: string
+          status: string
+          total_stages: number
+          triggered_by: string | null
+          updated_at: string
+        }
+        Insert: {
+          finished_at?: string | null
+          invoices_synced?: number
+          linked_count?: number
+          message?: string | null
+          orders_updated?: number
+          percentage?: number
+          run_id: string
+          stage?: string
+          stage_index?: number
+          started_at?: string
+          status?: string
+          total_stages?: number
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Update: {
+          finished_at?: string | null
+          invoices_synced?: number
+          linked_count?: number
+          message?: string | null
+          orders_updated?: number
+          percentage?: number
+          run_id?: string
+          stage?: string
+          stage_index?: number
+          started_at?: string
+          status?: string
+          total_stages?: number
+          triggered_by?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       system_backups: {
         Row: {
           backup_data: Json
