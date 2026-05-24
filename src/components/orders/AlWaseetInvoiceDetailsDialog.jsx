@@ -303,7 +303,7 @@ const LocalOrderCard = ({ order }) => {
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <Badge variant="default">#{order.order_number}</Badge>
+              <Badge variant="default">{order.tracking_number || '—'}</Badge>
               <span className="font-medium">{order.customer_name}</span>
               <ExternalLink className="h-3 w-3 text-primary" />
             </div>
@@ -322,9 +322,6 @@ const LocalOrderCard = ({ order }) => {
           </div>
           <div className="text-right">
             <p className="font-semibold">{(order.final_amount || 0).toLocaleString()} د.ع</p>
-            <p className="text-sm text-muted-foreground">
-              محلي: {order.tracking_number}
-            </p>
           </div>
         </div>
       </CardContent>
