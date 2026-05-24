@@ -96,7 +96,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[92vh] p-0 flex flex-col overflow-hidden border-0 bg-background">
+      <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[92vh] p-0 flex flex-col overflow-hidden overflow-x-hidden border-0 bg-background">
         {/* Hero Header */}
         <div className="relative flex-shrink-0 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
@@ -172,7 +172,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice }) => {
             </TabsList>
           </div>
 
-          <TabsContent value="details" className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5 mt-0 space-y-6">
+          <TabsContent value="details" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-5 mt-0 space-y-6 max-w-full">
             {/* Linked Local Orders — Timeline style */}
             <section dir="rtl">
               <SectionHeader
@@ -230,7 +230,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice }) => {
             </section>
           </TabsContent>
 
-          <TabsContent value="profits" className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-4 mt-0">
+          <TabsContent value="profits" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 mt-0 max-w-full">
             <InvoiceProfitsTab invoice={invoice} linkedOrders={linkedOrders} />
           </TabsContent>
         </Tabs>
@@ -334,7 +334,7 @@ const WaseetOrderRow = ({ order, linked }) => {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-1 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className="font-mono text-[11px]">#{order.qr_id || order.id}</Badge>
+            <Badge variant="outline" className="font-mono text-[11px] max-w-full truncate">#{order.qr_id || order.id}</Badge>
             {linked ? (
               <Badge className="h-5 px-1.5 text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
                 <Link2 className="h-3 w-3 ml-1" />مرتبط
