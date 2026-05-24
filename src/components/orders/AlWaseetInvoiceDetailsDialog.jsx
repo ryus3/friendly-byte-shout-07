@@ -172,7 +172,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice }) => {
             </TabsList>
           </div>
 
-          <TabsContent value="details" className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-5 mt-0 space-y-6">
+          <TabsContent value="details" className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-5 mt-0 space-y-6 max-w-full">
             {/* Linked Local Orders — Timeline style */}
             <section dir="rtl">
               <SectionHeader
