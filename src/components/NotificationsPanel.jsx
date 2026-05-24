@@ -267,7 +267,7 @@ const iconMap = {
   CheckCircle: OrderSuccessIcon,
   ShoppingCart: OrderIcon,
   UserPlus: UserRegistrationIcon,
-  Bot: SystemIcon,
+  Bot: AiOrderIcon,
   Bell: SystemIcon,
   // احتياطي
   default: SystemIcon,
