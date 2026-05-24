@@ -31,10 +31,45 @@ interface SyncRequest {
   sync_orders?: boolean;
   force_refresh?: boolean;
   run_reconciliation?: boolean;
-  // 🆕 وضع موجه: عند فتح فاتورة من الواجهة وكانت طلباتها ناقصة، نمرر external_id الخاص بها
-  // لتُعالج فوراً بدون انتظار الميزانية، بدون تأثير على باقي الفواتير.
   target_invoice_external_id?: string;
   target_invoice_partner?: 'alwaseet' | 'modon';
+  run_id?: string;
+}
+
+const STAGES = [
+  { key: 'init',     label: 'تهيئة المزامنة',                pct: 5   },
+  { key: 'invoices', label: 'جلب الفواتير من شركات التوصيل', pct: 35  },
+  { key: 'orders',   label: 'جلب تفاصيل الطلبات',            pct: 70  },
+  { key: 'linking',  label: 'ربط الفواتير بالطلبات المحلية', pct: 90  },
+  { key: 'done',     label: 'اكتمل',                          pct: 100 },
+];
+
+async function reportProgress(
+  supabase: any,
+  runId: string | undefined,
+  stageKey: string,
+  message: string,
+  extra: Record<string, any> = {},
+) {
+  if (!runId) return;
+  try {
+    const idx = STAGES.findIndex(s => s.key === stageKey);
+    const stage = STAGES[idx >= 0 ? idx : 0];
+    await supabase.from('sync_progress_events').upsert({
+      run_id: runId,
+      stage: stage.key,
+      stage_index: idx >= 0 ? idx : 0,
+      total_stages: STAGES.length,
+      percentage: stage.pct,
+      message,
+      status: stageKey === 'done' ? 'completed' : (stageKey === 'failed' ? 'failed' : 'running'),
+      updated_at: new Date().toISOString(),
+      ...(stageKey === 'done' ? { finished_at: new Date().toISOString() } : {}),
+      ...extra,
+    }, { onConflict: 'run_id' });
+  } catch (e) {
+    console.warn('reportProgress failed:', (e as any)?.message);
+  }
 }
 
 interface Invoice {
@@ -369,14 +404,17 @@ serve(async (req) => {
       mode = 'smart', 
       employee_id, 
       sync_invoices = true, 
-      sync_orders = true,  // ✅ تفعيل افتراضي - مهم للربط التلقائي
+      sync_orders = true,
       force_refresh = false,
       run_reconciliation = true,
       target_invoice_external_id,
       target_invoice_partner,
+      run_id,
     } = body;
 
-    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, ForceRefresh: ${force_refresh}, Target: ${target_invoice_external_id || '-'}`);
+    console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, ForceRefresh: ${force_refresh}, Target: ${target_invoice_external_id || '-'}, RunId: ${run_id || '-'}`);
+
+    await reportProgress(supabase, run_id, 'init', 'بدء المزامنة الشاملة...');
 
     // 🆕 وضع الجلب الموجه لفاتورة واحدة فقط (يُستدعى من واجهة فتح تفاصيل الفاتورة).
     // لا يلمس باقي الفواتير، ولا يعيد المزامنة العامة، ولا يُعدّ "موجة طلبات".
@@ -557,8 +595,13 @@ serve(async (req) => {
       }
 
       console.log(`📋 Found ${tokens?.length || 0} active tokens to sync`);
+      const totalTokens = tokens?.length || 0;
+      await reportProgress(supabase, run_id, 'invoices', `جلب الفواتير من ${totalTokens} حساب توصيل...`);
 
+      let tokenIdx = 0;
       for (const tokenData of tokens || []) {
+        tokenIdx++;
+        await reportProgress(supabase, run_id, 'invoices', `معالجة الحساب ${tokenIdx} من ${totalTokens}...`);
         const employeeId = tokenData.user_id;
         const accountUsername = tokenData.account_username || 'unknown';
         const partnerName = tokenData.partner_name || 'alwaseet';  // ✅ تحديد الشركة
@@ -1146,7 +1189,13 @@ serve(async (req) => {
       console.log(`✅ Smart sync complete for employee ${targetEmployeeId}: ${totalInvoicesSynced} invoices (${newInvoicesCount} new)`);
     }
 
+    await reportProgress(supabase, run_id, 'orders', `تم جلب ${totalInvoicesSynced} فاتورة و ${totalOrdersUpdated} طلب`, {
+      invoices_synced: totalInvoicesSynced,
+      orders_updated: totalOrdersUpdated,
+    });
+
     // ✅ Link invoice orders to local orders
+    await reportProgress(supabase, run_id, 'linking', 'ربط الفواتير بالطلبات المحلية...');
     let linkedCount = 0;
     let updatedOrdersCount = 0;
     try {
@@ -1172,6 +1221,12 @@ serve(async (req) => {
 
     console.log(`✅ Sync complete - Invoices: ${totalInvoicesSynced}, New: ${newInvoicesCount}, StatusChanged: ${statusChangedCount}, Orders: ${totalOrdersUpdated}, Linked: ${linkedCount}`);
 
+    await reportProgress(supabase, run_id, 'done', `اكتمل: ${totalInvoicesSynced} فاتورة، ${totalOrdersUpdated} طلب، ${linkedCount} ربط`, {
+      invoices_synced: totalInvoicesSynced,
+      orders_updated: totalOrdersUpdated,
+      linked_count: linkedCount,
+    });
+
     return new Response(
       JSON.stringify({
         success: true,
@@ -1182,6 +1237,7 @@ serve(async (req) => {
         orders_updated: totalOrdersUpdated,
         linked_count: linkedCount,
         employee_results: employeeResults,
+        run_id,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -1190,6 +1246,27 @@ serve(async (req) => {
     console.error('❌ Smart Invoice Sync Error:', error);
 
     const message = error instanceof Error ? error.message : 'Unknown error';
+    try {
+      const body = await req.clone().json().catch(() => ({}));
+      const runId = (body as any)?.run_id;
+      if (runId) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const sb = createClient(supabaseUrl, supabaseServiceKey);
+        await sb.from('sync_progress_events').upsert({
+          run_id: runId,
+          stage: 'failed',
+          stage_index: 0,
+          total_stages: STAGES.length,
+          percentage: 100,
+          status: 'failed',
+          message: `فشل: ${message}`,
+          finished_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'run_id' });
+      }
+    } catch { /* silent */ }
+
     return new Response(
       JSON.stringify({ 
         success: false, 
