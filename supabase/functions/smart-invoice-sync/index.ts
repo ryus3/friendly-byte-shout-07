@@ -442,6 +442,9 @@ serve(async (req) => {
           const apiInvoices = await fetchInvoicesWithTokenRecovery(supabase, tokenData, partnerName);
           console.log(`  📥 Fetched ${apiInvoices.length} total invoices from ${partnerName.toUpperCase()} API`);
 
+          // ✅ بناء خريطة merchant-orders لإثراء raw بـ tracking/qr الحقيقي (مرة واحدة لكل توكن)
+          const ordersIndex = await fetchMerchantOrdersIndex(tokenData.token, partnerName);
+
           let employeeInvoicesSynced = 0;
           let employeeOrdersSynced = 0;
           let employeeNewInvoices = 0;
