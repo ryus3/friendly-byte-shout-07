@@ -606,16 +606,13 @@ Deno.serve(async (req) => {
             continue;
           }
 
-          // ابحث عن أحدث إشعار alwaseet_status_change لنفس الطلب (آخر 7 أيام)
-          const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
           const { data: existing } = await supabase
             .from('notifications')
             .select('id, data, is_read')
             .eq('user_id', notif.user_id)
             .eq('type', 'alwaseet_status_change')
-            .gte('created_at', sevenDaysAgo)
             .order('created_at', { ascending: false })
-            .limit(20);
+            .limit(50);
 
           const sameOrder = (existing || []).find((n: any) => 
             (n.data?.order_id === orderId) || (n.data?.tracking_number && n.data?.tracking_number === (notif.data as any)?.tracking_number)
