@@ -364,12 +364,12 @@ const AlWaseetInvoicesTab = () => {
             <div className="flex gap-2">
               <Button 
                 onClick={handleRefresh} 
-                disabled={loading}
+                disabled={refreshing}
                 size="sm"
                 className="inline-flex items-center gap-2"
               >
                 <span>تحديث</span>
-                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               </Button>
             </div>
             <span className="text-right text-lg font-bold">
