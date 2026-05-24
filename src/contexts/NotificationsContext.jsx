@@ -155,27 +155,7 @@ export const NotificationsProvider = ({ children }) => {
                 currentUser: user.id
             });
 
-            const isForThisUser = newNotification.user_id === user.id;
-            const isGlobalAdminNotification = newNotification.user_id === null;
-
-            let shouldShow = false;
-
-            if (isForThisUser) {
-                shouldShow = true;
-                devLog.log('✅ NotificationsContext: Notification is for current user');
-            } else if (isGlobalAdminNotification) {
-                const isAdmin = user?.roles?.includes('super_admin') || user?.roles?.includes('admin');
-                if (isAdmin) {
-                    shouldShow = true;
-                    devLog.log('✅ NotificationsContext: Admin notification accepted');
-                } else {
-                    // التحقق من نوع الإشعار للموظفين
-                    // غير المدير لا يرى أي إشعار عام (user_id = null)
-                    devLog.log('❌ NotificationsContext: Global notification blocked for non-admin');
-                }
-            } else {
-                devLog.log('❌ NotificationsContext: Notification not for this user');
-            }
+            const shouldShow = canSeeNotification(newNotification);
 
             if (shouldShow) {
                 // ✅ استثناء إشعارات تغيير حالة الطلبات من التوست - نكتفي بنافذة الإشعارات
@@ -225,7 +205,7 @@ export const NotificationsProvider = ({ children }) => {
                 }
                 
                 // ✅ الإشعار يظهر في نافذة الإشعارات دائماً (سواء كان هناك توست أم لا)
-                setNotifications(prev => [newNotification, ...prev.filter(n => n.id !== newNotification.id)]);
+                setNotifications(prev => [getReadAwareNotification(newNotification), ...prev.filter(n => n.id !== newNotification.id)]);
             }
         };
 
@@ -240,10 +220,17 @@ export const NotificationsProvider = ({ children }) => {
                 schema: 'public',
                 table: 'notifications',
             }, (payload) => {
-                // تحديث الإشعار في الحالة المحلية
-                setNotifications(prev => prev.map(n => 
-                    n.id === payload.new.id ? payload.new : n
-                ));
+                const updatedNotification = getReadAwareNotification(payload.new);
+                if (!canSeeNotification(updatedNotification)) {
+                    setNotifications(prev => prev.filter(n => n.id !== updatedNotification.id));
+                    return;
+                }
+
+                // تحديث الإشعار نفسه وإعادته للأعلى وغير مقروء عند تغير الحالة
+                setNotifications(prev => [
+                    updatedNotification,
+                    ...prev.filter(n => n.id !== updatedNotification.id)
+                ]);
             })
             .on('postgres_changes', {
                 event: 'DELETE',
@@ -267,7 +254,7 @@ export const NotificationsProvider = ({ children }) => {
                 supabase.removeChannel(channel);
             }
         };
-    }, [user]);
+    }, [user, canSeeNotification, getReadAwareNotification]);
 
     const addNotification = useCallback(async (notificationData) => {
         if (!supabase) {
