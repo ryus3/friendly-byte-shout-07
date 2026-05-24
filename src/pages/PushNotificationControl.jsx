@@ -259,7 +259,7 @@ const PushNotificationControl = () => {
             
             <div className="space-y-4">
               {[
-                { key: 'ai_orders', icon: '🤖', label: 'طلبات تليجرام (AI Orders)' },
+                { key: 'ai_orders', icon: '🧠', label: 'طلبات تليجرام (AI Orders)' },
                 { key: 'regular_orders', icon: '📦', label: 'الطلبات العادية الجديدة' },
                 { key: 'delivery_updates', icon: '🚚', label: 'تحديثات حالة التوصيل' },
                 { key: 'new_registrations', icon: '👥', label: 'تسجيل موظفين جدد' }
