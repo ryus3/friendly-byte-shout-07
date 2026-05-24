@@ -690,12 +690,29 @@ serve(async (req) => {
           });
           const queue = incompleteFirst.slice(0, MAX_INVOICES_PER_TOKEN);
 
+          // 📊 بث التقدّم: عدد الفواتير الكلي لهذا التوكن
+          await reportProgress(supabase, run_id, 'orders',
+            `حساب ${accountUsername}: 0 / ${queue.length} فاتورة`,
+            { invoices_synced: totalInvoicesSynced, orders_updated: totalOrdersUpdated },
+            { current: 0, total: queue.length },
+            true,
+          );
+
           // ✅ معالجة الفواتير حسب الأولوية؛ تفاصيل الطلبات لها ميزانية محدودة لمنع rate limit
+          let invoiceIdxInQueue = 0;
           for (const invoice of queue) {
+            invoiceIdxInQueue++;
             const externalId = String(invoice.id);
+            // 📊 بث التقدّم لكل فاتورة (مع throttle داخل reportProgress)
+            await reportProgress(supabase, run_id, 'orders',
+              `${accountUsername}: فاتورة ${externalId} (${invoiceIdxInQueue}/${queue.length})`,
+              { invoices_synced: totalInvoicesSynced, orders_updated: totalOrdersUpdated, current_item: externalId },
+              { current: invoiceIdxInQueue, total: queue.length },
+            );
             const statusNormalized = normalizeStatus(invoice.status);
             const isReceived = statusNormalized === 'received' || invoice.received === true;
             const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
+
 
             // التحقق إذا كانت الفاتورة موجودة - ✅ استخدام partnerName بدلاً من 'alwaseet' الثابت
             const { data: existingInvoice } = await supabase
