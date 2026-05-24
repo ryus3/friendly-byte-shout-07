@@ -346,9 +346,10 @@ const AlWaseetInvoicesTab = () => {
                 onClick={handleRefresh} 
                 disabled={loading}
                 size="sm"
+                className="inline-flex items-center gap-2"
               >
-                تحديث
-                <RefreshCw className={`h-4 w-4 ml-2 ${loading ? 'animate-spin' : ''}`} />
+                <span>تحديث</span>
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
             </div>
             <span className="text-right text-lg font-bold">
