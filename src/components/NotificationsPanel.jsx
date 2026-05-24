@@ -21,7 +21,6 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { useNotifications } from '@/contexts/NotificationsContext';
-import { useNotificationsSystem } from '@/contexts/NotificationsSystemContext';
 import { useSuper } from '@/contexts/SuperProvider';
 import PendingRegistrations from './dashboard/PendingRegistrations';
 import AiOrdersManager from './dashboard/AiOrdersManager';
@@ -406,7 +405,6 @@ const typeColorMap = {
 
 const NotificationsPanel = () => {
   const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification } = useNotifications();
-  const { notifications: systemNotifications, markAsRead: markSystemAsRead, markAllAsRead: markAllSystemAsRead, deleteNotification: deleteSystemNotification } = useNotificationsSystem();
   const { orders } = useSuper(); // النظام الموحد للطلبات
   const [isOpen, setIsOpen] = useState(false);
   const [showPendingRegistrations, setShowPendingRegistrations] = useState(false);
@@ -418,11 +416,7 @@ const NotificationsPanel = () => {
     
     // تحديد الإشعار كمقروء
     if (!notification.is_read) {
-      if (notification.related_entity_type) {
-        markSystemAsRead(notification.id);
-      } else {
-        markAsRead(notification.id);
-      }
+      markAsRead(notification.id);
     }
     
     // التنقل المتقدم مع فلترة دقيقة حسب البيانات
@@ -529,9 +523,7 @@ const NotificationsPanel = () => {
 
   const handleMarkAllAsRead = (e) => {
     e.stopPropagation();
-    // Mark all notifications as read from both contexts
     markAllAsRead();
-    markAllSystemAsRead();
     toast({ title: "تم تحديد الكل كمقروء" });
   };
 
