@@ -793,6 +793,9 @@ serve(async (req) => {
         }
         console.log(`📥 Processing ${apiInvoices.length} invoices for ${tokenData.account_username} from ${partnerName.toUpperCase()}`);
 
+        // ✅ بناء خريطة merchant-orders لإثراء raw بـ tracking/qr الحقيقي (مرة واحدة لكل توكن)
+        const ordersIndexSmart = await fetchMerchantOrdersIndex(tokenData.token, partnerName);
+
         let orderDetailsFetchedForToken = 0;
 
         // 🆕 ترتيب الفواتير: الناقصة أولاً (orders_count > 0 وكاش delivery_invoice_orders أقل من المتوقع)،
