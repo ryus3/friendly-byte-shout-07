@@ -8761,6 +8761,11 @@ export type Database = {
               error: true
             } & "Could not choose the best candidate function between: public.urlencode(string => bytea), public.urlencode(string => varchar). Try renaming the parameters or the function itself in the database so function overloading can be resolved"
           }
+      user_can_see_invoice: { Args: { _invoice_id: string }; Returns: boolean }
+      user_can_see_invoice_owner: {
+        Args: { _owner_user_id: string }
+        Returns: boolean
+      }
       username_exists: { Args: { p_username: string }; Returns: boolean }
       validate_cash_balance_sync: {
         Args: never
