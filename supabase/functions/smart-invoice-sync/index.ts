@@ -495,6 +495,8 @@ serve(async (req) => {
           orders_from_merchant_list: ordersFromMerchantList.length,
           merchant_orders_list_size: merchantOrdersList.length,
           is_complete: isComplete,
+          write_failures: writeFailures,
+          last_write_error: lastWriteError,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
