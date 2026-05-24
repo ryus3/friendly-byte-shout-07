@@ -458,10 +458,22 @@ export const useAlWaseetInvoices = () => {
               await supabase
                 .from('delivery_invoice_orders')
                 .upsert(ordersToInsert, { onConflict: 'invoice_id,external_order_id' });
-              await supabase
-                .from('delivery_invoices')
-                .update({ orders_last_synced_at: new Date().toISOString() })
-                .eq('id', invoiceRecord.id);
+
+              // ✅ لا نحدّث orders_last_synced_at إلا إذا اكتمل الكاش فعلاً
+              const { count: dioCount } = await supabase
+                .from('delivery_invoice_orders')
+                .select('id', { count: 'exact', head: true })
+                .eq('invoice_id', invoiceRecord.id);
+              const cached = dioCount || 0;
+              if (expectedOrders === 0 || cached >= expectedOrders) {
+                await supabase
+                  .from('delivery_invoices')
+                  .update({ orders_last_synced_at: new Date().toISOString() })
+                  .eq('id', invoiceRecord.id);
+              } else {
+                devLog.warn(`⏳ الفاتورة ${invoiceId} كاش ناقص: ${cached}/${expectedOrders}`);
+              }
+
               // ربط الطلبات المحلية تلقائياً
               await supabase.rpc('link_invoice_orders_to_orders');
             } catch (saveErr) {
@@ -477,9 +489,9 @@ export const useAlWaseetInvoices = () => {
       if (!invoiceData?.orders) {
         try {
           // البحث عن الفاتورة بـ external_id
-          const { data: invoiceRecord, error: invoiceError } = await supabase
+          const { data: invoiceRecord2, error: invoiceError } = await supabase
             .from('delivery_invoices')
-            .select('id, external_id, raw, orders_count')
+            .select('id, external_id, raw, orders_count, partner')
             .eq('external_id', invoiceId)
             .maybeSingle();
 
@@ -487,26 +499,25 @@ export const useAlWaseetInvoices = () => {
             throw invoiceError;
           }
 
-          const finalInvoiceId = invoiceRecord?.id || invoiceId;
+          const finalInvoiceId = invoiceRecord2?.id || invoiceId;
           
-          // 🆕 Self-heal موجّه: إذا الفاتورة موجودة لكن delivery_invoice_orders فارغة، ننفذ مزامنة موجهة
-          // للـ external_id فقط عبر smart-invoice-sync (target_invoice_external_id). هذا لا يسبب
-          // موجة طلبات لأن edge function تجلب فقط طلبات هذه الفاتورة وتكتفي.
-          if (invoiceRecord?.orders_count > 0 && !cacheOnly) {
-            const { data: existingOrders, error: checkError } = await supabase
+          // 🆕 Self-heal موجّه: يعمل حتى عند الكاش الجزئي (ليس فقط الفارغ)
+          if (invoiceRecord2?.orders_count > 0 && !cacheOnly) {
+            const { count: existingCount } = await supabase
               .from('delivery_invoice_orders')
-              .select('id')
-              .eq('invoice_id', finalInvoiceId)
-              .limit(1);
+              .select('id', { count: 'exact', head: true })
+              .eq('invoice_id', finalInvoiceId);
 
-            if (!checkError && (!existingOrders || existingOrders.length === 0)) {
-              devLog.warn(`🩹 self-heal موجّه للفاتورة ${invoiceId}: استدعاء smart-invoice-sync لجلب طلباتها فقط`);
+            const have = existingCount || 0;
+            const expected = invoiceRecord2.orders_count || 0;
+            if (have < expected) {
+              devLog.warn(`🩹 self-heal موجّه للفاتورة ${invoiceId}: have=${have}/${expected}`);
               try {
                 await supabase.functions.invoke('smart-invoice-sync', {
                   body: {
                     mode: 'smart',
                     target_invoice_external_id: String(invoiceId),
-                    target_invoice_partner: invoiceRecord?.partner || 'alwaseet',
+                    target_invoice_partner: invoiceRecord2?.partner || 'alwaseet',
                   }
                 });
               } catch (selfHealErr) {

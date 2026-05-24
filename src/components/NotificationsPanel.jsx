@@ -353,7 +353,14 @@ const typeColorMap = {
     dot: 'bg-yellow-500'
   },
   ai_order: { 
-    bg: 'bg-card ai-smart-border', 
+    bg: 'bg-gradient-to-r from-violet-50/80 to-fuchsia-50/80 dark:from-violet-950/20 dark:to-fuchsia-950/20 backdrop-blur-sm ai-smart-border', 
+    border: '',
+    text: 'text-foreground', 
+    icon: 'text-violet-600 dark:text-violet-400',
+    dot: 'bg-gradient-to-br from-violet-500 to-pink-500'
+  },
+  new_ai_order: { 
+    bg: 'bg-gradient-to-r from-violet-50/80 to-fuchsia-50/80 dark:from-violet-950/20 dark:to-fuchsia-950/20 backdrop-blur-sm ai-smart-border', 
     border: '',
     text: 'text-foreground', 
     icon: 'text-violet-600 dark:text-violet-400',
@@ -883,17 +890,17 @@ const NotificationsPanel = () => {
                                    const cleanTitleText = String(titleText || '').replace(/🤖\s*/g, '').trim() || 'إشعار جديد';
                                    
                                     // استخدام ScrollingText للعناوين الطويلة
-                                    return cleanTitleText.length > 22 ? (
-                                      <ScrollingText 
-                                        text={cleanTitleText} 
-                                        className={cn("font-semibold text-sm leading-tight", colors.text)}
-                                        maxWidth="200px"
-                                      />
-                                    ) : (
-                                      <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
-                                        {cleanTitleText}
-                                      </h3>
-                                    );
+                                     return cleanTitleText.length > 22 ? (
+                                       <ScrollingText 
+                                         text={cleanTitleText} 
+                                         className={cn("font-semibold text-sm leading-tight", colors.text)}
+                                         maxWidth="170px"
+                                       />
+                                     ) : (
+                                       <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
+                                         {cleanTitleText}
+                                       </h3>
+                                     );
                                  })()}
                                </div>
                                <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">

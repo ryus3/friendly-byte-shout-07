@@ -372,8 +372,8 @@ serve(async (req) => {
       }
 
       let writtenOrders = 0;
-      if (ordersFromApi.length > 0) {
-        for (const order of ordersFromApi) {
+      const writeBatch = async (list: InvoiceOrder[]) => {
+        for (const order of list) {
           const { error: orderError } = await supabase
             .from('delivery_invoice_orders')
             .upsert({
@@ -386,10 +386,39 @@ serve(async (req) => {
             }, { onConflict: 'invoice_id,external_order_id', ignoreDuplicates: false });
           if (!orderError) writtenOrders++;
         }
-        await supabase
-          .from('delivery_invoices')
-          .update({ orders_last_synced_at: new Date().toISOString() })
-          .eq('id', invRow.id);
+      };
+
+      if (ordersFromApi.length > 0) {
+        await writeBatch(ordersFromApi);
+
+        // 🔁 Retry loop until cache reaches expected count (snapshot may be partial)
+        const delays = [2500, 6000, 12000];
+        let { count: dioAfter } = await supabase
+          .from('delivery_invoice_orders')
+          .select('id', { count: 'exact', head: true })
+          .eq('invoice_id', invRow.id);
+        let haveNow = dioAfter ?? 0;
+        for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
+          console.log(`  🔁 targeted retry ${attempt + 1}/${delays.length}: have=${haveNow}, expected=${expected}`);
+          await new Promise(r => setTimeout(r, delays[attempt]));
+          const retry = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenRow.token, String(invRow.external_id), partnerName), ordersIndexTargeted);
+          if (retry.length > 0) await writeBatch(retry);
+          const { count: c } = await supabase
+            .from('delivery_invoice_orders')
+            .select('id', { count: 'exact', head: true })
+            .eq('invoice_id', invRow.id);
+          haveNow = c ?? 0;
+        }
+
+        // ✅ Only bump orders_last_synced_at when cache is actually complete
+        if (expected === 0 || haveNow >= expected) {
+          await supabase
+            .from('delivery_invoices')
+            .update({ orders_last_synced_at: new Date().toISOString() })
+            .eq('id', invRow.id);
+        } else {
+          console.log(`  ⏳ targeted invoice ${invRow.external_id} still incomplete: ${haveNow}/${expected} — orders_last_synced_at NOT bumped`);
+        }
 
         try {
           await supabase.rpc('link_invoice_orders_to_orders');
