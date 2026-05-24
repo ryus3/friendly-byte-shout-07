@@ -780,18 +780,28 @@ export const useAlWaseetInvoices = () => {
   }, [token, fetchInvoices, fetchInvoiceOrders, user?.id, user?.user_id]);
 
   // ✅ FIXED: Link invoice with local orders - directly from database
-  const linkInvoiceWithLocalOrders = useCallback(async (invoiceId, viewerUserId = null) => {
+  const linkInvoiceWithLocalOrders = useCallback(async (invoiceId, viewerUserId = null, options = {}) => {
     if (!invoiceId) return [];
 
     try {
+      const normalizedViewerId = viewerUserId ? String(viewerUserId) : null;
       devLog.log(`🔗 جلب الطلبات المرتبطة بالفاتورة ${invoiceId} من قاعدة البيانات مباشرة`);
       
       // أولاً: جلب internal ID للفاتورة من external_id
-      const { data: invoiceRecord, error: invoiceError } = await supabase
+      let invoiceQuery = supabase
         .from('delivery_invoices')
-        .select('id, orders_count')
-        .eq('external_id', invoiceId)
-        .maybeSingle();
+        .select('id, orders_count, partner')
+        .eq('external_id', String(invoiceId));
+
+      if (options?.partner) {
+        invoiceQuery = invoiceQuery.eq('partner', options.partner);
+      }
+
+      const { data: invoiceRows, error: invoiceError } = await invoiceQuery
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const invoiceRecord = invoiceRows?.[0];
 
       if (invoiceError || !invoiceRecord) {
         devLog.warn(`⚠️ الفاتورة ${invoiceId} غير موجودة في قاعدة البيانات`);
@@ -868,12 +878,13 @@ export const useAlWaseetInvoices = () => {
               .eq('invoice_id', invoiceRecord.id);
             
             const refreshedSource = (refreshedOrders || []).filter(item => item.orders);
-            const refreshedFiltered = viewerUserId
-              ? refreshedSource.filter(item => item.orders?.created_by === viewerUserId)
+            const refreshedFiltered = normalizedViewerId
+              ? refreshedSource.filter(item => String(item.orders?.created_by || '') === normalizedViewerId)
               : refreshedSource;
             const refreshedFormatted = refreshedFiltered.map(item => ({
                 ...item.orders,
                 invoice_link_id: item.id,
+                invoice_external_order_id: item.external_order_id,
                 invoice_amount: item.amount,
                 invoice_status: item.status
               }));
@@ -887,17 +898,18 @@ export const useAlWaseetInvoices = () => {
       }
 
       // تحويل البيانات للصيغة المتوقعة + فلترة حسب المشاهد إن وجد
-      const sourceLinked = viewerUserId
-        ? linkedWithOrders.filter(item => item.orders?.created_by === viewerUserId)
+      const sourceLinked = normalizedViewerId
+        ? linkedWithOrders.filter(item => String(item.orders?.created_by || '') === normalizedViewerId)
         : linkedWithOrders;
       const formattedOrders = sourceLinked.map(item => ({
         ...item.orders,
         invoice_link_id: item.id,
+        invoice_external_order_id: item.external_order_id,
         invoice_amount: item.amount,
         invoice_status: item.status
       }));
 
-      devLog.log(`✅ تم جلب ${formattedOrders.length} طلب مرتبط${viewerUserId ? ` (مفلتر للمستخدم ${viewerUserId})` : ''}`);
+      devLog.log(`✅ تم جلب ${formattedOrders.length} طلب مرتبط${normalizedViewerId ? ` (مفلتر للمستخدم ${normalizedViewerId})` : ''}`);
       return formattedOrders;
       
     } catch (error) {
