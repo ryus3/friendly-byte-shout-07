@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Loader2, AlertCircle, FileText, Package, Link2, Sparkles, Settings2 } from 'lucide-react';
 
@@ -9,6 +9,31 @@ const STAGES = [
   { key: 'linking',  label: 'الربط',          icon: Link2 },
   { key: 'done',     label: 'الإنهاء',        icon: Sparkles },
 ];
+
+// 🔢 رقم متحرّك ناعم (CountUp)
+const useCountUp = (target, duration = 400) => {
+  const [val, setVal] = useState(target || 0);
+  const fromRef = useRef(target || 0);
+  useEffect(() => {
+    const from = fromRef.current;
+    const to = target || 0;
+    if (from === to) return;
+    const start = performance.now();
+    let raf;
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setVal(Math.round(from + (to - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else fromRef.current = to;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return val;
+};
+
+
 
 /**
  * 🎯 Stepper احترافي لعرض تقدم المزامنة الشاملة في الوقت الفعلي
