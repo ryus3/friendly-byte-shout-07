@@ -605,10 +605,19 @@ serve(async (req) => {
                       }
                     }
 
-                    await supabase
-                      .from('delivery_invoices')
-                      .update({ orders_last_synced_at: new Date().toISOString() })
-                      .eq('id', upsertedInvoice.id);
+                    // ✅ لا نعلن أن الفاتورة "متزامنة" إلا إذا الكاش مكتمل فعلاً
+                    const { count: finalCacheCount } = await supabase
+                      .from('delivery_invoice_orders')
+                      .select('id', { count: 'exact', head: true })
+                      .eq('invoice_id', upsertedInvoice.id);
+                    if (expectedForOrders === 0 || (finalCacheCount ?? 0) >= expectedForOrders) {
+                      await supabase
+                        .from('delivery_invoices')
+                        .update({ orders_last_synced_at: new Date().toISOString() })
+                        .eq('id', upsertedInvoice.id);
+                    } else {
+                      console.log(`    ⏳ Invoice ${externalId} cache still incomplete: ${finalCacheCount ?? 0}/${expectedForOrders} — orders_last_synced_at NOT bumped`);
+                    }
 
                     try {
                       await supabase.rpc('link_invoice_orders_to_orders');
@@ -942,10 +951,18 @@ serve(async (req) => {
                     }
                   }
 
-                  await supabase
-                    .from('delivery_invoices')
-                    .update({ orders_last_synced_at: new Date().toISOString() })
-                    .eq('id', upsertedInvoice.id);
+                  const { count: finalCacheCountSmart } = await supabase
+                    .from('delivery_invoice_orders')
+                    .select('id', { count: 'exact', head: true })
+                    .eq('invoice_id', upsertedInvoice.id);
+                  if (expectedCount === 0 || (finalCacheCountSmart ?? 0) >= expectedCount) {
+                    await supabase
+                      .from('delivery_invoices')
+                      .update({ orders_last_synced_at: new Date().toISOString() })
+                      .eq('id', upsertedInvoice.id);
+                  } else {
+                    console.log(`  ⏳ Invoice ${externalId} cache still incomplete: ${finalCacheCountSmart ?? 0}/${expectedCount} — orders_last_synced_at NOT bumped`);
+                  }
 
                   try {
                     await supabase.rpc('link_invoice_orders_to_orders');
