@@ -961,7 +961,7 @@ serve(async (req) => {
                     for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
                       console.log(`  🔁 Snapshot incomplete for ${externalId}: have=${haveNow}, expected=${expected}. Retry ${attempt + 1}/${delays.length} after ${delays[attempt]}ms...`);
                       await new Promise(r => setTimeout(r, delays[attempt]));
-                      const retryOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);
+                      const retryOrders = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName), ordersIndexSmart);
                       if (retryOrders.length > 0) {
                         for (const order of retryOrders) {
                           const { error: rErr } = await supabase
