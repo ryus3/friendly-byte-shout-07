@@ -723,23 +723,10 @@ serve(async (req) => {
                   const invoiceOrders = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName), ordersIndex);
                   
                   if (invoiceOrders.length > 0) {
-                    for (const order of invoiceOrders) {
-                      const { error: orderError } = await supabase
-                        .from('delivery_invoice_orders')
-                        .upsert({
-                          invoice_id: upsertedInvoice.id,
-                          external_order_id: String(order.id),
-                          raw: order,
-                          status: order.status,
-                          amount: order.price || order.amount || 0,
-                          owner_user_id: employeeId,
-                        }, {
-                          onConflict: 'invoice_id,external_order_id',
-                          ignoreDuplicates: false,
-                        });
-                      
-                      if (!orderError) employeeOrdersSynced++;
-                    }
+                    const { written } = await batchUpsertInvoiceOrders(supabase, upsertedInvoice.id, invoiceOrders, employeeId);
+                    employeeOrdersSynced += written;
+                  }
+                  {
                     
                     // ✅ منطق 26/4: إذا snapshot ناقص نعيد المحاولة داخل نفس التشغيل، للفواتير المستلمة والمعلقة.
                     if (expectedForOrders > 0) {
