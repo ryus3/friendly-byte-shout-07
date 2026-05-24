@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Loader2, AlertCircle, FileText, Package, Link2, Sparkles, Settings2 } from 'lucide-react';
 
@@ -10,6 +10,31 @@ const STAGES = [
   { key: 'done',     label: 'الإنهاء',        icon: Sparkles },
 ];
 
+// 🔢 رقم متحرّك ناعم (CountUp)
+const useCountUp = (target, duration = 400) => {
+  const [val, setVal] = useState(target || 0);
+  const fromRef = useRef(target || 0);
+  useEffect(() => {
+    const from = fromRef.current;
+    const to = target || 0;
+    if (from === to) return;
+    const start = performance.now();
+    let raf;
+    const tick = (now) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - t, 3);
+      setVal(Math.round(from + (to - from) * eased));
+      if (t < 1) raf = requestAnimationFrame(tick);
+      else fromRef.current = to;
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return val;
+};
+
+
+
 /**
  * 🎯 Stepper احترافي لعرض تقدم المزامنة الشاملة في الوقت الفعلي
  */
@@ -20,6 +45,11 @@ const SyncProgressStepper = ({ progress }) => {
   const isFailed = progress.status === 'failed';
   const isDone = progress.status === 'completed';
   const pct = Math.min(100, Math.max(0, progress.percentage || 0));
+  const animatedPct = useCountUp(pct, 350);
+  const invCount = useCountUp(progress.invoices_synced || 0, 350);
+  const ordCount = useCountUp(progress.orders_updated || 0, 350);
+  const linkCount = useCountUp(progress.linked_count || 0, 350);
+
 
   return (
     <AnimatePresence>
@@ -43,7 +73,7 @@ const SyncProgressStepper = ({ progress }) => {
               {isFailed ? 'فشلت المزامنة' : isDone ? 'اكتملت المزامنة' : 'جاري المزامنة الشاملة...'}
             </span>
           </div>
-          <span className="text-sm font-mono font-bold text-primary">{pct}%</span>
+          <span className="text-sm font-mono font-bold text-primary tabular-nums">{animatedPct}%</span>
         </div>
 
         {/* شريط التقدم */}
@@ -104,35 +134,41 @@ const SyncProgressStepper = ({ progress }) => {
           })}
         </div>
 
-        {/* رسالة الحالة */}
-        {progress.message && (
+        {/* رسالة الحالة + العنصر الحالي */}
+        {(progress.message || progress.current_item) && (
           <motion.div
-            key={progress.message}
+            key={`${progress.message}-${progress.current_item || ''}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-xs text-muted-foreground text-center pt-2 border-t border-border/50"
+            className="text-xs text-muted-foreground text-center pt-2 border-t border-border/50 space-y-1"
           >
-            {progress.message}
+            {progress.message && <div className="truncate">{progress.message}</div>}
+            {progress.current_item && (
+              <div className="font-mono text-[10px] text-primary/70 truncate">
+                ⟳ {progress.current_item}
+              </div>
+            )}
           </motion.div>
         )}
 
-        {/* عدّادات */}
-        {(progress.invoices_synced > 0 || progress.orders_updated > 0 || progress.linked_count > 0) && (
+        {/* عدّادات بأرقام متحرّكة */}
+        {(invCount > 0 || ordCount > 0 || linkCount > 0) && (
           <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-border/50">
             <div className="text-center">
-              <div className="text-lg font-bold text-blue-500">{progress.invoices_synced || 0}</div>
+              <div className="text-lg font-bold text-blue-500 tabular-nums">{invCount}</div>
               <div className="text-[10px] text-muted-foreground">فواتير</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-purple-500">{progress.orders_updated || 0}</div>
+              <div className="text-lg font-bold text-purple-500 tabular-nums">{ordCount}</div>
               <div className="text-[10px] text-muted-foreground">طلبات</div>
             </div>
             <div className="text-center">
-              <div className="text-lg font-bold text-emerald-500">{progress.linked_count || 0}</div>
+              <div className="text-lg font-bold text-emerald-500 tabular-nums">{linkCount}</div>
               <div className="text-[10px] text-muted-foreground">روابط</div>
             </div>
           </div>
         )}
+
       </motion.div>
     </AnimatePresence>
   );

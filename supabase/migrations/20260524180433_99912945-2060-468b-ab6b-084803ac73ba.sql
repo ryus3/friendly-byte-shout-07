@@ -1,0 +1,1 @@
+ALTER TABLE public.sync_progress_events ADD COLUMN IF NOT EXISTS current_item text;

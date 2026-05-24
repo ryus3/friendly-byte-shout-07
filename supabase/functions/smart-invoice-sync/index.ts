@@ -37,12 +37,15 @@ interface SyncRequest {
 }
 
 const STAGES = [
-  { key: 'init',     label: 'تهيئة المزامنة',                pct: 5   },
-  { key: 'invoices', label: 'جلب الفواتير من شركات التوصيل', pct: 35  },
-  { key: 'orders',   label: 'جلب تفاصيل الطلبات',            pct: 70  },
-  { key: 'linking',  label: 'ربط الفواتير بالطلبات المحلية', pct: 90  },
-  { key: 'done',     label: 'اكتمل',                          pct: 100 },
+  { key: 'init',     label: 'تهيئة المزامنة',                start: 0,  end: 5   },
+  { key: 'invoices', label: 'جلب الفواتير من شركات التوصيل', start: 5,  end: 40  },
+  { key: 'orders',   label: 'جلب تفاصيل الطلبات',            start: 40, end: 80  },
+  { key: 'linking',  label: 'ربط الفواتير بالطلبات المحلية', start: 80, end: 95  },
+  { key: 'done',     label: 'اكتمل',                          start: 95, end: 100 },
 ];
+
+// 🚦 Throttle للبثّ: لا نبعث أكثر من مرة كل 250ms لنفس run_id
+const lastProgressAt = new Map<string, number>();
 
 async function reportProgress(
   supabase: any,
@@ -50,17 +53,35 @@ async function reportProgress(
   stageKey: string,
   message: string,
   extra: Record<string, any> = {},
+  inStageProgress?: { current: number; total: number },
+  force: boolean = false,
 ) {
   if (!runId) return;
+  // Throttle (إلا للبدء/النهاية/الفشل)
+  const now = Date.now();
+  const last = lastProgressAt.get(runId) || 0;
+  if (!force && stageKey !== 'done' && stageKey !== 'failed' && (now - last) < 250) return;
+  lastProgressAt.set(runId, now);
+
   try {
     const idx = STAGES.findIndex(s => s.key === stageKey);
     const stage = STAGES[idx >= 0 ? idx : 0];
+    let pct = stage.end;
+    if (inStageProgress && inStageProgress.total > 0) {
+      const frac = Math.max(0, Math.min(1, inStageProgress.current / inStageProgress.total));
+      pct = Math.round(stage.start + frac * (stage.end - stage.start));
+    } else if (stageKey === 'done') {
+      pct = 100;
+    } else {
+      // لو لا تقدّم داخلي: انطلق من بداية المرحلة
+      pct = stage.start;
+    }
     await supabase.from('sync_progress_events').upsert({
       run_id: runId,
       stage: stage.key,
       stage_index: idx >= 0 ? idx : 0,
       total_stages: STAGES.length,
-      percentage: stage.pct,
+      percentage: pct,
       message,
       status: stageKey === 'done' ? 'completed' : (stageKey === 'failed' ? 'failed' : 'running'),
       updated_at: new Date().toISOString(),
@@ -71,6 +92,7 @@ async function reportProgress(
     console.warn('reportProgress failed:', (e as any)?.message);
   }
 }
+
 
 interface Invoice {
   id: number;
@@ -668,12 +690,29 @@ serve(async (req) => {
           });
           const queue = incompleteFirst.slice(0, MAX_INVOICES_PER_TOKEN);
 
+          // 📊 بث التقدّم: عدد الفواتير الكلي لهذا التوكن
+          await reportProgress(supabase, run_id, 'orders',
+            `حساب ${accountUsername}: 0 / ${queue.length} فاتورة`,
+            { invoices_synced: totalInvoicesSynced, orders_updated: totalOrdersUpdated },
+            { current: 0, total: queue.length },
+            true,
+          );
+
           // ✅ معالجة الفواتير حسب الأولوية؛ تفاصيل الطلبات لها ميزانية محدودة لمنع rate limit
+          let invoiceIdxInQueue = 0;
           for (const invoice of queue) {
+            invoiceIdxInQueue++;
             const externalId = String(invoice.id);
+            // 📊 بث التقدّم لكل فاتورة (مع throttle داخل reportProgress)
+            await reportProgress(supabase, run_id, 'orders',
+              `${accountUsername}: فاتورة ${externalId} (${invoiceIdxInQueue}/${queue.length})`,
+              { invoices_synced: totalInvoicesSynced, orders_updated: totalOrdersUpdated, current_item: externalId },
+              { current: invoiceIdxInQueue, total: queue.length },
+            );
             const statusNormalized = normalizeStatus(invoice.status);
             const isReceived = statusNormalized === 'received' || invoice.received === true;
             const receivedAt = isReceived ? extractReceivedAt(invoice) : null;
+
 
             // التحقق إذا كانت الفاتورة موجودة - ✅ استخدام partnerName بدلاً من 'alwaseet' الثابت
             const { data: existingInvoice } = await supabase
