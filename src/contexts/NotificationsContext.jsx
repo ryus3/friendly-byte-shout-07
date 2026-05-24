@@ -19,10 +19,38 @@ export const useNotifications = () => {
 export const NotificationsProvider = ({ children }) => {
     const [notifications, setNotifications] = useState([]);
     const { user } = useAuth();
+    const visibleUserIdsRef = useRef(new Set());
   
     // ✅ تحسين الأداء: نقل lastFetch إلى useRef لمنع re-renders غير ضرورية
     const lastFetchRef = useRef(0);
     const CACHE_DURATION = 30000; // 30 seconds cache
+
+    const isAdminUser = useCallback(() => (
+        user?.roles?.includes('super_admin') || user?.roles?.includes('admin')
+    ), [user?.roles]);
+
+    const isDepartmentManagerUser = useCallback(() => (
+        user?.roles?.includes('department_manager')
+    ), [user?.roles]);
+
+    const getReadAwareNotification = useCallback((notification, readAt = null) => {
+        const effectiveAt = notification?.updated_at || notification?.created_at;
+        const readTime = readAt ? new Date(readAt).getTime() : 0;
+        const effectiveTime = effectiveAt ? new Date(effectiveAt).getTime() : 0;
+        return {
+            ...notification,
+            _read_at: readAt,
+            is_read: Boolean(readAt && readTime >= effectiveTime)
+        };
+    }, []);
+
+    const canSeeNotification = useCallback((notification) => {
+        if (!user || !notification) return false;
+        if (isAdminUser()) return true;
+        if (notification.user_id === user.id) return true;
+        if (notification.user_id && isDepartmentManagerUser() && visibleUserIdsRef.current.has(notification.user_id)) return true;
+        return false;
+    }, [user, isAdminUser, isDepartmentManagerUser]);
     
     const fetchNotifications = useCallback(async (force = false) => {
         if (!user || !supabase) return;
@@ -33,19 +61,21 @@ export const NotificationsProvider = ({ children }) => {
             return;
         }
         
-        // جلب الإشعارات
+        // جلب الإشعارات من المصدر الوحيد: notifications
         let query = supabase
             .from('notifications')
             .select('*')
+            .order('updated_at', { ascending: false, nullsFirst: false })
             .order('created_at', { ascending: false })
-            .limit(30);
+            .limit(100);
 
         // فلترة الإشعارات حسب المستخدم
-        const isAdmin = user?.roles?.includes('super_admin') || user?.roles?.includes('admin');
-        const isDepartmentManager = user?.roles?.includes('department_manager');
+        const isAdmin = isAdminUser();
+        const isDepartmentManager = isDepartmentManagerUser();
         
         if (isAdmin) {
             // المدير العام يرى كل الإشعارات
+            visibleUserIdsRef.current = new Set();
         } else if (isDepartmentManager) {
             const { data: supervisedData } = await supabase
                 .from('employee_supervisors')
@@ -55,10 +85,12 @@ export const NotificationsProvider = ({ children }) => {
             
             const supervisedIds = supervisedData?.map(d => d.employee_id) || [];
             const allAllowedIds = [user.id, ...supervisedIds];
+            visibleUserIdsRef.current = new Set(allAllowedIds);
             
             query = query.in('user_id', allAllowedIds);
         } else {
-            query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,order_created,cash_correction,balance_correction,main_cash_correction))`);
+            visibleUserIdsRef.current = new Set([user.id]);
+            query = query.eq('user_id', user.id);
         }
         
         const { data: notificationsData, error } = await query;
@@ -71,26 +103,25 @@ export const NotificationsProvider = ({ children }) => {
         // جلب قراءات المستخدم الحالي من جدول notification_reads
         const notificationIds = (notificationsData || []).map(n => n.id);
         
-        let userReads = [];
+        let userReads = new Map();
         if (notificationIds.length > 0) {
             const { data: readsData } = await supabase
                 .from('notification_reads')
-                .select('notification_id')
+                .select('notification_id, read_at')
                 .eq('user_id', user.id)
                 .in('notification_id', notificationIds);
             
-            userReads = (readsData || []).map(r => r.notification_id);
+            userReads = new Map((readsData || []).map(r => [r.notification_id, r.read_at]));
         }
         
         // دمج حالة القراءة مع الإشعارات
-        const notificationsWithReadStatus = (notificationsData || []).map(n => ({
-            ...n,
-            is_read: userReads.includes(n.id)
-        }));
+        const notificationsWithReadStatus = (notificationsData || []).map(n =>
+            getReadAwareNotification(n, userReads.get(n.id) || null)
+        );
         
         setNotifications(notificationsWithReadStatus);
         lastFetchRef.current = now;
-    }, [user]);
+    }, [user, isAdminUser, isDepartmentManagerUser, getReadAwareNotification]);
 
     useEffect(() => {
         fetchNotifications();
