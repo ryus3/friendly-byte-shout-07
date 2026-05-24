@@ -138,15 +138,12 @@ const NotificationsPage = () => {
     if (n.type === 'alwaseet_status_change' || n.type === 'order_status_update') {
       const tracking = n.data?.tracking_number || n.data?.order_number || parseTrackingFromMessage(n.message);
       const orderId = n.data?.order_id;
-      const sid = n.data?.state_id || n.data?.delivery_status || parseAlwaseetStateIdFromMessage(n.message) || n.data?.status_id;
       
-      if (orderId && sid) {
-        // استخدام order_id + state_id للدمج الدقيق
-        uniqueKey = `status_change_${orderId}_${sid}`;
-      } else if (tracking && sid) {
-        uniqueKey = `status_change_${tracking}_${sid}`;
+      if (orderId) {
+        // إشعار واحد لكل طلب؛ يتحدث عند تغير الحالة
+        uniqueKey = `status_change_${orderId}`;
       } else if (tracking) {
-        uniqueKey = `status_change_${tracking}_${(n.message || '').slice(0, 32)}`;
+        uniqueKey = `status_change_${tracking}`;
       }
     }
     
@@ -180,7 +177,16 @@ const NotificationsPage = () => {
     }
   });
 
-  const uniqueNotifications = Array.from(uniqueMap.values());
+  const getNotificationDisplayTime = (notification) => {
+    const createdTime = new Date(notification.created_at);
+    const updatedTime = notification.updated_at ? new Date(notification.updated_at) : null;
+    return updatedTime && updatedTime > createdTime ? updatedTime : createdTime;
+  };
+
+  const uniqueNotifications = Array.from(uniqueMap.values()).sort((a, b) => {
+    if (a.is_read !== b.is_read) return a.is_read ? 1 : -1;
+    return getNotificationDisplayTime(b).getTime() - getNotificationDisplayTime(a).getTime();
+  });
 
   const filteredNotifications = uniqueNotifications.filter(notification => {
     const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
