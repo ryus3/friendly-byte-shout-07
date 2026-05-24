@@ -16,6 +16,7 @@ import StatCard from '@/components/dashboard/StatCard';
 import PendingRegistrations from '@/components/dashboard/PendingRegistrations';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager';
 import TopListCard from '@/components/dashboard/TopListCard';
+import ProvincesHeatmapCard from '@/components/dashboard/ProvincesHeatmapCard';
 import TopProvincesDialog from '@/components/dashboard/TopProvincesDialog';
 import TopProductsDialog from '@/components/dashboard/TopProductsDialog';
 import TopCustomersDialog from '@/components/dashboard/TopCustomersDialog';
@@ -923,11 +924,8 @@ const Dashboard = () => {
                       itemIcon={TrendingUp}
                       onViewAll={() => setTopProductsOpen(true)}
                     />
-                    <TopListCard 
-                      title="المحافظات الأكثر طلباً" 
+                    <ProvincesHeatmapCard 
                       items={dashboardData.topProvinces} 
-                      titleIcon={MapPin} 
-                      itemIcon={MapPin}
                       onViewAll={() => setTopProvincesOpen(true)}
                     />
                     <TopListCard 
