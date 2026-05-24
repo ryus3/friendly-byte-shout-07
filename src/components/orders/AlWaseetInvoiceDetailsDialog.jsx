@@ -28,7 +28,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import InvoiceProfitsTab from './InvoiceProfitsTab';
 import { cn } from '@/lib/utils';
 
-const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice }) => {
+const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId = null }) => {
   const {
     invoiceOrders,
     loading,
@@ -74,7 +74,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice }) => {
     if (!invoiceId) return;
     setLoadingLinked(true);
     try {
-      const linked = await linkInvoiceWithLocalOrders(invoiceId);
+      const linked = await linkInvoiceWithLocalOrders(invoiceId, viewerUserId);
       setLinkedOrders(linked);
     } catch (error) {
       console.error('Error loading linked orders:', error);
