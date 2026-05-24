@@ -164,6 +164,40 @@ async function fetchInvoiceOrdersFromAPI(token: string, invoiceId: string, partn
   }
 }
 
+// ✅ NEW: جلب merchant-orders كاملة لبناء خريطة من id الداخلي إلى tracking_number/qr_id الحقيقي
+// شركة التوصيل ترسل في الفاتورة id=140xxxxxx، بينما الطلب المحلي يستخدم tracking=143xxxxxx.
+// بدون هذه الخريطة لا يمكن الربط بدقة 100%.
+async function fetchMerchantOrdersIndex(token: string, partner: string): Promise<Map<string, { tracking?: string; qr?: string }>> {
+  const map = new Map<string, { tracking?: string; qr?: string }>();
+  try {
+    const baseUrl = partner === 'modon' ? MODON_API_BASE : ALWASEET_API_BASE;
+    const { response, data } = await fetchDeliveryJson(`${baseUrl}/merchant-orders?token=${encodeURIComponent(token)}`, token);
+    if (!response.ok) return map;
+    const list = Array.isArray(data?.data) ? data.data : (Array.isArray(data) ? data : []);
+    for (const o of list) {
+      const id = o?.id != null ? String(o.id) : null;
+      const tracking = o?.tracking_number != null ? String(o.tracking_number) : undefined;
+      const qr = o?.qr_id != null ? String(o.qr_id) : undefined;
+      if (id) map.set(id, { tracking, qr });
+    }
+    console.log(`📚 merchant-orders index built for ${partner}: ${map.size} entries`);
+  } catch (e) {
+    console.warn(`⚠️ fetchMerchantOrdersIndex(${partner}) failed:`, (e as any)?.message);
+  }
+  return map;
+}
+
+// إثراء طلبات الفاتورة بمعرفات tracking/qr من merchant-orders index
+function enrichInvoiceOrders(invoiceOrders: InvoiceOrder[], idx: Map<string, { tracking?: string; qr?: string }>): InvoiceOrder[] {
+  if (!idx || idx.size === 0) return invoiceOrders;
+  return invoiceOrders.map(o => {
+    const idStr = o?.id != null ? String(o.id) : null;
+    const found = idStr ? idx.get(idStr) : null;
+    if (!found) return o;
+    return { ...o, tracking_number: (o as any).tracking_number || found.tracking, qr_id: (o as any).qr_id || found.qr };
+  });
+}
+
 async function renewAlWaseetTokenIfNeeded(supabase: any, tokenData: any): Promise<string | null> {
   if ((tokenData.partner_name || 'alwaseet') !== 'alwaseet') return null;
   const username = tokenData.account_username || tokenData.partner_data?.username;
@@ -325,13 +359,15 @@ serve(async (req) => {
         );
       }
 
-      let ordersFromApi = await fetchInvoiceOrdersFromAPI(tokenRow.token, String(invRow.external_id), partnerName);
+      const ordersIndexTargeted = await fetchMerchantOrdersIndex(tokenRow.token, partnerName);
+      let ordersFromApi = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenRow.token, String(invRow.external_id), partnerName), ordersIndexTargeted);
 
       // محاولة تجديد توكن الوسيط لمرة واحدة عند فشل الجلب وإعادة المحاولة
       if (ordersFromApi.length === 0 && partnerName === 'alwaseet') {
         const renewed = await renewAlWaseetTokenIfNeeded(supabase, tokenRow);
         if (renewed) {
-          ordersFromApi = await fetchInvoiceOrdersFromAPI(renewed, String(invRow.external_id), partnerName);
+          const renewedIndex = await fetchMerchantOrdersIndex(renewed, partnerName);
+          ordersFromApi = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(renewed, String(invRow.external_id), partnerName), renewedIndex);
         }
       }
 
@@ -407,6 +443,9 @@ serve(async (req) => {
           // ✅ جلب جميع الفواتير من API المناسب للشركة
           const apiInvoices = await fetchInvoicesWithTokenRecovery(supabase, tokenData, partnerName);
           console.log(`  📥 Fetched ${apiInvoices.length} total invoices from ${partnerName.toUpperCase()} API`);
+
+          // ✅ بناء خريطة merchant-orders لإثراء raw بـ tracking/qr الحقيقي (مرة واحدة لكل توكن)
+          const ordersIndex = await fetchMerchantOrdersIndex(tokenData.token, partnerName);
 
           let employeeInvoicesSynced = 0;
           let employeeOrdersSynced = 0;
@@ -542,7 +581,7 @@ serve(async (req) => {
                 try {
                   if (orderDetailsFetchedForToken > 0) await new Promise(r => setTimeout(r, ORDER_DETAILS_GAP_MS));
                   orderDetailsFetchedForToken++;
-                  const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);
+                  const invoiceOrders = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName), ordersIndex);
                   
                   if (invoiceOrders.length > 0) {
                     for (const order of invoiceOrders) {
@@ -575,7 +614,7 @@ serve(async (req) => {
                       for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
                         console.log(`    🔁 Snapshot incomplete for ${externalId}: have=${haveNow}, expected=${expected}. Retry ${attempt + 1}/${delays.length} after ${delays[attempt]}ms...`);
                         await new Promise(r => setTimeout(r, delays[attempt]));
-                        const retryOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);
+                        const retryOrders = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName), ordersIndex);
                         if (retryOrders.length > 0) {
                           for (const order of retryOrders) {
                             const { error: rErr } = await supabase
@@ -756,6 +795,9 @@ serve(async (req) => {
         }
         console.log(`📥 Processing ${apiInvoices.length} invoices for ${tokenData.account_username} from ${partnerName.toUpperCase()}`);
 
+        // ✅ بناء خريطة merchant-orders لإثراء raw بـ tracking/qr الحقيقي (مرة واحدة لكل توكن)
+        const ordersIndexSmart = await fetchMerchantOrdersIndex(tokenData.token, partnerName);
+
         let orderDetailsFetchedForToken = 0;
 
         // 🆕 ترتيب الفواتير: الناقصة أولاً (orders_count > 0 وكاش delivery_invoice_orders أقل من المتوقع)،
@@ -888,7 +930,7 @@ serve(async (req) => {
               try {
                 if (orderDetailsFetchedForToken > 0) await new Promise(r => setTimeout(r, ORDER_DETAILS_GAP_MS));
                 orderDetailsFetchedForToken++;
-                const invoiceOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);  // ✅ تمرير partnerName
+                const invoiceOrders = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName), ordersIndexSmart);
                 
                 if (invoiceOrders.length > 0) {
                   for (const order of invoiceOrders) {
@@ -921,7 +963,7 @@ serve(async (req) => {
                     for (let attempt = 0; attempt < delays.length && expected > 0 && haveNow < expected; attempt++) {
                       console.log(`  🔁 Snapshot incomplete for ${externalId}: have=${haveNow}, expected=${expected}. Retry ${attempt + 1}/${delays.length} after ${delays[attempt]}ms...`);
                       await new Promise(r => setTimeout(r, delays[attempt]));
-                      const retryOrders = await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName);
+                      const retryOrders = enrichInvoiceOrders(await fetchInvoiceOrdersFromAPI(tokenData.token, externalId, partnerName), ordersIndexSmart);
                       if (retryOrders.length > 0) {
                         for (const order of retryOrders) {
                           const { error: rErr } = await supabase

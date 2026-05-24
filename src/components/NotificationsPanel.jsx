@@ -824,12 +824,6 @@ const NotificationsPanel = () => {
                       exit={{ opacity: 0, x: -20, transition: { duration: 0.2 } }}
                       className="relative group"
                     >
-                      {(notificationType === 'ai_order' || notificationType === 'new_ai_order') && (
-                        <>
-                          <span className="pointer-events-none absolute inset-y-0 right-0 w-1.5 rounded-r bg-gradient-to-b from-fuchsia-500 via-violet-500 to-sky-400 opacity-90" />
-                          <span className="pointer-events-none absolute inset-0 rounded-lg ring-1 ring-violet-400/30 dark:ring-violet-400/20" />
-                        </>
-                      )}
                       <div 
                         className={cn(
                           "flex items-start gap-3 p-3 cursor-pointer transition-all duration-300 rounded-lg", 
@@ -840,12 +834,7 @@ const NotificationsPanel = () => {
                         )}
                         onClick={(e) => handleNotificationClick(e, notification)}
                       >
-                        <div className={cn(
-                          "mt-1 flex-shrink-0",
-                          colors.icon,
-                          (notificationType === 'ai_order' || notificationType === 'new_ai_order') &&
-                            "rounded-lg p-1.5 bg-gradient-to-br from-violet-500/10 via-indigo-500/10 to-sky-500/10 ring-1 ring-violet-400/30 shadow-[0_0_18px_-6px_rgba(139,92,246,0.6)]"
-                        )}>
+                        <div className={cn("mt-1 flex-shrink-0", colors.icon)}>
                           <IconComponent />
                         </div>
                         <div className="flex-1 min-w-0">
