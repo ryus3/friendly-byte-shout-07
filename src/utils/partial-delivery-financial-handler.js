@@ -42,42 +42,41 @@ export const handlePartialDeliveryFinancials = async (
     }
 
     // 3️⃣ حساب الإيرادات والتكاليف للمنتجات المسلمة فقط
-    // ✅ استخدام finalPrice المخصص إن وُجد، وإلا استخدام final_amount من الطلب
+    // ✅ السعر النهائي المؤكد من المستخدم (يطابق ما ترسله شركة التوصيل) — هو مصدر الحقيقة
     const useFinalPrice = finalPrice !== null && finalPrice !== undefined;
-    const finalAmount = useFinalPrice ? finalPrice : (order.final_amount || order.total_amount || 0);
-    const orderTotalRevenue = order.total_amount || 0;
-    
-    devLog.log('💰 حساب الماليات:', {
+    const confirmedFinalAmount = useFinalPrice
+      ? Number(finalPrice)
+      : Number(order.final_amount || order.total_amount || 0);
+
+    devLog.log('💰 حساب الماليات (التسليم الجزئي):', {
       useFinalPrice,
-      finalPrice,
-      finalAmount,
-      orderTotalRevenue
+      confirmedFinalAmount,
+      orderFinalAmount: order.final_amount,
+      orderTotalAmount: order.total_amount
     });
-    
-    // ✅ حساب إيراد المنتجات المُسلّمة فقط (بدون تقسيم)
-    let totalRevenue = 0;
+
+    // تكلفة المنتجات المُسلّمة
     let totalCost = 0;
-
+    let deliveredItemsPrice = 0;
     deliveredItems.forEach(item => {
-      const itemRevenue = item.unit_price * item.quantity;
-      const itemCost = (item.variant?.cost_price || item.product?.cost_price || 0) * item.quantity;
-      
-      totalRevenue += itemRevenue;
-      totalCost += itemCost;
+      deliveredItemsPrice += (item.unit_price || 0) * (item.quantity || 0);
+      totalCost += ((item.variant?.cost_price || item.product?.cost_price || 0)) * (item.quantity || 0);
     });
-    
-    devLog.log('💰 الإيراد الحقيقي للمنتجات المسلمة:', totalRevenue);
 
-    // 4️⃣ حساب ربح الموظف للمنتجات المسلمة فقط
+    // 🔥 الإيراد المؤكد = السعر النهائي الذي كتبه المستخدم (شامل التوصيل) — هو ما ترسله شركة التوصيل
+    const allocatedDeliveryFee = deliveredItems.length > 0 ? Number(order.delivery_fee || 0) : 0;
+    // إيراد المنتجات بدون التوصيل = السعر النهائي - رسوم التوصيل (لا يقل عن سعر المنتجات الأصلي)
+    const productsRevenueFromFinal = Math.max(0, confirmedFinalAmount - allocatedDeliveryFee);
+    const totalRevenue = productsRevenueFromFinal; // بدون التوصيل (يضاف لاحقاً في الـ profit)
+
+    devLog.log('💰 الإيراد المؤكد:', { confirmedFinalAmount, productsRevenueFromFinal, allocatedDeliveryFee, deliveredItemsPrice });
+
+    // 4️⃣ حساب ربح الموظف للمنتجات المسلمة فقط (يبقى على سعر المنتجات الأصلي حتى لا يتأثر بزيادة شركة التوصيل)
     const employeeId = order.created_by;
     let employeeProfit = 0;
 
     if (calculateProfit && typeof calculateProfit === 'function') {
-      // ✅ استخدام التاريخ الحالي للتحقق من قواعد الربح
-      // لأن قاعدة الربح قد تُنشأ بعد إنشاء الطلب لكن قبل التسليم الجزئي
       const processingDate = new Date().toISOString();
-      
-      // إنشاء طلب مؤقت يحتوي فقط على المنتجات المسلمة
       const tempOrder = {
         ...order,
         items: deliveredItems.map(item => ({
@@ -86,24 +85,17 @@ export const handlePartialDeliveryFinancials = async (
           price: item.unit_price,
           quantity: item.quantity,
           cost_price: item.variant?.cost_price || item.product?.cost_price || 0,
-          orderDate: processingDate // ✅ تاريخ المعالجة للتحقق من القاعدة
+          orderDate: processingDate
         })),
-        created_at: processingDate, // ✅ ليست created_at الأصلية
+        created_at: processingDate,
         created_by: employeeId
       };
-
       employeeProfit = calculateProfit(tempOrder, employeeId) || 0;
-      devLog.log('💰 ربح الموظف المحسوب:', employeeProfit, 'بتاريخ معالجة:', processingDate);
     }
 
-    // 5️⃣ حساب ربح النظام
+    // 5️⃣ ربح النظام = (الإيراد الكلي بدون التوصيل) - التكلفة - ربح الموظف
+    // أي زيادة من شركة التوصيل تذهب لربح النظام
     const systemProfit = totalRevenue - totalCost - employeeProfit;
-
-    // 6️⃣ رسوم التوصيل كاملة تذهب لشركة التوصيل (في حالة التسليم الجزئي)
-    // ✅ عند تسليم أي منتج، شركة التوصيل تستحق كامل الرسوم
-    const allocatedDeliveryFee = deliveredItems.length > 0 
-      ? (order.delivery_fee || 0) 
-      : 0;
 
     // 7️⃣ إنشاء أو تحديث سجل الربح
     const { data: existingProfit } = await supabase
