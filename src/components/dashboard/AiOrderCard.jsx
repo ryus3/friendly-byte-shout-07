@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
-  Bot, 
   MessageSquare, 
   Clock, 
   CheckCircle2, 
@@ -22,6 +21,7 @@ import {
   ShoppingCart,
   Package
 } from 'lucide-react';
+import AiOrderIcon from '@/components/icons/AiOrderIcon';
 import { cn } from '@/lib/utils';
 import { getStatusForComponent } from '@/lib/order-status-translator';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog.jsx';
@@ -71,7 +71,7 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
       case 'ai_chat':
       case 'ai_assistant':
         return {
-          icon: Bot,
+          icon: AiOrderIcon,
           label: 'المساعد الذكي'
         };
       case 'web':

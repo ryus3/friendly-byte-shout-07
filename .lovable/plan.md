@@ -1,83 +1,89 @@
-# خطة الإصلاحات
 
-## 1) إشعارات تغيير حالة الطلب (بدون تكرار)
+# الخطة النهائية — نظام إشعارات عالمي موحّد
 
-**الوضع الحالي:**
-- في `supabase/functions/sync-order-updates/index.ts` يوجد منطق Dedup صحيح: يبحث عن إشعار `alwaseet_status_change` بنفس `order_id` ويُحدّثه بدل إنشاء واحد جديد.
-- لكن في `src/contexts/AlWaseetContext.jsx` (مزامنة الواجهة / زر الهيدر / دخول الصفحات) يتم في عدة مواضع `insert` مباشر لإشعار جديد عند تغيّر `delivery_status` دون نفس منطق التحديث الذي في Edge Function — مما يسبب أحياناً عدم وصول إشعار (لأن نوعه مختلف) أو تكراره.
+## التشخيص الفعلي (من فحص الكود والـ DB)
 
-**التغيير:**
-- استخراج دالة موحّدة `upsertStatusChangeNotification(orderId, payload)` في `AlWaseetContext.jsx` تقوم بـ:
-  1. البحث عن آخر إشعار `alwaseet_status_change` لنفس `order_id` خلال 7 أيام.
-  2. إن وُجد ونفس `delivery_status` → تخطّي.
-  3. إن وُجد وحالة مختلفة → `update` للإشعار نفسه (title/message/data/is_read=false/created_at=now).
-  4. إن لم يوجد → `insert` جديد.
-- ضمان أن **كل** تحديث حالة (الزر الدوار في الهيدر، دخول صفحة الطلبات، دخول متابعة الموظفين، فحص فردي بزر "تحقق الآن"، المزامنة التلقائية الخلفية) يمر عبر هذه الدالة الموحّدة → لا تكرار ولا حالة بلا إشعار.
+1. **آخر إشعار `alwaseet_status_change` كان في 2026-05-23 15:00** — رغم أن المزامنة التلقائية ركضت بعدها (20:58) ومستخدمون ضغطوا "تحقق الآن" على طلبات وتحديثوا حالاتها فعلياً.
 
-## 2) المزامنة التلقائية وما يُستبعد منها
+2. **السبب الجذري:** في `src/contexts/AlWaseetContext.jsx` (سطر 1809) دالة `createOrderStatusNotification` **مُعطّلة بالكامل** (تعيد `return;` فوراً). أي:
+   - زر الهيدر الدوار → يحدّث الحالة في DB لكن **لا يُنشئ إشعاراً**.
+   - دخول صفحة الطلبات/متابعة الموظفين (`syncVisibleOrdersBatch`) → نفس الشيء.
+   - زر "تحقق الآن" داخل تفاصيل الطلب → نفس الشيء.
+   - فقط **cron الخلفي** عبر edge function `sync-order-updates` يُنشئ إشعارات — وهذا يعمل ضمن ساعات 08-20 بغداد فقط، ولفئة محدودة من الطلبات في كل دورة.
 
-**الوضع الحالي مؤكد:**
-- `sync-order-updates/index.ts` يستبعد فقط `delivery_status IN (4, 17)`.
-- `AlWaseetContext.syncVisibleOrdersBatch` يستبعد نفس الحالتين + الحالات المحلية النهائية `completed`, `returned_in_stock`.
-- كل بقية الحالات (1, 2, 3, 21, 23, 24, 25, 26, 27, 28, 31, 32, "تحتاج معالجة"…) **تتزامن**.
+   النتيجة: المستخدم يرى الحالة تتغير في الواجهة لكن **بدون أي إشعار**.
 
-**التغيير:**
-- إضافة تعليق توثيقي موحّد في الملفّين يحدد القاعدة الذهبية، مع إضافة فحص دفاعي: إذا كان `status='completed' AND receipt_received=true` نتخطّى أيضاً (نهائي محاسبياً).
-- لا تغيير في المنطق غير ذلك — الاستبعاد دقيق فعلاً (4 = تم التسليم بانتظار الفاتورة لا يتغير، 17 = راجع للتاجر نهائي).
+3. **أيقونة "🤖" في عنوان الإشعار:** في `supabase/functions/ai-order-notifications/index.ts` السطر 81-83 يُكتب العنوان بـ `🤖 طلب ذكي جديد...` (emoji نصّي داخل العنوان). هذا هو ما يراه المستخدم في الـ screenshot — بجانب الأيقونة الاحترافية الجديدة (الدماغ المتدرّج) الموجودة بالفعل في `NotificationsPanel.jsx`. النتيجة: ازدواجية بصرية بدائية.
 
-## 3) التسليم الجزئي: قبول زيادة على المبلغ الأصلي
+4. **`AiOrderCard.jsx`** (سطر 7، 74) لا يزال يستخدم `Bot` من lucide-react لمصدر `ai_assistant`/`ai_chat`، وليس الأيقونة الاحترافية.
 
-**المشكلة (الطلب 143197937):**
-في `PartialDeliveryDialog.jsx` سطر 154 يوجد:
+## التغييرات المطلوبة
+
+### 1) المصدر الموحّد لإشعارات تغيير الحالة (Source of Truth)
+
+نُنشئ دالة موحّدة `upsertAlwaseetStatusNotification({ orderId, userId, trackingNumber, oldState, newState, statusText, city, province, account, priority })` داخل `AlWaseetContext.jsx` تطبّق **نفس منطق dedup الموجود في edge function** بالضبط:
+
+```text
+1. ابحث عن notification type='alwaseet_status_change' لنفس user_id خلال آخر 7 أيام
+2. fitler يدوي: data.order_id === orderId || data.tracking_number === trackingNumber
+3. إذا وُجد ونفس state_id → return (تخطي تام)
+4. إذا وُجد وحالة مختلفة → update (is_read=false, created_at=now, message/title/data جديدة)
+5. إذا لم يوجد → insert جديد
 ```
-if (finalPrice > originalTotal) { toast(خطأ); return; }
-```
-حيث `originalTotal = total_amount + delivery_fee` (مثلاً 24,000). عند إدخال 25,000 (مطابق لسعر شركة التوصيل الفعلي) → يرفضه ويبقى السعر 24,000.
 
-**التغيير:**
-- إزالة الشرط الذي يرفض `finalPrice > originalTotal`.
-- استبدال السقف بقاعدة منطقية: السماح بأن يكون `finalPrice` أكبر من `originalTotal` ويُحتسب الفرق كـ **زيادة** (مثل رسوم توصيل إضافية من شركة التوصيل). يُسجَّل الفرق في حقل `price_adjustment` ضمن `notes` JSON أو في عمود `discount` بقيمة سالبة (إن كان النظام يدعمه) — الأفضل: ترك `discount = 0` واستخدام `final_amount = finalPrice` كما هو، لأن الإيراد المالي يعتمد على `final_amount` فقط.
-- إبقاء الحد الأدنى: `finalPrice >= deliveredItemsTotal + deliveryFee` (تحذير وليس رفض، كما هو الآن).
-- إظهار شارة "زيادة عن الطلب الأصلي" في بطاقة فرق السعر (موجودة جزئياً سطر 398-410، نوسّعها لتعرض حالة الزيادة عن الأصلي).
-- ضمان أن `handlePartialDeliveryFinancials` يستخدم `finalPrice` كإيراد فعلي دون أي تطبيع — فحص سريع للملف `src/utils/partial-delivery-financial-handler.js` وتأكيد ذلك.
+العنوان والرسالة بنفس صيغة edge function: `"${city} - ${province} | ${statusText}"` و `"${statusText} ${tracking_number}"`.
 
-## 4) أيقونة احترافية لإشعار "طلب ذكي جديد"
+### 2) تفعيل المصدر الموحّد في جميع نقاط مزامنة العميل
 
-**الوضع الحالي:** يُستخدم `Bot` من lucide-react في `NotificationsPanel.jsx` و `NotificationHandler.jsx` للنوع `new_ai_order` / `ai_order`.
+كل موضع داخل `AlWaseetContext.jsx` يكتشف فيه تغيّر `delivery_status` لطلب يجب أن يستدعي `upsertAlwaseetStatusNotification` بعد نجاح `UPDATE orders`:
+- داخل `syncVisibleOrdersBatch` (المزامنة عند فتح الصفحات + الزر الدوار).
+- داخل `forceSyncSingleOrder` (زر "تحقق الآن").
+- داخل أي حلقة `for localOrder of …` تكتشف `localOrder.status !== newStatus` (حول السطر 1180).
 
-**التغيير:**
-- إنشاء مكوّن أيقونة مخصّص `AiOrderIcon.jsx` ضمن `src/components/icons/` يحتوي SVG احترافي متدرّج (gradient بنفسجي → أزرق سماوي) يمثّل دماغاً/شرارة ذكاء (Sparkles + Brain hybrid) مع توهج خفيف.
-- استبدال جميع استخدامات `Bot` لنوع `ai_order` / `new_ai_order` في:
-  - `src/components/NotificationsPanel.jsx` (سطر 246، 418، 837)
-  - `src/components/notifications/NotificationHandler.jsx` (سطر 74)
-  - أي ظهور للأيقونة في كرت `AiOrderCard.jsx` إن لزم.
-- الأيقونة الجديدة تتجاوب مع الوضع الداكن وتستخدم tokens من نظام التصميم.
+نحذف الـ `return;` المبكّر من `createOrderStatusNotification` ونجعلها alias رفيع للدالة الموحّدة.
 
-## 5) فحص مزامنة الفواتير والربط
+### 3) منع التكرار مع edge function (cron)
 
-**النقاط التي ستُفحص وتُصلَح:**
-1. **`useAlWaseetInvoices.js`:**
-   - التأكد من أن `fetchInvoices` يجلب فواتير الحساب المشترك للمدير + موظفيه بشكل صحيح (المنطق موجود لكن يقتصر على فواتير المستخدم نفسه؛ للمدير العام يجب جلب فواتير كل التوكنات النشطة).
-   - إضافة مسار للمدير العام يجلب من `delivery_invoices` كل الفواتير غير المُعاد ربطها بدلاً من فلترة حسب `owner_user_id` فقط.
-2. **`smart-invoice-sync` Edge Function:**
-   - مراجعة الـ upsert لمفتاح `(external_id, partner)` للتأكد من عدم تكرار الفواتير وعدم استبدال `received_at` الموجود (قاعدة Idempotent Date Preservation من الذاكرة).
-   - تأكيد أن المزامنة تستخدم كل التوكنات النشطة (المدير + مدير القسم + موظفين) وليس فقط توكن المستخدم الحالي.
-3. **الربط التلقائي للطلبات بالفواتير (Self-healing):**
-   - التحقق من أن `tracking_number` يُستخدم لربط الطلبات بـ `delivery_partner_invoice_id` عند فتح الفاتورة في الواجهة (موجود لكن يحتاج تفعيله أيضاً عند المزامنة الخلفية للفواتير الجديدة).
-4. **إشعارات الفواتير:**
-   - فصل واضح بين "فاتورة معلّقة" و "فاتورة مُستلمة" (حسب الذاكرة المحفوظة).
-   - منع التكرار باستخدام نفس نمط dedup المستخدم في إشعارات الحالة.
+ما دامت كل من العميل والـ edge function تستعمل **نفس** قاعدة dedup (search + same state → skip) على **نفس** الحقول (`type='alwaseet_status_change'`, `user_id`, `data.order_id`)، لن يحدث تكرار. أول من يصل يُنشئ، الباقي يُحدِّث أو يتخطّى.
 
-## التفاصيل التقنية
+### 4) إزالة الـ 🤖 من العنوان النصّي
 
-**ملفات ستُعدَّل:**
-- `src/contexts/AlWaseetContext.jsx` — دالة upsertStatusChangeNotification موحّدة + استبدال كل insert مباشر للإشعار.
-- `src/components/orders/PartialDeliveryDialog.jsx` — إزالة سقف `originalTotal` + تحديث رسائل الفرق.
-- `src/utils/partial-delivery-financial-handler.js` — فحص فقط (لا تعديل متوقع).
-- `src/components/icons/AiOrderIcon.jsx` — جديد.
-- `src/components/NotificationsPanel.jsx` + `src/components/notifications/NotificationHandler.jsx` — استخدام الأيقونة الجديدة.
-- `src/hooks/useAlWaseetInvoices.js` — توسيع نطاق الجلب للمدير.
-- `supabase/functions/smart-invoice-sync/index.ts` — مراجعة upsert واستخدام جميع التوكنات.
-- `supabase/functions/sync-order-updates/index.ts` — تعليقات توثيقية + فحص دفاعي إضافي (لا تغيير منطقي جوهري).
+في `supabase/functions/ai-order-notifications/index.ts`:
+- حذف `const sourceEmoji = '🤖';`
+- العنوان يصبح: `طلب ذكي جديد من ${creatorName} (${sourceLabel})` — بدون emoji.
+- الاعتماد على `AiOrderIcon` (الدماغ المتدرّج) الذي يعرضه `NotificationsPanel.jsx` تلقائياً عبر `iconMap[type='new_ai_order']`.
 
-**لا تغييرات على قاعدة البيانات** متوقعة — كل التغييرات على مستوى التطبيق و Edge Functions.
+### 5) استبدال أيقونة `Bot` في `AiOrderCard.jsx`
+
+- استيراد `AiOrderIcon` من `@/components/icons/AiOrderIcon`.
+- استبدال `icon: Bot` في `getSourceIcon` (سطر 74) لمصادر `ai_chat`/`ai_assistant` بـ `AiOrderIcon`.
+- إبقاء `Send` للتليغرام (مناسب) و `Smartphone` للويب.
+
+### 6) صفحة الإشعارات `NotificationsPage` و `NotificationsPanel`
+
+- لا تغيير منطقي: يستخدمان `iconMap` الموحّد الذي يربط `new_ai_order` و `ai_order` بـ `AiOrderIcon` (موجود بالفعل).
+- التأكد فقط أن `NotificationsHandler.jsx` يستخدم الأيقونة الجديدة عند عرض toast فوري للطلبات الذكية بدلاً من emoji.
+
+## الملفات التي ستُعدَّل (5 ملفات فقط)
+
+| الملف | التغيير |
+|------|---------|
+| `src/contexts/AlWaseetContext.jsx` | إضافة `upsertAlwaseetStatusNotification` موحّدة + استدعاؤها في كل مكان يتغيّر فيه `delivery_status` (3 مواضع داخل `syncVisibleOrdersBatch` و `forceSyncSingleOrder`). |
+| `supabase/functions/ai-order-notifications/index.ts` | حذف `sourceEmoji='🤖'` من العنوان. |
+| `src/components/dashboard/AiOrderCard.jsx` | استبدال `Bot` بـ `AiOrderIcon` لمصادر `ai_*`. |
+| `src/contexts/NotificationsHandler.jsx` | تأكيد استخدام أيقونة احترافية في toast (إن استعمل emoji). |
+| `src/utils/NotificationService.js` | إزالة أي 🤖 emoji من عناوين الإشعارات الموحدة (السطر 154 المنطقة). |
+
+## ضمانات النهائية ("عالمية كالمواقع الكبرى")
+
+- **مصدر واحد للحقيقة:** نفس دالة dedup منطقياً بين العميل وedge function → لا تكرار أبداً.
+- **التحديث في المكان:** الإشعار نفسه يُحدَّث ويصبح `is_read=false` عند تغيّر الحالة الفعلي — كما في Slack/Linear.
+- **بدون استدعاءات زائدة:** لا realtime parallel channels، لا dispatch زائدة — فقط استعلام-تحديث/إدراج واحد لكل تغيّر حالة فعلي.
+- **جاهز للتطبيق الحقيقي:** الإشعارات في DB → القناة الموجودة في `NotificationsContext` تلتقطها realtime → push notification (في التطبيق المستقبلي) يُغذّى من نفس السجل.
+
+## ما لن نلمسه
+
+- لا تغيير على قاعدة البيانات.
+- لا تغيير على منطق المزامنة نفسه ولا فلاتر الاستبعاد.
+- لا تغيير على `AiOrderIcon` (موجودة وممتازة).
+- لا triggers جديدة.

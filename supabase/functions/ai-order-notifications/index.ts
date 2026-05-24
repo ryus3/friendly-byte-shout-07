@@ -78,9 +78,8 @@ Deno.serve(async (req) => {
     // 🏷️ تمييز المصدر
     const isAiAssistant = record.source === 'ai_assistant' || record.source === 'ai_chat';
     const sourceLabel = isAiAssistant ? 'المساعد الذكي' : (record.source === 'telegram' ? 'تليغرام' : 'النظام');
-    const sourceEmoji = '🤖';
-
-    const title = `${sourceEmoji} طلب ذكي جديد من ${creatorName} (${sourceLabel})`;
+    // العنوان بدون emoji — الأيقونة الاحترافية (AiOrderIcon) تُعرض في الواجهة عبر iconMap
+    const title = `طلب ذكي جديد من ${creatorName} (${sourceLabel})`;
     const message = `عميل: ${record.customer_name || 'غير محدد'} — المبلغ: ${Number(record.total_amount || 0).toLocaleString()} د.ع`;
     const data = {
       ai_order_id: record.id,
