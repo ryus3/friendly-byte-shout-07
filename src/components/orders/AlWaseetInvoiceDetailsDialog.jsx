@@ -96,7 +96,7 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice }) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[92vh] p-0 flex flex-col overflow-hidden border-0 bg-background">
+      <DialogContent className="max-w-4xl w-[95vw] sm:w-full h-[92vh] p-0 flex flex-col overflow-hidden overflow-x-hidden border-0 bg-background">
         {/* Hero Header */}
         <div className="relative flex-shrink-0 overflow-hidden">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent" />
