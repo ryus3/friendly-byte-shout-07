@@ -202,13 +202,23 @@ const CashMovementsList = ({ movements = [], cashSources = [] }) => {
                         
                         {/* المبلغ */}
                         <div className="text-right flex-shrink-0">
-                          <p className={cn(
-                            "font-bold text-sm sm:text-lg leading-tight",
-                            movement.movement_type === 'in' ? 'text-green-600' : 'text-red-600'
-                          )}>
-                            {movement.movement_type === 'in' ? '+' : '-'}
-                            {(movement.amount || 0).toLocaleString()} د.ع
-                          </p>
+                          {(() => {
+                            const rawAmount = Number(movement.amount) || 0;
+                            // الإشارة الفعلية = إشارة المبلغ نفسه (يدعم القيم السالبة في حركات in/out)
+                            const signedAmount = movement.movement_type === 'out'
+                              ? -Math.abs(rawAmount)
+                              : rawAmount;
+                            const isPositive = signedAmount >= 0;
+                            const display = `${isPositive ? '+' : '-'}${Math.abs(signedAmount).toLocaleString()} د.ع`;
+                            return (
+                              <p className={cn(
+                                "font-bold text-sm sm:text-lg leading-tight",
+                                isPositive ? 'text-green-600' : 'text-red-600'
+                              )}>
+                                {display}
+                              </p>
+                            );
+                          })()}
                         </div>
                       </div>
                       
