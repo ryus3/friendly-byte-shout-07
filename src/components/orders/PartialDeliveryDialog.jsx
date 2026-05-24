@@ -255,6 +255,21 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
             </span>
             <Package className="w-8 h-8 text-primary" />
           </DialogTitle>
+          {(order?.tracking_number || order?.order_number) && (
+            <div className="text-right text-sm text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 justify-end">
+              <span className="font-semibold text-foreground">
+                طلب #{order?.tracking_number || order?.order_number}
+              </span>
+              {(order?.customer_city || order?.customer_province) && (
+                <>
+                  <span>•</span>
+                  <span>
+                    {[order?.customer_city, order?.customer_province].filter(Boolean).join(' — ')}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
         </DialogHeader>
 
         <div className="space-y-4">

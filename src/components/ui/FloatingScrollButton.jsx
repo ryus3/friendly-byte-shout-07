@@ -69,8 +69,8 @@ const FloatingScrollButton = () => {
       if (!isDragging) return;
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      const newX = Math.max(8, Math.min(clientX - dragOffset.x, window.innerWidth - 56));
-      const newY = Math.max(8, Math.min(clientY - dragOffset.y, window.innerHeight - 56));
+      const newX = Math.max(8, Math.min(clientX - dragOffset.x, window.innerWidth - 44));
+      const newY = Math.max(8, Math.min(clientY - dragOffset.y, window.innerHeight - 44));
       if (Math.abs(newX - position.x) > 3 || Math.abs(newY - position.y) > 3) setHasMoved(true);
       setPosition({ x: newX, y: newY });
     };
@@ -135,23 +135,23 @@ const FloatingScrollButton = () => {
     >
       {/* Outer soft glow */}
       <div
-        className={`absolute inset-0 rounded-full blur-xl opacity-60 transition-all duration-500 ${
+        className={`absolute inset-0 rounded-full blur-xl opacity-40 transition-all duration-500 ${
           atBottom
-            ? 'bg-[radial-gradient(circle,hsl(217_91%_60%/0.55),transparent_70%)]'
-            : 'bg-[radial-gradient(circle,hsl(270_91%_65%/0.55),transparent_70%)]'
-        } group-hover:opacity-90 group-hover:scale-125`}
-        style={{ width: 56, height: 56 }}
+            ? 'bg-[radial-gradient(circle,hsl(217_91%_60%/0.45),transparent_70%)]'
+            : 'bg-[radial-gradient(circle,hsl(270_91%_65%/0.45),transparent_70%)]'
+        } group-hover:opacity-70 group-hover:scale-125`}
+        style={{ width: 44, height: 44 }}
       />
 
       {/* Glass capsule */}
       <div
         className={`
-          relative w-14 h-14 rounded-full
-          bg-white/15 dark:bg-white/[0.06]
+          relative w-11 h-11 rounded-full
+          bg-white/10 dark:bg-white/[0.04]
           backdrop-blur-2xl backdrop-saturate-150
-          border border-white/40 dark:border-white/15
-          shadow-[0_8px_32px_-4px_rgba(0,0,0,0.25),inset_0_1px_0_0_rgba(255,255,255,0.45)]
-          dark:shadow-[0_8px_32px_-4px_rgba(0,0,0,0.6),inset_0_1px_0_0_rgba(255,255,255,0.15)]
+          border border-white/30 dark:border-white/10
+          shadow-[0_6px_24px_-4px_rgba(0,0,0,0.2),inset_0_1px_0_0_rgba(255,255,255,0.35)]
+          dark:shadow-[0_6px_24px_-4px_rgba(0,0,0,0.5),inset_0_1px_0_0_rgba(255,255,255,0.12)]
           transition-all duration-300 ease-out
           group-hover:scale-110 group-active:scale-95
           overflow-hidden
@@ -160,25 +160,25 @@ const FloatingScrollButton = () => {
       >
         {/* Iridescent gradient sheen */}
         <div
-          className={`absolute inset-0 rounded-full opacity-80 transition-all duration-500 ${
+          className={`absolute inset-0 rounded-full opacity-50 transition-all duration-500 ${
             atBottom
-              ? 'bg-gradient-to-br from-sky-400/40 via-blue-500/20 to-indigo-600/30'
-              : 'bg-gradient-to-br from-fuchsia-400/40 via-violet-500/25 to-indigo-600/30'
+              ? 'bg-gradient-to-br from-sky-400/30 via-blue-500/15 to-indigo-600/20'
+              : 'bg-gradient-to-br from-fuchsia-400/30 via-violet-500/18 to-indigo-600/20'
           }`}
         />
 
         {/* Top highlight (glass reflection) */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-3 rounded-b-full bg-gradient-to-b from-white/55 to-transparent blur-[1px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-2 rounded-b-full bg-gradient-to-b from-white/40 to-transparent blur-[1px]" />
 
         {/* Conic shimmer ring on hover */}
-        <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.35),transparent_30%)] animate-[spin_3s_linear_infinite]" />
+        <div className="absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-[conic-gradient(from_0deg,transparent,rgba(255,255,255,0.25),transparent_30%)] animate-[spin_3s_linear_infinite]" />
 
         {/* Icon */}
         <div className="relative z-10 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]">
           {atBottom ? (
-            <ArrowUp className="w-6 h-6" strokeWidth={2.5} />
+            <ArrowUp className="w-5 h-5" strokeWidth={2.5} />
           ) : (
-            <ArrowDown className="w-6 h-6 animate-bounce" strokeWidth={2.5} />
+            <ArrowDown className="w-5 h-5 animate-bounce" strokeWidth={2.5} />
           )}
         </div>
       </div>
