@@ -1,62 +1,46 @@
-## سبب انتهاء توكن الوسيط قبل أوانه
+## المشاكل والحل
 
-شركة الوسيط فعلاً تمنح التوكن **7 أيام** صلاحية، ونحن نخزنه عندنا بـ`expires_at = now + 7 days` (`AlWaseetContext.jsx:2352`) ولدينا cron يجدّده تلقائياً قبل 24 ساعة من الانتهاء (`refresh-delivery-partner-tokens`). إذن من جهتنا الإعداد صحيح. السبب الحقيقي لرسالة "انتهت صلاحية الجلسة" هو **جهة الوسيط** ترفض التوكن قبل نهاية 7 أيام لأحد سببين:
+### 1) خطأ "لا يمكن التعرف على المحافظة" في طلب سريع
+السبب: المدن والمناطق تُجلَب من `cities_master` / `regions_master` (جداول مركزية عامة)، فالـ id الذي يختاره المستخدم هو **internal master id** وليس بالضرورة موجوداً في `city_delivery_mappings` / `region_delivery_mappings` لشريك الوسيط. عند إرسال الطلب، `resolveExternalId` لا يجد تطابقاً مع `delivery_partner='alwaseet'` فيرمي الخطأ.
 
-1. **تسجيل دخول جديد بنفس الحساب من جهاز/متصفح آخر** → سيرفر الوسيط يُبطل التوكن القديم فوراً ويعطي errNum:21 (نراه نحن "TOKEN_EXPIRED"). الحساب `alshmry94` مشترك بين أكثر من موظف، فأي تسجيل دخول جديد يكسر جلسات الباقين.
-2. **خطأ مؤقت في endpoint معيّن من جهة الوسيط** → بعض مسارات الوسيط ترجع errNum:21 كـ "ليس لديك صلاحية" حتى مع توكن صالح. عالجنا أغلبها في `alwaseet-proxy` (`PASSTHROUGH_21_ENDPOINTS`) لكن `create-order` غير مشمول لأنه فعلياً حساس.
+الحل: مصدر المدن/المناطق للوسيط من جداول الـ mappings الخاصة بالشريك مباشرة (تماماً كما يفعل MODON حالياً في السطر 738–753). هكذا الـ id المختار يكون **external_id** للوسيط ومضمون التطابق.
 
-**الخلاصة:** التاريخ المحلي لا يعكس قرار سيرفر الوسيط. لذلك يجب أن نتعافى تلقائياً (auto-relogin) عند رفض التوكن من قِبل السيرفر، بدل إجبار المستخدم على فتح إعدادات شركة التوصيل ولمس "تجديد التوكن" يدوياً.
+### 2) المدن تحمّل قليلاً قبل الظهور
+السبب: `useCitiesCache` يبدأ بـ `setIsLoading(true)` ويقوم بـ pagination للمناطق مع تأخير 50ms بين الصفحات، وإذا تأخر الكاش يظهر "تحميل...".
 
-## الخطة الكاملة
+الحل: 
+- حفظ snapshot من المدن/المناطق في `localStorage` بعد كل تحميل ناجح، والتحميل الأولي يهيدرت من الـ localStorage **تزامنياً** في `useState(() => ...)` → ظهور فوري بلا أي شيمر، ثم تحديث صامت في الخلفية.
+- في `QuickOrderContent`: تهيئة `cities` و `packageSizes` بشكل lazy من نفس الـ snapshot، وعدم تفعيل `setLoadingCities(true)` إذا توفر snapshot.
 
-### 1) شفاء تلقائي عند رفض التوكن (Auto re-login + retry)
+### 3) المنسدلة منفصلة عن القائمة وتتحرك عند السحب
+السبب: `searchable-select-fixed.jsx` يستخدم portal مع `position: fixed`. لديه listener لتمرير Dialog و ScrollArea، لكن **لا** يستمع لـ `window scroll`. في صفحة طلب سريع (ليست داخل Dialog) عند تمرير الصفحة الزر يتحرك بينما المنسدلة تبقى ثابتة في الـ viewport → تبدو منفصلة.
 
-**أ. على جانب الواجهة (`src/lib/alwaseet-api.js`)**
-- داخل `apiCall` قبل رمي `isTokenExpired = true`: محاولة استدعاء وظيفة جديدة `attemptSilentRelogin(token)`:
-  - تستدعي edge function `refresh-delivery-partner-tokens` لجدول التوكن المعني (نمررها `tokenId` أو `username+partner`).
-  - تنتظر الرد، تقرأ التوكن الجديد من `delivery_partner_tokens`، وتعيد محاولة نفس endpoint مرة واحدة.
-- إذا فشل التجديد → نرمي `isTokenExpired` كما هو الآن.
+الحل: إضافة `window` scroll listener (capture + passive) داخل نفس الـ effect المسؤول عن تحديث `buttonRect`، فيتم إعادة حساب موضع المنسدلة فوراً مع كل سكروول وتبقى ملتصقة بالزر. كذلك إعادة الحساب على `orientationchange` للموبايل.
 
-**ب. على جانب edge function `refresh-delivery-partner-tokens`**
-- توسعة قبول `body.token_id` أو `body.username+partner_name` لتجديد توكن محدد عند الطلب (بدل انتظار cron).
-- إن نجح، تكتب التوكن الجديد في DB ويعود `success: true, token`.
+---
 
-**ج. على جانب `AlWaseetContext.jsx`**
-- مستمع `alwaseet-token-expired` يحاول تنفيذ نفس الـrelogin الصامت قبل عرض أي toast (نخفض throttle إلى 5 ثوانٍ ونعرض toast فقط لو فشل التجديد فعلاً).
-- في `createOrder/edit-order` على مستوى الواجهة (`QuickOrderContent.jsx` و`CreateOrderPage.jsx`): إذا التقطنا `isTokenExpired` بعد retry، نظهر toast فيه action "تجديد التوكن" يفتح `DeliveryPartnerDialog`.
+## التعديلات
 
-### 2) تجديد استباقي أكثر أماناً
-- في `AlWaseetContext.jsx` عند mount الصفحة: لو `expiresAt - now < 48h` → استدعاء tcp التجديد فوراً (بدل انتظار cron).
-- إضافة فحص عند رجوع التاب للتركيز (`visibilitychange`): إذا التوكن خلال 24 ساعة من الانتهاء → تجديد صامت.
+**`src/hooks/useCitiesCache.js`**
+- إضافة LocalStorage cache (`ryus_cities_v1`, `ryus_regions_v1`) مع TTL ناعم.
+- تهيئة `cities` و `allRegions` تزامنياً من LocalStorage.
+- `setIsLoading(false)` إذا كان هناك snapshot، ثم refresh في الخلفية بدون شيمر.
 
-### 3) ظهور المدن/المناطق فوراً في طلب سريع
-ملف: `src/components/quick-order/QuickOrderContent.jsx`
-- استخدام lazy initializer لـ`cities`/`packageSizes` لتُملأ مباشرة من `cachedCities` بدون انتظار `useEffect`.
-- إزالة `setLoadingCities(true)` إذا `cachedCities.length > 0` (لا وميض "تحميل...").
-- جلب المناطق synchronously داخل `onValueChange` للمدينة عبر `getRegionsByCity(cityId)` وضبط `regions` مباشرة قبل أي async، وإزالة placeholder "تحميل المناطق...".
+**`src/components/quick-order/QuickOrderContent.jsx`** (السطور ~720–810 و 866+)
+- في فرع `activePartner === 'alwaseet'`: استبدال جلب المدن من `cachedCities` بجلب من `city_delivery_mappings` (نفس نمط MODON) — `external_id` يصبح `id` المعروض.
+- جلب المناطق من `region_delivery_mappings` فلترة على `city_id` (master id الناتج من mapping المختار) **و** `delivery_partner='alwaseet'`. نحتفظ بـ `city_id` الداخلي من نفس صف الـ mapping كي نستعلم به مباشرة.
+- لا نُفعّل `setLoadingCities(true)` إذا كان `cachedCities`/snapshot جاهز.
 
-### 4) ربط المنسدلات بصرياً بحقل الاختيار
-ملف: `src/components/ui/searchable-select-fixed.jsx`
-- إزالة الفجوة 4px → جعل القائمة ملتصقة بأسفل الزر (`top: rect.bottom`).
-- عند `open === true`:
-  - الزر: `rounded-b-none border-b-0`
-  - البطاقة المنسدلة: `rounded-t-none` + نفس لون حدود الزر (`border-input`).
-- تطبيق نفس shadow الناعم وتطابق العرض تماماً مع الزر — تظهر كقطعة واحدة موحّدة.
+**`src/components/ui/searchable-select-fixed.jsx`** (السطر ~84–106)
+- إضافة `window.addEventListener('scroll', updatePosition, { capture: true, passive: true })` و `orientationchange`.
+- التنظيف يزيلها في cleanup.
+- ضمان أن `updatePosition` يستخدم `requestAnimationFrame` لتجنب layout thrash.
 
-### 5) التحقق من إشعار الإيراد (لا تعديل كود)
-- استعلام sql على آخر 10 إشعارات `revenue_received` للتأكد:
-  - المبلغ = `final_amount - delivery_fee` (موزّع نسبياً عند تعدّد الملاك).
-  - يحوي اسم البائع بين قوسين.
-  - `user_id` = مالك المنتج فقط، لا يصل لمدير عام/موظف آخر.
+لا تغييرات في قواعد البيانات ولا في الواجهات الخلفية.
 
-## ملفات سيتم تعديلها
-- `src/lib/alwaseet-api.js` — silent relogin + retry
-- `src/contexts/AlWaseetContext.jsx` — relogin خلف الكواليس + تجديد استباقي + visibilitychange
-- `supabase/functions/refresh-delivery-partner-tokens/index.ts` — دعم تجديد مفرد عند الطلب
-- `src/components/quick-order/QuickOrderContent.jsx` — تحميل فوري للمدن/المناطق
-- `src/components/ui/searchable-select-fixed.jsx` — ربط المنسدلة بالحقل بصرياً
-- تشغيل supabase--read_query فقط للتحقق من إشعارات الإيراد (لا migration)
+---
 
-## لا يتم لمس
-- منطق توزيع الإيراد/الأرباح، RLS، triggers الإشعار، أو أي ملف خارج النطاق المذكور.
-- لا migrations جديدة.
+## نتائج متوقعة
+- اختيار بغداد/الشعلة (وأي محافظة/منطقة) → الطلب يُنشأ بنجاح بدون "لا يمكن التعرف على المحافظة".
+- المدن والمناطق تظهر **بنفس اللحظة** عند دخول الصفحة.
+- المنسدلة تبقى ملتصقة بالقائمة عند سحب الصفحة لأعلى/أسفل.
