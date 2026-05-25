@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { MapPin, ArrowUpRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import IraqMapSvg from './IraqMapSvg';
 
 /**
  * IRAQ_PROVINCES — coords projected from real (lat, lng) onto a 0-100 grid
