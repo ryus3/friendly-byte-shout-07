@@ -46,6 +46,7 @@ export const useCitiesCache = () => {
 
       if (error) throw error;
       setCities(data || []);
+      writeLS(CITIES_LS_KEY, data || []);
       return data || [];
     } catch (error) {
       console.error('❌ خطأ في جلب المدن من cache:', error);
