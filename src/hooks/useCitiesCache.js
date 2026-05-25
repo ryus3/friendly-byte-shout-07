@@ -95,6 +95,7 @@ export const useCitiesCache = () => {
 
       devLog.log(`✅ اكتمل جلب جميع المناطق: ${allRegions.length} منطقة`);
       setAllRegions(allRegions); // ✅ حفظ في allRegions state
+      writeLS(REGIONS_LS_KEY, allRegions);
       return allRegions;
     } catch (error) {
       console.error('❌ خطأ في جلب المناطق من cache:', error);
