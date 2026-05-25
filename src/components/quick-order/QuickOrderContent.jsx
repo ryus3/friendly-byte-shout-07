@@ -30,6 +30,46 @@ import { useAiOrdersCleanup } from '@/hooks/useAiOrdersCleanup';
 import { linkReturnToOriginalOrder } from '@/utils/return-order-linker';
 import devLog from '@/lib/devLogger';
 
+const PARTNER_SIZE_FALLBACK = [
+  { id: '1', size: 'عادي' },
+  { id: '2', size: 'متوسط' },
+  { id: '3', size: 'كبير' },
+  { id: '4', size: 'كبير جداً' }
+];
+
+const readQuickOrderSnapshot = (key, fallback = []) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const writeQuickOrderSnapshot = (key, data) => {
+  try {
+    if (Array.isArray(data) && data.length > 0) localStorage.setItem(key, JSON.stringify(data));
+  } catch {}
+};
+
+const quickOrderCitiesKey = (partner) => `qo_cities_${partner || 'alwaseet'}_v1`;
+const quickOrderSizesKey = (partner) => `qo_pkg_sizes_${partner || 'alwaseet'}_v1`;
+const quickOrderRegionsKey = (partner, cityId) => `qo_regions_${partner || 'alwaseet'}_${cityId}_v1`;
+
+const translatePackageSize = (name) => {
+  if (!name) return name;
+  const map = {
+    normal: 'عادي', regular: 'عادي', standard: 'عادي', small: 'صغير',
+    medium: 'متوسط', middle: 'متوسط', large: 'كبير', xlarge: 'كبير جداً',
+    xl: 'كبير جداً', 'x-large': 'كبير جداً', 'x large': 'كبير جداً',
+    'extra large': 'كبير جداً', 'extra-large': 'كبير جداً'
+  };
+  const key = String(name).trim().toLowerCase();
+  return map[key] || name;
+};
+
 
 export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, setIsSubmitting, isSubmittingState, aiOrderData = null }) => {
   // حالة التعديل
