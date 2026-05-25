@@ -62,58 +62,57 @@ export const SearchableSelectFixed = ({
   // Detect touch device, dialog presence, calculate dropdown direction, and update button position
   useEffect(() => {
     setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
-    
+
     if (buttonRef.current) {
       const dialogContainer = buttonRef.current.closest('[data-radix-dialog-content], [role="dialog"]');
-      setIsInDialog(!!dialogContainer);
-      
-      // Calculate available space to determine dropdown direction and update button rect
+      const scrollArea = buttonRef.current.closest('[data-radix-scroll-area-viewport]');
+      // Use Portal only inside Dialog or ScrollArea (z-index/overflow issues there)
+      setIsInDialog(!!(dialogContainer || scrollArea));
+
       if (open) {
         const rect = buttonRef.current.getBoundingClientRect();
         setButtonRect(rect);
-        
         const spaceBelow = window.innerHeight - rect.bottom;
         const spaceAbove = rect.top;
-        
-        // If there's more space above and below is limited, open upward
         setDropdownDirection(spaceBelow < 200 && spaceAbove > spaceBelow ? 'up' : 'down');
       }
     }
   }, [open]);
 
-  // ✅ تحديث موضع dropdown عند التمرير داخل Dialog أو ScrollArea
+  // ✅ تحديث موضع dropdown - فقط داخل Dialog/ScrollArea (Portal mode)
+  // خارج Dialog نستخدم inline absolute فيتحرك تلقائياً مع الصفحة بدون أي ارتجاف
   useEffect(() => {
     if (!open || !buttonRef.current) return;
-    
-    const updatePosition = () => {
-      const rect = buttonRef.current?.getBoundingClientRect();
-      if (rect) {
-        setButtonRect(rect);
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const spaceAbove = rect.top;
-        setDropdownDirection(spaceBelow < 200 && spaceAbove > spaceBelow ? 'up' : 'down');
-      }
-    };
-    
-    // ✅ الاستماع لكل من Dialog content و ScrollArea viewport
     const dialogContent = buttonRef.current.closest('[data-radix-dialog-content]');
     const scrollArea = buttonRef.current.closest('[data-radix-scroll-area-viewport]');
+    if (!dialogContent && !scrollArea) return;
 
-    // الاستماع لكليهما
+    let rafId = null;
+    const updatePosition = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        const rect = buttonRef.current?.getBoundingClientRect();
+        if (rect) {
+          setButtonRect(rect);
+          const spaceBelow = window.innerHeight - rect.bottom;
+          const spaceAbove = rect.top;
+          setDropdownDirection(spaceBelow < 200 && spaceAbove > spaceBelow ? 'up' : 'down');
+        }
+      });
+    };
+
     [dialogContent, scrollArea].filter(Boolean).forEach(el => {
       el.addEventListener('scroll', updatePosition, { passive: true });
     });
-
-    // ✅ الاستماع لتمرير النافذة (للصفحات العادية مثل طلب سريع) - capture لالتقاط كل تمرير
-    window.addEventListener('scroll', updatePosition, { capture: true, passive: true });
     window.addEventListener('resize', updatePosition, { passive: true });
     window.addEventListener('orientationchange', updatePosition, { passive: true });
 
     return () => {
+      if (rafId) cancelAnimationFrame(rafId);
       [dialogContent, scrollArea].filter(Boolean).forEach(el => {
         el.removeEventListener('scroll', updatePosition);
       });
-      window.removeEventListener('scroll', updatePosition, { capture: true });
       window.removeEventListener('resize', updatePosition);
       window.removeEventListener('orientationchange', updatePosition);
     };
@@ -271,10 +270,10 @@ export const SearchableSelectFixed = ({
         onTouchStart={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
         className={cn(
-          "bg-background border border-input shadow-lg max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95",
+          "bg-background border border-input shadow-lg max-h-60 overflow-hidden",
           dropdownDirection === 'down'
-            ? "rounded-b-md rounded-t-none border-t-0 slide-in-from-top-1"
-            : "rounded-t-md rounded-b-none border-b-0 slide-in-from-bottom-1"
+            ? "rounded-b-md rounded-t-none border-t-0"
+            : "rounded-t-md rounded-b-none border-b-0"
         )}
         style={{ 
           direction: 'rtl',
@@ -458,8 +457,27 @@ export const SearchableSelectFixed = ({
       </Button>
 
       {/* Dropdown - Using Portal for proper z-index */}
-      {open && buttonRect && createPortal(
-        <div 
+      {/* Inline mode: dropdown يتحرك تلقائياً مع الصفحة - بدون ارتجاف */}
+      {open && !isInDialog && (
+        <div
+          className="absolute left-0 right-0 z-50"
+          role="listbox"
+          style={{
+            direction: 'rtl',
+            top: dropdownDirection === 'down' ? '100%' : 'auto',
+            bottom: dropdownDirection === 'up' ? '100%' : 'auto',
+          }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) e.stopPropagation(); }}
+          onTouchStart={(e) => { if (e.target === e.currentTarget) e.stopPropagation(); }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {renderDropdownContent()}
+        </div>
+      )}
+
+      {/* Portal mode: فقط داخل Dialog/ScrollArea لتجاوز overflow/z-index */}
+      {open && isInDialog && buttonRect && createPortal(
+        <div
           className="fixed isolate"
           role="listbox"
           aria-modal="true"
@@ -469,32 +487,13 @@ export const SearchableSelectFixed = ({
             isolation: 'isolate',
             pointerEvents: 'auto',
             left: buttonRect.left + 'px',
-            top: dropdownDirection === 'down' 
-              ? buttonRect.bottom + 'px' 
-              : 'auto',
-            bottom: dropdownDirection === 'up' 
-              ? (window.innerHeight - buttonRect.top) + 'px' 
-              : 'auto',
+            top: dropdownDirection === 'down' ? buttonRect.bottom + 'px' : 'auto',
+            bottom: dropdownDirection === 'up' ? (window.innerHeight - buttonRect.top) + 'px' : 'auto',
             width: buttonRect.width + 'px'
           }}
-          onMouseDown={(e) => {
-            // ✅ فقط stopPropagation - بدون preventDefault
-            if (e.target === e.currentTarget) {
-              e.stopPropagation();
-            }
-          }}
-          onTouchStart={(e) => {
-            // ✅ إزالة preventDefault للسماح بفتح الكيبورد على iOS
-            if (e.target === e.currentTarget) {
-              e.stopPropagation();
-            }
-          }}
-          onPointerDown={(e) => {
-            // ✅ فقط stopPropagation - بدون preventDefault
-            if (e.target === e.currentTarget) {
-              e.stopPropagation();
-            }
-          }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) e.stopPropagation(); }}
+          onTouchStart={(e) => { if (e.target === e.currentTarget) e.stopPropagation(); }}
+          onPointerDown={(e) => { if (e.target === e.currentTarget) e.stopPropagation(); }}
           onClick={(e) => e.stopPropagation()}
           onFocus={(e) => e.stopPropagation()}
         >
