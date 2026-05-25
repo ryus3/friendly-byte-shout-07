@@ -115,45 +115,26 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
       </CardHeader>
 
       <CardContent className="flex-1 flex flex-col p-4 pt-0 relative">
-        {/* Real Iraq map outline with overlaid markers — glassmorphism */}
+        {/* Real Iraq map outline with overlaid markers — thin elegant sky outline */}
         <div className="relative w-full max-w-[300px] mx-auto aspect-square">
-          {/* Aurora mesh backdrop */}
-          <div className="pointer-events-none absolute -inset-6 opacity-70">
-            <div className="absolute top-4 left-8 w-32 h-32 rounded-full bg-primary/25 blur-3xl" />
-            <div className="absolute bottom-2 right-6 w-28 h-28 rounded-full bg-cyan-400/20 blur-3xl" />
-            <div className="absolute top-1/3 right-1/4 w-20 h-20 rounded-full bg-fuchsia-400/15 blur-3xl" />
+          {/* Subtle aurora backdrop */}
+          <div className="pointer-events-none absolute -inset-4 opacity-50">
+            <div className="absolute top-4 left-6 w-28 h-28 rounded-full bg-sky-400/10 blur-3xl" />
+            <div className="absolute bottom-2 right-4 w-24 h-24 rounded-full bg-cyan-400/10 blur-3xl" />
           </div>
 
-          {/* Glass-filled country shape with luminous edges */}
-          <div
-            className="absolute inset-0 backdrop-blur-md"
+          {/* Thin luminous Iraq border with translucent sky fill */}
+          <IraqMapSvg
+            className="absolute inset-0 w-full h-full"
+            fill="hsl(199 89% 65% / 0.06)"
+            stroke="hsl(199 89% 72% / 0.95)"
+            strokeWidth={1}
             style={{
-              WebkitMaskImage: "url('/iraq-map.svg')",
-              WebkitMaskRepeat: 'no-repeat',
-              WebkitMaskPosition: 'center',
-              WebkitMaskSize: 'contain',
-              maskImage: "url('/iraq-map.svg')",
-              maskRepeat: 'no-repeat',
-              maskPosition: 'center',
-              maskSize: 'contain',
-              background:
-                'linear-gradient(160deg, hsl(var(--primary) / 0.18) 0%, hsl(var(--primary) / 0.04) 45%, hsl(199 89% 60% / 0.10) 100%)',
-              boxShadow: 'inset 0 0 30px hsl(var(--primary) / 0.15)',
+              filter:
+                'drop-shadow(0 0 2px hsl(199 89% 60% / 0.55)) drop-shadow(0 0 6px hsl(199 89% 60% / 0.25))',
             }}
           />
 
-          {/* Luminous border outline */}
-          <img
-            src="/iraq-map.svg"
-            alt="خريطة العراق"
-            className="absolute inset-0 w-full h-full object-contain pointer-events-none"
-            style={{
-              filter:
-                'invert(46%) sepia(91%) saturate(2500%) hue-rotate(195deg) brightness(115%) contrast(95%) drop-shadow(0 0 6px hsl(var(--primary) / 0.85)) drop-shadow(0 0 14px hsl(var(--primary) / 0.45)) drop-shadow(0 0 22px hsl(199 89% 60% / 0.35))',
-              opacity: 0.9,
-              mixBlendMode: 'screen',
-            }}
-          />
 
 
           {/* Markers overlay */}
