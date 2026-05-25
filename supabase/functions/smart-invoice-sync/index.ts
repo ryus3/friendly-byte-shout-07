@@ -72,6 +72,9 @@ async function reportProgress(
       pct = Math.round(stage.start + frac * (stage.end - stage.start));
     } else if (stageKey === 'done') {
       pct = 100;
+    } else if (stageKey === 'init') {
+      // لو لا تقدّم داخلي: انطلق من منتصف مرحلة التهيئة (يظهر حركة فورية للمستخدم)
+      pct = Math.round((stage.start + stage.end) / 2);
     } else {
       // لو لا تقدّم داخلي: انطلق من بداية المرحلة
       pct = stage.start;
