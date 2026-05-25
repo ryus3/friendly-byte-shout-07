@@ -504,14 +504,11 @@ useEffect(() => {
     
     try {
       if (action === 'approve') {
-        // تحديث فوري محلياً أولاً
         const approvedIds = [...selectedOrders];
-        setOrders(prev => prev.filter(o => !approvedIds.includes(o.id)));
-        
-        // معالجة تسلسلية مع تأخير لتجنب Rate Limiting
         const successIds = [];
-        const failedIds = [];
+        const failedResults = [];
         let processed = 0;
+        const delayMs = orderDestination.destination === 'local' ? 220 : 1100;
         
         for (const id of approvedIds) {
           processed++;
@@ -525,13 +522,14 @@ useEffect(() => {
           
           if (result?.success) {
             successIds.push(id);
+            setOrders(prev => prev.filter(o => o.id !== id));
           } else {
-            failedIds.push(id);
+            failedResults.push({ id, error: result?.error || 'فشل غير معروف' });
           }
           
-          // تأخير 500ms بين كل طلب (إلا إذا كان آخر طلب)
+          // تأخير ذكي بين الطلبات: المحلي سريع، شركة التوصيل أبطأ لحماية WAF/Rate limit
           if (processed < approvedIds.length) {
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, delayMs));
           }
         }
         
@@ -543,12 +541,6 @@ useEffect(() => {
             .in('id', successIds);
         }
         
-        // إضافة الطلبات الفاشلة للقائمة مرة أخرى
-        if (failedIds.length > 0) {
-          const failedOrders = ordersFromContext.filter(o => failedIds.includes(o.id));
-          setOrders(prev => [...failedOrders, ...prev]);
-        }
-        
         // إضافة الطلبات المعتمدة للمعالجة
         if (successIds.length > 0) {
           setProcessedOrders(prev => [...prev, ...successIds]);
@@ -557,8 +549,14 @@ useEffect(() => {
           });
           toast({ title: 'تمت الموافقة', description: `تمت الموافقة على ${successIds.length} طلب بنجاح`, variant: 'success' });
         }
-        if (failedIds.length > 0) {
-          toast({ title: 'تنبيه', description: `فشل في الموافقة على ${failedIds.length} طلب`, variant: 'destructive' });
+        if (failedResults.length > 0) {
+          const firstReason = failedResults[0]?.error || 'غير محدد';
+          toast({
+            title: 'تنبيه',
+            description: `فشل في الموافقة على ${failedResults.length} طلب. السبب الأول: ${firstReason}`,
+            variant: 'destructive',
+            duration: 9000
+          });
         }
         
       } else if (action === 'delete') {

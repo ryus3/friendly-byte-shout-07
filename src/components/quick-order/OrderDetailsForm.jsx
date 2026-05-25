@@ -50,8 +50,8 @@ const OrderDetailsForm = ({
         handleSelectChange('size', 'عادي');
       }
     }
-    // لشركة الوسيط: استخدام أول حجم متاح فقط
-    else if (activePartner === 'alwaseet' && packageSizes && packageSizes.length > 0) {
+    // لشركات التوصيل: استخدام أول حجم متاح فقط
+    else if ((activePartner === 'alwaseet' || activePartner === 'modon') && packageSizes && packageSizes.length > 0) {
       const firstPackageId = String(packageSizes[0]?.id || '');
       if (formData.size !== firstPackageId) {
         handleSelectChange('size', firstPackageId);
