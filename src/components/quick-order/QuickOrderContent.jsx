@@ -875,7 +875,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     
     if (cityIdForRegions && (activePartner === 'alwaseet' || activePartner === 'modon') && waseetToken) {
       const fetchRegionsData = async () => {
-        setLoadingRegions(true);
+        // لا فلاش "تحميل المناطق" للوسيط لو الكاش جاهز (العملية synchronous)
+        const cacheKeyPre = `regions_${activePartner}_${cityIdForRegions}`;
+        const hasInstantRegions = activePartner === 'alwaseet'
+          && (regionCache.current.get(cacheKeyPre) || (isCacheLoaded && globalRegionsCache.length > 0));
+        if (!hasInstantRegions) setLoadingRegions(true);
         
         const preservedRegionId = isEditMode ? (selectedRegionId || formData.region_id || '') : '';
         
