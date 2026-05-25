@@ -1,57 +1,58 @@
-## نتائج الفحص (فاتورة 3406747)
 
-| طلب | sales_amount | حركة نقد قاصة أحمد | الإشعار |
-|---|---|---|---|
-| 142809140 | 20,000 | **20,000 ✓** | 19,000 ✗ |
-| 143202894 | 20,000 | **20,000 ✓** | 19,000 ✗ |
-| 143197932 | 45,000 (−5k توصيل = 40k) | **40,000 ✓** | 38,000 ✗ |
-| 143815094 | 20,000 | **20,000 ✓** | 19,000 ✗ |
+## 1) خريطة العراق — حد رفيع جداً ومضيء بدون نشاز
+**الملف:** `src/components/dashboard/ProvincesHeatmapCard.jsx` و `src/components/dashboard/IraqMapSvg.jsx`
 
-**الإيرادات في القاصة صحيحة 100%.** المشكلة فقط في رسالة الإشعار.
+- في `IraqMapSvg.jsx` تغيير `strokeWidth * 10` إلى قيمة أنحف ثابتة (السبب: الـ group مُكبَّر ×10 فيظهر الخط ضخماً جداً كما في الصورة).
+- استخدام `vectorEffect="non-scaling-stroke"` مع `strokeWidth={0.6}` فقط، بدون مضاعفة ×10.
+- إزالة الـ drop-shadow المزدوج الحالي واستبداله بـ glow واحد خفيف:
+  `filter: drop-shadow(0 0 1.5px hsl(199 89% 70% / 0.7))`
+- تخفيف لون الـ stroke قليلاً: `hsl(199 89% 75% / 0.85)` للحصول على خط نيون أنيق نحيف.
+- الإبقاء على التعبئة الشفافة `hsl(199 89% 65% / 0.04)`.
 
-### السبب الجذري
-- ترايغر `route_cash_movement_to_product_owner` (هجرة 20260415) يحسب نصيب المالك = `final_amount − delivery_fee` (أو نسبة في حالة تعدد المالكين) → 20,000.
-- ترايغر `notify_product_owner_on_receipt` (هجرة 20260524) يحسب القيمة من `SUM(order_items.total_price)` فقط = 19,000، فيتجاهل هامش الموظف الذي يذهب لمالك المنتج عند **عدم وجود قاعدة ربح للموظف/المدير**.
+النتيجة: حدود رفيعة مضيئة بنعومة بدلاً من الحد العريض الحالي.
 
-### القاعدة المتفق عليها (مثبتة في الذاكرة)
-- إذا لم يكن للموظف قاعدة ربح: كل الإيراد + الزيادة يذهب لمالك المنتج.
-- إذا كانت هناك قاعدة ربح: تطبَّق وتذهب الزيادة/الخصم للموظف.
+## 2) زر المزامنة في الهيدر — تقييد النطاق حسب الدور
+**المشكلة:** الموظف أحمد عند الضغط على زر المزامنة يزامن كل طلبات النظام.
 
----
+**التحقيق:** `scopeOrdersQuery` في `src/contexts/AlWaseetContext.jsx` يبدو صحيحاً منطقياً (المدير العام = كل شيء، مدير قسم = نفسه + موظفوه، الموظف = نفسه). لكن المشكلة على الأرجح في أن `fastSyncPendingOrders` بعد جلب الطلبات المحلية يستدعي API الوسيط بكل الـ tracking numbers بدون إعادة تطبيق فلتر المالك، أو أن `supervisedIdsRef` لأحمد يحوي قيماً خاطئة.
 
-## الخطة الكاملة
+**الإصلاح في `AlWaseetContext.jsx`:**
+- إضافة دالة مساعدة `getSyncScope(user)` ترجع:
+  - admin → `all`
+  - department_manager → `[self, ...supervised]`
+  - employee → `[self]` فقط
+- في `fastSyncPendingOrders` التأكد من أن استعلام `pendingOrders` يستخدم `scopeOrdersQuery` بحيث يُجبر الموظف على رؤية طلباته فقط، وعدم الاعتماد على `supervisedIdsRef` للموظفين.
+- التحقق من أن `useSupervisedEmployees` لا يحمّل قائمة لموظف عادي (يجب أن تكون فارغة).
+- تسجيل devLog واضح: `🔒 نطاق المزامنة لـ {role}: {count} طلب`.
 
-### 1) إصلاح مبلغ إشعار الإيراد (مطابقة منطق القاصة بدقة)
-هجرة قاعدة بيانات تعيد كتابة `notify_product_owner_on_receipt` لتطابق منطق التوجيه المالي تماماً:
-- حساب `v_sales_amount = final_amount − delivery_fee`.
-- جلب `owners` لكل منتج وتجميع `item_total` لكل مالك.
-- إذا كان هناك مالك واحد: نصيبه = `v_sales_amount` بالكامل (20,000).
-- إذا كان هناك أكثر من مالك: نصيب كل مالك = `(item_total / items_total) × v_sales_amount`.
-- **خصم حصة الموظف من قاعدة الربح** (إن وُجدت قاعدة فعّالة في `employee_profit_rules` أو `department_manager_profit_rules` لهذا الموظف/المنتج بتاريخ سريان مطابق لتاريخ الطلب) — حصة الموظف تُخصم من نصيب المالك.
-- في حال لا قاعدة → كل الإيراد + الزيادة للمالك كما هو في القاصة.
-- إصلاح الإشعارات القديمة الموجودة بنفس الصيغة الجديدة (تحديث `message` لكل إشعار `revenue_received` يطابق طلباً موجوداً).
+## 3) إشعار إيراد الطلب — أيقونة احترافية + اسم البائع
+**الملف:** `src/contexts/NotificationsContext.jsx` (rendering) + migration على `notify_product_owner_on_receipt`.
 
-### 2) قَصْر إشعار الإيراد على مالك المنتج فقط (UI)
-ملف: `src/contexts/NotificationsContext.jsx`
-- في `fetchNotifications` و `canSeeNotification`: استثناء النوع `revenue_received` من رؤية المدير العام/المدير الإداري إذا كان `user_id ≠ المستخدم الحالي`.
-- التطبيق:
-  - في `isAdmin`: استبدال الجلب المفتوح بـ `query.or('type.neq.revenue_received,user_id.eq.<self>')`.
-  - في `isDepartmentManager`: نفس الشرط داخل قائمة المسموح بها.
-  - في `canSeeNotification`: إذا `type === 'revenue_received' && user_id !== user.id` → return false.
+### 3أ) أيقونة الفلوس الاحترافية
+- استبدال الإيموجي 💰 في عنوان الإشعار بـ Lucide icon احترافي (مثلاً `Banknote` أو `Wallet` مع gradient ذهبي أخضر) داخل دائرة زجاجية في قائمة الإشعارات.
+- إنشاء معالج خاص في رندر الإشعار: عند `type === 'revenue_received'` يُعرض أيقونة Banknote بحجم 20px داخل بادج بـ `bg-gradient-to-br from-emerald-500/20 to-amber-500/20` مع `ring-1 ring-emerald-400/40`.
 
-### 3) إكمال ثورة تصميم الخريطة (حدود نحيفة + سماوي شفاف أنيق)
-ملف: `src/components/dashboard/ProvincesHeatmapCard.jsx`
-- إزالة طبقة `WebkitMaskImage` الزرقاء الكثيفة + `<img>` ذي الـ filter الثقيل.
-- إدراج `<svg>` يحتوي على `<path>` الفعلي لخريطة العراق (مقتبس من `/iraq-map.svg`):
-  - `fill="hsl(199 89% 65% / 0.05)"` (سماوي شفاف).
-  - `stroke="hsl(199 89% 70% / 0.9)"` بسماكة `1px` وعرض ثابت مع `vector-effect="non-scaling-stroke"`.
-  - توهج خفيف فقط: `filter: drop-shadow(0 0 3px hsl(199 89% 60% / 0.5))`.
-- خلفية بطاقة زجاجية رقيقة `bg-white/[0.02] backdrop-blur-sm` بدل الهالات الكبيرة.
-- المؤشرات (Markers) بحجم متناسق مع الخط النحيف الجديد.
+### 3ب) ذكر اسم بائع/منشئ الطلب بين قوسين
+- تعديل trigger `notify_product_owner_on_receipt` ليُضمّن `created_by_name` في `data` JSON:
+  - جلب `full_name` من `profiles` للحقل `orders.created_by`.
+  - إذا كان المنشئ هو المدير العام → الاسم "المدير العام"، وإلا الاسم الكامل من profiles.
+- تعديل نص الإشعار:
+  - من: `تورة الطلب 143202894 — إيرادك: 20000 د.ع`
+  - إلى: `طلب 143202894 (المدير العام) — إيرادك: 20,000 د.ع`
+- إعادة حساب الإشعارات السابقة من type `revenue_received` لإضافة اسم البائع.
 
----
+## 4) فحص صفحة الطلب السريع — مدن/مناطق كاش الوسيط للحساب المختار
+**الملف:** `src/components/quick-order/QuickOrderContent.jsx` السطر 760-770.
 
-### الملفات/التغييرات
-1. **هجرة SQL جديدة**: إعادة كتابة `notify_product_owner_on_receipt` + سكربت تصحيح للإشعارات الحالية.
-2. `src/contexts/NotificationsContext.jsx` — فلترة `revenue_received` للمالك فقط.
-3. `src/components/dashboard/ProvincesHeatmapCard.jsx` — إعادة بناء العرض البصري.
+**الفحص الحالي:** عند `activePartner === 'alwaseet'` تستخدم `cachedCities` من `useCitiesCache()` بدون تمييز أي حساب وسيط مختار (alshmry94 أو غيره). الكاش `cities_cache` على مستوى partner_name فقط وليس per-token.
+
+**الإصلاح:**
+- التحقق من `waseetUser` المختار (alshmry94 مثلاً) وتمرير `account_username` إلى `useCitiesCache({ partner: 'alwaseet', account: waseetUser?.username })`.
+- في `useCitiesCache` إضافة فلتر اختياري على عمود `account_username` في الجدول؛ إذا لم يكن الكاش مخصصاً لحساب → fallback للكاش العام.
+- إن لزم: إضافة عمود `account_username` (nullable) في جدول الكاش وتشغيل sync أولي لحساب alshmry94 لجلب مدن/مناطق هذا الحساب تحديداً.
+- إضافة devLog: `🏙️ تحميل مدن alwaseet للحساب {username}: {count}`.
+
+## ملاحظات تقنية
+- لا تغيير في منطق الأرباح أو حركات النقد.
+- تغييرات DB محصورة في trigger `notify_product_owner_on_receipt` + (احتمالاً) عمود `account_username` في كاش المدن.
+- جميع تغييرات الواجهة تستخدم semantic tokens.
