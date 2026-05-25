@@ -1163,7 +1163,7 @@ export const SuperProvider = ({ children }) => {
         total_amount: (() => {
           if (orderType === 'replacement' || orderType === 'exchange') {
             const metadata = isPayload ? (arg1.exchange_metadata || {}) : {};
-            return Math.abs(metadata.price_difference || 0);
+            return Math.max(0, Number(metadata.price_difference || 0));
           }
           if (orderType === 'return') {
             return Math.abs(deliveryPartnerDataArg?.refund_amount || 0);
@@ -1171,7 +1171,9 @@ export const SuperProvider = ({ children }) => {
           return subtotal;
         })(),
         // ✅ sales_amount = سعر المنتجات فقط (بدون توصيل)
-        sales_amount: subtotal - discount,
+        sales_amount: orderType === 'replacement' || orderType === 'exchange'
+          ? Math.max(0, Number((isPayload ? arg1.exchange_metadata?.price_difference : 0) || 0))
+          : subtotal - discount,
         discount,
         delivery_fee: deliveryFee,
         // ✅ منع price_increase الخاطئ للطلبات الجديدة
@@ -1181,7 +1183,7 @@ export const SuperProvider = ({ children }) => {
         final_amount: (() => {
           if (orderType === 'replacement' || orderType === 'exchange') {
             const metadata = isPayload ? (arg1.exchange_metadata || {}) : {};
-            const priceDiff = metadata.price_difference || 0;
+            const priceDiff = Number(metadata.price_difference || 0);
             return priceDiff + deliveryFee;
           }
           if (orderType === 'return' && deliveryPartnerDataArg?.final_amount !== undefined) {
