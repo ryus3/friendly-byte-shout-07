@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +41,9 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
   const [dataSource, setDataSource] = useState('database');
   const [fetchNotice, setFetchNotice] = useState(null);
 
+  // ✅ كاش داخل الجلسة لتفادي ظهور skeleton عند إعادة فتح نفس الفاتورة
+  const sessionCacheRef = useRef(new Map());
+
   const isReceived = !!invoice && (
     invoice.received === true ||
     invoice.received_flag === true ||
@@ -49,37 +52,55 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
   );
 
   useEffect(() => {
-    if (isOpen && invoice) {
-      const invoiceId = invoice.external_id || invoice.id;
-      if (invoiceId) {
-        setFetchNotice(null);
-        fetchInvoiceOrders(invoiceId).then(result => {
-          if (result?.dataSource) setDataSource(result.dataSource);
-          const expected = parseInt(invoice.linked_orders_count || invoice.orders_count || invoice.delivered_orders_count) || 0;
-          const got = (result?.orders || []).length;
-          if (expected > 0 && got === 0) {
-            setFetchNotice('تعذّر جلب تفاصيل الطلبات من شركة التوصيل الآن. الفاتورة محفوظة وسيُعاد المحاولة تلقائياً عند المزامنة التالية.');
-          }
-        }).catch(() => {
-          setFetchNotice('تعذّر الاتصال بشركة التوصيل لجلب تفاصيل الطلبات. الفاتورة محفوظة.');
-        });
-        loadLinkedOrders();
-      }
+    if (!isOpen || !invoice) return;
+    const invoiceId = invoice.external_id || invoice.id;
+    if (!invoiceId) return;
+
+    const cacheKey = `${invoiceId}|${viewerUserId || 'self'}`;
+    const cached = sessionCacheRef.current.get(cacheKey);
+
+    setFetchNotice(null);
+
+    // إن وُجد كاش جلسي: اعرض فوراً ثم حدّث بصمت في الخلفية
+    if (cached) {
+      setLinkedOrders(cached.linked || []);
+      if (cached.dataSource) setDataSource(cached.dataSource);
+      setLoadingLinked(false);
     }
+
+    const expected = parseInt(invoice.linked_orders_count || invoice.orders_count || invoice.delivered_orders_count) || 0;
+
+    // الفاتورة المستلمة + الكاش مكتمل ⇒ preferCache صراحةً
+    const preferCache = isReceived && expected > 0;
+
+    fetchInvoiceOrders(invoiceId, { preferCache }).then(result => {
+      if (result?.dataSource) setDataSource(result.dataSource);
+      const got = (result?.orders || []).length;
+      if (expected > 0 && got === 0) {
+        setFetchNotice('تعذّر جلب تفاصيل الطلبات من شركة التوصيل الآن. الفاتورة محفوظة وسيُعاد المحاولة تلقائياً عند المزامنة التالية.');
+      }
+    }).catch(() => {
+      setFetchNotice('تعذّر الاتصال بشركة التوصيل لجلب تفاصيل الطلبات. الفاتورة محفوظة.');
+    });
+
+    loadLinkedOrders(cached ? { silent: true } : {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, invoice?.id, invoice?.external_id, isReceived, viewerUserId]);
 
-  const loadLinkedOrders = async () => {
+  const loadLinkedOrders = async ({ silent = false } = {}) => {
     const invoiceId = invoice?.external_id || invoice?.id;
     if (!invoiceId) return;
-    setLoadingLinked(true);
+    if (!silent) setLoadingLinked(true);
     try {
       const linked = await linkInvoiceWithLocalOrders(invoiceId, viewerUserId);
       setLinkedOrders(linked);
+      const cacheKey = `${invoiceId}|${viewerUserId || 'self'}`;
+      const prev = sessionCacheRef.current.get(cacheKey) || {};
+      sessionCacheRef.current.set(cacheKey, { ...prev, linked });
     } catch (error) {
       console.error('Error loading linked orders:', error);
     } finally {
-      setLoadingLinked(false);
+      if (!silent) setLoadingLinked(false);
     }
   };
 
