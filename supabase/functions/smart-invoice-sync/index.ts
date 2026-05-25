@@ -416,6 +416,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // 🔁 احفظ نسخة من الجسم قبل أي قراءة، حتى نتمكن من تسجيل الفشل بـ run_id إذا حصل خطأ مبكر
+  const reqClone = req.clone();
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -436,7 +438,8 @@ serve(async (req) => {
 
     console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, ForceRefresh: ${force_refresh}, Target: ${target_invoice_external_id || '-'}, RunId: ${run_id || '-'}`);
 
-    await reportProgress(supabase, run_id, 'init', 'بدء المزامنة الشاملة...');
+    // ✅ بثّ تقدّم init بشكل قسري ليؤكد للواجهة أن الدالة وصلت فعلاً
+    await reportProgress(supabase, run_id, 'init', 'تهيئة المزامنة...', {}, undefined, true);
 
     // 🆕 وضع الجلب الموجه لفاتورة واحدة فقط (يُستدعى من واجهة فتح تفاصيل الفاتورة).
     // لا يلمس باقي الفواتير، ولا يعيد المزامنة العامة، ولا يُعدّ "موجة طلبات".
