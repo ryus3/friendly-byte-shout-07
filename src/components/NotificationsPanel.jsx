@@ -241,6 +241,38 @@ const CityDiscountIcon = () => (
   </svg>
 );
 
+// أيقونة احترافية لإيراد الطلب — ورقة نقدية مع وميض ذهبي/زمردي
+const RevenueReceivedIcon = () => {
+  const gradId = React.useId();
+  const glowId = React.useId();
+  return (
+    <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#34d399" />
+          <stop offset="55%" stopColor="#10b981" />
+          <stop offset="100%" stopColor="#f59e0b" />
+        </linearGradient>
+        <filter id={glowId} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="0.6" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <g filter={`url(#${glowId})`}>
+        <rect x="2.5" y="6" width="19" height="12" rx="2.2" fill={`url(#${gradId})`} fillOpacity="0.18" stroke={`url(#${gradId})`} strokeWidth="1.4" />
+        <circle cx="12" cy="12" r="2.8" fill="none" stroke={`url(#${gradId})`} strokeWidth="1.4" />
+        <path d="M12 10.4v3.2M10.9 11.2c.3-.4.9-.5 1.4-.3.5.2.6.7.2 1-.4.3-1 .2-1.4.1-.4-.1-.6.3-.3.6.4.4 1.1.5 1.6.3" stroke={`url(#${gradId})`} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <circle cx="5.5" cy="12" r="0.9" fill={`url(#${gradId})`} />
+        <circle cx="18.5" cy="12" r="0.9" fill={`url(#${gradId})`} />
+        <path d="M19.5 4.5l.7 1.4 1.4.7-1.4.7-.7 1.4-.7-1.4-1.4-.7 1.4-.7.7-1.4z" fill={`url(#${gradId})`} opacity="0.8" />
+      </g>
+    </svg>
+  );
+};
+
 const iconMap = {
   // أيقونات حسب النوع
   low_stock: StockWarningIcon,
