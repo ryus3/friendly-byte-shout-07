@@ -62,20 +62,18 @@ export const SearchableSelectFixed = ({
   // Detect touch device, dialog presence, calculate dropdown direction, and update button position
   useEffect(() => {
     setIsTouchDevice('ontouchstart' in window || navigator.maxTouchPoints > 0);
-    
+
     if (buttonRef.current) {
       const dialogContainer = buttonRef.current.closest('[data-radix-dialog-content], [role="dialog"]');
-      setIsInDialog(!!dialogContainer);
-      
-      // Calculate available space to determine dropdown direction and update button rect
+      const scrollArea = buttonRef.current.closest('[data-radix-scroll-area-viewport]');
+      // Use Portal only inside Dialog or ScrollArea (z-index/overflow issues there)
+      setIsInDialog(!!(dialogContainer || scrollArea));
+
       if (open) {
         const rect = buttonRef.current.getBoundingClientRect();
         setButtonRect(rect);
-        
         const spaceBelow = window.innerHeight - rect.bottom;
         const spaceAbove = rect.top;
-        
-        // If there's more space above and below is limited, open upward
         setDropdownDirection(spaceBelow < 200 && spaceAbove > spaceBelow ? 'up' : 'down');
       }
     }
