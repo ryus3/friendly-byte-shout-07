@@ -510,6 +510,16 @@ useEffect(() => {
         let processed = 0;
         const delayMs = orderDestination.destination === 'local' ? 220 : 1100;
         
+        // ⏱️ Timeout صارم لكل طلب: يحمي الدفعة من التوقف بسبب طلب واحد بطيء
+        const PER_ORDER_TIMEOUT_MS = orderDestination.destination === 'local' ? 15000 : 45000;
+        const withTimeout = (promise, ms) => Promise.race([
+          promise,
+          new Promise((_, reject) => setTimeout(
+            () => reject(new Error(`انتهت المهلة (${Math.round(ms/1000)} ثانية) — تم تجاوز الطلب لإكمال الدفعة`)),
+            ms
+          ))
+        ]);
+
         for (const id of approvedIds) {
           processed++;
           toast({ 
@@ -518,7 +528,15 @@ useEffect(() => {
             variant: 'default' 
           });
           
-          const result = await approveAiOrder?.(id, orderDestination.destination, orderDestination.account);
+          let result;
+          try {
+            result = await withTimeout(
+              approveAiOrder?.(id, orderDestination.destination, orderDestination.account),
+              PER_ORDER_TIMEOUT_MS
+            );
+          } catch (timeoutErr) {
+            result = { success: false, error: timeoutErr.message };
+          }
           
           if (result?.success) {
             successIds.push(id);

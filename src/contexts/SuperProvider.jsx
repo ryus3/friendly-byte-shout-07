@@ -2799,7 +2799,9 @@ export const SuperProvider = ({ children }) => {
       qr_id: deliveryPartnerData.qr_id || null,
       delivery_account_used: deliveryPartnerData.delivery_account_used || 'local',
       notes: '', // ملاحظات فارغة دائماً لطلبات التليغرام
-        created_by: resolveCurrentUserUUID(),
+        // ✅ ملكية الطلب: تبقى لصاحب الطلب الذكي الأصلي حتى لو المدير ضغط الموافقة
+        // هذا يضمن نسبة الطلب لصاحبه في الفواتير وصفحة متابعة الموظفين
+        created_by: aiOrder.created_by || resolveCurrentUserUUID(),
       };
 
       const { data: createdOrder, error: createErr } = await supabase

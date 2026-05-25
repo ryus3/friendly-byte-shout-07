@@ -72,6 +72,9 @@ async function reportProgress(
       pct = Math.round(stage.start + frac * (stage.end - stage.start));
     } else if (stageKey === 'done') {
       pct = 100;
+    } else if (stageKey === 'init') {
+      // لو لا تقدّم داخلي: انطلق من منتصف مرحلة التهيئة (يظهر حركة فورية للمستخدم)
+      pct = Math.round((stage.start + stage.end) / 2);
     } else {
       // لو لا تقدّم داخلي: انطلق من بداية المرحلة
       pct = stage.start;
@@ -416,6 +419,8 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // 🔁 احفظ نسخة من الجسم قبل أي قراءة، حتى نتمكن من تسجيل الفشل بـ run_id إذا حصل خطأ مبكر
+  const reqClone = req.clone();
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -436,7 +441,8 @@ serve(async (req) => {
 
     console.log(`🔄 Smart Invoice Sync - Mode: ${mode}, Employee: ${employee_id || 'all'}, SyncOrders: ${sync_orders}, ForceRefresh: ${force_refresh}, Target: ${target_invoice_external_id || '-'}, RunId: ${run_id || '-'}`);
 
-    await reportProgress(supabase, run_id, 'init', 'بدء المزامنة الشاملة...');
+    // ✅ بثّ تقدّم init بشكل قسري ليؤكد للواجهة أن الدالة وصلت فعلاً
+    await reportProgress(supabase, run_id, 'init', 'تهيئة المزامنة...', {}, undefined, true);
 
     // 🆕 وضع الجلب الموجه لفاتورة واحدة فقط (يُستدعى من واجهة فتح تفاصيل الفاتورة).
     // لا يلمس باقي الفواتير، ولا يعيد المزامنة العامة، ولا يُعدّ "موجة طلبات".
@@ -1286,7 +1292,7 @@ serve(async (req) => {
 
     const message = error instanceof Error ? error.message : 'Unknown error';
     try {
-      const body = await req.clone().json().catch(() => ({}));
+      const body = await reqClone.json().catch(() => ({}));
       const runId = (body as any)?.run_id;
       if (runId) {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
