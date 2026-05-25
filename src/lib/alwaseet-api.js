@@ -154,7 +154,7 @@ const readDeliveryHint = (token) => {
   }
 };
 
-const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 2) => {
+const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 2, _silentReloginAttempted = false) => {
   // 🛑 إذا الجلسة معطّلة، لا نرسل أي طلب جديد للوسيط حتى يعاد تسجيل الدخول
   if (sessionInvalidUntilLogin) {
     const blocked = new Error('انتهت جلسة الوسيط. يرجى تسجيل الدخول مجدداً قبل المتابعة.');
