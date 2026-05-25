@@ -206,9 +206,10 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
       const newDiscount = 0; // ❌ لا خصم للتسليم الجزئي - الفرق = منتجات مُرجعة
 
       // ✅ تحديث الطلب - تعيين order_type فقط (status يتزامن طبيعياً)
-      await supabase
+      const { error: orderUpdateError } = await supabase
         .from('orders')
         .update({
+          status: newOrderStatus,
           order_type: 'partial_delivery',     // ✅ نوع الطلب الجديد
           is_partial_delivery: true,          // ✅ نبقيه للتوافق
           total_amount: deliveredItemsTotal,  // سعر المنتجات المُسلّمة فقط
@@ -218,6 +219,10 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
           updated_at: new Date().toISOString()
         })
         .eq('id', order.id);
+
+      if (orderUpdateError) {
+        throw orderUpdateError;
+      }
 
       onConfirm?.();
       onOpenChange(false);
