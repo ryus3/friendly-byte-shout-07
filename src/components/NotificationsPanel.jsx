@@ -292,6 +292,7 @@ const iconMap = {
   alwaseet_status_change: SystemIcon,
   ai_order: AiOrderIcon,
   new_ai_order: AiOrderIcon,
+  revenue_received: RevenueReceivedIcon,
   system: SystemIcon,
   // ألوان حسب النوع
   AlertTriangle: StockWarningIcon,
