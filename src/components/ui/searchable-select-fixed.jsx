@@ -457,8 +457,27 @@ export const SearchableSelectFixed = ({
       </Button>
 
       {/* Dropdown - Using Portal for proper z-index */}
-      {open && buttonRect && createPortal(
-        <div 
+      {/* Inline mode: dropdown يتحرك تلقائياً مع الصفحة - بدون ارتجاف */}
+      {open && !isInDialog && (
+        <div
+          className="absolute left-0 right-0 z-50"
+          role="listbox"
+          style={{
+            direction: 'rtl',
+            top: dropdownDirection === 'down' ? '100%' : 'auto',
+            bottom: dropdownDirection === 'up' ? '100%' : 'auto',
+          }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) e.stopPropagation(); }}
+          onTouchStart={(e) => { if (e.target === e.currentTarget) e.stopPropagation(); }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {renderDropdownContent()}
+        </div>
+      )}
+
+      {/* Portal mode: فقط داخل Dialog/ScrollArea لتجاوز overflow/z-index */}
+      {open && isInDialog && buttonRect && createPortal(
+        <div
           className="fixed isolate"
           role="listbox"
           aria-modal="true"
@@ -468,32 +487,13 @@ export const SearchableSelectFixed = ({
             isolation: 'isolate',
             pointerEvents: 'auto',
             left: buttonRect.left + 'px',
-            top: dropdownDirection === 'down' 
-              ? buttonRect.bottom + 'px' 
-              : 'auto',
-            bottom: dropdownDirection === 'up' 
-              ? (window.innerHeight - buttonRect.top) + 'px' 
-              : 'auto',
+            top: dropdownDirection === 'down' ? buttonRect.bottom + 'px' : 'auto',
+            bottom: dropdownDirection === 'up' ? (window.innerHeight - buttonRect.top) + 'px' : 'auto',
             width: buttonRect.width + 'px'
           }}
-          onMouseDown={(e) => {
-            // ✅ فقط stopPropagation - بدون preventDefault
-            if (e.target === e.currentTarget) {
-              e.stopPropagation();
-            }
-          }}
-          onTouchStart={(e) => {
-            // ✅ إزالة preventDefault للسماح بفتح الكيبورد على iOS
-            if (e.target === e.currentTarget) {
-              e.stopPropagation();
-            }
-          }}
-          onPointerDown={(e) => {
-            // ✅ فقط stopPropagation - بدون preventDefault
-            if (e.target === e.currentTarget) {
-              e.stopPropagation();
-            }
-          }}
+          onMouseDown={(e) => { if (e.target === e.currentTarget) e.stopPropagation(); }}
+          onTouchStart={(e) => { if (e.target === e.currentTarget) e.stopPropagation(); }}
+          onPointerDown={(e) => { if (e.target === e.currentTarget) e.stopPropagation(); }}
           onClick={(e) => e.stopPropagation()}
           onFocus={(e) => e.stopPropagation()}
         >
