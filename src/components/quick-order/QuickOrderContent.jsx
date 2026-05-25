@@ -919,8 +919,12 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       const fetchRegionsData = async () => {
         // لا فلاش "تحميل المناطق" للوسيط لو الكاش جاهز (العملية synchronous)
         const cacheKeyPre = `regions_${activePartner}_${cityIdForRegions}`;
-        const hasInstantRegions = activePartner === 'alwaseet'
-          && (regionCache.current.get(cacheKeyPre) || (isCacheLoaded && globalRegionsCache.length > 0));
+        const lsRegions = readQuickOrderSnapshot(quickOrderRegionsKey(activePartner, cityIdForRegions));
+        if (lsRegions.length > 0 && !regionCache.current.get(cacheKeyPre)) {
+          regionCache.current.set(cacheKeyPre, lsRegions);
+          setRegions(lsRegions);
+        }
+        const hasInstantRegions = Boolean(regionCache.current.get(cacheKeyPre)) || lsRegions.length > 0;
         if (!hasInstantRegions) setLoadingRegions(true);
         
         const preservedRegionId = isEditMode ? (selectedRegionId || formData.region_id || '') : '';
@@ -1050,6 +1054,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               
               const dedupedRegions = dedupeById(safeRegions);
               regionCache.current.set(cacheKey, dedupedRegions);
+               writeQuickOrderSnapshot(quickOrderRegionsKey(activePartner, cityIdForRegions), dedupedRegions);
               setRegions(dedupedRegions);
               
                // ✅ تطبيق pendingRegionId بعد تحميل المناطق من API
