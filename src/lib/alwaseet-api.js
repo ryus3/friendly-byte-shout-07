@@ -208,9 +208,19 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
             // can't parse error body
           }
 
-          // ✅ TOKEN_EXPIRED قد يصل ضمن error.context (status != 2xx) — أبلّغ الواجهة بدون مسح أعمى
+          // ✅ TOKEN_EXPIRED قد يصل ضمن error.context (status != 2xx) — حاول تجديداً صامتاً مرة واحدة
           if (parsedBody && (parsedBody.errNum === 'TOKEN_EXPIRED' || parsedBody.error === 'DELIVERY_TOKEN_EXPIRED' || parsedBody.requireRelogin === true)) {
             devLog.warn(`🔑 توكن الوسيط منتهي (من error.context) endpoint: ${endpoint}`);
+            if (!_silentReloginAttempted && hint.accountUsername) {
+              const newToken = await attemptSilentRelogin({
+                partnerName: hint.partnerName || 'alwaseet',
+                accountUsername: hint.accountUsername,
+                expiredToken: token,
+              });
+              if (newToken) {
+                return await handleApiCall(endpoint, method, newToken, payload, queryParams, retries, true);
+              }
+            }
             if (shouldNotifyTokenExpired(endpoint)) {
               try {
                 window.dispatchEvent(new CustomEvent('alwaseet-token-expired', {
@@ -230,6 +240,7 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
             tokErr.partnerName = hint.partnerName || 'alwaseet';
             throw tokErr;
           }
+
 
           // 🛑 إذا حصلنا 503 (edge runtime overload) ولدينا حظر فعّال على الجلسة، أوقف الموجة
           if (is503 && sessionInvalidUntilLogin) {
