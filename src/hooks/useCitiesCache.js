@@ -279,20 +279,22 @@ export const useCitiesCache = () => {
   // فحص إذا كان cache فارغ أو قديم
   const isCacheEmpty = () => cities.length === 0;
 
-  // جلب المدن والمناطق عند التحميل الأولي
+  // جلب المدن والمناطق عند التحميل الأولي - مع refresh صامت إذا توفر snapshot
   useEffect(() => {
+    const hasSnapshot = cities.length > 0 && allRegions.length > 0;
     const loadCacheData = async () => {
-      setIsLoading(true);
-      devLog.log('🔄 بدء تحميل الـ Cache...');
+      if (!hasSnapshot) setIsLoading(true);
+      devLog.log(hasSnapshot ? '🔄 تحديث الـ Cache بالخلفية (snapshot جاهز)...' : '🔄 بدء تحميل الـ Cache...');
       await fetchCities();
       const loadedRegions = await fetchAllRegions();
-      setAllRegions(loadedRegions); // ✅ حفظ جميع المناطق
+      setAllRegions(loadedRegions);
       await fetchSyncInfo();
       setIsLoaded(true);
       setIsLoading(false);
       devLog.log('✅ اكتمل تحميل الـ Cache');
     };
     loadCacheData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
