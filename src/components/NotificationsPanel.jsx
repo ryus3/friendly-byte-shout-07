@@ -434,7 +434,14 @@ const typeColorMap = {
     icon: 'text-indigo-600 dark:text-indigo-400',
     dot: 'bg-indigo-500'
   },
-  default: { 
+  revenue_received: {
+    bg: 'bg-gradient-to-r from-emerald-50/80 to-amber-50/80 dark:from-emerald-950/20 dark:to-amber-950/20 backdrop-blur-sm',
+    border: 'border-r-4 border-emerald-500 dark:border-emerald-400',
+    text: 'text-foreground',
+    icon: 'text-emerald-600 dark:text-amber-300',
+    dot: 'bg-gradient-to-br from-emerald-500 to-amber-500'
+  },
+  default: {
     bg: 'bg-gradient-to-r from-sky-50 to-cyan-100 dark:from-sky-950/30 dark:to-cyan-900/30', 
     border: 'border-r-4 border-sky-500 dark:border-sky-400',
     text: 'text-sky-900 dark:text-sky-100', 
