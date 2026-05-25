@@ -58,6 +58,24 @@ const SystemIcon = () => (
   </svg>
 );
 
+const RevenueReceivedIcon = () => {
+  const gradId = React.useId();
+  return (
+    <svg className="w-4 h-4 md:w-5 md:h-5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id={gradId} x1="0" y1="0" x2="24" y2="24" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#34d399" />
+          <stop offset="55%" stopColor="#10b981" />
+          <stop offset="100%" stopColor="#f59e0b" />
+        </linearGradient>
+      </defs>
+      <rect x="2.5" y="6" width="19" height="12" rx="2.2" fill={`url(#${gradId})`} fillOpacity="0.2" stroke={`url(#${gradId})`} strokeWidth="1.4" />
+      <circle cx="12" cy="12" r="2.8" fill="none" stroke={`url(#${gradId})`} strokeWidth="1.4" />
+      <path d="M12 10.4v3.2M10.9 11.2c.3-.4.9-.5 1.4-.3.5.2.6.7.2 1-.4.3-1 .2-1.4.1-.4-.1-.6.3-.3.6.4.4 1.1.5 1.6.3" stroke={`url(#${gradId})`} strokeWidth="1.1" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+    </svg>
+  );
+};
+
 const iconMap = {
   low_stock: <StockWarningIcon />,
   stock_warning: <StockWarningIcon />,
@@ -69,6 +87,7 @@ const iconMap = {
   new_ai_order: <AiOrderIcon className="w-4 h-4 md:w-5 md:h-5" />,
   new_order: <OrderIcon />,
   new_registration: <UserRegistrationIcon />,
+  revenue_received: <RevenueReceivedIcon />,
   system: <SystemIcon />,
   AlertTriangle: <StockWarningIcon />,
   Package: <StockWarningIcon />,

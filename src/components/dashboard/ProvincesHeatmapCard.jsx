@@ -126,12 +126,11 @@ const ProvincesHeatmapCard = ({ items = [], onViewAll }) => {
           {/* Thin luminous Iraq border with translucent sky fill */}
           <IraqMapSvg
             className="absolute inset-0 w-full h-full"
-            fill="hsl(199 89% 65% / 0.06)"
-            stroke="hsl(199 89% 72% / 0.95)"
-            strokeWidth={1}
+            fill="hsl(199 89% 65% / 0.04)"
+            stroke="hsl(199 89% 78% / 0.9)"
+            strokeWidth={0.7}
             style={{
-              filter:
-                'drop-shadow(0 0 2px hsl(199 89% 60% / 0.55)) drop-shadow(0 0 6px hsl(199 89% 60% / 0.25))',
+              filter: 'drop-shadow(0 0 1.5px hsl(199 89% 70% / 0.7))',
             }}
           />
 
