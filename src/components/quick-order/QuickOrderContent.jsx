@@ -494,13 +494,13 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       if (formData.city && activePartner === 'local') {
         delete newErrors.city;
       }
-      if (formData.city_id && activePartner === 'alwaseet') {
+      if (formData.city_id && (activePartner === 'alwaseet' || activePartner === 'modon')) {
         delete newErrors.city_id;
       }
       if (formData.region && activePartner === 'local') {
         delete newErrors.region;
       }
-      if (formData.region_id && activePartner === 'alwaseet') {
+      if (formData.region_id && (activePartner === 'alwaseet' || activePartner === 'modon')) {
         delete newErrors.region_id;
       }
       return newErrors;
@@ -1203,7 +1203,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     if (activePartner === 'local') {
       if (!formData.city) newErrors.city = 'الرجاء اختيار المحافظة.';
       if (!formData.region) newErrors.region = 'الرجاء إدخال المنطقة.';
-    } else if (activePartner === 'alwaseet') {
+    } else if (activePartner === 'alwaseet' || activePartner === 'modon') {
       if (!effectiveCityId) newErrors.city_id = 'الرجاء اختيار المدينة.';
       if (!effectiveRegionId) newErrors.region_id = 'الرجاء اختيار المنطقة.';
     }
@@ -2765,7 +2765,7 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
       handleSubmit(e);
     } 
   };
-  const isSubmitDisabled = isSubmittingState || !isDeliveryPartnerSelected || (activePartner === 'alwaseet' && (!isWaseetLoggedIn || !initialDataLoaded || dataFetchError)) || Object.values(errors).some(e => e) || cart.length === 0;
+  const isSubmitDisabled = isSubmittingState || !isDeliveryPartnerSelected || ((activePartner === 'alwaseet' || activePartner === 'modon') && (!isWaseetLoggedIn || !initialDataLoaded || dataFetchError)) || Object.values(errors).some(e => e) || cart.length === 0;
 
   return (
     <>
