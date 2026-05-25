@@ -467,7 +467,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     });
   }, [formData.city, formData.city_id, formData.region, formData.region_id, activePartner]);
   
-  const [cities, setCities] = useState([]);
+  // ✅ ظهور فوري للمدن من الكاش المحلي دون انتظار effect
+  const [cities, setCities] = useState(() => {
+    if (Array.isArray(cachedCities) && cachedCities.length > 0) {
+      const seen = new Set();
+      return cachedCities
+        .map(c => ({ id: c.alwaseet_id || c.id, name: c.name_ar || c.name, name_en: c.name_en }))
+        .filter(c => c.id && !seen.has(String(c.id)) && seen.add(String(c.id)));
+    }
+    return [];
+  });
   const [regions, setRegions] = useState([]);
   const [packageSizes, setPackageSizes] = useState([]);
   const [loadingCities, setLoadingCities] = useState(false);
