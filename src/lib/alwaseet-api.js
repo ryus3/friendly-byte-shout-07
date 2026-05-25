@@ -28,6 +28,63 @@ if (typeof window !== 'undefined') {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// 🔄 Silent re-login: عند رفض التوكن من سيرفر الوسيط، نحاول تجديده تلقائياً مرة واحدة
+// عبر edge function refresh-delivery-partner-tokens، ثم نعيد محاولة نفس الطلب.
+const reloginInflight = new Map(); // partnerName::username -> Promise<newToken|null>
+const recentReloginAttempts = new Map(); // key -> timestamp (cooldown 30s)
+const RELOGIN_COOLDOWN_MS = 30 * 1000;
+
+const attemptSilentRelogin = async ({ partnerName, accountUsername, expiredToken }) => {
+  const key = `${partnerName || 'alwaseet'}::${accountUsername || ''}`;
+  if (!accountUsername) return null;
+
+  const lastAttempt = recentReloginAttempts.get(key);
+  if (lastAttempt && Date.now() - lastAttempt < RELOGIN_COOLDOWN_MS) {
+    return null;
+  }
+
+  if (reloginInflight.has(key)) return reloginInflight.get(key);
+
+  const promise = (async () => {
+    recentReloginAttempts.set(key, Date.now());
+    try {
+      devLog.log(`🔄 محاولة تجديد صامت للتوكن: ${key}`);
+      const { data, error } = await supabase.functions.invoke('refresh-delivery-partner-tokens', {
+        body: { partner_name: partnerName || 'alwaseet', account_username: accountUsername }
+      });
+      if (error) {
+        devLog.warn('⚠️ فشل التجديد الصامت:', error.message);
+        return null;
+      }
+      const result = (data?.results || []).find((r) => r.success && r.token);
+      if (result?.token) {
+        devLog.log(`✅ تم تجديد التوكن صامتاً: ${key}`);
+        try {
+          window.dispatchEvent(new CustomEvent('alwaseet-token-renewed', {
+            detail: {
+              partnerName: partnerName || 'alwaseet',
+              accountUsername,
+              token: result.token,
+              expiresAt: result.expires_at,
+              previousToken: expiredToken,
+            }
+          }));
+        } catch { /* SSR */ }
+        return result.token;
+      }
+      return null;
+    } catch (e) {
+      devLog.warn('⚠️ exception أثناء التجديد الصامت:', e?.message);
+      return null;
+    } finally {
+      reloginInflight.delete(key);
+    }
+  })();
+
+  reloginInflight.set(key, promise);
+  return promise;
+};
+
 const buildRequestKey = (endpoint, method, token, payload, queryParams) => JSON.stringify({
   endpoint,
   method,
@@ -97,7 +154,7 @@ const readDeliveryHint = (token) => {
   }
 };
 
-const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 2) => {
+const handleApiCall = async (endpoint, method, token, payload, queryParams, retries = 2, _silentReloginAttempted = false) => {
   // 🛑 إذا الجلسة معطّلة، لا نرسل أي طلب جديد للوسيط حتى يعاد تسجيل الدخول
   if (sessionInvalidUntilLogin) {
     const blocked = new Error('انتهت جلسة الوسيط. يرجى تسجيل الدخول مجدداً قبل المتابعة.');
@@ -151,9 +208,19 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
             // can't parse error body
           }
 
-          // ✅ TOKEN_EXPIRED قد يصل ضمن error.context (status != 2xx) — أبلّغ الواجهة بدون مسح أعمى
+          // ✅ TOKEN_EXPIRED قد يصل ضمن error.context (status != 2xx) — حاول تجديداً صامتاً مرة واحدة
           if (parsedBody && (parsedBody.errNum === 'TOKEN_EXPIRED' || parsedBody.error === 'DELIVERY_TOKEN_EXPIRED' || parsedBody.requireRelogin === true)) {
             devLog.warn(`🔑 توكن الوسيط منتهي (من error.context) endpoint: ${endpoint}`);
+            if (!_silentReloginAttempted && hint.accountUsername) {
+              const newToken = await attemptSilentRelogin({
+                partnerName: hint.partnerName || 'alwaseet',
+                accountUsername: hint.accountUsername,
+                expiredToken: token,
+              });
+              if (newToken) {
+                return await handleApiCall(endpoint, method, newToken, payload, queryParams, retries, true);
+              }
+            }
             if (shouldNotifyTokenExpired(endpoint)) {
               try {
                 window.dispatchEvent(new CustomEvent('alwaseet-token-expired', {
@@ -173,6 +240,7 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
             tokErr.partnerName = hint.partnerName || 'alwaseet';
             throw tokErr;
           }
+
 
           // 🛑 إذا حصلنا 503 (edge runtime overload) ولدينا حظر فعّال على الجلسة، أوقف الموجة
           if (is503 && sessionInvalidUntilLogin) {
@@ -201,9 +269,19 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
           throw cfErr;
         }
 
-        // ✅ Detect expired token (errNum:21) — أبلّغ الواجهة لتقرر هل هذا التوكن النشط أم لا
+        // ✅ Detect expired token (errNum:21) — حاول تجديداً صامتاً قبل إبلاغ الواجهة
         if (data.errNum === 'TOKEN_EXPIRED' || data.error === 'DELIVERY_TOKEN_EXPIRED' || data.requireRelogin === true) {
           devLog.warn(`🔑 توكن الوسيط منتهي للـendpoint: ${endpoint}`);
+          if (!_silentReloginAttempted && hint.accountUsername) {
+            const newToken = await attemptSilentRelogin({
+              partnerName: hint.partnerName || 'alwaseet',
+              accountUsername: hint.accountUsername,
+              expiredToken: token,
+            });
+            if (newToken) {
+              return await handleApiCall(endpoint, method, newToken, payload, queryParams, retries, true);
+            }
+          }
           if (shouldNotifyTokenExpired(endpoint)) {
             try {
               window.dispatchEvent(new CustomEvent('alwaseet-token-expired', {
@@ -223,6 +301,7 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
           tokErr.partnerName = hint.partnerName || 'alwaseet';
           throw tokErr;
         }
+
         
         // معالجة خاصة لـ edit-order
         if (endpoint === 'edit-order') {

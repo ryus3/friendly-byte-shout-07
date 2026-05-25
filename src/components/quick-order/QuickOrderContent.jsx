@@ -467,7 +467,16 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     });
   }, [formData.city, formData.city_id, formData.region, formData.region_id, activePartner]);
   
-  const [cities, setCities] = useState([]);
+  // ✅ ظهور فوري للمدن من الكاش المحلي دون انتظار effect
+  const [cities, setCities] = useState(() => {
+    if (Array.isArray(cachedCities) && cachedCities.length > 0) {
+      const seen = new Set();
+      return cachedCities
+        .map(c => ({ id: c.alwaseet_id || c.id, name: c.name_ar || c.name, name_en: c.name_en }))
+        .filter(c => c.id && !seen.has(String(c.id)) && seen.add(String(c.id)));
+    }
+    return [];
+  });
   const [regions, setRegions] = useState([]);
   const [packageSizes, setPackageSizes] = useState([]);
   const [loadingCities, setLoadingCities] = useState(false);
@@ -715,7 +724,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           return;
         }
 
-        setLoadingCities(true);
+        // لا نُظهر "تحميل..." إذا الكاش جاهز مسبقاً
+        const hasInstantCities = activePartner === 'alwaseet' && Array.isArray(cachedCities) && cachedCities.length > 0;
+        if (!hasInstantCities) setLoadingCities(true);
         setLoadingPackageSizes(true);
         setInitialDataLoaded(false);
         setDataFetchError(false);
@@ -864,7 +875,11 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     
     if (cityIdForRegions && (activePartner === 'alwaseet' || activePartner === 'modon') && waseetToken) {
       const fetchRegionsData = async () => {
-        setLoadingRegions(true);
+        // لا فلاش "تحميل المناطق" للوسيط لو الكاش جاهز (العملية synchronous)
+        const cacheKeyPre = `regions_${activePartner}_${cityIdForRegions}`;
+        const hasInstantRegions = activePartner === 'alwaseet'
+          && (regionCache.current.get(cacheKeyPre) || (isCacheLoaded && globalRegionsCache.length > 0));
+        if (!hasInstantRegions) setLoadingRegions(true);
         
         const preservedRegionId = isEditMode ? (selectedRegionId || formData.region_id || '') : '';
         

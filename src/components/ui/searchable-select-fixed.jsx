@@ -262,17 +262,20 @@ export const SearchableSelectFixed = ({
         ref={dropdownRef}
         onMouseDown={(e) => {
           e.stopPropagation();
-          // ❌ إزالة e.preventDefault() - يمنع فتح الكيبورد على الهواتف
         }}
         onTouchStart={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()} // ✅ إضافة pointer events
-        className="bg-background border border-border rounded-md shadow-xl max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95 slide-in-from-top-2"
+        onPointerDown={(e) => e.stopPropagation()}
+        className={cn(
+          "bg-background border border-input shadow-lg max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95",
+          dropdownDirection === 'down'
+            ? "rounded-b-md rounded-t-none border-t-0 slide-in-from-top-1"
+            : "rounded-t-md rounded-b-none border-b-0 slide-in-from-bottom-1"
+        )}
         style={{ 
           direction: 'rtl',
           minWidth: '200px',
           maxWidth: '400px',
-          pointerEvents: 'auto',
-          borderColor: 'hsl(var(--border))'
+          pointerEvents: 'auto'
         }}
       >
       {/* Search Input */}
@@ -435,7 +438,12 @@ export const SearchableSelectFixed = ({
         variant="outline"
         role="combobox"
         aria-expanded={open}
-        className={cn("w-full justify-between", className)}
+        className={cn(
+          "w-full justify-between transition-[border-radius] duration-150",
+          open && dropdownDirection === 'down' && "rounded-b-none border-b-transparent",
+          open && dropdownDirection === 'up' && "rounded-t-none border-t-transparent",
+          className
+        )}
         onClick={handleToggle}
         disabled={disabled}
         type="button"
@@ -457,10 +465,10 @@ export const SearchableSelectFixed = ({
             pointerEvents: 'auto',
             left: buttonRect.left + 'px',
             top: dropdownDirection === 'down' 
-              ? (buttonRect.bottom + 4) + 'px' 
+              ? buttonRect.bottom + 'px' 
               : 'auto',
             bottom: dropdownDirection === 'up' 
-              ? (window.innerHeight - buttonRect.top + 4) + 'px' 
+              ? (window.innerHeight - buttonRect.top) + 'px' 
               : 'auto',
             width: buttonRect.width + 'px'
           }}

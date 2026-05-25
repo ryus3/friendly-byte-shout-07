@@ -116,22 +116,35 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get tokens that need renewal:
-    // - auto_renew_enabled = true
-    // - Token expires within 24 hours (last day) but NOT already expired
+    // Optional on-demand body: { token_id?, partner_name?, account_username? }
+    // If provided, renew that specific token immediately regardless of expiry window.
+    let body: { token_id?: string; partner_name?: string; account_username?: string } = {};
+    if (req.method === 'POST') {
+      try { body = await req.json(); } catch { body = {}; }
+    }
+    const targeted = !!(body.token_id || (body.partner_name && body.account_username));
+
     const renewalWindowHours = 24;
     const now = new Date();
     const renewalThreshold = new Date(now.getTime() + renewalWindowHours * 60 * 60 * 1000);
 
-    // Fetch tokens that need renewal:
-    // - Expiring within 24 hours OR already expired (self-healing after missed runs)
-    const { data: tokens, error: fetchError } = await supabase
+    let query = supabase
       .from('delivery_partner_tokens')
       .select('id, partner_name, token, expires_at, partner_data, account_username, user_id')
       .eq('is_active', true)
-      .eq('auto_renew_enabled', true)
-      .in('partner_name', ['alwaseet', 'modon'])
-      .lte('expires_at', renewalThreshold.toISOString()); // Expiring soon OR already expired
+      .in('partner_name', ['alwaseet', 'modon']);
+
+    if (targeted) {
+      if (body.token_id) {
+        query = query.eq('id', body.token_id);
+      } else {
+        query = query.eq('partner_name', body.partner_name!).eq('account_username', body.account_username!);
+      }
+    } else {
+      query = query.eq('auto_renew_enabled', true).lte('expires_at', renewalThreshold.toISOString());
+    }
+
+    const { data: tokens, error: fetchError } = await query;
 
     if (fetchError) {
       console.error('Error fetching tokens:', fetchError);
@@ -140,6 +153,7 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
+
 
     if (!tokens || tokens.length === 0) {
       console.log('No tokens need renewal at this time');
@@ -151,7 +165,7 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${tokens.length} tokens needing renewal`);
 
-    const results: { id: string; success: boolean; error?: string }[] = [];
+    const results: { id: string; success: boolean; error?: string; token?: string; expires_at?: string }[] = [];
 
     for (const tokenRecord of tokens as TokenRecord[]) {
       const username = tokenRecord.account_username || tokenRecord.partner_data?.username;
@@ -165,13 +179,11 @@ Deno.serve(async (req) => {
 
       console.log(`Renewing token for ${tokenRecord.partner_name} account: ${username}`);
       
-      // Call the appropriate login function based on partner
       const loginResult = tokenRecord.partner_name === 'modon'
         ? await loginToModon(username, password)
         : await loginToAlWaseet(username, password);
 
       if (loginResult.success && loginResult.token) {
-        // Update token in database
         const { error: updateError } = await supabase
           .from('delivery_partner_tokens')
           .update({
@@ -187,16 +199,21 @@ Deno.serve(async (req) => {
           results.push({ id: tokenRecord.id, success: false, error: 'Database update failed' });
         } else {
           console.log(`Successfully renewed token for ${username}`);
-          results.push({ id: tokenRecord.id, success: true });
+          results.push({
+            id: tokenRecord.id,
+            success: true,
+            token: loginResult.token,
+            expires_at: loginResult.expires_at,
+          });
         }
       } else {
         console.error(`Failed to renew token for ${username}:`, loginResult.error);
         results.push({ id: tokenRecord.id, success: false, error: loginResult.error });
       }
 
-      // Small delay between renewals to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 500));
     }
+
 
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;

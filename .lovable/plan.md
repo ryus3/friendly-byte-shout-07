@@ -1,58 +1,62 @@
+## سبب انتهاء توكن الوسيط قبل أوانه
 
-## 1) خريطة العراق — حد رفيع جداً ومضيء بدون نشاز
-**الملف:** `src/components/dashboard/ProvincesHeatmapCard.jsx` و `src/components/dashboard/IraqMapSvg.jsx`
+شركة الوسيط فعلاً تمنح التوكن **7 أيام** صلاحية، ونحن نخزنه عندنا بـ`expires_at = now + 7 days` (`AlWaseetContext.jsx:2352`) ولدينا cron يجدّده تلقائياً قبل 24 ساعة من الانتهاء (`refresh-delivery-partner-tokens`). إذن من جهتنا الإعداد صحيح. السبب الحقيقي لرسالة "انتهت صلاحية الجلسة" هو **جهة الوسيط** ترفض التوكن قبل نهاية 7 أيام لأحد سببين:
 
-- في `IraqMapSvg.jsx` تغيير `strokeWidth * 10` إلى قيمة أنحف ثابتة (السبب: الـ group مُكبَّر ×10 فيظهر الخط ضخماً جداً كما في الصورة).
-- استخدام `vectorEffect="non-scaling-stroke"` مع `strokeWidth={0.6}` فقط، بدون مضاعفة ×10.
-- إزالة الـ drop-shadow المزدوج الحالي واستبداله بـ glow واحد خفيف:
-  `filter: drop-shadow(0 0 1.5px hsl(199 89% 70% / 0.7))`
-- تخفيف لون الـ stroke قليلاً: `hsl(199 89% 75% / 0.85)` للحصول على خط نيون أنيق نحيف.
-- الإبقاء على التعبئة الشفافة `hsl(199 89% 65% / 0.04)`.
+1. **تسجيل دخول جديد بنفس الحساب من جهاز/متصفح آخر** → سيرفر الوسيط يُبطل التوكن القديم فوراً ويعطي errNum:21 (نراه نحن "TOKEN_EXPIRED"). الحساب `alshmry94` مشترك بين أكثر من موظف، فأي تسجيل دخول جديد يكسر جلسات الباقين.
+2. **خطأ مؤقت في endpoint معيّن من جهة الوسيط** → بعض مسارات الوسيط ترجع errNum:21 كـ "ليس لديك صلاحية" حتى مع توكن صالح. عالجنا أغلبها في `alwaseet-proxy` (`PASSTHROUGH_21_ENDPOINTS`) لكن `create-order` غير مشمول لأنه فعلياً حساس.
 
-النتيجة: حدود رفيعة مضيئة بنعومة بدلاً من الحد العريض الحالي.
+**الخلاصة:** التاريخ المحلي لا يعكس قرار سيرفر الوسيط. لذلك يجب أن نتعافى تلقائياً (auto-relogin) عند رفض التوكن من قِبل السيرفر، بدل إجبار المستخدم على فتح إعدادات شركة التوصيل ولمس "تجديد التوكن" يدوياً.
 
-## 2) زر المزامنة في الهيدر — تقييد النطاق حسب الدور
-**المشكلة:** الموظف أحمد عند الضغط على زر المزامنة يزامن كل طلبات النظام.
+## الخطة الكاملة
 
-**التحقيق:** `scopeOrdersQuery` في `src/contexts/AlWaseetContext.jsx` يبدو صحيحاً منطقياً (المدير العام = كل شيء، مدير قسم = نفسه + موظفوه، الموظف = نفسه). لكن المشكلة على الأرجح في أن `fastSyncPendingOrders` بعد جلب الطلبات المحلية يستدعي API الوسيط بكل الـ tracking numbers بدون إعادة تطبيق فلتر المالك، أو أن `supervisedIdsRef` لأحمد يحوي قيماً خاطئة.
+### 1) شفاء تلقائي عند رفض التوكن (Auto re-login + retry)
 
-**الإصلاح في `AlWaseetContext.jsx`:**
-- إضافة دالة مساعدة `getSyncScope(user)` ترجع:
-  - admin → `all`
-  - department_manager → `[self, ...supervised]`
-  - employee → `[self]` فقط
-- في `fastSyncPendingOrders` التأكد من أن استعلام `pendingOrders` يستخدم `scopeOrdersQuery` بحيث يُجبر الموظف على رؤية طلباته فقط، وعدم الاعتماد على `supervisedIdsRef` للموظفين.
-- التحقق من أن `useSupervisedEmployees` لا يحمّل قائمة لموظف عادي (يجب أن تكون فارغة).
-- تسجيل devLog واضح: `🔒 نطاق المزامنة لـ {role}: {count} طلب`.
+**أ. على جانب الواجهة (`src/lib/alwaseet-api.js`)**
+- داخل `apiCall` قبل رمي `isTokenExpired = true`: محاولة استدعاء وظيفة جديدة `attemptSilentRelogin(token)`:
+  - تستدعي edge function `refresh-delivery-partner-tokens` لجدول التوكن المعني (نمررها `tokenId` أو `username+partner`).
+  - تنتظر الرد، تقرأ التوكن الجديد من `delivery_partner_tokens`، وتعيد محاولة نفس endpoint مرة واحدة.
+- إذا فشل التجديد → نرمي `isTokenExpired` كما هو الآن.
 
-## 3) إشعار إيراد الطلب — أيقونة احترافية + اسم البائع
-**الملف:** `src/contexts/NotificationsContext.jsx` (rendering) + migration على `notify_product_owner_on_receipt`.
+**ب. على جانب edge function `refresh-delivery-partner-tokens`**
+- توسعة قبول `body.token_id` أو `body.username+partner_name` لتجديد توكن محدد عند الطلب (بدل انتظار cron).
+- إن نجح، تكتب التوكن الجديد في DB ويعود `success: true, token`.
 
-### 3أ) أيقونة الفلوس الاحترافية
-- استبدال الإيموجي 💰 في عنوان الإشعار بـ Lucide icon احترافي (مثلاً `Banknote` أو `Wallet` مع gradient ذهبي أخضر) داخل دائرة زجاجية في قائمة الإشعارات.
-- إنشاء معالج خاص في رندر الإشعار: عند `type === 'revenue_received'` يُعرض أيقونة Banknote بحجم 20px داخل بادج بـ `bg-gradient-to-br from-emerald-500/20 to-amber-500/20` مع `ring-1 ring-emerald-400/40`.
+**ج. على جانب `AlWaseetContext.jsx`**
+- مستمع `alwaseet-token-expired` يحاول تنفيذ نفس الـrelogin الصامت قبل عرض أي toast (نخفض throttle إلى 5 ثوانٍ ونعرض toast فقط لو فشل التجديد فعلاً).
+- في `createOrder/edit-order` على مستوى الواجهة (`QuickOrderContent.jsx` و`CreateOrderPage.jsx`): إذا التقطنا `isTokenExpired` بعد retry، نظهر toast فيه action "تجديد التوكن" يفتح `DeliveryPartnerDialog`.
 
-### 3ب) ذكر اسم بائع/منشئ الطلب بين قوسين
-- تعديل trigger `notify_product_owner_on_receipt` ليُضمّن `created_by_name` في `data` JSON:
-  - جلب `full_name` من `profiles` للحقل `orders.created_by`.
-  - إذا كان المنشئ هو المدير العام → الاسم "المدير العام"، وإلا الاسم الكامل من profiles.
-- تعديل نص الإشعار:
-  - من: `تورة الطلب 143202894 — إيرادك: 20000 د.ع`
-  - إلى: `طلب 143202894 (المدير العام) — إيرادك: 20,000 د.ع`
-- إعادة حساب الإشعارات السابقة من type `revenue_received` لإضافة اسم البائع.
+### 2) تجديد استباقي أكثر أماناً
+- في `AlWaseetContext.jsx` عند mount الصفحة: لو `expiresAt - now < 48h` → استدعاء tcp التجديد فوراً (بدل انتظار cron).
+- إضافة فحص عند رجوع التاب للتركيز (`visibilitychange`): إذا التوكن خلال 24 ساعة من الانتهاء → تجديد صامت.
 
-## 4) فحص صفحة الطلب السريع — مدن/مناطق كاش الوسيط للحساب المختار
-**الملف:** `src/components/quick-order/QuickOrderContent.jsx` السطر 760-770.
+### 3) ظهور المدن/المناطق فوراً في طلب سريع
+ملف: `src/components/quick-order/QuickOrderContent.jsx`
+- استخدام lazy initializer لـ`cities`/`packageSizes` لتُملأ مباشرة من `cachedCities` بدون انتظار `useEffect`.
+- إزالة `setLoadingCities(true)` إذا `cachedCities.length > 0` (لا وميض "تحميل...").
+- جلب المناطق synchronously داخل `onValueChange` للمدينة عبر `getRegionsByCity(cityId)` وضبط `regions` مباشرة قبل أي async، وإزالة placeholder "تحميل المناطق...".
 
-**الفحص الحالي:** عند `activePartner === 'alwaseet'` تستخدم `cachedCities` من `useCitiesCache()` بدون تمييز أي حساب وسيط مختار (alshmry94 أو غيره). الكاش `cities_cache` على مستوى partner_name فقط وليس per-token.
+### 4) ربط المنسدلات بصرياً بحقل الاختيار
+ملف: `src/components/ui/searchable-select-fixed.jsx`
+- إزالة الفجوة 4px → جعل القائمة ملتصقة بأسفل الزر (`top: rect.bottom`).
+- عند `open === true`:
+  - الزر: `rounded-b-none border-b-0`
+  - البطاقة المنسدلة: `rounded-t-none` + نفس لون حدود الزر (`border-input`).
+- تطبيق نفس shadow الناعم وتطابق العرض تماماً مع الزر — تظهر كقطعة واحدة موحّدة.
 
-**الإصلاح:**
-- التحقق من `waseetUser` المختار (alshmry94 مثلاً) وتمرير `account_username` إلى `useCitiesCache({ partner: 'alwaseet', account: waseetUser?.username })`.
-- في `useCitiesCache` إضافة فلتر اختياري على عمود `account_username` في الجدول؛ إذا لم يكن الكاش مخصصاً لحساب → fallback للكاش العام.
-- إن لزم: إضافة عمود `account_username` (nullable) في جدول الكاش وتشغيل sync أولي لحساب alshmry94 لجلب مدن/مناطق هذا الحساب تحديداً.
-- إضافة devLog: `🏙️ تحميل مدن alwaseet للحساب {username}: {count}`.
+### 5) التحقق من إشعار الإيراد (لا تعديل كود)
+- استعلام sql على آخر 10 إشعارات `revenue_received` للتأكد:
+  - المبلغ = `final_amount - delivery_fee` (موزّع نسبياً عند تعدّد الملاك).
+  - يحوي اسم البائع بين قوسين.
+  - `user_id` = مالك المنتج فقط، لا يصل لمدير عام/موظف آخر.
 
-## ملاحظات تقنية
-- لا تغيير في منطق الأرباح أو حركات النقد.
-- تغييرات DB محصورة في trigger `notify_product_owner_on_receipt` + (احتمالاً) عمود `account_username` في كاش المدن.
-- جميع تغييرات الواجهة تستخدم semantic tokens.
+## ملفات سيتم تعديلها
+- `src/lib/alwaseet-api.js` — silent relogin + retry
+- `src/contexts/AlWaseetContext.jsx` — relogin خلف الكواليس + تجديد استباقي + visibilitychange
+- `supabase/functions/refresh-delivery-partner-tokens/index.ts` — دعم تجديد مفرد عند الطلب
+- `src/components/quick-order/QuickOrderContent.jsx` — تحميل فوري للمدن/المناطق
+- `src/components/ui/searchable-select-fixed.jsx` — ربط المنسدلة بالحقل بصرياً
+- تشغيل supabase--read_query فقط للتحقق من إشعارات الإيراد (لا migration)
+
+## لا يتم لمس
+- منطق توزيع الإيراد/الأرباح، RLS، triggers الإشعار، أو أي ملف خارج النطاق المذكور.
+- لا migrations جديدة.
