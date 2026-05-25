@@ -269,9 +269,19 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
           throw cfErr;
         }
 
-        // ✅ Detect expired token (errNum:21) — أبلّغ الواجهة لتقرر هل هذا التوكن النشط أم لا
+        // ✅ Detect expired token (errNum:21) — حاول تجديداً صامتاً قبل إبلاغ الواجهة
         if (data.errNum === 'TOKEN_EXPIRED' || data.error === 'DELIVERY_TOKEN_EXPIRED' || data.requireRelogin === true) {
           devLog.warn(`🔑 توكن الوسيط منتهي للـendpoint: ${endpoint}`);
+          if (!_silentReloginAttempted && hint.accountUsername) {
+            const newToken = await attemptSilentRelogin({
+              partnerName: hint.partnerName || 'alwaseet',
+              accountUsername: hint.accountUsername,
+              expiredToken: token,
+            });
+            if (newToken) {
+              return await handleApiCall(endpoint, method, newToken, payload, queryParams, retries, true);
+            }
+          }
           if (shouldNotifyTokenExpired(endpoint)) {
             try {
               window.dispatchEvent(new CustomEvent('alwaseet-token-expired', {
@@ -291,6 +301,7 @@ const handleApiCall = async (endpoint, method, token, payload, queryParams, retr
           tokErr.partnerName = hint.partnerName || 'alwaseet';
           throw tokErr;
         }
+
         
         // معالجة خاصة لـ edit-order
         if (endpoint === 'edit-order') {
