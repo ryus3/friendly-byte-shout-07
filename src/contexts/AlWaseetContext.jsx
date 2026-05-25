@@ -270,6 +270,42 @@ export const AlWaseetProvider = ({ children }) => {
     return () => window.removeEventListener('alwaseet-token-expired', handleTokenExpired);
   }, [token]);
 
+  // 🔄 مستمع لحدث تجديد التوكن الصامت — يحدّث state دون مقاطعة المستخدم
+  useEffect(() => {
+    const handleTokenRenewed = (event) => {
+      const detail = event?.detail || {};
+      if (!detail?.token) return;
+      // فقط حدّث إذا كان التجديد يخص الحساب النشط في هذا المتصفح
+      if (detail.previousToken && token && detail.previousToken !== token) return;
+      devLog.log('🔄 استلام توكن وسيط مجدّد — تحديث الجلسة المحلية');
+      setToken(detail.token);
+      if (detail.expiresAt) setTokenExpiry(detail.expiresAt);
+      try { window.dispatchEvent(new CustomEvent('alwaseet-session-restored')); } catch {}
+    };
+    window.addEventListener('alwaseet-token-renewed', handleTokenRenewed);
+    return () => window.removeEventListener('alwaseet-token-renewed', handleTokenRenewed);
+  }, [token, setTokenExpiry]);
+
+  // 🕒 تجديد استباقي عند رجوع التاب للتركيز إن كان التوكن خلال 24 ساعة من الانتهاء
+  useEffect(() => {
+    const onVisible = async () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!token || !tokenExpiry || !user?.id) return;
+      try {
+        const msLeft = new Date(tokenExpiry).getTime() - Date.now();
+        if (msLeft > 0 && msLeft < 24 * 60 * 60 * 1000) {
+          devLog.log('🕒 توكن الوسيط ضمن نافذة 24 ساعة — استدعاء تجديد استباقي');
+          await supabase.functions.invoke('refresh-delivery-partner-tokens', { body: {} });
+        }
+      } catch (e) {
+        devLog.warn('⚠️ فشل التجديد الاستباقي:', e?.message);
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [token, tokenExpiry, user?.id]);
+
+
   // ✅ استعادة آخر شركة توصيل غير 'local' عند التحميل
   useEffect(() => {
     if (!activePartner || activePartner === 'local') {
