@@ -28,6 +28,63 @@ if (typeof window !== 'undefined') {
 
 const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
+// 🔄 Silent re-login: عند رفض التوكن من سيرفر الوسيط، نحاول تجديده تلقائياً مرة واحدة
+// عبر edge function refresh-delivery-partner-tokens، ثم نعيد محاولة نفس الطلب.
+const reloginInflight = new Map(); // partnerName::username -> Promise<newToken|null>
+const recentReloginAttempts = new Map(); // key -> timestamp (cooldown 30s)
+const RELOGIN_COOLDOWN_MS = 30 * 1000;
+
+const attemptSilentRelogin = async ({ partnerName, accountUsername, expiredToken }) => {
+  const key = `${partnerName || 'alwaseet'}::${accountUsername || ''}`;
+  if (!accountUsername) return null;
+
+  const lastAttempt = recentReloginAttempts.get(key);
+  if (lastAttempt && Date.now() - lastAttempt < RELOGIN_COOLDOWN_MS) {
+    return null;
+  }
+
+  if (reloginInflight.has(key)) return reloginInflight.get(key);
+
+  const promise = (async () => {
+    recentReloginAttempts.set(key, Date.now());
+    try {
+      devLog.log(`🔄 محاولة تجديد صامت للتوكن: ${key}`);
+      const { data, error } = await supabase.functions.invoke('refresh-delivery-partner-tokens', {
+        body: { partner_name: partnerName || 'alwaseet', account_username: accountUsername }
+      });
+      if (error) {
+        devLog.warn('⚠️ فشل التجديد الصامت:', error.message);
+        return null;
+      }
+      const result = (data?.results || []).find((r) => r.success && r.token);
+      if (result?.token) {
+        devLog.log(`✅ تم تجديد التوكن صامتاً: ${key}`);
+        try {
+          window.dispatchEvent(new CustomEvent('alwaseet-token-renewed', {
+            detail: {
+              partnerName: partnerName || 'alwaseet',
+              accountUsername,
+              token: result.token,
+              expiresAt: result.expires_at,
+              previousToken: expiredToken,
+            }
+          }));
+        } catch { /* SSR */ }
+        return result.token;
+      }
+      return null;
+    } catch (e) {
+      devLog.warn('⚠️ exception أثناء التجديد الصامت:', e?.message);
+      return null;
+    } finally {
+      reloginInflight.delete(key);
+    }
+  })();
+
+  reloginInflight.set(key, promise);
+  return promise;
+};
+
 const buildRequestKey = (endpoint, method, token, payload, queryParams) => JSON.stringify({
   endpoint,
   method,
