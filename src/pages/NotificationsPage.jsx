@@ -87,6 +87,7 @@ const iconMap = {
   new_ai_order: <AiOrderIcon className="w-4 h-4 md:w-5 md:h-5" />,
   new_order: <OrderIcon />,
   new_registration: <UserRegistrationIcon />,
+  revenue_received: <RevenueReceivedIcon />,
   system: <SystemIcon />,
   AlertTriangle: <StockWarningIcon />,
   Package: <StockWarningIcon />,
