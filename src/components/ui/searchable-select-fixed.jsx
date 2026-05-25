@@ -438,7 +438,12 @@ export const SearchableSelectFixed = ({
         variant="outline"
         role="combobox"
         aria-expanded={open}
-        className={cn("w-full justify-between", className)}
+        className={cn(
+          "w-full justify-between transition-[border-radius] duration-150",
+          open && dropdownDirection === 'down' && "rounded-b-none border-b-transparent",
+          open && dropdownDirection === 'up' && "rounded-t-none border-t-transparent",
+          className
+        )}
         onClick={handleToggle}
         disabled={disabled}
         type="button"
@@ -460,10 +465,10 @@ export const SearchableSelectFixed = ({
             pointerEvents: 'auto',
             left: buttonRect.left + 'px',
             top: dropdownDirection === 'down' 
-              ? (buttonRect.bottom + 4) + 'px' 
+              ? buttonRect.bottom + 'px' 
               : 'auto',
             bottom: dropdownDirection === 'up' 
-              ? (window.innerHeight - buttonRect.top + 4) + 'px' 
+              ? (window.innerHeight - buttonRect.top) + 'px' 
               : 'auto',
             width: buttonRect.width + 'px'
           }}
