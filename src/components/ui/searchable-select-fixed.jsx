@@ -270,10 +270,10 @@ export const SearchableSelectFixed = ({
         onTouchStart={(e) => e.stopPropagation()}
         onPointerDown={(e) => e.stopPropagation()}
         className={cn(
-          "bg-background border border-input shadow-lg max-h-60 overflow-hidden animate-in fade-in-0 zoom-in-95",
+          "bg-background border border-input shadow-lg max-h-60 overflow-hidden",
           dropdownDirection === 'down'
-            ? "rounded-b-md rounded-t-none border-t-0 slide-in-from-top-1"
-            : "rounded-t-md rounded-b-none border-b-0 slide-in-from-bottom-1"
+            ? "rounded-b-md rounded-t-none border-t-0"
+            : "rounded-t-md rounded-b-none border-b-0"
         )}
         style={{ 
           direction: 'rtl',
