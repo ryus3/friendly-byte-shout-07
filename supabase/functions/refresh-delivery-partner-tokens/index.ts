@@ -116,22 +116,35 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get tokens that need renewal:
-    // - auto_renew_enabled = true
-    // - Token expires within 24 hours (last day) but NOT already expired
+    // Optional on-demand body: { token_id?, partner_name?, account_username? }
+    // If provided, renew that specific token immediately regardless of expiry window.
+    let body: { token_id?: string; partner_name?: string; account_username?: string } = {};
+    if (req.method === 'POST') {
+      try { body = await req.json(); } catch { body = {}; }
+    }
+    const targeted = !!(body.token_id || (body.partner_name && body.account_username));
+
     const renewalWindowHours = 24;
     const now = new Date();
     const renewalThreshold = new Date(now.getTime() + renewalWindowHours * 60 * 60 * 1000);
 
-    // Fetch tokens that need renewal:
-    // - Expiring within 24 hours OR already expired (self-healing after missed runs)
-    const { data: tokens, error: fetchError } = await supabase
+    let query = supabase
       .from('delivery_partner_tokens')
       .select('id, partner_name, token, expires_at, partner_data, account_username, user_id')
       .eq('is_active', true)
-      .eq('auto_renew_enabled', true)
-      .in('partner_name', ['alwaseet', 'modon'])
-      .lte('expires_at', renewalThreshold.toISOString()); // Expiring soon OR already expired
+      .in('partner_name', ['alwaseet', 'modon']);
+
+    if (targeted) {
+      if (body.token_id) {
+        query = query.eq('id', body.token_id);
+      } else {
+        query = query.eq('partner_name', body.partner_name!).eq('account_username', body.account_username!);
+      }
+    } else {
+      query = query.eq('auto_renew_enabled', true).lte('expires_at', renewalThreshold.toISOString());
+    }
+
+    const { data: tokens, error: fetchError } = await query;
 
     if (fetchError) {
       console.error('Error fetching tokens:', fetchError);
@@ -140,6 +153,7 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       );
     }
+
 
     if (!tokens || tokens.length === 0) {
       console.log('No tokens need renewal at this time');
