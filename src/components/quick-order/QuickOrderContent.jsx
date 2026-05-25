@@ -764,29 +764,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   useEffect(() => {
     const fetchInitialData = async () => {
       if ((activePartner === 'alwaseet' || activePartner === 'modon') && waseetToken) {
-        // ✅ ننتظر تحميل الـ cache لكلا الشريكين (الكاش يخدم الوسيط ومدن من نفس الجداول الموحّدة)
-        if (!isCacheLoaded) {
-          devLog.log('⏳ انتظار تحميل الـ Cache...');
-          return;
-        }
-
-        // ✅ Snapshot فوري من localStorage (cities + package_sizes) قبل أي fetch
-        const LS_CITIES_KEY = `qo_cities_${activePartner}_v1`;
-        const LS_SIZES_KEY = `qo_pkg_sizes_${activePartner}_v1`;
-        try {
-          const lsCities = JSON.parse(localStorage.getItem(LS_CITIES_KEY) || 'null');
-          const lsSizes = JSON.parse(localStorage.getItem(LS_SIZES_KEY) || 'null');
-          if (Array.isArray(lsCities) && lsCities.length > 0) setCities(lsCities);
-          if (Array.isArray(lsSizes) && lsSizes.length > 0) setPackageSizes(lsSizes);
-        } catch {}
-
-        // لا نُظهر "تحميل..." إذا الكاش جاهز مسبقاً (DB cache أو localStorage)
-        const hasInstantCities = (activePartner === 'alwaseet' && Array.isArray(cachedCities) && cachedCities.length > 0)
-          || (cities && cities.length > 0);
-        if (!hasInstantCities) setLoadingCities(true);
-        const hasInstantSizes = packageSizes && packageSizes.length > 0;
-        if (!hasInstantSizes) setLoadingPackageSizes(true);
-        setInitialDataLoaded(false);
+        const LS_CITIES_KEY = quickOrderCitiesKey(activePartner);
+        const LS_SIZES_KEY = quickOrderSizesKey(activePartner);
+        const instantCities = readQuickOrderSnapshot(LS_CITIES_KEY);
+        const instantSizes = readQuickOrderSnapshot(LS_SIZES_KEY, PARTNER_SIZE_FALLBACK);
+        if (instantCities.length > 0) setCities(instantCities);
+        if (instantSizes.length > 0) setPackageSizes(instantSizes);
+        if (!instantCities.length && !cities.length) setLoadingCities(true);
+        if (!instantSizes.length && !packageSizes.length) setLoadingPackageSizes(true);
+        setInitialDataLoaded(true);
         setDataFetchError(false);
         try {
           let citiesData = [];
@@ -810,22 +796,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               citiesData = [];
             }
 
-            // أحجام الطرود من الكاش (مع ترجمة عربية للأحجام الإنجليزية)
-            const MODON_SIZE_AR = { normal:'عادي', regular:'عادي', standard:'عادي', small:'صغير', medium:'وسط', middle:'وسط', large:'كبير', xlarge:'كبير جداً', xl:'كبير جداً', 'x-large':'كبير جداً', 'x large':'كبير جداً', 'extra large':'كبير جداً', 'extra-large':'كبير جداً' };
-            const trSize = (n) => {
-              if (!n) return n;
-              const k = String(n).trim().toLowerCase();
-              return MODON_SIZE_AR[k] || n;
-            };
             const { data: modonSizes } = await supabase
               .from('package_sizes_cache')
               .select('external_id, size_name')
               .eq('partner_name', 'modon')
               .eq('is_active', true);
             if (modonSizes && modonSizes.length > 0) {
-              packageSizesData = modonSizes.map(s => ({ id: s.external_id, size: trSize(s.size_name) }));
+              packageSizesData = modonSizes.map(s => ({ id: s.external_id, size: translatePackageSize(s.size_name) }));
             } else {
-              packageSizesData = [];
+              packageSizesData = PARTNER_SIZE_FALLBACK;
             }
           } else {
             // ✅ الوسيط: cache-first من city_delivery_mappings (external_id = AlWaseet city id)
@@ -846,14 +825,6 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               citiesData = [];
             }
 
-            // ✅ ترجمة أحجام الطرود للعربية (موحّدة مع map MODON أعلاه)
-            const SIZE_AR = { normal:'عادي', regular:'عادي', standard:'عادي', small:'صغير', medium:'متوسط', middle:'متوسط', large:'كبير', xlarge:'كبير جداً', xl:'كبير جداً', 'x-large':'كبير جداً', 'x large':'كبير جداً', 'extra large':'كبير جداً', 'extra-large':'كبير جداً' };
-            const trAlwSize = (n) => {
-              if (!n) return n;
-              const k = String(n).trim().toLowerCase();
-              return SIZE_AR[k] || n;
-            };
-
             const { data: cachedSizes } = await supabase
               .from('package_sizes_cache')
               .select('external_id, size_name')
@@ -861,9 +832,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               .eq('is_active', true);
 
             if (cachedSizes && cachedSizes.length > 0) {
-              packageSizesData = cachedSizes.map(s => ({ id: s.external_id, size: trAlwSize(s.size_name) }));
+              packageSizesData = cachedSizes.map(s => ({ id: s.external_id, size: translatePackageSize(s.size_name) }));
             } else {
-              packageSizesData = [{ id: '1', size: 'عادي' }, { id: '2', size: 'متوسط' }, { id: '3', size: 'كبير' }, { id: '4', size: 'كبير جداً' }];
+              packageSizesData = PARTNER_SIZE_FALLBACK;
             }
           }
           
@@ -877,10 +848,8 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           setCities(dedupedCities);
           setPackageSizes(dedupedSizes);
           // ✅ احفظ snapshot للعرض الفوري في الزيارة القادمة
-          try {
-            if (dedupedCities.length > 0) localStorage.setItem(LS_CITIES_KEY, JSON.stringify(dedupedCities));
-            if (dedupedSizes.length > 0) localStorage.setItem(LS_SIZES_KEY, JSON.stringify(dedupedSizes));
-          } catch {}
+          writeQuickOrderSnapshot(LS_CITIES_KEY, dedupedCities);
+          writeQuickOrderSnapshot(LS_SIZES_KEY, dedupedSizes);
 
           if ((!formData.city_id || formData.city_id === '') && safeCities.length > 0) {
             const baghdadCity = safeCities.find(city => 
