@@ -724,7 +724,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           return;
         }
 
-        setLoadingCities(true);
+        // لا نُظهر "تحميل..." إذا الكاش جاهز مسبقاً
+        const hasInstantCities = activePartner === 'alwaseet' && Array.isArray(cachedCities) && cachedCities.length > 0;
+        if (!hasInstantCities) setLoadingCities(true);
         setLoadingPackageSizes(true);
         setInitialDataLoaded(false);
         setDataFetchError(false);
