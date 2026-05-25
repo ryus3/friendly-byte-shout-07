@@ -5,13 +5,31 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { toast } from '@/components/ui/use-toast';
 import devLog from '@/lib/devLogger';
 
+const CITIES_LS_KEY = 'ryus_cities_v1';
+const REGIONS_LS_KEY = 'ryus_regions_v1';
+
+const readLS = (key) => {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+};
+
+const writeLS = (key, data) => {
+  try { localStorage.setItem(key, JSON.stringify(data || [])); } catch {}
+};
+
 export const useCitiesCache = () => {
-  const [cities, setCities] = useState([]);
+  // ✅ تهيئة تزامنية من localStorage → ظهور فوري بلا شيمر
+  const [cities, setCities] = useState(() => readLS(CITIES_LS_KEY));
   const [regions, setRegions] = useState([]);
-  const [allRegions, setAllRegions] = useState([]); // ✅ جميع المناطق دفعة واحدة
+  const [allRegions, setAllRegions] = useState(() => readLS(REGIONS_LS_KEY));
   const [loading, setLoading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const initialCitiesSnapshot = cities.length > 0 && allRegions.length > 0;
+  const [isLoading, setIsLoading] = useState(!initialCitiesSnapshot);
+  const [isLoaded, setIsLoaded] = useState(initialCitiesSnapshot);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [syncInfo, setSyncInfo] = useState(null);
   const { getTokenForUser } = useAlWaseet();
@@ -28,6 +46,7 @@ export const useCitiesCache = () => {
 
       if (error) throw error;
       setCities(data || []);
+      writeLS(CITIES_LS_KEY, data || []);
       return data || [];
     } catch (error) {
       console.error('❌ خطأ في جلب المدن من cache:', error);
@@ -76,6 +95,7 @@ export const useCitiesCache = () => {
 
       devLog.log(`✅ اكتمل جلب جميع المناطق: ${allRegions.length} منطقة`);
       setAllRegions(allRegions); // ✅ حفظ في allRegions state
+      writeLS(REGIONS_LS_KEY, allRegions);
       return allRegions;
     } catch (error) {
       console.error('❌ خطأ في جلب المناطق من cache:', error);
@@ -259,20 +279,22 @@ export const useCitiesCache = () => {
   // فحص إذا كان cache فارغ أو قديم
   const isCacheEmpty = () => cities.length === 0;
 
-  // جلب المدن والمناطق عند التحميل الأولي
+  // جلب المدن والمناطق عند التحميل الأولي - مع refresh صامت إذا توفر snapshot
   useEffect(() => {
+    const hasSnapshot = cities.length > 0 && allRegions.length > 0;
     const loadCacheData = async () => {
-      setIsLoading(true);
-      devLog.log('🔄 بدء تحميل الـ Cache...');
+      if (!hasSnapshot) setIsLoading(true);
+      devLog.log(hasSnapshot ? '🔄 تحديث الـ Cache بالخلفية (snapshot جاهز)...' : '🔄 بدء تحميل الـ Cache...');
       await fetchCities();
       const loadedRegions = await fetchAllRegions();
-      setAllRegions(loadedRegions); // ✅ حفظ جميع المناطق
+      setAllRegions(loadedRegions);
       await fetchSyncInfo();
       setIsLoaded(true);
       setIsLoading(false);
       devLog.log('✅ اكتمل تحميل الـ Cache');
     };
     loadCacheData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return {
