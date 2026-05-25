@@ -962,20 +962,40 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
                   regionsData = [];
                 }
               } else {
-                // ✅ الوسيط: فلترة المناطق من الـ Cache فوراً
-                devLog.log(`🔍 فلترة المناطق للمدينة ${cityIdForRegions} (cache: ${globalRegionsCache.length} منطقة)...`);
-                
-                if (isCacheLoaded && globalRegionsCache.length > 0) {
-                  const filteredRegions = getRegionsByCity(cityIdForRegions);
-                  devLog.log(`✅ تم فلترة ${filteredRegions.length} منطقة من الـ Cache`);
-                  
-                  regionsData = filteredRegions.map(region => ({
-                    id: region.alwaseet_id || region.id,
-                    name: region.name,
-                    city_id: cityIdForRegions
-                  }));
-                } else {
-                  devLog.log('⏳ انتظار تحميل الـ Cache...');
+                // ✅ الوسيط: cache-first من region_delivery_mappings (external_id = AlWaseet region id)
+                //    cityIdForRegions = AlWaseet external_id → نحوّله إلى city_id داخلي ثم نفلتر المناطق
+                devLog.log(`🔍 [الوسيط] جلب المناطق للمدينة ${cityIdForRegions} من region_delivery_mappings...`);
+
+                const { data: cityMap } = await supabase
+                  .from('city_delivery_mappings')
+                  .select('city_id')
+                  .eq('delivery_partner', 'alwaseet')
+                  .eq('external_id', String(cityIdForRegions))
+                  .eq('is_active', true)
+                  .maybeSingle();
+
+                const internalCityId = cityMap?.city_id;
+
+                if (internalCityId) {
+                  const { data: alwRegions, error: alwRegErr } = await supabase
+                    .from('region_delivery_mappings')
+                    .select('external_id, external_name, regions_master:region_id!inner(city_id)')
+                    .eq('delivery_partner', 'alwaseet')
+                    .eq('is_active', true)
+                    .eq('regions_master.city_id', internalCityId);
+
+                  if (!alwRegErr && alwRegions && alwRegions.length > 0) {
+                    regionsData = alwRegions.map(r => ({
+                      id: r.external_id,
+                      name: r.external_name,
+                      city_id: cityIdForRegions
+                    }));
+                    devLog.log(`✅ [الوسيط] تم جلب ${regionsData.length} منطقة من region_delivery_mappings`);
+                  }
+                }
+
+                if (!regionsData || regionsData.length === 0) {
+                  devLog.warn('⚠️ [الوسيط] لا توجد مناطق في الكاش لهذه المدينة');
                   regionsData = [];
                 }
               }
