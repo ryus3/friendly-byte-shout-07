@@ -1289,7 +1289,7 @@ serve(async (req) => {
 
     const message = error instanceof Error ? error.message : 'Unknown error';
     try {
-      const body = await req.clone().json().catch(() => ({}));
+      const body = await reqClone.json().catch(() => ({}));
       const runId = (body as any)?.run_id;
       if (runId) {
         const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
