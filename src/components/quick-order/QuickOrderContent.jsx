@@ -724,10 +724,22 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           return;
         }
 
-        // لا نُظهر "تحميل..." إذا الكاش جاهز مسبقاً
-        const hasInstantCities = activePartner === 'alwaseet' && Array.isArray(cachedCities) && cachedCities.length > 0;
+        // ✅ Snapshot فوري من localStorage (cities + package_sizes) قبل أي fetch
+        const LS_CITIES_KEY = `qo_cities_${activePartner}_v1`;
+        const LS_SIZES_KEY = `qo_pkg_sizes_${activePartner}_v1`;
+        try {
+          const lsCities = JSON.parse(localStorage.getItem(LS_CITIES_KEY) || 'null');
+          const lsSizes = JSON.parse(localStorage.getItem(LS_SIZES_KEY) || 'null');
+          if (Array.isArray(lsCities) && lsCities.length > 0) setCities(lsCities);
+          if (Array.isArray(lsSizes) && lsSizes.length > 0) setPackageSizes(lsSizes);
+        } catch {}
+
+        // لا نُظهر "تحميل..." إذا الكاش جاهز مسبقاً (DB cache أو localStorage)
+        const hasInstantCities = (activePartner === 'alwaseet' && Array.isArray(cachedCities) && cachedCities.length > 0)
+          || (cities && cities.length > 0);
         if (!hasInstantCities) setLoadingCities(true);
-        setLoadingPackageSizes(true);
+        const hasInstantSizes = packageSizes && packageSizes.length > 0;
+        if (!hasInstantSizes) setLoadingPackageSizes(true);
         setInitialDataLoaded(false);
         setDataFetchError(false);
         try {
