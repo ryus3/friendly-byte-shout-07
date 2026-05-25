@@ -826,8 +826,15 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
           const safeCities = Array.isArray(citiesData) ? citiesData : Object.values(citiesData || {});
           const safePackageSizes = Array.isArray(packageSizesData) ? packageSizesData : Object.values(packageSizesData || {});
 
-          setCities(dedupeById(safeCities));
-          setPackageSizes(dedupeById(safePackageSizes));
+          const dedupedCities = dedupeById(safeCities);
+          const dedupedSizes = dedupeById(safePackageSizes);
+          setCities(dedupedCities);
+          setPackageSizes(dedupedSizes);
+          // ✅ احفظ snapshot للعرض الفوري في الزيارة القادمة
+          try {
+            if (dedupedCities.length > 0) localStorage.setItem(LS_CITIES_KEY, JSON.stringify(dedupedCities));
+            if (dedupedSizes.length > 0) localStorage.setItem(LS_SIZES_KEY, JSON.stringify(dedupedSizes));
+          } catch {}
 
           if ((!formData.city_id || formData.city_id === '') && safeCities.length > 0) {
             const baghdadCity = safeCities.find(city => 
