@@ -165,7 +165,7 @@ Deno.serve(async (req) => {
 
     console.log(`Found ${tokens.length} tokens needing renewal`);
 
-    const results: { id: string; success: boolean; error?: string }[] = [];
+    const results: { id: string; success: boolean; error?: string; token?: string; expires_at?: string }[] = [];
 
     for (const tokenRecord of tokens as TokenRecord[]) {
       const username = tokenRecord.account_username || tokenRecord.partner_data?.username;
@@ -179,13 +179,11 @@ Deno.serve(async (req) => {
 
       console.log(`Renewing token for ${tokenRecord.partner_name} account: ${username}`);
       
-      // Call the appropriate login function based on partner
       const loginResult = tokenRecord.partner_name === 'modon'
         ? await loginToModon(username, password)
         : await loginToAlWaseet(username, password);
 
       if (loginResult.success && loginResult.token) {
-        // Update token in database
         const { error: updateError } = await supabase
           .from('delivery_partner_tokens')
           .update({
@@ -201,16 +199,21 @@ Deno.serve(async (req) => {
           results.push({ id: tokenRecord.id, success: false, error: 'Database update failed' });
         } else {
           console.log(`Successfully renewed token for ${username}`);
-          results.push({ id: tokenRecord.id, success: true });
+          results.push({
+            id: tokenRecord.id,
+            success: true,
+            token: loginResult.token,
+            expires_at: loginResult.expires_at,
+          });
         }
       } else {
         console.error(`Failed to renew token for ${username}:`, loginResult.error);
         results.push({ id: tokenRecord.id, success: false, error: loginResult.error });
       }
 
-      // Small delay between renewals to avoid rate limiting
       await new Promise(resolve => setTimeout(resolve, 500));
     }
+
 
     const successCount = results.filter(r => r.success).length;
     const failCount = results.filter(r => !r.success).length;
