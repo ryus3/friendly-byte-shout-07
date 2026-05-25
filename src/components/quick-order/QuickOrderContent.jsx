@@ -509,6 +509,9 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
   
   // ✅ ظهور فوري للمدن من الكاش المحلي دون انتظار effect
   const [cities, setCities] = useState(() => {
+    const partner = activePartner === 'modon' ? 'modon' : 'alwaseet';
+    const partnerSnapshot = readQuickOrderSnapshot(quickOrderCitiesKey(partner));
+    if (partnerSnapshot.length > 0) return partnerSnapshot;
     if (Array.isArray(cachedCities) && cachedCities.length > 0) {
       const seen = new Set();
       return cachedCities
@@ -518,7 +521,10 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
     return [];
   });
   const [regions, setRegions] = useState([]);
-  const [packageSizes, setPackageSizes] = useState([]);
+  const [packageSizes, setPackageSizes] = useState(() => {
+    const partner = activePartner === 'modon' ? 'modon' : 'alwaseet';
+    return readQuickOrderSnapshot(quickOrderSizesKey(partner), PARTNER_SIZE_FALLBACK);
+  });
   const [loadingCities, setLoadingCities] = useState(false);
   const [loadingRegions, setLoadingRegions] = useState(false);
   const [loadingPackageSizes, setLoadingPackageSizes] = useState(false);
