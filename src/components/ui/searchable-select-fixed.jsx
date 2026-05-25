@@ -98,19 +98,24 @@ export const SearchableSelectFixed = ({
     // ✅ الاستماع لكل من Dialog content و ScrollArea viewport
     const dialogContent = buttonRef.current.closest('[data-radix-dialog-content]');
     const scrollArea = buttonRef.current.closest('[data-radix-scroll-area-viewport]');
-    
+
     // الاستماع لكليهما
     [dialogContent, scrollArea].filter(Boolean).forEach(el => {
       el.addEventListener('scroll', updatePosition, { passive: true });
     });
-    
+
+    // ✅ الاستماع لتمرير النافذة (للصفحات العادية مثل طلب سريع) - capture لالتقاط كل تمرير
+    window.addEventListener('scroll', updatePosition, { capture: true, passive: true });
     window.addEventListener('resize', updatePosition, { passive: true });
-    
+    window.addEventListener('orientationchange', updatePosition, { passive: true });
+
     return () => {
       [dialogContent, scrollArea].filter(Boolean).forEach(el => {
         el.removeEventListener('scroll', updatePosition);
       });
+      window.removeEventListener('scroll', updatePosition, { capture: true });
       window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('orientationchange', updatePosition);
     };
   }, [open]);
 
