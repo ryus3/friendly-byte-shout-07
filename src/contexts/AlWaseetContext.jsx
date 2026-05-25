@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { useLocalStorage } from '@/hooks/useLocalStorage.jsx';
 import { supabase } from '@/integrations/supabase/client';
