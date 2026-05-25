@@ -46,6 +46,10 @@ export const NotificationsProvider = ({ children }) => {
 
     const canSeeNotification = useCallback((notification) => {
         if (!user || !notification) return false;
+        // إشعارات الإيراد خاصة بمالك المنتج فقط
+        if (notification.type === 'revenue_received') {
+            return notification.user_id === user.id;
+        }
         if (isAdminUser()) return true;
         if (notification.user_id === user.id) return true;
         if (notification.user_id && isDepartmentManagerUser() && visibleUserIdsRef.current.has(notification.user_id)) return true;
@@ -74,8 +78,9 @@ export const NotificationsProvider = ({ children }) => {
         const isDepartmentManager = isDepartmentManagerUser();
         
         if (isAdmin) {
-            // المدير العام يرى كل الإشعارات
+            // المدير العام يرى كل الإشعارات، ما عدا إشعارات الإيراد الخاصة بمستخدمين آخرين
             visibleUserIdsRef.current = new Set();
+            query = query.or(`type.neq.revenue_received,user_id.eq.${user.id}`);
         } else if (isDepartmentManager) {
             const { data: supervisedData } = await supabase
                 .from('employee_supervisors')
@@ -87,7 +92,8 @@ export const NotificationsProvider = ({ children }) => {
             const allAllowedIds = [user.id, ...supervisedIds];
             visibleUserIdsRef.current = new Set(allAllowedIds);
             
-            query = query.in('user_id', allAllowedIds);
+            query = query.in('user_id', allAllowedIds)
+                         .or(`type.neq.revenue_received,user_id.eq.${user.id}`);
         } else {
             visibleUserIdsRef.current = new Set([user.id]);
             query = query.eq('user_id', user.id);

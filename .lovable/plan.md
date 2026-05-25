@@ -1,55 +1,57 @@
-## 1. السماح بتكرار نفس المنتج في الطلب
+## نتائج الفحص (فاتورة 3406747)
 
-**المشكلة:** قيد فريد `unique_order_item_variant` يمنع تكرار نفس المتغير في طلب واحد، مما يفشل الطلبات الذكية بـ 3 منتجات متشابهة.
+| طلب | sales_amount | حركة نقد قاصة أحمد | الإشعار |
+|---|---|---|---|
+| 142809140 | 20,000 | **20,000 ✓** | 19,000 ✗ |
+| 143202894 | 20,000 | **20,000 ✓** | 19,000 ✗ |
+| 143197932 | 45,000 (−5k توصيل = 40k) | **40,000 ✓** | 38,000 ✗ |
+| 143815094 | 20,000 | **20,000 ✓** | 19,000 ✗ |
 
-**الحل:**
-- ترحيل قاعدة بيانات: حذف `DROP INDEX unique_order_item_variant`.
-- إزالة منطق الدمج `aggregatedItemsMap` في `src/contexts/SuperProvider.jsx` (السطر ~2831 ومسار الذكي ~1246) لإبقاء كل صف عنصر مستقلاً.
-- التأكد أن دوال الحجز/الخصم تتعامل مع الكميات تراكمياً (التراجع عبر استدعاءات RPC الموجودة لكل صف).
+**الإيرادات في القاصة صحيحة 100%.** المشكلة فقط في رسالة الإشعار.
 
-## 2. خريطة العراق — مظهر زجاجي بحواف مضيئة
+### السبب الجذري
+- ترايغر `route_cash_movement_to_product_owner` (هجرة 20260415) يحسب نصيب المالك = `final_amount − delivery_fee` (أو نسبة في حالة تعدد المالكين) → 20,000.
+- ترايغر `notify_product_owner_on_receipt` (هجرة 20260524) يحسب القيمة من `SUM(order_items.total_price)` فقط = 19,000، فيتجاهل هامش الموظف الذي يذهب لمالك المنتج عند **عدم وجود قاعدة ربح للموظف/المدير**.
 
-**الملف:** `src/components/dashboard/ProvincesHeatmapCard.jsx`
+### القاعدة المتفق عليها (مثبتة في الذاكرة)
+- إذا لم يكن للموظف قاعدة ربح: كل الإيراد + الزيادة يذهب لمالك المنتج.
+- إذا كانت هناك قاعدة ربح: تطبَّق وتذهب الزيادة/الخصم للموظف.
 
-- استبدال خلفية الـ mask المملوءة بـ:
-  - طبقة زجاجية شفافة `bg-white/5 backdrop-blur-xl`.
-  - حدود مضيئة باستخدام `filter: drop-shadow()` متعدد الطبقات (توهج primary + cyan خارجي).
-  - حد داخلي رفيع `stroke` على outline الـ SVG بدلاً من تعبئة كاملة.
-- إضافة طبقة gradient mesh خفيفة خلف الخريطة (نقاط ضوء aurora).
-- markers تبقى كما هي لكن مع حلقة زجاجية محيطة (`ring` نصف شفاف).
+---
 
-## 3. فلترة الطلبات المحلية المرتبطة حسب المشاهد
+## الخطة الكاملة
 
-**المشكلة:** `linkInvoiceWithLocalOrders` ترجع كل الطلبات المرتبطة بالفاتورة بدون فلترة حسب من يفتحها. لذلك يرى أحمد طلبات المدير المحلية، والمدير في صفحة متابعة أحمد يرى طلباته هو.
+### 1) إصلاح مبلغ إشعار الإيراد (مطابقة منطق القاصة بدقة)
+هجرة قاعدة بيانات تعيد كتابة `notify_product_owner_on_receipt` لتطابق منطق التوجيه المالي تماماً:
+- حساب `v_sales_amount = final_amount − delivery_fee`.
+- جلب `owners` لكل منتج وتجميع `item_total` لكل مالك.
+- إذا كان هناك مالك واحد: نصيبه = `v_sales_amount` بالكامل (20,000).
+- إذا كان هناك أكثر من مالك: نصيب كل مالك = `(item_total / items_total) × v_sales_amount`.
+- **خصم حصة الموظف من قاعدة الربح** (إن وُجدت قاعدة فعّالة في `employee_profit_rules` أو `department_manager_profit_rules` لهذا الموظف/المنتج بتاريخ سريان مطابق لتاريخ الطلب) — حصة الموظف تُخصم من نصيب المالك.
+- في حال لا قاعدة → كل الإيراد + الزيادة للمالك كما هو في القاصة.
+- إصلاح الإشعارات القديمة الموجودة بنفس الصيغة الجديدة (تحديث `message` لكل إشعار `revenue_received` يطابق طلباً موجوداً).
 
-**القاعدة المطلوبة:**
-- موظف يفتح الفاتورة → يرى فقط الطلبات حيث `orders.created_by = auth.uid()`.
-- مدير يفتح الفاتورة من صفحته العادية → يرى طلباته المحلية فقط.
-- مدير يفتح الفاتورة من صفحة متابعة موظف معين → يرى طلبات ذلك الموظف فقط (`created_by = employeeId`).
+### 2) قَصْر إشعار الإيراد على مالك المنتج فقط (UI)
+ملف: `src/contexts/NotificationsContext.jsx`
+- في `fetchNotifications` و `canSeeNotification`: استثناء النوع `revenue_received` من رؤية المدير العام/المدير الإداري إذا كان `user_id ≠ المستخدم الحالي`.
+- التطبيق:
+  - في `isAdmin`: استبدال الجلب المفتوح بـ `query.or('type.neq.revenue_received,user_id.eq.<self>')`.
+  - في `isDepartmentManager`: نفس الشرط داخل قائمة المسموح بها.
+  - في `canSeeNotification`: إذا `type === 'revenue_received' && user_id !== user.id` → return false.
 
-**التنفيذ:**
+### 3) إكمال ثورة تصميم الخريطة (حدود نحيفة + سماوي شفاف أنيق)
+ملف: `src/components/dashboard/ProvincesHeatmapCard.jsx`
+- إزالة طبقة `WebkitMaskImage` الزرقاء الكثيفة + `<img>` ذي الـ filter الثقيل.
+- إدراج `<svg>` يحتوي على `<path>` الفعلي لخريطة العراق (مقتبس من `/iraq-map.svg`):
+  - `fill="hsl(199 89% 65% / 0.05)"` (سماوي شفاف).
+  - `stroke="hsl(199 89% 70% / 0.9)"` بسماكة `1px` وعرض ثابت مع `vector-effect="non-scaling-stroke"`.
+  - توهج خفيف فقط: `filter: drop-shadow(0 0 3px hsl(199 89% 60% / 0.5))`.
+- خلفية بطاقة زجاجية رقيقة `bg-white/[0.02] backdrop-blur-sm` بدل الهالات الكبيرة.
+- المؤشرات (Markers) بحجم متناسق مع الخط النحيف الجديد.
 
-أ. `src/hooks/useAlWaseetInvoices.js` — تعديل `linkInvoiceWithLocalOrders(invoiceId, viewerUserId)`:
-   - إضافة معامل ثانٍ `viewerUserId`.
-   - فلترة النتيجة: `linkedWithOrders.filter(item => item.orders.created_by === viewerUserId)`.
-   - إذا `viewerUserId` فارغ → السلوك الحالي (للمدير في العرض العام).
+---
 
-ب. `src/components/orders/AlWaseetInvoiceDetailsDialog.jsx`:
-   - استقبال prop جديد `viewerUserId`.
-   - تمريره إلى `linkInvoiceWithLocalOrders`.
-
-ج. الاستدعاءات:
-   - `EmployeeDeliveryInvoicesTab.jsx`: تمرير `viewerUserId={employeeId}` (يعمل لكل من الموظف الذي يرى نفسه، والمدير الذي يفتح متابعة موظف).
-   - `AllEmployeesInvoicesView.jsx` (عرض المدير العام): تمرير `viewerUserId={user.id}` أو ترك null لإظهار كل الروابط (سنختار `user.id` لكي يرى المدير طلباته المحلية المرتبطة فقط، توافقاً مع المنطق).
-
-د. تحديث عداد الطلبات المرتبطة في الواجهة (linkedCount) ليعكس الكمية المفلترة، مع إبقاء `cachedCount` (إجمالي طلبات شركة التوصيل) كما هو.
-
-## الملفات المعدّلة
-
-- `supabase/migrations/<new>.sql` — حذف قيد التكرار.
-- `src/contexts/SuperProvider.jsx` — إزالة الدمج في مسارين.
-- `src/components/dashboard/ProvincesHeatmapCard.jsx` — تصميم زجاجي.
-- `src/hooks/useAlWaseetInvoices.js` — معامل المشاهد + فلترة.
-- `src/components/orders/AlWaseetInvoiceDetailsDialog.jsx` — تمرير المشاهد.
-- `src/components/orders/EmployeeDeliveryInvoicesTab.jsx` — تمرير `employeeId`.
-- `src/components/orders/AllEmployeesInvoicesView.jsx` — تمرير `user.id`.
+### الملفات/التغييرات
+1. **هجرة SQL جديدة**: إعادة كتابة `notify_product_owner_on_receipt` + سكربت تصحيح للإشعارات الحالية.
+2. `src/contexts/NotificationsContext.jsx` — فلترة `revenue_received` للمالك فقط.
+3. `src/components/dashboard/ProvincesHeatmapCard.jsx` — إعادة بناء العرض البصري.
