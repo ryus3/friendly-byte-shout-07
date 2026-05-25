@@ -1684,10 +1684,17 @@ export const AlWaseetProvider = ({ children }) => {
   
   // ✅ قائمة الموظفين تحت إشراف مدير القسم (للمزامنة فقط)
   const supervisedIdsRef = useRef([]);
+  // ✅ هل المستخدم مدير قسم أو أعلى (للسماح بتوسيع نطاق المزامنة)
+  const isManagerOrAdmin = useMemo(() => {
+    const roles = user?.roles || [];
+    return roles.some(r => ['super_admin', 'admin', 'department_manager', 'general_manager'].includes(r))
+      || user?.email === 'ryusbrand@gmail.com';
+  }, [user]);
+
   useEffect(() => {
     const loadSupervised = async () => {
       const uid = user?.user_id || user?.id;
-      if (!uid) { supervisedIdsRef.current = []; return; }
+      if (!uid || !isManagerOrAdmin) { supervisedIdsRef.current = []; return; }
       try {
         const { data } = await supabase
           .from('employee_supervisors')
@@ -1698,7 +1705,7 @@ export const AlWaseetProvider = ({ children }) => {
       } catch { supervisedIdsRef.current = []; }
     };
     loadSupervised();
-  }, [user?.user_id, user?.id]);
+  }, [user?.user_id, user?.id, isManagerOrAdmin]);
 
   // دالة مساعدة لتطبيق فصل الحسابات على جميع استعلامات الطلبات
   const scopeOrdersQuery = useCallback((query, restrictToOwnOrders = false) => {
@@ -1710,19 +1717,21 @@ export const AlWaseetProvider = ({ children }) => {
       return query.eq('created_by', userUUID);
     }
     
-    // ✅ المدير يرى جميع الطلبات للعرض - باستخدام user_id الصحيح
+    // ✅ المدير العام فقط يرى جميع الطلبات
     if (user?.email === 'ryusbrand@gmail.com' || userUUID === '91484496-b887-44f7-9e5d-be9db5567604') {
       return query;
     }
     
-    // ✅ مدير القسم: طلباته + طلبات الموظفين تحت إشرافه فقط
-    const allowedIds = [userUUID, ...(supervisedIdsRef.current || [])];
-    if (allowedIds.length > 1) {
-      return query.in('created_by', allowedIds);
+    // ✅ مدير القسم: طلباته + طلبات الموظفين تحت إشرافه فقط (لا يُفعّل إلا للمدراء فعلياً)
+    if (isManagerOrAdmin) {
+      const allowedIds = [userUUID, ...(supervisedIdsRef.current || [])];
+      if (allowedIds.length > 1) {
+        return query.in('created_by', allowedIds);
+      }
     }
-    // الموظفون يرون طلباتهم فقط
+    // الموظفون يرون طلباتهم فقط — صارم
     return query.eq('created_by', userUUID);
-  }, [user]);
+  }, [user, isManagerOrAdmin]);
   
   // إنشاء فلتر أمان إضافي لطلبات الوسيط
   const secureOrderFilter = createSecureOrderFilter(user);
