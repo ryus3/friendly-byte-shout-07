@@ -770,12 +770,20 @@ export const QuickOrderContent = ({ isDialog = false, onOrderCreated, formRef, s
               packageSizesData = [];
             }
           } else {
-            // ✅ الوسيط: cache من cachedCities (موجود)
-            if (cachedCities.length > 0) {
-              citiesData = cachedCities.map(city => ({
-                id: city.alwaseet_id || city.id,
-                name: city.name
+            // ✅ الوسيط: cache-first من city_delivery_mappings (external_id = AlWaseet city id)
+            //    يضمن أن الـ id المختار يطابق دائماً جداول الـ mappings عند إنشاء الطلب
+            const { data: alwCityMaps } = await supabase
+              .from('city_delivery_mappings')
+              .select('external_id, external_name, city_id, cities_master:city_id(name)')
+              .eq('delivery_partner', 'alwaseet')
+              .eq('is_active', true);
+
+            if (alwCityMaps && alwCityMaps.length > 0) {
+              citiesData = alwCityMaps.map(m => ({
+                id: m.external_id,
+                name: m.cities_master?.name || m.external_name
               }));
+              devLog.log(`✅ الوسيط: تم جلب ${citiesData.length} مدينة من city_delivery_mappings`);
             } else {
               citiesData = [];
             }
