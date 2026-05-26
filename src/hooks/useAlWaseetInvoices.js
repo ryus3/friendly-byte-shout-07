@@ -826,6 +826,7 @@ export const useAlWaseetInvoices = () => {
             sales_amount,
             final_amount,
             receipt_received,
+            created_by,
             created_at,
             updated_at
           )
