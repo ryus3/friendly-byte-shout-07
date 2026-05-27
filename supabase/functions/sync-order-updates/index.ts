@@ -368,7 +368,14 @@ Deno.serve(async (req) => {
               updates.is_partial_delivery = true;
               console.log(`📦 [PARTIAL-21] ${localOrder.tracking_number} تحويل لتسليم جزئي`);
             } else if (newStatus === '17') {
-              finalStatus = 'returned_in_stock';
+              // ✅ حماية: لا يمكن تحويل partial_delivery إلى returned_in_stock (يخالف check constraint)
+              // إن كان order_type جزئي بالفعل، نُبقي الحالة ونعالج لاحقاً عبر معالج المرتجعات
+              if (localOrder.order_type === 'partial_delivery') {
+                finalStatus = localOrder.status;
+                console.log(`🔒 [17-PARTIAL] ${localOrder.tracking_number} يبقى partial_delivery، لا يتحول لمرتجع كامل`);
+              } else {
+                finalStatus = 'returned_in_stock';
+              }
             } else if (newStatus === '31' || newStatus === '32') {
               finalStatus = 'cancelled';
             }
