@@ -182,14 +182,16 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       productMap[pid].cost += cost;
     });
 
-    // Fallback: إذا لم تتوفر order_items، نحسب من orders (final_amount - delivery_fee)
+    // ✅ الإيراد الصحيح للفاتورة = مجموع final_amount للطلبات المرتبطة - رسوم التوصيل
+    // هذا يحترم الخصم/الزيادة/التسليم الجزئي، ولا يعتمد على order_items التي قد لا تطابق المبلغ الفعلي
     const itemsAvailable = (orderItems || []).length > 0;
     const revenueFromOrders = ordersData.reduce(
       (s, o) => s + ((Number(o.final_amount) || Number(o.total_amount) || 0) - (Number(o.delivery_fee) || 0)),
       0
     );
 
-    const totalRevenue = itemsAvailable ? revenueFromItems : revenueFromOrders;
+    // نعتمد revenueFromOrders كمصدر حقيقة الإيراد دائماً (مطابق لمبلغ شركة التوصيل)
+    const totalRevenue = revenueFromOrders;
 
     // التكلفة من order_items فقط (الأدق)
     const totalCost = costFromItems;
