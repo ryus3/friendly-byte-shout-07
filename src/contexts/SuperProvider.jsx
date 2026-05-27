@@ -2888,17 +2888,17 @@ export const SuperProvider = ({ children }) => {
             productIds 
           });
           
-          // حفظ معلومة الزيادة في order_discounts كرصيد إضافي
-          // سيتم توزيعها على الأرباح عند حساب الأرباح
+          // حفظ معلومة الزيادة في order_discounts بالأعمدة الصحيحة
+          // (discount_amount سالب يعني زيادة، affects_employee_profit يحدد الوجهة)
           await supabase.from('order_discounts').insert({
             order_id: createdOrder.id,
-            amount: -priceAdjustment, // سالب لأنها زيادة وليست خصم
-            type: hasEmployeeProfitRule ? 'employee_markup' : 'system_markup',
-            notes: `زيادة سعر (${aiOrder.written_total_amount} بدلاً من ${aiOrder.calculated_total_amount}) - ${hasEmployeeProfitRule ? 'ستُضاف لربح الموظف' : 'ستُضاف لربح النظام'}`,
+            discount_amount: -priceAdjustment, // سالب لأنها زيادة وليست خصم
+            discount_reason: `زيادة سعر (${aiOrder.written_total_amount} بدلاً من ${aiOrder.calculated_total_amount}) - ${hasEmployeeProfitRule ? 'ستُضاف لربح الموظف' : 'ستُضاف لربح النظام'}`,
+            affects_employee_profit: hasEmployeeProfitRule,
             applied_by: resolveCurrentUserUUID()
           });
           
-          devLog.log(`✅ تم حفظ الزيادة كـ ${hasEmployeeProfitRule ? 'employee_markup' : 'system_markup'}`);
+          devLog.log(`✅ تم حفظ الزيادة (affects_employee_profit=${hasEmployeeProfitRule})`);
         } catch (markupErr) {
           devLog.warn('⚠️ فشل حفظ معلومة الزيادة:', markupErr);
         }
