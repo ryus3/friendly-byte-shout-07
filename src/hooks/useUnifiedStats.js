@@ -208,14 +208,17 @@ export const useUnifiedStats = () => {
         value: `${product.quantity} قطعة`
       }));
 
-    // أفضل المحافظات - حساب موحد
+    // ✅ المحافظات الأكثر طلباً — نعتمد customer_city كمحافظة (province هو منطقة فرعية)
+    // ونحتسب الطلبات المسلّمة/المكتملة فقط ضمن نطاق المستخدم (مفلتر مسبقاً)
     const provinceOrderMap = new Map();
     filteredData.orders.forEach(order => {
-      if (!['completed', 'delivered'].includes(order.status)) return;
-      
-      const province = order.customer_province || 'غير محدد';
+      const isCounted = ['completed', 'delivered'].includes(order.status)
+        || String(order.delivery_status || '') === '4';
+      if (!isCounted) return;
+
+      const province = order.customer_city || order.customer_province || 'غير محدد';
       const revenue = order.final_amount || order.total_amount || 0;
-      
+
       if (provinceOrderMap.has(province)) {
         const existing = provinceOrderMap.get(province);
         existing.ordersCount++;
