@@ -286,29 +286,48 @@ Deno.serve(async (req) => {
         }
 
         if (!waseetOrder) {
-          // 🛡️ السياسة الجديدة: لا حذف تلقائي على الإطلاق (لا فعلي ولا ناعم).
-          //   الحذف ممنوع إلا عند تأكيد 100% من شركة التوصيل أن الطلب محذوف فعلاً
-          //   عبر مسار صريح (UI/endpoint مخصص). غياب الطلب من قائمة المزامنة لا يكفي
-          //   كدليل حذف — قد يكون بسبب تأخر فهرسة الشريك، أو تجزئة القوائم، أو
-          //   فشل جزئي. نكتفي بزيادة عداد الاشتباه للمراقبة فقط.
+          // 🛡️ الحذف التلقائي الآمن:
+          //  لا نحذف إلا إذا تحققت كل الشروط الصارمة معاً:
+          //   1) جلب قائمة شركة التوصيل لنفس (الشركة + الحساب) نجح فعلاً
+          //   2) عداد الاختفاء المتراكم تجاوز حد التأكيد (6 محاولات)
+          //   3) الطلب لم يصبح مفوتراً ولم يصل لحالة نهائية ولم يُستلم إيصاله
+          //   4) delivery_status في حالة بدائية فقط ('1' قيد التجهيز أو 'pending')
+          //  بهذا نضمن أن الطلب فعلاً محذوف من شركة التوصيل وليس فشل API مؤقت.
           const localAccount = (localOrder.delivery_account_used || '').trim();
           const fetchKey = `${localOrder.delivery_partner}:${localAccount}`;
-          const partnerHadSuccess = localAccount
-            ? successfulFetches.has(fetchKey)
-            : Array.from(successfulFetches).some(k => k.startsWith(`${localOrder.delivery_partner}:`));
+          const accountFetchedOk = localAccount ? successfulFetches.has(fetchKey) : false;
+          const partnerHadSuccess = accountFetchedOk
+            || Array.from(successfulFetches).some(k => k.startsWith(`${localOrder.delivery_partner}:`));
 
-          if (partnerHadSuccess) {
-            const newCount = ((localOrder as any).partner_missed_count || 0) + 1;
-            console.log(`⚠️ الطلب ${localOrder.tracking_number} لم يظهر في قائمة ${localOrder.delivery_partner} (عداد اشتباه=${newCount}) — لا حذف تلقائي`);
+          const CONFIRM_THRESHOLD = 6;
+          const currentMisses = ((localOrder as any).partner_missed_count || 0) + 1;
+          const eligibleStatus = ['1', 'pending'].includes(String(localOrder.delivery_status || '').trim());
+          const safeOrderState = !localOrder.receipt_received
+            && !localOrder.delivery_partner_invoice_id
+            && !['completed','delivered','returned_in_stock','cancelled'].includes(String(localOrder.status));
+
+          if (accountFetchedOk && currentMisses >= CONFIRM_THRESHOLD && eligibleStatus && safeOrderState) {
+            console.log(`🗑️ حذف آمن للطلب ${localOrder.tracking_number} (اختفى ${currentMisses} مرات من ${fetchKey})`);
+            const { error: delErr } = await supabase.from('orders').delete().eq('id', localOrder.id);
+            if (delErr) {
+              console.error(`❌ فشل الحذف الآمن للطلب ${localOrder.tracking_number}:`, delErr.message);
+              await supabase.from('orders').update({ partner_missed_count: currentMisses }).eq('id', localOrder.id);
+            } else {
+              updatedCount++;
+              changes.push({ order_id: localOrder.id, order_number: localOrder.order_number, tracking_number: localOrder.tracking_number, account: localAccount, changes: ['حذف تلقائي: الطلب غير موجود في شركة التوصيل'] });
+            }
+          } else if (partnerHadSuccess) {
+            console.log(`⚠️ الطلب ${localOrder.tracking_number} لم يظهر (عداد=${currentMisses}, account_ok=${accountFetchedOk}, eligible=${eligibleStatus}, safe=${safeOrderState}) — لا حذف بعد`);
             await supabase
               .from('orders')
-              .update({ partner_missed_count: newCount })
+              .update({ partner_missed_count: currentMisses })
               .eq('id', localOrder.id);
           } else {
-            console.log(`⏭️ الطلب ${localOrder.tracking_number} غير موجود لكن لم يصل رد ناجح من ${localOrder.delivery_partner} - تخطي بأمان`);
+            console.log(`⏭️ الطلب ${localOrder.tracking_number}: لم يصل رد ناجح من ${localOrder.delivery_partner} - تخطي`);
           }
           continue;
         }
+
 
         // ✅ إعادة تصفير العداد عند ظهور الطلب مجدداً
         if ((localOrder as any).partner_missed_count > 0) {
