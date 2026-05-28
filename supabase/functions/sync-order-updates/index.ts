@@ -286,27 +286,30 @@ Deno.serve(async (req) => {
         }
 
         if (!waseetOrder) {
-          // 🛡️ الحذف التلقائي الآمن:
-          //  لا نحذف إلا إذا تحققت كل الشروط الصارمة معاً:
+          // 🛡️ الحذف التلقائي الصارم:
+          //  لا نحذف إلا إذا تحققت كل الشروط معاً:
           //   1) جلب قائمة شركة التوصيل لنفس (الشركة + الحساب) نجح فعلاً
-          //   2) عداد الاختفاء المتراكم تجاوز حد التأكيد (6 محاولات)
-          //   3) الطلب لم يصبح مفوتراً ولم يصل لحالة نهائية ولم يُستلم إيصاله
-          //   4) delivery_status في حالة بدائية فقط ('1' قيد التجهيز أو 'pending')
-          //  بهذا نضمن أن الطلب فعلاً محذوف من شركة التوصيل وليس فشل API مؤقت.
+          //   2) عداد الاختفاء المتراكم >= 3 (تأكيد ثلاثي)
+          //   3) عمر الطلب > 3 دقائق (تفادي حذف طلب أُنشئ للتو ولم يظهر بعد)
+          //   4) لم يصبح مفوتراً ولم يصل لحالة نهائية ولم يُستلم إيصاله
+          //   5) delivery_status بدائي فقط ('1' أو 'pending')
           const localAccount = (localOrder.delivery_account_used || '').trim();
           const fetchKey = `${localOrder.delivery_partner}:${localAccount}`;
           const accountFetchedOk = localAccount ? successfulFetches.has(fetchKey) : false;
           const partnerHadSuccess = accountFetchedOk
             || Array.from(successfulFetches).some(k => k.startsWith(`${localOrder.delivery_partner}:`));
 
-          const CONFIRM_THRESHOLD = 6;
+          const CONFIRM_THRESHOLD = 3;
+          const MIN_AGE_MS = 3 * 60 * 1000; // 3 دقائق
           const currentMisses = ((localOrder as any).partner_missed_count || 0) + 1;
           const eligibleStatus = ['1', 'pending'].includes(String(localOrder.delivery_status || '').trim());
           const safeOrderState = !localOrder.receipt_received
             && !localOrder.delivery_partner_invoice_id
             && !['completed','delivered','returned_in_stock','cancelled'].includes(String(localOrder.status));
+          const createdAt = (localOrder as any).created_at ? new Date((localOrder as any).created_at).getTime() : 0;
+          const oldEnough = createdAt > 0 && (Date.now() - createdAt) >= MIN_AGE_MS;
 
-          if (accountFetchedOk && currentMisses >= CONFIRM_THRESHOLD && eligibleStatus && safeOrderState) {
+          if (accountFetchedOk && currentMisses >= CONFIRM_THRESHOLD && eligibleStatus && safeOrderState && oldEnough) {
             console.log(`🗑️ حذف آمن للطلب ${localOrder.tracking_number} (اختفى ${currentMisses} مرات من ${fetchKey})`);
             const { error: delErr } = await supabase.from('orders').delete().eq('id', localOrder.id);
             if (delErr) {
@@ -317,7 +320,7 @@ Deno.serve(async (req) => {
               changes.push({ order_id: localOrder.id, order_number: localOrder.order_number, tracking_number: localOrder.tracking_number, account: localAccount, changes: ['حذف تلقائي: الطلب غير موجود في شركة التوصيل'] });
             }
           } else if (partnerHadSuccess) {
-            console.log(`⚠️ الطلب ${localOrder.tracking_number} لم يظهر (عداد=${currentMisses}, account_ok=${accountFetchedOk}, eligible=${eligibleStatus}, safe=${safeOrderState}) — لا حذف بعد`);
+            console.log(`⚠️ الطلب ${localOrder.tracking_number} لم يظهر (عداد=${currentMisses}, account_ok=${accountFetchedOk}, eligible=${eligibleStatus}, safe=${safeOrderState}, old=${oldEnough}) — لا حذف بعد`);
             await supabase
               .from('orders')
               .update({ partner_missed_count: currentMisses })
