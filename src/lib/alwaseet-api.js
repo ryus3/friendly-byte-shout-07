@@ -555,10 +555,7 @@ const mapToAlWaseetFields = (orderData) => {
   
   devLog.log('📋 mapToAlWaseetFields - Mapped result:', mapped);
   
-  // التحقق من البيانات المطلوبة
-  if (!mapped.qr_id) {
-    console.error('❌ Missing qr_id/tracking_number in order data');
-  }
+  // التحقق من البيانات المطلوبة (qr_id مطلوب فقط للتعديل، يتحقق منه editAlWaseetOrder)
   if (!mapped.client_name) {
     devLog.warn('⚠️ Missing customer name in order data');
   }
