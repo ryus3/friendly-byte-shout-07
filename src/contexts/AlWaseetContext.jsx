@@ -1772,10 +1772,15 @@ export const AlWaseetProvider = ({ children }) => {
   // إنشاء فلتر أمان إضافي لطلبات الوسيط
   const secureOrderFilter = createSecureOrderFilter(user);
   
-  // تسجيل نجاح تطبيق نظام الأمان (مرة واحدة فقط)
+  // تسجيل نجاح تطبيق نظام الأمان (مرة واحدة فقط لكل جلسة)
   React.useEffect(() => {
     if (user && userUUID) {
-      displaySecuritySummary();
+      try {
+        if (typeof window !== 'undefined' && !window.sessionStorage.getItem('__sec_summary_shown__')) {
+          window.sessionStorage.setItem('__sec_summary_shown__', '1');
+          displaySecuritySummary();
+        }
+      } catch { /* ignore storage errors */ }
     }
   }, [user, userUUID]);
   

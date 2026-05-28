@@ -482,26 +482,46 @@ export const createAlWaseetOrder = async (orderData, token) => {
   
   // Normalize and fallback if qr_id missing
   let normalized = createRes || {};
-  let qrId = String(normalized?.qr_id || normalized?.tracking_number || normalized?.id || '').trim();
-  let id = String(normalized?.id || '').trim();
+  const pickId = (o) => String(
+    o?.qr_id ?? o?.tracking_number ?? o?.id ?? o?.order_id ??
+    o?.data?.qr_id ?? o?.data?.tracking_number ?? o?.data?.id ?? ''
+  ).trim();
+  let qrId = pickId(normalized);
+  let id = String(normalized?.id || normalized?.data?.id || '').trim();
 
   if (!qrId) {
-    try {
-      // Fetch recent orders and try to match by phone and price
-      const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
-      const last10 = (formattedData.client_mobile || '').replace(/\D/g, '').slice(-10);
-      const candidates = (orders || []).filter((o) =>
-        String(o?.client_mobile || '').replace(/\D/g, '').endsWith(last10)
-      );
-      // Prefer exact price match
-      const exact = candidates.find(o => parseInt(o?.price) === formattedData.price) || candidates[0];
-      if (exact) {
-        qrId = String(exact.qr_id || exact.tracking_number || exact.id || '').trim();
-        id = String(exact.id || id || '').trim();
-        normalized = { ...exact, id, qr_id: qrId };
+    // Fallback مزدوج: محاولتان متباعدتان مع مطابقة الهاتف + السعر + الأحدث
+    const last10 = (formattedData.client_mobile || '').replace(/\D/g, '').slice(-10);
+    const targetPrice = Number(formattedData.price);
+    const tryLookup = async () => {
+      try {
+        const orders = await handleApiCall('merchant-orders', 'GET', token, null, { token });
+        const candidates = (orders || []).filter((o) =>
+          String(o?.client_mobile || '').replace(/\D/g, '').endsWith(last10)
+        );
+        // ترتيب: تطابق السعر أولاً، ثم الأحدث created_at
+        const sorted = [...candidates].sort((a, b) => {
+          const ta = new Date(a?.created_at || a?.updated_at || 0).getTime();
+          const tb = new Date(b?.created_at || b?.updated_at || 0).getTime();
+          return tb - ta;
+        });
+        const exact = sorted.find(o => Math.round(Number(o?.price)) === targetPrice) || sorted[0];
+        return exact || null;
+      } catch (e) {
+        devLog.warn('Fallback lookup attempt failed:', e?.message);
+        return null;
       }
-    } catch (fbErr) {
-      devLog.warn('Fallback lookup for qr_id failed:', fbErr);
+    };
+
+    let match = await tryLookup();
+    if (!match) {
+      await new Promise(r => setTimeout(r, 2000));
+      match = await tryLookup();
+    }
+    if (match) {
+      qrId = pickId(match);
+      id = String(match.id || id || '').trim();
+      normalized = { ...match, id, qr_id: qrId };
     }
   }
 
@@ -555,10 +575,7 @@ const mapToAlWaseetFields = (orderData) => {
   
   devLog.log('📋 mapToAlWaseetFields - Mapped result:', mapped);
   
-  // التحقق من البيانات المطلوبة
-  if (!mapped.qr_id) {
-    console.error('❌ Missing qr_id/tracking_number in order data');
-  }
+  // التحقق من البيانات المطلوبة (qr_id مطلوب فقط للتعديل، يتحقق منه editAlWaseetOrder)
   if (!mapped.client_name) {
     devLog.warn('⚠️ Missing customer name in order data');
   }
