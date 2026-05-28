@@ -242,7 +242,7 @@ Deno.serve(async (req) => {
     // ❗ نسمح بمزامنة جميع حالات "تحتاج معالجة/راجع/ملغي" حتى تتحول للحالة الصحيحة لاحقاً
     let ordersQ = supabase
       .from('orders')
-      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner, customer_city, customer_province, customer_address, partner_missed_count, receipt_received, delivery_partner_invoice_id')
+      .select('id, tracking_number, delivery_partner_order_id, qr_id, delivery_status, final_amount, delivery_fee, created_by, order_type, refund_amount, order_number, notes, delivery_account_used, status, delivery_partner, customer_city, customer_province, customer_address, partner_missed_count, receipt_received, delivery_partner_invoice_id, created_at')
       .in('delivery_partner', activePartnerKeys)
       .not('delivery_status', 'in', '(4,17)')
       .not('status', 'in', '(completed,returned_in_stock)')
