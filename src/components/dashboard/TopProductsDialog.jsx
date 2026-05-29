@@ -3,11 +3,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Button } from '@/components/ui/button';
 import { Package, Calendar, Eye, TrendingUp, DollarSign, ShoppingCart } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { startOfMonth, startOfYear, subMonths } from 'date-fns';
 import useOrdersAnalytics from '@/hooks/useOrdersAnalytics';
 
 const TopProductsDialog = ({ open, onOpenChange, employeeId = null }) => {
   const [selectedPeriod, setSelectedPeriod] = useState('all');
-  const { analytics, loading, error } = useOrdersAnalytics(!!employeeId);
+  const { analytics, loading, error, setDateRange } = useOrdersAnalytics(!!employeeId);
+
+  // ✅ تحويل selectedPeriod إلى dateRange (نفس منطق TopCustomersDialog)
+  useEffect(() => {
+    const now = new Date();
+    let range = { from: null, to: null };
+    switch (selectedPeriod) {
+      case 'week': range = { from: new Date(now.getTime() - 7*24*60*60*1000), to: now }; break;
+      case 'month': range = { from: startOfMonth(now), to: now }; break;
+      case '3months': range = { from: startOfMonth(subMonths(now, 2)), to: now }; break;
+      case '6months': range = { from: startOfMonth(subMonths(now, 5)), to: now }; break;
+      case 'year': range = { from: startOfYear(now), to: now }; break;
+      default: range = { from: null, to: null };
+    }
+    setDateRange(range);
+  }, [selectedPeriod, setDateRange]);
 
   const periods = [
     { key: 'week', label: 'الأسبوع الماضي' },
