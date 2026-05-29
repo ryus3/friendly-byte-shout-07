@@ -1272,10 +1272,17 @@ export const AlWaseetProvider = ({ children }) => {
                   updated_at: new Date().toISOString()
                 };
 
-                // ✅ تحويل order_type فوراً عند الحالة 21 لأول مرة
-                if (newDeliveryStatus === '21' && localOrder.order_type !== 'partial_delivery') {
+                // ✅ تحويل order_type فوراً عند الحالة 21 — فقط للطلبات العادية
+                // (لا نُغيّر النوع للاستبدال/الإرجاع/الاستبدال التي أُنشئت بنوعها الصحيح)
+                const protectedOrderTypes = ['partial_delivery', 'exchange', 'replacement', 'return'];
+                if (newDeliveryStatus === '21' && !protectedOrderTypes.includes(localOrder.order_type)) {
                   updates.order_type = 'partial_delivery';
                   devLog.log(`🔄 [PARTIAL-DELIVERY] تحويل نوع الطلب ${localOrder.tracking_number} إلى partial_delivery`);
+                }
+
+                // ✅ إعادة تصفير عداد الاختفاء عند ظهور الطلب
+                if (Number(localOrder.partner_missed_count) > 0) {
+                  updates.partner_missed_count = 0;
                 }
 
                 // ✅ مزامنة المدينة/المنطقة من شركة التوصيل (بدون استهلاك API إضافي)
