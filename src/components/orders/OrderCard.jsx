@@ -254,7 +254,13 @@ const OrderCard = React.memo(({
     // فقط للطلبات متعددة المنتجات من الوسيط
     if (order.delivery_partner?.toLowerCase() !== 'alwaseet') return false;
     if (!order.order_items || order.order_items.length <= 1) return false;
-    
+
+    // 🔒 استثناء صارم: طلبات الاستبدال/الإرجاع لا تفتح نافذة التسليم الجزئي أبداً
+    // (لها مسارها الخاص — السعر يأتي من شركة التوصيل دون افتراضات)
+    if (order.order_type === 'exchange' || order.order_type === 'replacement' || order.order_type === 'return') {
+      return false;
+    }
+
     // التحقق من أن جميع العناصر لا تزال في pending
     const allPending = order.order_items.every(item => 
       !item.item_status || item.item_status === 'pending'
