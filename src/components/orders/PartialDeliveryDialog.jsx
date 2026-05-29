@@ -260,11 +260,25 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
             </span>
             <Package className="w-8 h-8 text-primary" />
           </DialogTitle>
-          {(order?.tracking_number || order?.order_number) && (
+          {(order?.tracking_number || order?.order_number || order?.customer_phone) && (
             <div className="text-right text-sm text-muted-foreground mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 justify-end">
-              <span className="font-semibold text-foreground">
-                طلب #{order?.tracking_number || order?.order_number}
-              </span>
+              {(order?.tracking_number || order?.order_number) && (
+                <span className="font-semibold text-foreground">
+                  طلب #{order?.tracking_number || order?.order_number}
+                </span>
+              )}
+              {order?.customer_phone && (
+                <>
+                  <span>•</span>
+                  <a
+                    href={`tel:${order.customer_phone}`}
+                    className="font-semibold text-primary hover:underline"
+                    dir="ltr"
+                  >
+                    📞 {order.customer_phone}
+                  </a>
+                </>
+              )}
               {(order?.customer_city || order?.customer_province) && (
                 <>
                   <span>•</span>

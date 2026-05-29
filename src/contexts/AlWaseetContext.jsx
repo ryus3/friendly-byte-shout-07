@@ -1272,10 +1272,17 @@ export const AlWaseetProvider = ({ children }) => {
                   updated_at: new Date().toISOString()
                 };
 
-                // ✅ تحويل order_type فوراً عند الحالة 21 لأول مرة
-                if (newDeliveryStatus === '21' && localOrder.order_type !== 'partial_delivery') {
+                // ✅ تحويل order_type فوراً عند الحالة 21 — فقط للطلبات العادية
+                // (لا نُغيّر النوع للاستبدال/الإرجاع/الاستبدال التي أُنشئت بنوعها الصحيح)
+                const protectedOrderTypes = ['partial_delivery', 'exchange', 'replacement', 'return'];
+                if (newDeliveryStatus === '21' && !protectedOrderTypes.includes(localOrder.order_type)) {
                   updates.order_type = 'partial_delivery';
                   devLog.log(`🔄 [PARTIAL-DELIVERY] تحويل نوع الطلب ${localOrder.tracking_number} إلى partial_delivery`);
+                }
+
+                // ✅ إعادة تصفير عداد الاختفاء عند ظهور الطلب
+                if (Number(localOrder.partner_missed_count) > 0) {
+                  updates.partner_missed_count = 0;
                 }
 
                 // ✅ مزامنة المدينة/المنطقة من شركة التوصيل (بدون استهلاك API إضافي)
@@ -1515,69 +1522,41 @@ export const AlWaseetProvider = ({ children }) => {
                 } else {
                   devLog.warn(`❌ الطلب ${localOrder.tracking_number} غير موجود حتى في getOrderById!`);
                   
-                  // ⚠️ الطلب غير موجود - فحص إمكانية الحذف التلقائي
+                  // 🛡️ منطق الحذف التلقائي الصارم (موحَّد مع edge function sync-order-updates)
+                  // الشروط الـ 5 (يجب أن تتحقق كلها معاً):
+                  //   1) partner_missed_count >= 3 (تأكيد ثلاثي بمرور المزامنة)
+                  //   2) عمر الطلب >= 3 دقائق
+                  //   3) delivery_status IN ('1','pending')
+                  //   4) receipt_received = false و لا فاتورة مرتبطة
+                  //   5) status ليس نهائياً
+                  //   - + canAutoDeleteOrder (ملكية + حماية)
                   if (canAutoDeleteOrder(localOrder, user)) {
-                    devLog.log(`🗑️ [AUTO-DELETE-CHECK] الطلب ${localOrder.tracking_number} غير موجود - بدء فحص الحذف...`);
-                    
-                    // ✅ جلب توكن الحساب المحدد
-                    const deleteToken = await getTokenForUser(
-                      localOrder.created_by, 
-                      localOrder.delivery_account_used, 
-                      localOrder.delivery_partner, 
-                      true // strict mode
-                    );
-                    
-                    // ⛔ لا تحذف إذا لم يوجد توكن صالح
-                    if (!deleteToken) {
-                      devLog.warn(`⛔ إيقاف الحذف - لا يوجد توكن صالح للحساب "${localOrder.delivery_account_used}"`);
+                    const CONFIRM_THRESHOLD = 3;
+                    const MIN_AGE_MS = 3 * 60 * 1000;
+                    const currentMisses = (Number(localOrder.partner_missed_count) || 0) + 1;
+                    const eligibleStatus = ['1', 'pending'].includes(String(localOrder.delivery_status || '').trim());
+                    const safeOrderState = !localOrder.receipt_received
+                      && !localOrder.delivery_partner_invoice_id
+                      && !['completed','delivered','returned_in_stock','cancelled'].includes(String(localOrder.status));
+                    const createdAtMs = localOrder.created_at ? new Date(localOrder.created_at).getTime() : 0;
+                    const oldEnough = createdAtMs > 0 && (Date.now() - createdAtMs) >= MIN_AGE_MS;
+
+                    if (currentMisses >= CONFIRM_THRESHOLD && eligibleStatus && safeOrderState && oldEnough) {
+                      devLog.log(`🗑️ [AUTO-DELETE] ${localOrder.tracking_number}: misses=${currentMisses} ✓ age✓ eligible✓ safe✓ — حذف آمن`);
                       toast({
-                        title: "⚠️ توكن منتهي",
-                        description: `لم يتم التحقق من الطلب ${localOrder.tracking_number}. سجّل دخول للحساب أولاً.`,
+                        title: "🗑️ طلب محذوف من شركة التوصيل",
+                        description: `الطلب ${localOrder.tracking_number} غير موجود وتم حذفه محلياً`,
                         variant: "warning",
                         duration: 8000
                       });
+                      await handleAutoDeleteOrder(localOrder.id, 'syncVisibleBatch');
                     } else {
-                      // ✅ فحص 3 مرات بتأخير
-                      let foundOrder = false;
-                      const RETRY_DELAYS = [0, 2000, 4000];
-                      
-                      for (let attempt = 1; attempt <= 3; attempt++) {
-                        if (attempt > 1) await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt-1]));
-                        
-                        devLog.log(`🔍 محاولة ${attempt}/3: فحص ${localOrder.tracking_number}`);
-                        
-                        try {
-                          // طريقة 1: بـ QR
-                          let found = await AlWaseetAPI.getOrderByQR(deleteToken.token, localOrder.tracking_number);
-                          
-                          // طريقة 2: بـ ID (fallback)
-                          if (!found && localOrder.delivery_partner_order_id) {
-                            found = await AlWaseetAPI.getOrderById(deleteToken.token, localOrder.delivery_partner_order_id);
-                          }
-                          
-                          if (found) {
-                            foundOrder = true;
-                            devLog.log(`✅ محاولة ${attempt}: الطلب موجود - لن يُحذف`);
-                            break;
-                          }
-                        } catch (e) {
-                          devLog.warn(`⚠️ محاولة ${attempt} فشلت: ${e.message}`);
-                        }
-                      }
-                      
-                      // ✅ حذف فقط بعد 3 محاولات فاشلة
-                      if (!foundOrder) {
-                        devLog.log(`🗑️ الطلب ${localOrder.tracking_number} غير موجود بعد 3 محاولات - سيُحذف`);
-                        
-                        toast({
-                          title: "🗑️ طلب محذوف من شركة التوصيل",
-                          description: `الطلب ${localOrder.tracking_number} غير موجود وتم حذفه محلياً`,
-                          variant: "warning",
-                          duration: 8000
-                        });
-                        
-                        await handleAutoDeleteOrder(localOrder.id, 'syncVisibleBatch');
-                      }
+                      // زيادة العداد فقط بدون حذف
+                      devLog.log(`⚠️ [AUTO-DELETE-PENDING] ${localOrder.tracking_number}: misses=${currentMisses}/${CONFIRM_THRESHOLD}, age_ok=${oldEnough}, eligible=${eligibleStatus}, safe=${safeOrderState}`);
+                      await supabase
+                        .from('orders')
+                        .update({ partner_missed_count: currentMisses })
+                        .eq('id', localOrder.id);
                     }
                   }
                 }
@@ -1586,7 +1565,6 @@ export const AlWaseetProvider = ({ children }) => {
                 if (directError.message?.includes('تجاوزت الحد المسموح به') || 
                     directError.message?.includes('rate limit')) {
                   devLog.warn(`⚠️ Rate limit للطلب ${localOrder.tracking_number} - سنحاول لاحقاً`);
-                  // لا نرفع console.error هنا لتجنب إزعاج المستخدم
                 } else {
                   console.error(`❌ خطأ جلب ${localOrder.tracking_number} مباشرة:`, directError);
                 }
