@@ -634,7 +634,8 @@ useEffect(() => {
       toast({ title: 'خطأ', description: 'حدث خطأ أثناء تنفيذ العملية', variant: 'destructive' });
       try { await refreshAll?.(); } catch (_) {}
     } finally {
-      setSelectedOrders([]);
+      // ✅ تنظيف نهائي للمحدد (الباقي = الفاشل فقط)
+      setSelectedOrders(prev => prev);
     }
   };
 
