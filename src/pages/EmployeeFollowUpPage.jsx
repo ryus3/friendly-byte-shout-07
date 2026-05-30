@@ -656,7 +656,12 @@ const filteredOrders = useMemo(() => {
   }).map(order => ({
     ...order,
     created_by_name: usersMap.get(order.created_by) || 'غير معروف'
-  }));
+  })).sort((a, b) => {
+    // ✅ ترتيب: آخر تغيير حالة فعلي أولاً، ثم تاريخ الإنشاء
+    const aDate = new Date(a.status_changed_at || a.created_at).getTime();
+    const bDate = new Date(b.status_changed_at || b.created_at).getTime();
+    return bDate - aDate;
+  });
 
   devLog.log('✅ الطلبات المفلترة النهائية:', {
     count: filtered.length,

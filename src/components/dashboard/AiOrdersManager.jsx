@@ -541,6 +541,9 @@ useEffect(() => {
           if (result?.success) {
             successIds.push(id);
             setOrders(prev => prev.filter(o => o.id !== id));
+            // ✅ تحديث فوري للعداد المحدد
+            setSelectedOrders(prev => prev.filter(x => x !== id));
+            setProcessedOrders(prev => prev.includes(id) ? prev : [...prev, id]);
           } else {
             failedResults.push({ id, error: result?.error || 'فشل غير معروف' });
           }
@@ -597,6 +600,8 @@ useEffect(() => {
         
         // تحديث القائمة بناءً على النتائج
         setOrders(prev => prev.filter(o => !successIds.includes(o.id)));
+        // ✅ تحديث فوري للعداد المحدد
+        setSelectedOrders(prev => prev.filter(id => !successIds.includes(id)));
         
         // إضافة الطلبات المحذوفة للمعالجة
         if (successIds.length > 0) {
@@ -629,7 +634,8 @@ useEffect(() => {
       toast({ title: 'خطأ', description: 'حدث خطأ أثناء تنفيذ العملية', variant: 'destructive' });
       try { await refreshAll?.(); } catch (_) {}
     } finally {
-      setSelectedOrders([]);
+      // ✅ تنظيف نهائي للمحدد (الباقي = الفاشل فقط)
+      setSelectedOrders(prev => prev);
     }
   };
 

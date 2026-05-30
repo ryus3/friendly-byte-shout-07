@@ -1339,13 +1339,8 @@ export const AlWaseetProvider = ({ children }) => {
                   });
                 }
               } else {
-                // ✅ حتى لو لم تتغير البيانات، نحدث وقت المزامنة
-                await supabase
-                  .from('orders')
-                  .update({ updated_at: new Date().toISOString() })
-                  .eq('id', localOrder.id);
-                
-                devLog.log(`⏰ [SYNC-TIMESTAMP] تم تحديث وقت ${localOrder.tracking_number} فقط (لا تغيير في البيانات)`);
+                // ✅ لا تغيير حقيقي — لا نحدث updated_at حتى لا يتغير ترتيب الطلبات
+                devLog.log(`⏸️ [SYNC-NOOP] ${localOrder.tracking_number}: لا تغيير، تخطي تحديث updated_at`);
               }
             } else {
               // ⚠️ الطلب غير موجود في getMerchantOrders
@@ -1511,13 +1506,8 @@ export const AlWaseetProvider = ({ children }) => {
                       console.error(`❌ خطأ تحديث ${localOrder.tracking_number}:`, error);
                     }
                   } else {
-                    // تحديث الوقت فقط (لإظهار أن المزامنة حدثت)
-                    await supabase
-                      .from('orders')
-                      .update({ updated_at: new Date().toISOString() })
-                      .eq('id', localOrder.id);
-                    
-                    devLog.log(`⏰ تم تحديث وقت ${localOrder.tracking_number} عبر fallback (لا تغيير)`);
+                    // ✅ لا تغيير حقيقي — لا نحدث updated_at حتى لا يتحرك الترتيب
+                    devLog.log(`⏸️ [SYNC-NOOP-FALLBACK] ${localOrder.tracking_number}: لا تغيير`);
                   }
                 } else {
                   devLog.warn(`❌ الطلب ${localOrder.tracking_number} غير موجود حتى في getOrderById!`);

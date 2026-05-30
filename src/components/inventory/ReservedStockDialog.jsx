@@ -317,7 +317,16 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
             {/* قائمة الطلبات */}
             <div className="space-y-3 md:space-y-6">
               {ordersWithActualReservation && ordersWithActualReservation.length > 0 ? (
-                ordersWithActualReservation.map((order, index) => (
+                ordersWithActualReservation.map((order, index) => {
+                  if (!order || !order.id) return null;
+                  let statusConfig;
+                  try {
+                    statusConfig = getStatusForComponent(order, 'reservedStock');
+                  } catch (e) {
+                    statusConfig = { color: 'bg-muted text-foreground', label: 'قيد التجهيز', icon: Clock };
+                  }
+                  const StatusIcon = statusConfig?.icon || Clock;
+                  return (
                   <Card key={order.id} className="group relative overflow-hidden border-2 border-violet-200/60 hover:border-violet-400/80 transition-all duration-500 hover:shadow-2xl hover:shadow-violet-500/20">
                     <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 via-purple-500/5 to-indigo-500/5"></div>
                     <CardContent className="p-3 md:p-8 relative">
@@ -340,16 +349,10 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                           </div>
                         </div>
                         <div className="flex items-center gap-2 md:gap-3">
-                          {(() => {
-                            const statusConfig = getStatusForComponent(order, 'reservedStock');
-                            const StatusIcon = statusConfig.icon;
-                            return (
-                               <Badge className={`${statusConfig.color} border-0 shadow-lg px-2 md:px-3 py-1 text-xs max-w-[120px] flex items-center`}>
-                                 <StatusIcon className="w-3 h-3 mr-1 flex-shrink-0" />
-                                 <ScrollingText text={statusConfig.label} className="min-w-0 flex-1" />
-                               </Badge>
-                            );
-                          })()}
+                          <Badge className={`${statusConfig.color} border-0 shadow-lg px-2 md:px-3 py-1 text-xs max-w-[120px] flex items-center`}>
+                            <StatusIcon className="w-3 h-3 mr-1 flex-shrink-0" />
+                            <ScrollingText text={statusConfig.label} className="min-w-0 flex-1" />
+                          </Badge>
                           <Badge variant="outline" className="text-xs md:text-sm px-2 md:px-3 py-1">
                             #{index + 1}
                           </Badge>
@@ -514,7 +517,8 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                       )}
                     </CardContent>
                   </Card>
-                ))
+                  );
+                })
               ) : (
                 <Card className="border-2 border-dashed border-gray-300 bg-gray-50/50 dark:bg-gray-900/50 dark:border-gray-600">
                   <CardContent className="p-12 text-center">
