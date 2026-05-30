@@ -1657,15 +1657,18 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
-    // ✅ فقط الطلبات pending تُحذف تلقائياً
-    const allowedStatuses = ['pending'];
-    if (!allowedStatuses.includes(order.status)) {
+    // ✅ فقط الطلبات الابتدائية غير النهائية تُحذف تلقائياً
+    if (String(order.status || '') !== 'pending') {
       return false;
     }
     
-    // ✅ الحماية 1: عمر الطلب أكبر من دقيقة واحدة (حسب طلب المستخدم)
+    if (order.receipt_received || order.delivery_partner_invoice_id) {
+      return false;
+    }
+
+    // ✅ الحماية 1: عمر الطلب 3 دقائق أو أكثر
     const orderAge = Date.now() - new Date(order.created_at).getTime();
-    const minAge = 1 * 60 * 1000; // دقيقة واحدة
+    const minAge = 3 * 60 * 1000;
     if (orderAge < minAge) {
       return false;
     }
@@ -1687,8 +1690,13 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
-    // التحقق من الملكية - حتى المدير لا يحذف طلبات الموظفين
-    if (!isOrderOwner(order, currentUser)) {
+    const deliveryStatus = String(order.delivery_status || '').trim();
+    if (!['1', 'pending', ''].includes(deliveryStatus)) {
+      return false;
+    }
+
+    // التحقق من الصلاحية: الموظف طلباته فقط، المدير حسب RLS/verifyOrderOwnership
+    if (!verifyOrderOwnership(order, currentUser)) {
       return false;
     }
     
