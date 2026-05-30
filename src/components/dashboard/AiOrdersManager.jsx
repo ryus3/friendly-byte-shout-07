@@ -600,6 +600,8 @@ useEffect(() => {
         
         // تحديث القائمة بناءً على النتائج
         setOrders(prev => prev.filter(o => !successIds.includes(o.id)));
+        // ✅ تحديث فوري للعداد المحدد
+        setSelectedOrders(prev => prev.filter(id => !successIds.includes(id)));
         
         // إضافة الطلبات المحذوفة للمعالجة
         if (successIds.length > 0) {
