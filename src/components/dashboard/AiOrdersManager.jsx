@@ -541,6 +541,9 @@ useEffect(() => {
           if (result?.success) {
             successIds.push(id);
             setOrders(prev => prev.filter(o => o.id !== id));
+            // ✅ تحديث فوري للعداد المحدد
+            setSelectedOrders(prev => prev.filter(x => x !== id));
+            setProcessedOrders(prev => prev.includes(id) ? prev : [...prev, id]);
           } else {
             failedResults.push({ id, error: result?.error || 'فشل غير معروف' });
           }
