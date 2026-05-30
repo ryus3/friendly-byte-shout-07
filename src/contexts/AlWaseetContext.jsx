@@ -793,6 +793,7 @@ export const AlWaseetProvider = ({ children }) => {
           
           // استدعاء API المناسب حسب partner_name
           let merchantOrders;
+          let apiFetchHadError = false;
           try {
             devLog.log(`🚀 [${partnerName}] سيتم الآن استدعاء getMerchantOrders...`);
             devLog.log(`🔑 Token preview: ${employeeTokenData.token.substring(0, 20)}...`);
@@ -869,7 +870,8 @@ export const AlWaseetProvider = ({ children }) => {
                       devLog.log(`✅ [Bulk] جلب ${batchOrders?.length || 0} طلب من ${chunk.length} مطلوب`);
                       return batchOrders || [];
                     } catch (err) {
-                      console.error(`❌ خطأ في جلب دفعة:`, err);
+                      apiFetchHadError = true;
+                      devLog.error(`❌ خطأ في جلب دفعة:`, err);
                       return [];
                     }
                   });
@@ -903,7 +905,12 @@ export const AlWaseetProvider = ({ children }) => {
               }
             }
             
-          if (!merchantOrders || !Array.isArray(merchantOrders) || merchantOrders.length === 0) {
+          if (!Array.isArray(merchantOrders)) {
+            devLog.warn(`⚠️ لم يتم الحصول على استجابة صالحة من ${partnerName} للموظف: ${employeeId}`);
+            continue;
+          }
+
+          if (merchantOrders.length === 0) {
             
             // ⚠️ إذا كانت MODON ولا توجد طلبات، قد يكون لا توجد فواتير
             if (employeeTokenData.partner_name === 'modon' && (!merchantOrders || merchantOrders.length === 0)) {
@@ -925,12 +932,14 @@ export const AlWaseetProvider = ({ children }) => {
               }
             }
             
-            devLog.log(`⚠️ لم يتم الحصول على طلبات صالحة من ${partnerName} للموظف: ${employeeId}`);
-            
-            // ⚠️ صامت: عدم وجود طلبات لا يعني فشل تسجيل دخول.
-            // كان هذا التوست يظهر تحذير "فشل مزامنة الوسيط" حتى لحسابات نشطة بالكامل.
-            devLog.warn(`⚠️ ${partnerName}: لا توجد طلبات للموظف ${employeeId} (سلوك طبيعي إن لم تكن لديه طلبات حديثة)`);
-            continue;
+            if (apiFetchHadError) {
+              devLog.warn(`⛔ ${partnerName}: حصل خطأ أثناء الجلب؛ لن نعتبر الطلبات محذوفة ولن نحذف شيئاً`);
+              continue;
+            }
+
+            // ✅ للوسيط: رد Bulk ناجح لكنه فارغ = الطلبات المطلوبة غير موجودة فعلاً.
+            // لا نتوقف هنا؛ نمرر القائمة الفارغة لمسار كل طلب حتى يزيد partner_missed_count ثم يحذف بعد التأكيد.
+            devLog.warn(`⚠️ ${partnerName}: رد ناجح بدون أي طلب من ${groupOrders.length} مطلوب — سيتم فحصها كطلبات غير موجودة`);
           }
           } catch (apiError) {
             console.error(`❌ ===== [${partnerName}] خطأ في getMerchantOrders =====`);
