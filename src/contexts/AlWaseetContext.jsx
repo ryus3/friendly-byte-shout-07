@@ -793,6 +793,7 @@ export const AlWaseetProvider = ({ children }) => {
           
           // استدعاء API المناسب حسب partner_name
           let merchantOrders;
+          let apiFetchHadError = false;
           try {
             devLog.log(`🚀 [${partnerName}] سيتم الآن استدعاء getMerchantOrders...`);
             devLog.log(`🔑 Token preview: ${employeeTokenData.token.substring(0, 20)}...`);
@@ -869,7 +870,8 @@ export const AlWaseetProvider = ({ children }) => {
                       devLog.log(`✅ [Bulk] جلب ${batchOrders?.length || 0} طلب من ${chunk.length} مطلوب`);
                       return batchOrders || [];
                     } catch (err) {
-                      console.error(`❌ خطأ في جلب دفعة:`, err);
+                      apiFetchHadError = true;
+                      devLog.error(`❌ خطأ في جلب دفعة:`, err);
                       return [];
                     }
                   });
@@ -903,7 +905,12 @@ export const AlWaseetProvider = ({ children }) => {
               }
             }
             
-          if (!merchantOrders || !Array.isArray(merchantOrders) || merchantOrders.length === 0) {
+          if (!Array.isArray(merchantOrders)) {
+            devLog.warn(`⚠️ لم يتم الحصول على استجابة صالحة من ${partnerName} للموظف: ${employeeId}`);
+            continue;
+          }
+
+          if (merchantOrders.length === 0) {
             
             // ⚠️ إذا كانت MODON ولا توجد طلبات، قد يكون لا توجد فواتير
             if (employeeTokenData.partner_name === 'modon' && (!merchantOrders || merchantOrders.length === 0)) {
@@ -925,12 +932,14 @@ export const AlWaseetProvider = ({ children }) => {
               }
             }
             
-            devLog.log(`⚠️ لم يتم الحصول على طلبات صالحة من ${partnerName} للموظف: ${employeeId}`);
-            
-            // ⚠️ صامت: عدم وجود طلبات لا يعني فشل تسجيل دخول.
-            // كان هذا التوست يظهر تحذير "فشل مزامنة الوسيط" حتى لحسابات نشطة بالكامل.
-            devLog.warn(`⚠️ ${partnerName}: لا توجد طلبات للموظف ${employeeId} (سلوك طبيعي إن لم تكن لديه طلبات حديثة)`);
-            continue;
+            if (apiFetchHadError) {
+              devLog.warn(`⛔ ${partnerName}: حصل خطأ أثناء الجلب؛ لن نعتبر الطلبات محذوفة ولن نحذف شيئاً`);
+              continue;
+            }
+
+            // ✅ للوسيط: رد Bulk ناجح لكنه فارغ = الطلبات المطلوبة غير موجودة فعلاً.
+            // لا نتوقف هنا؛ نمرر القائمة الفارغة لمسار كل طلب حتى يزيد partner_missed_count ثم يحذف بعد التأكيد.
+            devLog.warn(`⚠️ ${partnerName}: رد ناجح بدون أي طلب من ${groupOrders.length} مطلوب — سيتم فحصها كطلبات غير موجودة`);
           }
           } catch (apiError) {
             console.error(`❌ ===== [${partnerName}] خطأ في getMerchantOrders =====`);
@@ -1648,15 +1657,18 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
-    // ✅ فقط الطلبات pending تُحذف تلقائياً
-    const allowedStatuses = ['pending'];
-    if (!allowedStatuses.includes(order.status)) {
+    // ✅ فقط الطلبات الابتدائية غير النهائية تُحذف تلقائياً
+    if (String(order.status || '') !== 'pending') {
       return false;
     }
     
-    // ✅ الحماية 1: عمر الطلب أكبر من دقيقة واحدة (حسب طلب المستخدم)
+    if (order.receipt_received || order.delivery_partner_invoice_id) {
+      return false;
+    }
+
+    // ✅ الحماية 1: عمر الطلب 3 دقائق أو أكثر
     const orderAge = Date.now() - new Date(order.created_at).getTime();
-    const minAge = 1 * 60 * 1000; // دقيقة واحدة
+    const minAge = 3 * 60 * 1000;
     if (orderAge < minAge) {
       return false;
     }
@@ -1678,8 +1690,13 @@ export const AlWaseetProvider = ({ children }) => {
       return false;
     }
     
-    // التحقق من الملكية - حتى المدير لا يحذف طلبات الموظفين
-    if (!isOrderOwner(order, currentUser)) {
+    const deliveryStatus = String(order.delivery_status || '').trim();
+    if (!['1', 'pending', ''].includes(deliveryStatus)) {
+      return false;
+    }
+
+    // التحقق من الصلاحية: الموظف طلباته فقط، المدير حسب RLS/verifyOrderOwnership
+    if (!verifyOrderOwnership(order, currentUser)) {
       return false;
     }
     
