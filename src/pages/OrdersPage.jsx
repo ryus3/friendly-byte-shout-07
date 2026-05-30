@@ -506,9 +506,9 @@ const OrdersPage = () => {
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
-      // ✅ الترتيب حسب status_changed_at (آخر تغيير في الحالة)
-      const dateA = new Date(a.status_changed_at || a.updated_at);
-      const dateB = new Date(b.status_changed_at || b.updated_at);
+      // ✅ الترتيب حسب آخر تغيير حالة فعلي فقط (لا نستخدم updated_at حتى لا تتحرك الطلبات بمزامنة فارغة)
+      const dateA = new Date(a.status_changed_at || a.created_at);
+      const dateB = new Date(b.status_changed_at || b.created_at);
       return dateB - dateA; // الأحدث أولاً
     })
     .map(order => ({
