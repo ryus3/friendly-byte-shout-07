@@ -517,7 +517,8 @@ const ReservedStockDialog = ({ open, onOpenChange }) => {
                       )}
                     </CardContent>
                   </Card>
-                ))
+                  );
+                })
               ) : (
                 <Card className="border-2 border-dashed border-gray-300 bg-gray-50/50 dark:bg-gray-900/50 dark:border-gray-600">
                   <CardContent className="p-12 text-center">
