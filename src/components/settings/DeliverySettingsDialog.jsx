@@ -53,6 +53,18 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
         ...settings,
         ...localSettings
       });
+
+      // ✅ حفظ إعداد توجيه الطلبات الذكية
+      try {
+        await supabase
+          .from('settings')
+          .upsert(
+            { key: 'ai_approval_send_as', value: JSON.stringify(sendAsCreator ? 'creator' : 'approver') },
+            { onConflict: 'key' }
+          );
+      } catch (e) {
+        console.error('فشل حفظ إعداد توجيه الموافقة:', e);
+      }
       
       toast({
         title: "تم الحفظ!",
@@ -69,6 +81,7 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
       });
     }
   };
+
 
   const updateLocalSetting = (key, value) => {
     setLocalSettings(prev => ({
