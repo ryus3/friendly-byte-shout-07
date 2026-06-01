@@ -2107,12 +2107,8 @@ export const SuperProvider = ({ children }) => {
   const approveAiOrder = useCallback(async (orderId, destination = 'local', selectedAccount = null) => {
     try {
       devLog.log('🚀 بدء موافقة طلب ذكي:', { orderId, destination, selectedAccount });
-      
-      // التأكد من وجود مستخدم صالح
-      const createdBy = resolveCurrentUserUUID();
-      devLog.log('👤 معرف المستخدم المستخدم:', createdBy);
-      
-      // 1) جلب الطلب الذكي
+
+      // 1) جلب الطلب الذكي أولاً
       const { data: aiOrder, error: aiErr } = await supabase
         .from('ai_orders')
         .select('*')
@@ -2120,6 +2116,34 @@ export const SuperProvider = ({ children }) => {
         .maybeSingle();
       if (aiErr) throw aiErr;
       if (!aiOrder) return { success: false, error: 'الطلب الذكي غير موجود' };
+
+      // ✅ تحديد هوية الإرسال (الحل العالمي):
+      //   - ai_approval_send_as='creator' (افتراضي) → نرسل بحساب منشئ الطلب الذكي في شركة التوصيل ومحلياً.
+      //   - 'approver' → نرسل بحساب الموافق الحالي.
+      // المدير/مدير القسم يضغط موافقة، والطلب يصل لحساب الموظف الأصلي.
+      const approverId = resolveCurrentUserUUID();
+      let sendAsMode = 'creator';
+      try {
+        const { data: sendAsSetting } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'ai_approval_send_as')
+          .maybeSingle();
+        const raw = sendAsSetting?.value;
+        const parsed = typeof raw === 'string' ? raw.replace(/"/g, '') : raw;
+        if (parsed === 'approver') sendAsMode = 'approver';
+      } catch (_) {}
+
+      const createdBy = (sendAsMode === 'creator' && aiOrder.created_by)
+        ? aiOrder.created_by
+        : approverId;
+
+      devLog.log('👤 هوية الإرسال:', {
+        mode: sendAsMode,
+        owner: createdBy,
+        approver: approverId,
+        aiOwner: aiOrder.created_by
+      });
 
       const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];
       if (!itemsInput.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };
@@ -2159,14 +2183,13 @@ export const SuperProvider = ({ children }) => {
                 .eq('user_id', createdBy)
                 .eq('partner_name', destination)
                 .eq('is_active', true)
-                .gt('expires_at', new Date().toISOString())
                 .order('is_default', { ascending: false })
                 .order('last_used_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
               if (tokenRow?.account_username) {
                 actualAccount = tokenRow.account_username;
-                devLog.log('📋 استُخدم الحساب الافتراضي للشريك المختار:', actualAccount);
+                devLog.log('📋 استُخدم الحساب الافتراضي/الأحدث للمنشئ في الشريك المختار:', actualAccount);
               }
             }
           } catch (error) {
@@ -2202,8 +2225,9 @@ export const SuperProvider = ({ children }) => {
           destination: destination
         });
 
-        // 🛡️ تحقق نهائي: يجب أن يوجد توكن صالح لهذا الحساب لهذا الشريك تحديداً
-        // (يمنع إرسال طلب مدن بتوكن وسيط أو العكس)
+        // 🛡️ تحقق نهائي: يجب أن يوجد حساب نشط للمنشئ في هذا الشريك تحديداً
+        // (يمنع إرسال طلب مدن بتوكن وسيط أو العكس).
+        // ملاحظة: لا نفحص expires_at هنا؛ نعتمد على رد الشريك الفعلي والتجديد التلقائي عند TOKEN_EXPIRED.
         const { data: tokenCheck } = await supabase
           .from('delivery_partner_tokens')
           .select('id, expires_at')
@@ -2211,44 +2235,49 @@ export const SuperProvider = ({ children }) => {
           .eq('partner_name', destination)
           .ilike('account_username', actualAccount)
           .eq('is_active', true)
-          .gt('expires_at', new Date().toISOString())
           .maybeSingle();
 
         if (!tokenCheck) {
           const partnerLabel = destination === 'modon' ? 'مدن' : 'الوسيط';
           return {
             success: false,
-            error: `لا يوجد توكن صالح للحساب "${rawAccount}" في شركة ${partnerLabel}. سجّل دخول من إدارة شركات التوصيل ثم أعد المحاولة.`
+            error: `لا يوجد حساب نشط للحساب "${rawAccount}" في شركة ${partnerLabel} لمنشئ الطلب. سجّل دخوله من إدارة شركات التوصيل ثم أعد المحاولة.`
           };
         }
 
-        // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات
+        // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات (بدون فلتر expires_at)
+        // الاعتماد على رد الشريك الفعلي + تجديد تلقائي عند TOKEN_EXPIRED.
         try {
-          devLog.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
-          
-          // الحصول على توكن الحساب مباشرة بدلاً من الاعتماد على تحديث السياق
-          const accountData = await getTokenForUser(createdBy, actualAccount, destination);
-          
-          devLog.log('🔍 [DEBUG approveAiOrder] نتيجة getTokenForUser:', {
+          devLog.log('🔄 الحصول على توكن المنشئ للحساب:', actualAccount);
+
+          const { data: accountData } = await supabase
+            .from('delivery_partner_tokens')
+            .select('id, token, expires_at, account_username, partner_name, partner_data, user_id, is_default, last_used_at')
+            .eq('user_id', createdBy)
+            .eq('partner_name', destination)
+            .ilike('account_username', actualAccount)
+            .eq('is_active', true)
+            .order('expires_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          devLog.log('🔍 [DEBUG approveAiOrder] نتيجة جلب التوكن:', {
             requestedAccount: actualAccount,
             requestedPartner: destination,
+            owner: createdBy,
             foundToken: !!accountData?.token,
-            foundAccount: accountData?.account_username,
-            foundPartner: accountData?.partner_name,
             tokenExpiry: accountData?.expires_at
           });
-          
+
           if (!accountData?.token) {
-            console.error('❌ فشل في الحصول على توكن:', {
-              userId: createdBy,
-              accountUsername: actualAccount,
-              partnerName: destination,
-              suggestion: `تحقق من وجود توكن صالح في delivery_partner_tokens لهذا المستخدم والحساب`
-            });
-            throw new Error(`فشل في الحصول على توكن صالح للحساب: ${actualAccount} (${destination})`);
+            const partnerLabel = destination === 'modon' ? 'مدن' : 'الوسيط';
+            return {
+              success: false,
+              error: `لا يوجد توكن محفوظ لحساب "${rawAccount}" في ${partnerLabel} لمنشئ الطلب. يجب تسجيل دخوله من إدارة شركات التوصيل أولاً.`
+            };
           }
-          
-          devLog.log('✅ تم الحصول على توكن صالح للحساب:', actualAccount);
+
+          devLog.log('✅ تم الحصول على توكن للحساب:', actualAccount);
           devLog.log('📋 بيانات الحساب:', { 
             username: accountData.account_username,
             partner: accountData.partner_name,

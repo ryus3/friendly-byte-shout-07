@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -8,9 +8,10 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import { 
   Truck, DollarSign, Settings, MapPin, 
-  Clock, Package, Users 
+  Clock, Package, Users, UserCheck
 } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const DeliverySettingsDialog = ({ open, onOpenChange }) => {
   const { settings, updateSettings } = useInventory();
@@ -25,12 +26,45 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
     expressDeliveryFee: settings?.expressDeliveryFee || 10000,
   });
 
+  // ✅ إعداد التوجيه: 'creator' (افتراضي) = إرسال الطلب الذكي بحساب منشئه الأصلي
+  //                  'approver' = إرسال بحساب من ضغط الموافقة
+  const [sendAsCreator, setSendAsCreator] = useState(true);
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'ai_approval_send_as')
+          .maybeSingle();
+        const raw = data?.value;
+        const parsed = typeof raw === 'string' ? raw.replace(/"/g, '') : raw;
+        setSendAsCreator(parsed !== 'approver');
+      } catch (_) {}
+    })();
+  }, [open]);
+
+
   const handleSave = async () => {
     try {
       await updateSettings({
         ...settings,
         ...localSettings
       });
+
+      // ✅ حفظ إعداد توجيه الطلبات الذكية
+      try {
+        await supabase
+          .from('settings')
+          .upsert(
+            { key: 'ai_approval_send_as', value: JSON.stringify(sendAsCreator ? 'creator' : 'approver') },
+            { onConflict: 'key' }
+          );
+      } catch (e) {
+        console.error('فشل حفظ إعداد توجيه الموافقة:', e);
+      }
       
       toast({
         title: "تم الحفظ!",
@@ -47,6 +81,7 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
       });
     }
   };
+
 
   const updateLocalSetting = (key, value) => {
     setLocalSettings(prev => ({
@@ -150,6 +185,32 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
               )}
             </CardContent>
           </Card>
+
+          {/* ✅ توجيه موافقة الطلبات الذكية */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-emerald-600" />
+                توجيه الطلبات الذكية
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <Label>إرسال بحساب منشئ الطلب الأصلي</Label>
+                  <p className="text-sm text-muted-foreground">
+                    عند موافقة المدير أو مدير القسم على طلب موظف، يُرسل الطلب لحساب الموظف في شركة التوصيل ويُحفظ محلياً باسمه. (موصى به)
+                  </p>
+                </div>
+                <Switch
+                  checked={sendAsCreator}
+                  onCheckedChange={setSendAsCreator}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+
 
           {/* معلومات إضافية */}
           <Card className="bg-blue-50 border-blue-200">

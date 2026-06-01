@@ -8426,7 +8426,7 @@ export type Database = {
       }
       rebuild_products_cache: { Args: never; Returns: undefined }
       recalculate_cash_source_balance: {
-        Args: { p_source_id: string }
+        Args: { p_cash_source_id: string }
         Returns: number
       }
       recalculate_reserved_for_variant: {
