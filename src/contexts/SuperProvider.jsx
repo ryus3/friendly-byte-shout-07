@@ -2225,8 +2225,9 @@ export const SuperProvider = ({ children }) => {
           destination: destination
         });
 
-        // 🛡️ تحقق نهائي: يجب أن يوجد توكن صالح لهذا الحساب لهذا الشريك تحديداً
-        // (يمنع إرسال طلب مدن بتوكن وسيط أو العكس)
+        // 🛡️ تحقق نهائي: يجب أن يوجد حساب نشط للمنشئ في هذا الشريك تحديداً
+        // (يمنع إرسال طلب مدن بتوكن وسيط أو العكس).
+        // ملاحظة: لا نفحص expires_at هنا؛ نعتمد على رد الشريك الفعلي والتجديد التلقائي عند TOKEN_EXPIRED.
         const { data: tokenCheck } = await supabase
           .from('delivery_partner_tokens')
           .select('id, expires_at')
@@ -2234,14 +2235,13 @@ export const SuperProvider = ({ children }) => {
           .eq('partner_name', destination)
           .ilike('account_username', actualAccount)
           .eq('is_active', true)
-          .gt('expires_at', new Date().toISOString())
           .maybeSingle();
 
         if (!tokenCheck) {
           const partnerLabel = destination === 'modon' ? 'مدن' : 'الوسيط';
           return {
             success: false,
-            error: `لا يوجد توكن صالح للحساب "${rawAccount}" في شركة ${partnerLabel}. سجّل دخول من إدارة شركات التوصيل ثم أعد المحاولة.`
+            error: `لا يوجد حساب نشط للحساب "${rawAccount}" في شركة ${partnerLabel} لمنشئ الطلب. سجّل دخوله من إدارة شركات التوصيل ثم أعد المحاولة.`
           };
         }
 
