@@ -2245,33 +2245,39 @@ export const SuperProvider = ({ children }) => {
           };
         }
 
-        // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات
+        // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات (بدون فلتر expires_at)
+        // الاعتماد على رد الشريك الفعلي + تجديد تلقائي عند TOKEN_EXPIRED.
         try {
-          devLog.log('🔄 الحصول على توكن الحساب المختار:', actualAccount);
-          
-          // الحصول على توكن الحساب مباشرة بدلاً من الاعتماد على تحديث السياق
-          const accountData = await getTokenForUser(createdBy, actualAccount, destination);
-          
-          devLog.log('🔍 [DEBUG approveAiOrder] نتيجة getTokenForUser:', {
+          devLog.log('🔄 الحصول على توكن المنشئ للحساب:', actualAccount);
+
+          const { data: accountData } = await supabase
+            .from('delivery_partner_tokens')
+            .select('id, token, expires_at, account_username, partner_name, partner_data, user_id, is_default, last_used_at')
+            .eq('user_id', createdBy)
+            .eq('partner_name', destination)
+            .ilike('account_username', actualAccount)
+            .eq('is_active', true)
+            .order('expires_at', { ascending: false })
+            .limit(1)
+            .maybeSingle();
+
+          devLog.log('🔍 [DEBUG approveAiOrder] نتيجة جلب التوكن:', {
             requestedAccount: actualAccount,
             requestedPartner: destination,
+            owner: createdBy,
             foundToken: !!accountData?.token,
-            foundAccount: accountData?.account_username,
-            foundPartner: accountData?.partner_name,
             tokenExpiry: accountData?.expires_at
           });
-          
+
           if (!accountData?.token) {
-            console.error('❌ فشل في الحصول على توكن:', {
-              userId: createdBy,
-              accountUsername: actualAccount,
-              partnerName: destination,
-              suggestion: `تحقق من وجود توكن صالح في delivery_partner_tokens لهذا المستخدم والحساب`
-            });
-            throw new Error(`فشل في الحصول على توكن صالح للحساب: ${actualAccount} (${destination})`);
+            const partnerLabel = destination === 'modon' ? 'مدن' : 'الوسيط';
+            return {
+              success: false,
+              error: `لا يوجد توكن محفوظ لحساب "${rawAccount}" في ${partnerLabel} لمنشئ الطلب. يجب تسجيل دخوله من إدارة شركات التوصيل أولاً.`
+            };
           }
-          
-          devLog.log('✅ تم الحصول على توكن صالح للحساب:', actualAccount);
+
+          devLog.log('✅ تم الحصول على توكن للحساب:', actualAccount);
           devLog.log('📋 بيانات الحساب:', { 
             username: accountData.account_username,
             partner: accountData.partner_name,
