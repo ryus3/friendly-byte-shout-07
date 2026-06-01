@@ -2107,12 +2107,8 @@ export const SuperProvider = ({ children }) => {
   const approveAiOrder = useCallback(async (orderId, destination = 'local', selectedAccount = null) => {
     try {
       devLog.log('🚀 بدء موافقة طلب ذكي:', { orderId, destination, selectedAccount });
-      
-      // التأكد من وجود مستخدم صالح
-      const createdBy = resolveCurrentUserUUID();
-      devLog.log('👤 معرف المستخدم المستخدم:', createdBy);
-      
-      // 1) جلب الطلب الذكي
+
+      // 1) جلب الطلب الذكي أولاً
       const { data: aiOrder, error: aiErr } = await supabase
         .from('ai_orders')
         .select('*')
@@ -2120,6 +2116,34 @@ export const SuperProvider = ({ children }) => {
         .maybeSingle();
       if (aiErr) throw aiErr;
       if (!aiOrder) return { success: false, error: 'الطلب الذكي غير موجود' };
+
+      // ✅ تحديد هوية الإرسال (الحل العالمي):
+      //   - ai_approval_send_as='creator' (افتراضي) → نرسل بحساب منشئ الطلب الذكي في شركة التوصيل ومحلياً.
+      //   - 'approver' → نرسل بحساب الموافق الحالي.
+      // المدير/مدير القسم يضغط موافقة، والطلب يصل لحساب الموظف الأصلي.
+      const approverId = resolveCurrentUserUUID();
+      let sendAsMode = 'creator';
+      try {
+        const { data: sendAsSetting } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'ai_approval_send_as')
+          .maybeSingle();
+        const raw = sendAsSetting?.value;
+        const parsed = typeof raw === 'string' ? raw.replace(/"/g, '') : raw;
+        if (parsed === 'approver') sendAsMode = 'approver';
+      } catch (_) {}
+
+      const createdBy = (sendAsMode === 'creator' && aiOrder.created_by)
+        ? aiOrder.created_by
+        : approverId;
+
+      devLog.log('👤 هوية الإرسال:', {
+        mode: sendAsMode,
+        owner: createdBy,
+        approver: approverId,
+        aiOwner: aiOrder.created_by
+      });
 
       const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];
       if (!itemsInput.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };
