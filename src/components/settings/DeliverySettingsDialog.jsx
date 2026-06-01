@@ -186,6 +186,32 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
             </CardContent>
           </Card>
 
+          {/* ✅ توجيه موافقة الطلبات الذكية */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-emerald-600" />
+                توجيه الطلبات الذكية
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <Label>إرسال بحساب منشئ الطلب الأصلي</Label>
+                  <p className="text-sm text-muted-foreground">
+                    عند موافقة المدير أو مدير القسم على طلب موظف، يُرسل الطلب لحساب الموظف في شركة التوصيل ويُحفظ محلياً باسمه. (موصى به)
+                  </p>
+                </div>
+                <Switch
+                  checked={sendAsCreator}
+                  onCheckedChange={setSendAsCreator}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+
+
           {/* معلومات إضافية */}
           <Card className="bg-blue-50 border-blue-200">
             <CardContent className="pt-6">
