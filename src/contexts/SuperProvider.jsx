@@ -2183,14 +2183,13 @@ export const SuperProvider = ({ children }) => {
                 .eq('user_id', createdBy)
                 .eq('partner_name', destination)
                 .eq('is_active', true)
-                .gt('expires_at', new Date().toISOString())
                 .order('is_default', { ascending: false })
                 .order('last_used_at', { ascending: false })
                 .limit(1)
                 .maybeSingle();
               if (tokenRow?.account_username) {
                 actualAccount = tokenRow.account_username;
-                devLog.log('📋 استُخدم الحساب الافتراضي للشريك المختار:', actualAccount);
+                devLog.log('📋 استُخدم الحساب الافتراضي/الأحدث للمنشئ في الشريك المختار:', actualAccount);
               }
             }
           } catch (error) {
