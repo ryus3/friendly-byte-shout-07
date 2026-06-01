@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
@@ -8,9 +8,10 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import { 
   Truck, DollarSign, Settings, MapPin, 
-  Clock, Package, Users 
+  Clock, Package, Users, UserCheck
 } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const DeliverySettingsDialog = ({ open, onOpenChange }) => {
   const { settings, updateSettings } = useInventory();
@@ -24,6 +25,27 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
     enableExpressDelivery: settings?.enableExpressDelivery || false,
     expressDeliveryFee: settings?.expressDeliveryFee || 10000,
   });
+
+  // ✅ إعداد التوجيه: 'creator' (افتراضي) = إرسال الطلب الذكي بحساب منشئه الأصلي
+  //                  'approver' = إرسال بحساب من ضغط الموافقة
+  const [sendAsCreator, setSendAsCreator] = useState(true);
+
+  useEffect(() => {
+    if (!open) return;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'ai_approval_send_as')
+          .maybeSingle();
+        const raw = data?.value;
+        const parsed = typeof raw === 'string' ? raw.replace(/"/g, '') : raw;
+        setSendAsCreator(parsed !== 'approver');
+      } catch (_) {}
+    })();
+  }, [open]);
+
 
   const handleSave = async () => {
     try {
