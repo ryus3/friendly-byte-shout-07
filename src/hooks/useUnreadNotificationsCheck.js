@@ -32,7 +32,7 @@ export const useUnreadNotificationsCheck = (user) => {
         // فلترة حسب المستخدم
         const isAdmin = user?.roles?.includes('super_admin') || user?.roles?.includes('admin');
         if (!isAdmin) {
-          query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,order_created,cash_correction,balance_correction,main_cash_correction))`);
+          query = query.or(`user_id.eq.${user.id},and(user_id.is.null,type.not.in.(profit_settlement_request,settlement_request,profit_settlement_completed,new_registration,low_stock,order_status_update_admin,new_order,order_created,cash_correction,balance_correction,main_cash_correction,new_ai_order))`);
         } else {
           query = query.or(`user_id.eq.${user.id},user_id.is.null`);
         }
