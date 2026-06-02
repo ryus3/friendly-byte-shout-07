@@ -86,7 +86,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       }
       setLoading(true);
       try {
-        const [{ data: pData }, { data: itemsData }, { data: oData }] = await Promise.all([
+        const [{ data: pData }, { data: itemsData }, { data: oData }, { data: dData }] = await Promise.all([
           supabase
             .from('profits')
             .select('order_id, employee_id, employee_profit, profit_amount, total_revenue, total_cost, status')
@@ -103,6 +103,10 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
             .from('orders')
             .select('id, final_amount, total_amount, delivery_fee')
             .in('id', ids),
+          supabase
+            .from('order_discounts')
+            .select('order_id, discount_amount, affects_employee_profit')
+            .in('order_id', ids),
         ]);
 
         const employeeIds = (pData || []).map(p => p.employee_id).filter(Boolean);
