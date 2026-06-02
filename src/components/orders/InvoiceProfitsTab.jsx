@@ -139,6 +139,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         setProfits(pData || []);
         setOrderItems(itemsData || []);
         setOrdersData(oData || []);
+        setDiscounts(dData || []);
         setNamesMap(names);
         setSupervisedIds(supIds);
       } catch (e) {
