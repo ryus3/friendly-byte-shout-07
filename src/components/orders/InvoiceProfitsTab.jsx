@@ -24,6 +24,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   const [profits, setProfits] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
   const [ordersData, setOrdersData] = useState([]);
+  const [discounts, setDiscounts] = useState([]);
   const [namesMap, setNamesMap] = useState({});
   const [supervisedIds, setSupervisedIds] = useState([]);
   const [resolvedOrderIds, setResolvedOrderIds] = useState([]);
@@ -86,7 +87,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       }
       setLoading(true);
       try {
-        const [{ data: pData }, { data: itemsData }, { data: oData }] = await Promise.all([
+        const [{ data: pData }, { data: itemsData }, { data: oData }, { data: dData }] = await Promise.all([
           supabase
             .from('profits')
             .select('order_id, employee_id, employee_profit, profit_amount, total_revenue, total_cost, status')
@@ -103,6 +104,10 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
             .from('orders')
             .select('id, final_amount, total_amount, delivery_fee')
             .in('id', ids),
+          supabase
+            .from('order_discounts')
+            .select('order_id, discount_amount, affects_employee_profit')
+            .in('order_id', ids),
         ]);
 
         const employeeIds = (pData || []).map(p => p.employee_id).filter(Boolean);
@@ -134,6 +139,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         setProfits(pData || []);
         setOrderItems(itemsData || []);
         setOrdersData(oData || []);
+        setDiscounts(dData || []);
         setNamesMap(names);
         setSupervisedIds(supIds);
       } catch (e) {
@@ -209,7 +215,17 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       employeeProfitByEmp[k] = (employeeProfitByEmp[k] || 0) + (Number(p.employee_profit) || 0);
     });
 
-    // توزيع على المالكين
+    // ✅ توزيع فرق الزيادة/الخصم على المالكين (لا يخص الموظف عبر قواعد الربح)
+    // - الزيادة/الخصم المؤهَّلة لمستحقات الموظف موجودة بالفعل في profits.employee_profit (لا تُكرَّر هنا).
+    // - الفرق المتبقي (totalRevenue - revenueFromItems - deltaForEmployees) يُوزَّع على المالكين
+    //   بنسبة إيراد منتجاتهم — يجعل byOwner.revenue يطابق الإيراد الحقيقي للفاتورة.
+    const deltaForEmployees = (discounts || []).reduce(
+      (s, d) => s + (d.affects_employee_profit ? -(Number(d.discount_amount) || 0) : 0),
+      0
+    ); // ملاحظة: discount_amount السالب = زيادة، الموجب = خصم. للموظف نأخذ -discount_amount (زيادة=موجب).
+    const totalDelta = totalRevenue - revenueFromItems; // قد يكون موجباً (زيادة) أو سالباً (خصم)
+    const deltaForOwners = totalDelta - deltaForEmployees;
+
     const byOwner = {};
     Object.values(productMap).forEach(prod => {
       const ownerId = prod.ownerId;
@@ -220,6 +236,13 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       byOwner[ownerId].products.push(prod);
     });
 
+    if (revenueFromItems > 0 && Math.abs(deltaForOwners) > 0.5) {
+      Object.values(byOwner).forEach(o => {
+        const share = o.revenue / revenueFromItems;
+        o.revenue += deltaForOwners * share;
+      });
+    }
+
     const productsList = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
 
     return {
@@ -228,8 +251,9 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       employeeProfitByEmp, byOwner,
       itemsAvailable, totalDeliveryFees, totalQty,
       productsList, productCount: productsList.length,
+      totalDelta, deltaForEmployees, deltaForOwners,
     };
-  }, [profits, orderItems, ordersData]);
+  }, [profits, orderItems, ordersData, discounts]);
 
   if (loading) {
     return (

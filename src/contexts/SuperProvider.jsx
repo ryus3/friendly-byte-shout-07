@@ -2155,13 +2155,35 @@ export const SuperProvider = ({ children }) => {
         // التحقق من وجود الحساب أو جلبه من التفضيلات
         let actualAccount = selectedAccount;
         let profile = null; // تعريف profile خارج try-catch
-        
-        // ✅ إذا لم يُحدَّد حساب، نحاول جلب الحساب الافتراضي للشريك المختار حصراً
-        // (لا نقبل حساب شريك مختلف من profiles)
-        if (!actualAccount) {
-          devLog.log('⚠️ لا يوجد حساب محدد، محاولة جلب الحساب الافتراضي للشريك:', destination);
+
+        // ✅ تحقق أوّلي: إذا كان selectedAccount ممرراً، يجب أن يخص createdBy (منشئ الطلب) في هذا الشريك تحديداً.
+        // وإلا نتجاهله بصمت ونعتمد على الاختيار التلقائي لحساب المنشئ. (المدير يضغط موافقة لكن الإرسال بحساب الموظف.)
+        if (actualAccount) {
           try {
-            // 1) أولاً نجرب من profiles لكن نتحقق أنه يطابق الشريك
+            const probe = String(actualAccount).trim().toLowerCase().replace(/\s+/g, '-');
+            const { data: ownsAccount } = await supabase
+              .from('delivery_partner_tokens')
+              .select('id')
+              .eq('user_id', createdBy)
+              .eq('partner_name', destination)
+              .ilike('account_username', probe)
+              .eq('is_active', true)
+              .maybeSingle();
+            if (!ownsAccount) {
+              devLog.log('ℹ️ الحساب الممرر لا يخص المنشئ — تجاهل والاختيار التلقائي لحساب المنشئ.', {
+                passedAccount: actualAccount, createdBy, destination
+              });
+              actualAccount = null;
+            }
+          } catch (_) {
+            actualAccount = null;
+          }
+        }
+
+        // ✅ إذا لم يُحدَّد حساب صالح للمنشئ، نجلب حسابه الافتراضي/الأحدث في الشريك المختار
+        if (!actualAccount) {
+          devLog.log('⚠️ لا يوجد حساب صالح للمنشئ، محاولة جلب الحساب الافتراضي للشريك:', destination);
+          try {
             const { data: profileData } = await supabase
               .from('profiles')
               .select('selected_delivery_account, selected_delivery_partner, default_customer_name, default_ai_order_destination')
@@ -2171,11 +2193,21 @@ export const SuperProvider = ({ children }) => {
 
             const profilePartner = profileData?.selected_delivery_partner || profileData?.default_ai_order_destination;
             if (profileData?.selected_delivery_account && profilePartner === destination) {
-              actualAccount = profileData.selected_delivery_account;
-              devLog.log('📋 استُخدم الحساب من التفضيلات (مطابق للشريك):', actualAccount);
+              const probe = String(profileData.selected_delivery_account).trim().toLowerCase().replace(/\s+/g, '-');
+              const { data: profTok } = await supabase
+                .from('delivery_partner_tokens')
+                .select('id')
+                .eq('user_id', createdBy)
+                .eq('partner_name', destination)
+                .ilike('account_username', probe)
+                .eq('is_active', true)
+                .maybeSingle();
+              if (profTok) {
+                actualAccount = profileData.selected_delivery_account;
+                devLog.log('📋 استُخدم الحساب من تفضيلات المنشئ:', actualAccount);
+              }
             }
 
-            // 2) إذا لم يطابق التفضيل، نختار الحساب الافتراضي/الأحدث للشريك المختار
             if (!actualAccount) {
               const { data: tokenRow } = await supabase
                 .from('delivery_partner_tokens')
@@ -2209,41 +2241,31 @@ export const SuperProvider = ({ children }) => {
 
         if (!actualAccount) {
           const partnerLabel = destination === 'modon' ? 'مدن' : 'الوسيط';
-          return { 
-            success: false, 
-            error: `لا يوجد حساب نشط لشركة ${partnerLabel}. سجّل دخول لها من إدارة شركات التوصيل أولاً.` 
+          let creatorName = 'منشئ الطلب';
+          try {
+            const { data: cu } = await supabase
+              .from('profiles')
+              .select('full_name, username')
+              .eq('user_id', createdBy)
+              .maybeSingle();
+            creatorName = cu?.full_name || cu?.username || creatorName;
+          } catch (_) {}
+          return {
+            success: false,
+            error: `الموظف "${creatorName}" ليس لديه حساب نشط في شركة ${partnerLabel}. سجّل دخوله من إدارة شركات التوصيل أولاً.`
           };
         }
-        
+
         // تطبيع اسم الحساب قبل البحث
         const rawAccount = actualAccount;
         actualAccount = actualAccount.trim().toLowerCase().replace(/\s+/g, '-');
-        
+
         devLog.log('🔍 تطبيع اسم الحساب:', {
           original: rawAccount,
           normalized: actualAccount,
-          destination: destination
+          destination,
+          owner: createdBy
         });
-
-        // 🛡️ تحقق نهائي: يجب أن يوجد حساب نشط للمنشئ في هذا الشريك تحديداً
-        // (يمنع إرسال طلب مدن بتوكن وسيط أو العكس).
-        // ملاحظة: لا نفحص expires_at هنا؛ نعتمد على رد الشريك الفعلي والتجديد التلقائي عند TOKEN_EXPIRED.
-        const { data: tokenCheck } = await supabase
-          .from('delivery_partner_tokens')
-          .select('id, expires_at')
-          .eq('user_id', createdBy)
-          .eq('partner_name', destination)
-          .ilike('account_username', actualAccount)
-          .eq('is_active', true)
-          .maybeSingle();
-
-        if (!tokenCheck) {
-          const partnerLabel = destination === 'modon' ? 'مدن' : 'الوسيط';
-          return {
-            success: false,
-            error: `لا يوجد حساب نشط للحساب "${rawAccount}" في شركة ${partnerLabel} لمنشئ الطلب. سجّل دخوله من إدارة شركات التوصيل ثم أعد المحاولة.`
-          };
-        }
 
         // الحصول على توكن الحساب المحدد مباشرة من قاعدة البيانات (بدون فلتر expires_at)
         // الاعتماد على رد الشريك الفعلي + تجديد تلقائي عند TOKEN_EXPIRED.

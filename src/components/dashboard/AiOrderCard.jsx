@@ -619,14 +619,9 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                           return;
                         }
 
-                        if (orderDestination.destination !== 'local' && !orderDestination.account) {
-                          toast({
-                            title: "خطأ",
-                            description: 'يجب تحديد حساب شركة التوصيل قبل الموافقة',
-                            variant: "destructive"
-                          });
-                          return;
-                        }
+                        // ملاحظة: لا نمنع الموافقة عند غياب الحساب — الخادم يختار حساب
+                        // منشئ الطلب تلقائياً (المدير يضغط موافقة لكن الإرسال بحساب الموظف).
+
 
                         const res = await approveAiOrder?.(
                           order.id,
