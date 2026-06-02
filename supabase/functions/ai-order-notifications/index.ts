@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
       icon: 'sparkles'
     };
 
-    // 1) إشعار عام للمدير العام (user_id = null)
+    // 1) إشعارات موجَّهة لكل مدير عام/أدمن (لا نستخدم user_id=null لمنع تسرّب الإشعار لمدراء الأقسام)
     const recipientsAttempted: string[] = [];
     const insertOne = async (user_id: string | null) => {
       const key = String(user_id);
@@ -107,7 +107,22 @@ Deno.serve(async (req) => {
       }
     };
 
-    await insertOne(null);
+    try {
+      const { data: admins } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('role', ['super_admin', 'admin']);
+      const adminIds = Array.from(new Set((admins || []).map((a: any) => a.user_id).filter(Boolean)));
+      for (const aid of adminIds) await insertOne(aid);
+      if (adminIds.length === 0) {
+        // fallback آمن: إشعار عام (لن يصل لغير الأدمن بفضل فحص الواجهة)
+        await insertOne(null);
+      }
+    } catch (e) {
+      console.warn('⚠️ admins fetch failed; falling back to global notification', e);
+      await insertOne(null);
+    }
+
 
     // 2) إشعارات لمديري قسم الموظف (employee_supervisors)
     //    🛡️ تخطي إذا المنشئ هو مدير عام/أدمن (لمنع تسرّب إشعاراته إلى مدراء أقسام)
