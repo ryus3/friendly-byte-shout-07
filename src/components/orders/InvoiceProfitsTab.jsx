@@ -24,6 +24,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   const [profits, setProfits] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
   const [ordersData, setOrdersData] = useState([]);
+  const [discounts, setDiscounts] = useState([]);
   const [namesMap, setNamesMap] = useState({});
   const [supervisedIds, setSupervisedIds] = useState([]);
   const [resolvedOrderIds, setResolvedOrderIds] = useState([]);
