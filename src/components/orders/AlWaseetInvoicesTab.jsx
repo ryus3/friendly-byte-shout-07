@@ -563,6 +563,11 @@ const AlWaseetInvoicesTab = () => {
         invoice={selectedInvoice}
         viewerUserId={user?.id || user?.user_id || null}
       />
+
+      <InvoicesProfitReportDialog
+        open={profitReportOpen}
+        onOpenChange={setProfitReportOpen}
+      />
     </div>
   );
 };
