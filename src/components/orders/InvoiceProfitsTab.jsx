@@ -5,27 +5,23 @@ import { Loader2, TrendingUp, Wallet, Users, Package, Crown, ShieldCheck, Info, 
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { computeInvoiceProfits, fetchInvoiceProfitsData } from '@/lib/invoiceProfitsCalc';
 
 /**
- * تبويب أرباح الفاتورة
- *
- *  ⚠️ قاعدة محاسبية صارمة:
- *  جميع الأرقام (الإيراد، الربح، الصافي) **بدون أجور التوصيل**.
- *  الإيراد الحقيقي = SUM(order_items.quantity * unit_price)
- *  أو fallback: orders.final_amount - orders.delivery_fee
- *  التكلفة = SUM(order_items.quantity * cost_price من المتغير/المنتج)
- *  الربح = الإيراد - التكلفة
+ * تبويب أرباح الفاتورة - منطق دقيق:
+ * - الإيراد = orders.final_amount - delivery_fee (سعر شركة التوصيل الفعلي).
+ * - الزيادة/الخصم لكل طلب توزَّع تلقائياً:
+ *   • للموظف منشئ الطلب إذا له قاعدة ربح فعّالة.
+ *   • وإلا تُضاف لمالكي المنتجات بنسبة حصتهم.
+ * - التكلفة تأخذ products.cost_price أولاً (الأحدث) ثم product_variants.cost_price.
+ * - أجور التوصيل مستثناة دائماً.
  */
 const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   const { user } = useAuth();
   const { isAdmin, isDepartmentManager } = usePermissions();
 
   const [loading, setLoading] = useState(true);
-  const [profits, setProfits] = useState([]);
-  const [orderItems, setOrderItems] = useState([]);
-  const [ordersData, setOrdersData] = useState([]);
-  const [discounts, setDiscounts] = useState([]);
-  const [namesMap, setNamesMap] = useState({});
+  const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
   const [supervisedIds, setSupervisedIds] = useState([]);
   const [resolvedOrderIds, setResolvedOrderIds] = useState([]);
 
@@ -36,7 +32,6 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     [linkedOrders]
   );
 
-  // جلب order_id من delivery_invoice_orders إذا لم تكن الروابط ممررة
   useEffect(() => {
     let cancelled = false;
     const resolve = async () => {
@@ -45,20 +40,14 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         return;
       }
       const externalId = invoice?.external_id || invoice?.id;
-      if (!externalId) {
-        setResolvedOrderIds([]);
-        return;
-      }
+      if (!externalId) { setResolvedOrderIds([]); return; }
       try {
         const { data: invRow } = await supabase
           .from('delivery_invoices')
           .select('id')
           .eq('external_id', String(externalId))
           .maybeSingle();
-        if (!invRow?.id) {
-          if (!cancelled) setResolvedOrderIds([]);
-          return;
-        }
+        if (!invRow?.id) { if (!cancelled) setResolvedOrderIds([]); return; }
         const { data: dio } = await supabase
           .from('delivery_invoice_orders')
           .select('order_id')
@@ -77,53 +66,10 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      const ids = resolvedOrderIds;
-      if (!ids || ids.length === 0) {
-        setLoading(false);
-        setProfits([]);
-        setOrderItems([]);
-        setOrdersData([]);
-        return;
-      }
+      if (!resolvedOrderIds.length) { setLoading(false); setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} }); return; }
       setLoading(true);
       try {
-        const [{ data: pData }, { data: itemsData }, { data: oData }, { data: dData }] = await Promise.all([
-          supabase
-            .from('profits')
-            .select('order_id, employee_id, employee_profit, profit_amount, total_revenue, total_cost, status')
-            .in('order_id', ids),
-          supabase
-            .from('order_items')
-            .select(`
-              order_id, product_id, variant_id, quantity, unit_price, total_price,
-              products:product_id(id, name, owner_user_id, cost_price),
-              product_variants:variant_id(id, cost_price)
-            `)
-            .in('order_id', ids),
-          supabase
-            .from('orders')
-            .select('id, final_amount, total_amount, delivery_fee')
-            .in('id', ids),
-          supabase
-            .from('order_discounts')
-            .select('order_id, discount_amount, affects_employee_profit')
-            .in('order_id', ids),
-        ]);
-
-        const employeeIds = (pData || []).map(p => p.employee_id).filter(Boolean);
-        const ownerIds = (itemsData || [])
-          .map(i => i.products?.owner_user_id)
-          .filter(Boolean);
-        const allUserIds = Array.from(new Set([...employeeIds, ...ownerIds]));
-
-        let names = {};
-        if (allUserIds.length) {
-          const { data: profs } = await supabase
-            .from('profiles')
-            .select('user_id, full_name')
-            .in('user_id', allUserIds);
-          (profs || []).forEach(p => { names[p.user_id] = p.full_name; });
-        }
+        const fetched = await fetchInvoiceProfitsData(supabase, resolvedOrderIds);
 
         let supIds = [];
         if (isDepartmentManager && !isAdmin && userId) {
@@ -134,13 +80,8 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
             .eq('is_active', true);
           supIds = (sup || []).map(r => r.employee_id);
         }
-
         if (cancelled) return;
-        setProfits(pData || []);
-        setOrderItems(itemsData || []);
-        setOrdersData(oData || []);
-        setDiscounts(dData || []);
-        setNamesMap(names);
+        setData(fetched);
         setSupervisedIds(supIds);
       } catch (e) {
         console.error('InvoiceProfitsTab load error', e);
@@ -152,108 +93,8 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     return () => { cancelled = true; };
   }, [resolvedOrderIds.join(','), userId, isAdmin, isDepartmentManager]);
 
-  const calc = useMemo(() => {
-    // ✅ القاعدة: استبعاد أجور التوصيل دائماً
-    const totalDeliveryFees = ordersData.reduce((s, o) => s + (Number(o.delivery_fee) || 0), 0);
-
-    // الإيراد الحقيقي بدون توصيل = من order_items (الأدق)
-    let revenueFromItems = 0;
-    let costFromItems = 0;
-    let totalQty = 0;
-    const productMap = {}; // product_id -> { name, qty, revenue, cost, ownerId }
-
-    (orderItems || []).forEach(it => {
-      const qty = Number(it.quantity) || 0;
-      const unitPrice = Number(it.unit_price) || 0;
-      const costUnit =
-        Number(it.product_variants?.cost_price) ||
-        Number(it.products?.cost_price) || 0;
-      const revenue = qty * unitPrice;
-      const cost = qty * costUnit;
-      revenueFromItems += revenue;
-      costFromItems += cost;
-      totalQty += qty;
-
-      const pid = it.product_id || '__unknown__';
-      if (!productMap[pid]) {
-        productMap[pid] = {
-          id: pid,
-          name: it.products?.name || 'منتج',
-          ownerId: it.products?.owner_user_id || '__system__',
-          qty: 0, revenue: 0, cost: 0,
-        };
-      }
-      productMap[pid].qty += qty;
-      productMap[pid].revenue += revenue;
-      productMap[pid].cost += cost;
-    });
-
-    // ✅ الإيراد الصحيح للفاتورة = مجموع final_amount للطلبات المرتبطة - رسوم التوصيل
-    // هذا يحترم الخصم/الزيادة/التسليم الجزئي، ولا يعتمد على order_items التي قد لا تطابق المبلغ الفعلي
-    const itemsAvailable = (orderItems || []).length > 0;
-    const revenueFromOrders = ordersData.reduce(
-      (s, o) => s + ((Number(o.final_amount) || Number(o.total_amount) || 0) - (Number(o.delivery_fee) || 0)),
-      0
-    );
-
-    // نعتمد revenueFromOrders كمصدر حقيقة الإيراد دائماً (مطابق لمبلغ شركة التوصيل)
-    const totalRevenue = revenueFromOrders;
-
-    // التكلفة من order_items فقط (الأدق)
-    const totalCost = costFromItems;
-
-    // مستحقات الموظفين تبقى من جدول profits
-    const employeeProfitTotal = profits.reduce((s, p) => s + (Number(p.employee_profit) || 0), 0);
-
-    // الربح الإجمالي بدون توصيل
-    const totalProfit = totalRevenue - totalCost;
-    const netForOwners = totalProfit - employeeProfitTotal;
-
-    const employeeProfitByEmp = {};
-    profits.forEach(p => {
-      const k = p.employee_id || '__unknown__';
-      employeeProfitByEmp[k] = (employeeProfitByEmp[k] || 0) + (Number(p.employee_profit) || 0);
-    });
-
-    // ✅ توزيع فرق الزيادة/الخصم على المالكين (لا يخص الموظف عبر قواعد الربح)
-    // - الزيادة/الخصم المؤهَّلة لمستحقات الموظف موجودة بالفعل في profits.employee_profit (لا تُكرَّر هنا).
-    // - الفرق المتبقي (totalRevenue - revenueFromItems - deltaForEmployees) يُوزَّع على المالكين
-    //   بنسبة إيراد منتجاتهم — يجعل byOwner.revenue يطابق الإيراد الحقيقي للفاتورة.
-    const deltaForEmployees = (discounts || []).reduce(
-      (s, d) => s + (d.affects_employee_profit ? -(Number(d.discount_amount) || 0) : 0),
-      0
-    ); // ملاحظة: discount_amount السالب = زيادة، الموجب = خصم. للموظف نأخذ -discount_amount (زيادة=موجب).
-    const totalDelta = totalRevenue - revenueFromItems; // قد يكون موجباً (زيادة) أو سالباً (خصم)
-    const deltaForOwners = totalDelta - deltaForEmployees;
-
-    const byOwner = {};
-    Object.values(productMap).forEach(prod => {
-      const ownerId = prod.ownerId;
-      if (!byOwner[ownerId]) byOwner[ownerId] = { revenue: 0, cost: 0, items: 0, products: [] };
-      byOwner[ownerId].revenue += prod.revenue;
-      byOwner[ownerId].cost += prod.cost;
-      byOwner[ownerId].items += prod.qty;
-      byOwner[ownerId].products.push(prod);
-    });
-
-    if (revenueFromItems > 0 && Math.abs(deltaForOwners) > 0.5) {
-      Object.values(byOwner).forEach(o => {
-        const share = o.revenue / revenueFromItems;
-        o.revenue += deltaForOwners * share;
-      });
-    }
-
-    const productsList = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
-
-    return {
-      totalRevenue, totalCost, totalProfit,
-      employeeProfitTotal, netForOwners,
-      employeeProfitByEmp, byOwner,
-      itemsAvailable, totalDeliveryFees, totalQty,
-      productsList, productCount: productsList.length,
-      totalDelta, deltaForEmployees, deltaForOwners,
-    };
-  }, [profits, orderItems, ordersData, discounts]);
+  const calc = useMemo(() => computeInvoiceProfits(data), [data]);
+  const namesMap = data.namesMap;
 
   if (loading) {
     return (
@@ -271,7 +112,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     );
   }
 
-  if (profits.length === 0 && !calc.itemsAvailable) {
+  if (!calc.itemsAvailable && calc.employeeTotalCombined === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground space-y-2" dir="rtl">
         <Info className="w-6 h-6 mx-auto text-muted-foreground" />
@@ -284,8 +125,9 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
 
   // === الموظف ===
   if (!isAdmin && !isDepartmentManager) {
-    const myProfit = calc.employeeProfitByEmp[userId] || 0;
-    const myOrdersCount = profits.filter(p => p.employee_id === userId).length;
+    const myProfit = calc.employeeCombinedByEmp[userId] || 0;
+    const myBonus = calc.employeeBonusByEmp[userId] || 0;
+    const myOrdersCount = (data.profits || []).filter(p => p.employee_id === userId).length;
     return (
       <div className="space-y-4 p-1" dir="rtl">
         <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 border-emerald-500/30">
@@ -300,9 +142,12 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
             <p className="text-sm text-muted-foreground">
               من {myOrdersCount} طلب{myOrdersCount > 1 ? 'اً' : ''} مرتبط بهذه الفاتورة
             </p>
-            <p className="text-xs text-muted-foreground mt-2">
-              * المبلغ صافي بدون أجور التوصيل
-            </p>
+            {myBonus !== 0 && (
+              <p className="text-xs text-amber-600 mt-1">
+                يشمل {fmt(myBonus)} من الزيادة/الخصم على طلباتك
+              </p>
+            )}
+            <p className="text-xs text-muted-foreground mt-2">* المبلغ صافي بدون أجور التوصيل</p>
           </CardContent>
         </Card>
       </div>
@@ -312,11 +157,9 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   // === مدير القسم ===
   if (isDepartmentManager && !isAdmin) {
     const myOwnerStats = calc.byOwner[userId] || { revenue: 0, cost: 0, items: 0, products: [] };
-    const myEmployeesProfits = Object.entries(calc.employeeProfitByEmp)
+    const myEmployeesProfits = Object.entries(calc.employeeCombinedByEmp)
       .filter(([empId]) => supervisedIds.includes(empId))
-      .map(([empId, amount]) => ({
-        empId, name: namesMap[empId] || 'موظف', amount,
-      }));
+      .map(([empId, amount]) => ({ empId, name: namesMap[empId] || 'موظف', amount }));
     const myEmployeesTotal = myEmployeesProfits.reduce((s, e) => s + e.amount, 0);
     const myNet = (myOwnerStats.revenue - myOwnerStats.cost) - myEmployeesTotal;
 
@@ -356,7 +199,8 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
           </CardContent>
         </Card>
 
-        <DeliveryNote totalDelivery={calc.totalDeliveryFees} fmt={fmt} />
+        <DeltaNote calc={calc} fmt={fmt} />
+        <DeliveryNote totalDelivery={calc.totalDelivery} fmt={fmt} />
       </div>
     );
   }
@@ -369,23 +213,26 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     netProfit: stats.revenue - stats.cost,
   })).sort((a, b) => b.netProfit - a.netProfit);
 
-  const employeeEntries = Object.entries(calc.employeeProfitByEmp)
+  const employeeEntries = Object.entries(calc.employeeCombinedByEmp)
     .filter(([, amount]) => Number(amount) !== 0)
     .map(([empId, amount]) => ({
-      empId, name: namesMap[empId] || 'موظف', amount,
+      empId,
+      name: namesMap[empId] || 'موظف',
+      amount,
+      bonus: calc.employeeBonusByEmp[empId] || 0,
     }));
 
   return (
     <div className="space-y-4 p-1" dir="rtl">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon={TrendingUp} label="إجمالي الإيراد" sub="بدون توصيل" value={fmt(calc.totalRevenue)} color="blue" />
+        <StatCard icon={TrendingUp} label="إجمالي الإيراد" sub="حسب شركة التوصيل بدون توصيل" value={fmt(calc.totalRevenue)} color="blue" />
         <StatCard icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
         <StatCard icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج`} value={`${calc.totalQty}`} color="purple" />
         <StatCard icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
       </div>
 
       <div className="grid grid-cols-2 gap-3">
-        <StatCard icon={Users} label="مستحقات الموظفين" value={fmt(calc.employeeProfitTotal)} color="purple" />
+        <StatCard icon={Users} label="مستحقات الموظفين" value={fmt(calc.employeeTotalCombined)} color="purple" />
         <StatCard icon={Crown} label="صافي للمالكين" value={fmt(calc.netForOwners)} color="emerald" />
       </div>
 
@@ -402,9 +249,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         </CardHeader>
         <CardContent>
           {ownerEntries.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">
-              تفاصيل المنتجات غير متاحة لهذه الفاتورة
-            </p>
+            <p className="text-center text-muted-foreground py-4">تفاصيل المنتجات غير متاحة لهذه الفاتورة</p>
           ) : (
             <div className="space-y-2">
               {ownerEntries.map(o => (
@@ -427,7 +272,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
             </div>
           )}
           <p className="text-xs text-muted-foreground mt-3 text-center">
-            * توزيع الأرباح يعرض صافي ما يعود لكل مالك منتج (الإيراد - التكلفة) بدون أجور التوصيل
+            * الإيراد لكل مالك يشمل حصته من الزيادة/الخصم (لما لا يأخذها موظف صاحب قاعدة ربح)
           </p>
         </CardContent>
       </Card>
@@ -436,7 +281,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-right">
             <Users className="w-5 h-5 text-primary" />
-            مستحقات الموظفين ({fmt(calc.employeeProfitTotal)})
+            مستحقات الموظفين ({fmt(calc.employeeTotalCombined)})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -446,7 +291,12 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
             <div className="space-y-2">
               {employeeEntries.map(e => (
                 <div key={e.empId} className="flex items-center justify-between p-3 rounded-lg bg-muted/40">
-                  <span className="font-medium">{e.name}</span>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{e.name}</span>
+                    {e.bonus !== 0 && (
+                      <span className="text-[10px] text-amber-600">+ {fmt(e.bonus)} زيادة/خصم</span>
+                    )}
+                  </div>
                   <Badge variant="secondary" className="text-emerald-600 bg-emerald-500/10">{fmt(e.amount)}</Badge>
                 </div>
               ))}
@@ -455,7 +305,8 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         </CardContent>
       </Card>
 
-      <DeliveryNote totalDelivery={calc.totalDeliveryFees} fmt={fmt} />
+      <DeltaNote calc={calc} fmt={fmt} />
+      <DeliveryNote totalDelivery={calc.totalDelivery} fmt={fmt} />
     </div>
   );
 };
@@ -487,6 +338,21 @@ const ProductsBreakdown = ({ products, fmt }) => (
     </CardContent>
   </Card>
 );
+
+const DeltaNote = ({ calc, fmt }) => {
+  if (Math.abs(calc.totalDelta) < 1) return null;
+  const isIncrease = calc.totalDelta > 0;
+  return (
+    <div className={`flex items-center justify-center gap-2 p-3 rounded-lg border border-dashed text-xs ${isIncrease ? 'text-emerald-600 bg-emerald-500/5' : 'text-orange-600 bg-orange-500/5'}`} dir="rtl">
+      <TrendingUp className="w-4 h-4" />
+      <span>
+        إجمالي {isIncrease ? 'الزيادة' : 'الخصم'} على هذه الفاتورة: {fmt(Math.abs(calc.totalDelta))}
+        {' — '}
+        {calc.employeeBonusTotal !== 0 ? `وُزِّع ${fmt(calc.employeeBonusTotal)} للموظفين أصحاب قواعد الربح` : 'وُزِّع كاملاً على مالكي المنتجات'}
+      </span>
+    </div>
+  );
+};
 
 const DeliveryNote = ({ totalDelivery, fmt }) => {
   if (!totalDelivery) return null;

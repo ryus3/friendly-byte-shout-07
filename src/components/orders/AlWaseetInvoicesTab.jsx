@@ -26,6 +26,7 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
+import InvoicesProfitReportDialog from './InvoicesProfitReportDialog';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 import devLog from '@/lib/devLogger';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -52,6 +53,7 @@ const AlWaseetInvoicesTab = () => {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [partnerFilter, setPartnerFilter] = useState('all');
+  const [profitReportOpen, setProfitReportOpen] = useState(false);
   
   // Time filter state with localStorage - default to 'week' for better UX
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
@@ -386,6 +388,15 @@ const AlWaseetInvoicesTab = () => {
                 <span>تحديث</span>
                 <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               </Button>
+              <Button
+                onClick={() => setProfitReportOpen(true)}
+                size="sm"
+                variant="outline"
+                className="inline-flex items-center gap-2"
+              >
+                <TrendingUp className="h-4 w-4" />
+                <span>تقرير أرباح الفواتير</span>
+              </Button>
             </div>
             <span className="text-right text-lg font-bold">
               فواتير شركات التوصيل
@@ -551,6 +562,11 @@ const AlWaseetInvoicesTab = () => {
         onClose={() => setDetailsDialogOpen(false)}
         invoice={selectedInvoice}
         viewerUserId={user?.id || user?.user_id || null}
+      />
+
+      <InvoicesProfitReportDialog
+        open={profitReportOpen}
+        onOpenChange={setProfitReportOpen}
       />
     </div>
   );
