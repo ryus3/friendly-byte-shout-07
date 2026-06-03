@@ -26,6 +26,7 @@ import { useAlWaseet } from '@/contexts/AlWaseetContext';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
+import InvoicesProfitReportDialog from './InvoicesProfitReportDialog';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 import devLog from '@/lib/devLogger';
 import { supabase } from '@/lib/customSupabaseClient';
