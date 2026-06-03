@@ -388,6 +388,15 @@ const AlWaseetInvoicesTab = () => {
                 <span>تحديث</span>
                 <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               </Button>
+              <Button
+                onClick={() => setProfitReportOpen(true)}
+                size="sm"
+                variant="outline"
+                className="inline-flex items-center gap-2"
+              >
+                <TrendingUp className="h-4 w-4" />
+                <span>تقرير أرباح الفواتير</span>
+              </Button>
             </div>
             <span className="text-right text-lg font-bold">
               فواتير شركات التوصيل
