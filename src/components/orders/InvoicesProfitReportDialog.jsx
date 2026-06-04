@@ -130,13 +130,22 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[92vh] overflow-hidden flex flex-col" dir="rtl">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-primary" />
-            تقرير أرباح الفواتير حسب الفترة
-          </DialogTitle>
-        </DialogHeader>
+      <DialogContent className="max-w-4xl max-h-[92vh] overflow-hidden flex flex-col p-0" dir="rtl">
+        <div className="relative overflow-hidden rounded-t-lg" style={{ background: 'linear-gradient(135deg, hsl(var(--primary) / 0.15) 0%, hsl(var(--accent, var(--primary)) / 0.1) 100%)' }}>
+          <div className="absolute inset-0 opacity-30" style={{ background: 'radial-gradient(circle at 20% 0%, hsl(var(--primary) / 0.4), transparent 50%), radial-gradient(circle at 80% 100%, hsl(var(--accent, var(--primary)) / 0.3), transparent 50%)' }} />
+          <DialogHeader className="relative p-5 pb-4">
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-primary to-primary/60 text-primary-foreground shadow-lg shadow-primary/30">
+                <FileText className="w-5 h-5" />
+              </div>
+              <div className="flex flex-col items-start">
+                <span className="font-bold bg-gradient-to-r from-primary to-foreground bg-clip-text text-transparent">تقرير أرباحي من الفواتير</span>
+                <span className="text-xs font-normal text-muted-foreground mt-0.5">حسابات شركة التوصيل الخاصة بك فقط</span>
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+        </div>
+        <div className="px-5 pt-3 pb-5 flex flex-col overflow-hidden flex-1">
 
         <div className="flex flex-col md:flex-row gap-3 items-start">
           <DateRangePicker date={dateRange} onDateChange={setDateRange} />
