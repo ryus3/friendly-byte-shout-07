@@ -34,9 +34,9 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange }) => {
   const [computing, setComputing] = useState(false);
   const [supervisedIds, setSupervisedIds] = useState([]);
 
-  // جلب الفواتير ضمن الفترة
+  // جلب الفواتير ضمن الفترة — مقيدة بحسابات المستخدم الحالي فقط (حتى للمدير)
   useEffect(() => {
-    if (!open || !dateRange?.from || !dateRange?.to) return;
+    if (!open || !dateRange?.from || !dateRange?.to || !userId) return;
     let cancelled = false;
     (async () => {
       setLoadingInvoices(true);
@@ -45,10 +45,12 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange }) => {
         const toIso = new Date(dateRange.to); toIso.setHours(23, 59, 59, 999);
         const { data: invs } = await supabase
           .from('delivery_invoices')
-          .select('id, external_id, amount, orders_count, partner, created_at, received_at, status')
+          .select('id, external_id, amount, orders_count, partner, account_username, owner_user_id, created_at, received_at, status')
+          .eq('owner_user_id', userId)
           .gte('created_at', fromIso.toISOString())
           .lte('created_at', toIso.toISOString())
-          .order('created_at', { ascending: false });
+          .order('received_at', { ascending: false, nullsFirst: false })
+          .order('external_id', { ascending: false });
         if (cancelled) return;
         setInvoices(invs || []);
         setSelectedIds(new Set((invs || []).map(i => i.id))); // تحديد الكل افتراضياً
