@@ -280,12 +280,12 @@ const OrderCard = React.memo(({
     return false;
   }, [order]);
 
-  // ✅ فتح تلقائي عند الحالة 21 فقط إذا الطلب يحتاج فعلاً لاختيار المنتجات
+  // ✅ فتح تلقائي إجباري عند أي حالة تتطلب تأكيد التسليم الجزئي
   React.useEffect(() => {
-    if (needsPartialDeliverySelection && order.delivery_status === '21' && !showPartialDelivery) {
+    if (needsPartialDeliverySelection && !showPartialDelivery) {
       setShowPartialDelivery(true);
     }
-  }, [order.delivery_status, order.tracking_number, needsPartialDeliverySelection]);
+  }, [needsPartialDeliverySelection, order.delivery_status, order.tracking_number]);
 
   const employeeProfit = useMemo(() => {
     if (!calculateProfit || !order.items) return 0;
