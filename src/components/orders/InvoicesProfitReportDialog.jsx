@@ -303,6 +303,7 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange }) => {
             )}
           </div>
         </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
