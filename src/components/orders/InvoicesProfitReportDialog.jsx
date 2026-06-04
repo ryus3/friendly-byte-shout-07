@@ -164,6 +164,9 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange }) => {
                         <Checkbox checked={selectedIds.has(inv.id)} onCheckedChange={() => toggleOne(inv.id)} />
                         <span className="font-mono text-xs">#{inv.external_id}</span>
                         <Badge variant="outline" className="text-[10px]">{inv.partner}</Badge>
+                        {inv.account_username && (
+                          <Badge className="text-[10px] bg-primary/10 text-primary border-primary/30">{inv.account_username}</Badge>
+                        )}
                         <span className="text-muted-foreground text-xs">{inv.orders_count} طلب</span>
                         <span className="mr-auto font-medium">{fmt(inv.amount)}</span>
                       </label>
