@@ -92,7 +92,7 @@ const ProductCard = React.memo(({ product, onSelect }) => {
           <div className="p-2 rounded" style={{ background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(4px)' }}>
             <h3 className="font-bold text-white text-lg truncate group-hover:gradient-text transition-colors">{product.name}</h3>
             <div className="flex justify-between items-center mt-2">
-              <p className="text-sm font-semibold text-white">{parseFloat(product.variants[0]?.price || product.base_price || 0).toLocaleString()} د.ع</p>
+              <p className="text-sm font-semibold text-white">{parseFloat(product.base_price ?? product.price ?? product.variants?.[0]?.price ?? 0).toLocaleString()} د.ع</p>
               <div className="flex -space-x-2 rtl:space-x-reverse">
                 {uniqueColorsWithHex.map((color, idx) => (
                   <div
