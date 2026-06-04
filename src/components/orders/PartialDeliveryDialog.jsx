@@ -249,8 +249,12 @@ export const PartialDeliveryDialog = ({ open, onOpenChange, order, onConfirm }) 
   const priceMismatch = Math.abs(expectedPrice - apiPrice) > 100;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(v) => { if (v) onOpenChange(v); /* منع الإغلاق إلا بالتأكيد */ }}>
+      <DialogContent
+        className="max-w-2xl max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold text-right flex items-center gap-3 justify-end">
             <span>
