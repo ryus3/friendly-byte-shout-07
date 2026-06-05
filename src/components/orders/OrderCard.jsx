@@ -251,32 +251,36 @@ const OrderCard = React.memo(({
 
   // تحديد ما إذا كان الطلب يحتاج لتحديد المنتجات المُسلّمة
   const needsPartialDeliverySelection = useMemo(() => {
-    // فقط للطلبات متعددة المنتجات من الوسيط
+    // فقط لطلبات الوسيط
     if (order.delivery_partner?.toLowerCase() !== 'alwaseet') return false;
-    if (!order.order_items || order.order_items.length <= 1) return false;
+    if (!order.order_items || order.order_items.length === 0) return false;
 
     // 🔒 استثناء صارم: طلبات الاستبدال/الإرجاع لا تفتح نافذة التسليم الجزئي أبداً
-    // (لها مسارها الخاص — السعر يأتي من شركة التوصيل دون افتراضات)
     if (order.order_type === 'exchange' || order.order_type === 'replacement' || order.order_type === 'return') {
       return false;
     }
 
-    // التحقق من أن جميع العناصر لا تزال في pending
-    const allPending = order.order_items.every(item => 
+    // التحقق من أن جميع العناصر لا تزال pending (لم يُحدد المباع بعد)
+    const allPending = order.order_items.every(item =>
       !item.item_status || item.item_status === 'pending'
     );
     if (!allPending) return false;
-    
+
+    // الكمية الإجمالية: نسمح بالتسليم الجزئي حتى لمنتج واحد بكمية > 1
+    const totalQty = order.order_items.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+    const multiSelectable = order.order_items.length > 1 || totalQty > 1;
+    if (!multiSelectable) return false;
+
     // ✅ الحالات التي تحتاج تسليم جزئي:
-    // 1. الحالة 21 (تم التسليم + استرجاع جزئي) - دائماً
-    if (order.delivery_status === '21') return true;
-    
-    // 2. ✅ أي طلب نوعه partial_delivery أو is_partial_delivery=true ولم يُعالج بعد
+    // 1. الحالة 21 / 23 (تسليم + استرجاع جزئي)
+    if (order.delivery_status === '21' || order.delivery_status === '23') return true;
+
+    // 2. أي طلب نوعه partial_delivery أو is_partial_delivery=true ولم يُعالج بعد
     if (order.order_type === 'partial_delivery' || order.is_partial_delivery === true) return true;
-    
+
     // 3. الحالة 4 (تم التسليم) - فقط إذا كان هناك تغيير سعر من API
     if (order.delivery_status === '4' && order.price_change_type === 'api_sync') return true;
-    
+
     return false;
   }, [order]);
 
