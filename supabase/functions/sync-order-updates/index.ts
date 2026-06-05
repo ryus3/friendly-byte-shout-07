@@ -541,13 +541,15 @@ Deno.serve(async (req) => {
 
             let notificationMessage: string;
             let notificationTitle: string;
+            const creatorName = creatorNames[localOrder.created_by] || '';
+            const namePrefix = creatorName ? `(${creatorName}) ` : '';
             if (statusChanged) {
               notificationTitle = locationLabel
-                ? `${locationLabel} | ${statusText}`
-                : statusText || 'تحديث حالة الطلب';
+                ? `${namePrefix}${locationLabel} | ${statusText}`
+                : `${namePrefix}${statusText || 'تحديث حالة الطلب'}`;
               notificationMessage = `${statusText} ${tracking}`.trim();
             } else {
-              notificationTitle = 'تحديث من شركة التوصيل';
+              notificationTitle = `${namePrefix}تحديث من شركة التوصيل`;
               notificationMessage = `الطلب ${tracking}: ${changesList.join('، ')}`;
             }
 
@@ -556,6 +558,7 @@ Deno.serve(async (req) => {
               order_number: localOrder.order_number,
               tracking_number: localOrder.tracking_number,
               employee_id: localOrder.created_by,
+              creator_name: creatorName,
               customer_city: localOrder.customer_city,
               customer_province: localOrder.customer_province,
               account: waseetOrder._account,
