@@ -388,15 +388,15 @@ const AlWaseetInvoicesTab = () => {
                 <span>تحديث</span>
                 <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
               </Button>
-              <button
+              <Button
                 onClick={() => setProfitReportOpen(true)}
-                className="relative group inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-white overflow-hidden shadow-lg shadow-primary/30 hover:shadow-primary/50 transition-all duration-300 hover:scale-[1.02]"
-                style={{ background: 'linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--accent, var(--primary))) 50%, hsl(var(--primary)) 100%)', backgroundSize: '200% 200%', animation: 'gradient-shift 4s ease infinite' }}
+                size="sm"
+                variant="outline"
+                className="inline-flex items-center gap-2 border-primary/40 bg-gradient-to-br from-primary/10 to-accent/10 hover:from-primary/20 hover:to-accent/20 text-primary"
               >
-                <span className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-                <TrendingUp className="h-4 w-4 relative z-10" />
-                <span className="relative z-10">تقرير أرباحي</span>
-              </button>
+                <span>تقريري</span>
+                <TrendingUp className="h-4 w-4" />
+              </Button>
             </div>
             <span className="text-right text-lg font-bold">
               فواتير شركات التوصيل
