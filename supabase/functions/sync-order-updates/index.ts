@@ -264,6 +264,19 @@ Deno.serve(async (req) => {
 
     console.log(`📋 تم العثور على ${activeOrders?.length || 0} طلب محلي نشط للمزامنة`);
 
+    // ✨ جلب أسماء منشئي الطلبات لإدراجها في عنوان الإشعار (مهم للمدير ومدير القسم)
+    const creatorIds = Array.from(new Set((activeOrders || []).map((o: any) => o.created_by).filter(Boolean)));
+    const creatorNames: Record<string, string> = {};
+    if (creatorIds.length > 0) {
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, username')
+        .in('user_id', creatorIds);
+      (profs || []).forEach((p: any) => {
+        creatorNames[p.user_id] = p.full_name || p.username || '';
+      });
+    }
+
     let updatedCount = 0;
     const changes: any[] = [];
     const notificationsToInsert: any[] = [];
@@ -528,13 +541,15 @@ Deno.serve(async (req) => {
 
             let notificationMessage: string;
             let notificationTitle: string;
+            const creatorName = creatorNames[localOrder.created_by] || '';
+            const namePrefix = creatorName ? `(${creatorName}) ` : '';
             if (statusChanged) {
               notificationTitle = locationLabel
-                ? `${locationLabel} | ${statusText}`
-                : statusText || 'تحديث حالة الطلب';
+                ? `${namePrefix}${locationLabel} | ${statusText}`
+                : `${namePrefix}${statusText || 'تحديث حالة الطلب'}`;
               notificationMessage = `${statusText} ${tracking}`.trim();
             } else {
-              notificationTitle = 'تحديث من شركة التوصيل';
+              notificationTitle = `${namePrefix}تحديث من شركة التوصيل`;
               notificationMessage = `الطلب ${tracking}: ${changesList.join('، ')}`;
             }
 
@@ -543,6 +558,7 @@ Deno.serve(async (req) => {
               order_number: localOrder.order_number,
               tracking_number: localOrder.tracking_number,
               employee_id: localOrder.created_by,
+              creator_name: creatorName,
               customer_city: localOrder.customer_city,
               customer_province: localOrder.customer_province,
               account: waseetOrder._account,

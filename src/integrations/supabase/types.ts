@@ -7965,6 +7965,10 @@ export type Database = {
           order_receipt_received: boolean
         }[]
       }
+      get_invoice_profits_report: {
+        Args: { p_invoice_ids: string[] }
+        Returns: Json
+      }
       get_invoice_sync_stats: {
         Args: never
         Returns: {

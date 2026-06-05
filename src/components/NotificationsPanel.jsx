@@ -888,60 +888,62 @@ const NotificationsPanel = () => {
                            <div className="flex items-center justify-between mb-1">
                               <div className="flex items-center gap-2 flex-1 min-w-0">
                                 {(() => {
-                                  // استخراج العنوان
-                                  const titleText = (() => {
-                                    // تخصيص العنوان لإشعارات تحديث حالة الطلب
-                                    if (notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed') {
-                                      const data = notification.data || {};
+                                  const data = notification.data || {};
+                                  const isStatusNotif = notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed';
+                                  // اسم منشئ الطلب (مهم للمدير ومدير القسم)
+                                  const creatorName = (data.creator_name || data.employee_name || '').trim();
+
+                                  // استخراج العنوان الأساسي
+                                  const baseTitle = (() => {
+                                    if (isStatusNotif) {
                                       const orderId = data.order_id;
-                                      
-                                      // ✅ Fallback: استخراج tracking_number من message إذا لم يوجد order_id
                                       const trackingFromMessage = !orderId ? parseTrackingFromMessage(notification.message) : null;
                                       const searchKey = orderId || trackingFromMessage || data.tracking_number || data.order_number;
-                                      
-                                       // البحث عن الطلب من النظام الموحد (بـ UUID أو tracking_number)
-                                       if (searchKey && orders && orders.length > 0) {
-                                         const foundOrder = orders.find(order => 
-                                           order.id === searchKey || 
-                                           order.tracking_number === searchKey ||
-                                           order.order_number === searchKey
-                                         );
-                                         if (foundOrder) {
-                                           // استخدام تنسيق "المدينة - المنطقة" مباشرة
-                                           const city = (foundOrder.customer_city || '').trim() || 'غير محدد';
-                                           const region = (foundOrder.customer_province || '').trim() || 'غير محدد';
-                                           return `${city} - ${region}`;
-                                         }
+                                      if (searchKey && orders && orders.length > 0) {
+                                        const foundOrder = orders.find(order =>
+                                          order.id === searchKey ||
+                                          order.tracking_number === searchKey ||
+                                          order.order_number === searchKey
+                                        );
+                                        if (foundOrder) {
+                                          const city = (foundOrder.customer_city || '').trim() || 'غير محدد';
+                                          const region = (foundOrder.customer_province || '').trim() || 'غير محدد';
+                                          return `${city} - ${region}`;
+                                        }
                                       }
-                                      
-                                       // للإشعارات القديمة بدون order_id، استخدام البيانات من data
-                                       if (data.customer_city || data.customer_address) {
-                                         const city = data.customer_city || 'غير محدد';
-                                         const region = data.customer_province || 'غير محدد';
-                                         return `${city} - ${region}`;
-                                       }
+                                      if (data.customer_city || data.customer_address) {
+                                        const city = data.customer_city || 'غير محدد';
+                                        const region = data.customer_province || 'غير محدد';
+                                        return `${city} - ${region}`;
+                                      }
                                     }
-                                    
-                                    // العنوان الافتراضي
-                                    return notification.title || 'إشعار جديد';
-                                   })();
-                                   
-                                   // إزالة الإيموجي البدائي 🤖 من العناوين القديمة — الأيقونة الاحترافية تظهر يساراً
-                                   const cleanTitleText = String(titleText || '').replace(/🤖\s*/g, '').trim() || 'إشعار جديد';
-                                   
-                                    // استخدام ScrollingText للعناوين الطويلة
-                                     return cleanTitleText.length > 22 ? (
-                                       <ScrollingText 
-                                         text={cleanTitleText} 
-                                         className={cn("font-semibold text-sm leading-tight", colors.text)}
-                                         maxWidth="170px"
-                                       />
-                                     ) : (
-                                       <h3 className={cn("font-semibold text-sm leading-tight", colors.text)}>
-                                         {cleanTitleText}
-                                       </h3>
-                                     );
-                                 })()}
+                                    // إزالة أي بادئة (الاسم) من title المخزن لتجنب التكرار
+                                    return String(notification.title || 'إشعار جديد').replace(/^\([^)]+\)\s*/, '');
+                                  })();
+
+                                  const cleanTitleText = String(baseTitle).replace(/🤖\s*/g, '').trim() || 'إشعار جديد';
+                                  const showNameBadge = !!creatorName;
+                                  const combinedLength = cleanTitleText.length + (showNameBadge ? creatorName.length + 3 : 0);
+
+                                  if (combinedLength > 22) {
+                                    const scrollText = showNameBadge ? `(${creatorName}) ${cleanTitleText}` : cleanTitleText;
+                                    return (
+                                      <ScrollingText
+                                        text={scrollText}
+                                        className={cn("font-semibold text-sm leading-tight", colors.text)}
+                                        maxWidth="170px"
+                                      />
+                                    );
+                                  }
+                                  return (
+                                    <h3 className={cn("font-semibold text-sm leading-tight flex items-center gap-1.5", colors.text)}>
+                                      {showNameBadge && (
+                                        <span className="text-violet-500 dark:text-violet-300 font-bold">({creatorName})</span>
+                                      )}
+                                      <span>{cleanTitleText}</span>
+                                    </h3>
+                                  );
+                                })()}
                                </div>
                                <p className="text-[10px] text-muted-foreground/60 flex items-center gap-1 flex-shrink-0 mr-2">
                                 {!(notification.is_read || notification.read) && (
