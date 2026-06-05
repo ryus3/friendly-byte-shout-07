@@ -264,6 +264,19 @@ Deno.serve(async (req) => {
 
     console.log(`📋 تم العثور على ${activeOrders?.length || 0} طلب محلي نشط للمزامنة`);
 
+    // ✨ جلب أسماء منشئي الطلبات لإدراجها في عنوان الإشعار (مهم للمدير ومدير القسم)
+    const creatorIds = Array.from(new Set((activeOrders || []).map((o: any) => o.created_by).filter(Boolean)));
+    const creatorNames: Record<string, string> = {};
+    if (creatorIds.length > 0) {
+      const { data: profs } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, username')
+        .in('user_id', creatorIds);
+      (profs || []).forEach((p: any) => {
+        creatorNames[p.user_id] = p.full_name || p.username || '';
+      });
+    }
+
     let updatedCount = 0;
     const changes: any[] = [];
     const notificationsToInsert: any[] = [];
