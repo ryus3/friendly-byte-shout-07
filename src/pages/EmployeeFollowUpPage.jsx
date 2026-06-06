@@ -1224,6 +1224,14 @@ useEffect(() => {
             <h1 className="text-3xl font-bold gradient-text">متابعة الموظفين</h1>
             <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل وإدارة المزامنة الذكية.</p>
           </div>
+          <Button
+            onClick={() => setIsInvoicesReportOpen(true)}
+            className="bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 text-white shadow-lg hover:scale-105 transition-all"
+            size="sm"
+          >
+            <FileText className="w-4 h-4 ml-2" />
+            تقرير الفواتير
+          </Button>
         </div>
 
         {/* شريط الأدوات الاحترافي للمزامنة */}
