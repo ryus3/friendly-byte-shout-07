@@ -45,7 +45,7 @@ const computeRange = (period) => {
   return { from, to };
 };
 
-const InvoicesProfitReportDialog = ({ open, onOpenChange }) => {
+const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employeeId = null }) => {
   const { user } = useAuth();
   const { isAdmin, isDepartmentManager } = usePermissions();
   const userId = user?.user_id || user?.id;
