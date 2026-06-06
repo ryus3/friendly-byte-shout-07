@@ -129,10 +129,10 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     );
   }
 
-  if (!resolvedOrderIds.length) {
+  if ((data.orders || []).length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground" dir="rtl">
-        لا توجد طلبات محلية مرتبطة لحساب الأرباح
+        لا توجد طلبات مرتبطة بهذه الفاتورة بعد
       </div>
     );
   }
