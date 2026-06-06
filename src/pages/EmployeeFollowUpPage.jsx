@@ -28,6 +28,7 @@ import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 import EmployeeDeliveryInvoicesTab from '@/components/orders/EmployeeDeliveryInvoicesTab';
 import ProfessionalSyncToolbar from '@/components/shared/ProfessionalSyncToolbar';
 import SettlementRequestsDialog from '@/components/dialogs/SettlementRequestsDialog';
+import InvoicesProfitReportDialog from '@/components/orders/InvoicesProfitReportDialog';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
