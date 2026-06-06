@@ -23,45 +23,8 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
   const [supervisedIds, setSupervisedIds] = useState([]);
-  const [resolvedOrderIds, setResolvedOrderIds] = useState([]);
 
   const userId = user?.user_id || user?.id;
-
-  const orderIdsFromProps = useMemo(
-    () => Array.from(new Set((linkedOrders || []).map(o => o.id).filter(Boolean))),
-    [linkedOrders]
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    const resolve = async () => {
-      if (orderIdsFromProps.length > 0) {
-        setResolvedOrderIds(orderIdsFromProps);
-        return;
-      }
-      const externalId = invoice?.external_id || invoice?.id;
-      if (!externalId) { setResolvedOrderIds([]); return; }
-      try {
-        const { data: invRow } = await supabase
-          .from('delivery_invoices')
-          .select('id')
-          .eq('external_id', String(externalId))
-          .maybeSingle();
-        if (!invRow?.id) { if (!cancelled) setResolvedOrderIds([]); return; }
-        const { data: dio } = await supabase
-          .from('delivery_invoice_orders')
-          .select('order_id')
-          .eq('invoice_id', invRow.id)
-          .not('order_id', 'is', null);
-        const ids = Array.from(new Set((dio || []).map(r => r.order_id).filter(Boolean)));
-        if (!cancelled) setResolvedOrderIds(ids);
-      } catch {
-        if (!cancelled) setResolvedOrderIds([]);
-      }
-    };
-    resolve();
-    return () => { cancelled = true; };
-  }, [orderIdsFromProps, invoice?.external_id, invoice?.id]);
 
   useEffect(() => {
     let cancelled = false;
