@@ -23,75 +23,63 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
   const [supervisedIds, setSupervisedIds] = useState([]);
-  const [resolvedOrderIds, setResolvedOrderIds] = useState([]);
 
   const userId = user?.user_id || user?.id;
-
-  const orderIdsFromProps = useMemo(
-    () => Array.from(new Set((linkedOrders || []).map(o => o.id).filter(Boolean))),
-    [linkedOrders]
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    const resolve = async () => {
-      if (orderIdsFromProps.length > 0) {
-        setResolvedOrderIds(orderIdsFromProps);
-        return;
-      }
-      const externalId = invoice?.external_id || invoice?.id;
-      if (!externalId) { setResolvedOrderIds([]); return; }
-      try {
-        const { data: invRow } = await supabase
-          .from('delivery_invoices')
-          .select('id')
-          .eq('external_id', String(externalId))
-          .maybeSingle();
-        if (!invRow?.id) { if (!cancelled) setResolvedOrderIds([]); return; }
-        const { data: dio } = await supabase
-          .from('delivery_invoice_orders')
-          .select('order_id')
-          .eq('invoice_id', invRow.id)
-          .not('order_id', 'is', null);
-        const ids = Array.from(new Set((dio || []).map(r => r.order_id).filter(Boolean)));
-        if (!cancelled) setResolvedOrderIds(ids);
-      } catch {
-        if (!cancelled) setResolvedOrderIds([]);
-      }
-    };
-    resolve();
-    return () => { cancelled = true; };
-  }, [orderIdsFromProps, invoice?.external_id, invoice?.id]);
 
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      if (!resolvedOrderIds.length) { setLoading(false); setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} }); return; }
+      // الإستراتيجية الجديدة: استخدم RPC الآمن دائماً عندما توجد فاتورة
+      const invoiceDbId = invoice?.id && typeof invoice.id === 'string' && invoice.id.includes('-') ? invoice.id : null;
+      // نحاول أولاً جلب معرف الفاتورة من DB إذا لم يكن متاحاً
+      let dbInvoiceId = invoiceDbId;
+      if (!dbInvoiceId) {
+        const externalId = invoice?.external_id || invoice?.id;
+        if (externalId) {
+          try {
+            const { data: invRow } = await supabase
+              .from('delivery_invoices').select('id')
+              .eq('external_id', String(externalId)).maybeSingle();
+            dbInvoiceId = invRow?.id || null;
+          } catch { dbInvoiceId = null; }
+        }
+      }
+
+      if (!dbInvoiceId) {
+        if (!cancelled) { setLoading(false); setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} }); }
+        return;
+      }
+
       setLoading(true);
       try {
-        const fetched = await fetchInvoiceProfitsData(supabase, resolvedOrderIds);
-
+        const { data: rpc, error } = await supabase.rpc('get_invoice_profits_report', { p_invoice_ids: [dbInvoiceId] });
+        if (error) throw error;
         let supIds = [];
         if (isDepartmentManager && !isAdmin && userId) {
           const { data: sup } = await supabase
-            .from('employee_supervisors')
-            .select('employee_id')
-            .eq('supervisor_id', userId)
-            .eq('is_active', true);
+            .from('employee_supervisors').select('employee_id')
+            .eq('supervisor_id', userId).eq('is_active', true);
           supIds = (sup || []).map(r => r.employee_id);
         }
         if (cancelled) return;
-        setData(fetched);
+        setData({
+          orders: rpc?.orders || [],
+          orderItems: rpc?.orderItems || [],
+          profits: rpc?.profits || [],
+          employeesWithRules: new Set(rpc?.employeesWithRules || []),
+          namesMap: rpc?.namesMap || {},
+        });
         setSupervisedIds(supIds);
       } catch (e) {
         console.error('InvoiceProfitsTab load error', e);
+        if (!cancelled) setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
     load();
     return () => { cancelled = true; };
-  }, [resolvedOrderIds.join(','), userId, isAdmin, isDepartmentManager]);
+  }, [invoice?.id, invoice?.external_id, userId, isAdmin, isDepartmentManager]);
 
   const calc = useMemo(() => computeInvoiceProfits(data), [data]);
   const namesMap = data.namesMap;
@@ -104,10 +92,10 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     );
   }
 
-  if (!resolvedOrderIds.length) {
+  if ((data.orders || []).length === 0) {
     return (
       <div className="text-center py-8 text-muted-foreground" dir="rtl">
-        لا توجد طلبات محلية مرتبطة لحساب الأرباح
+        لا توجد طلبات مرتبطة بهذه الفاتورة بعد
       </div>
     );
   }

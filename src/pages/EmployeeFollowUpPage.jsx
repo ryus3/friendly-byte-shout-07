@@ -28,6 +28,7 @@ import ManagerProfitsDialog from '@/components/profits/ManagerProfitsDialog';
 import EmployeeDeliveryInvoicesTab from '@/components/orders/EmployeeDeliveryInvoicesTab';
 import ProfessionalSyncToolbar from '@/components/shared/ProfessionalSyncToolbar';
 import SettlementRequestsDialog from '@/components/dialogs/SettlementRequestsDialog';
+import InvoicesProfitReportDialog from '@/components/orders/InvoicesProfitReportDialog';
 
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -66,6 +67,7 @@ const EmployeeFollowUpPage = () => {
   
   // حالة معالجة التسوية
   const [isSettlementProcessing, setIsSettlementProcessing] = useState(false);
+  const [isInvoicesReportOpen, setIsInvoicesReportOpen] = useState(false);
   
   // جلب الموظفين الذين يشرف عليهم مدير القسم
   useEffect(() => {
@@ -1224,6 +1226,14 @@ useEffect(() => {
             <h1 className="text-3xl font-bold gradient-text">متابعة الموظفين</h1>
             <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل وإدارة المزامنة الذكية.</p>
           </div>
+          <Button
+            onClick={() => setIsInvoicesReportOpen(true)}
+            className="bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 text-white shadow-lg hover:scale-105 transition-all"
+            size="sm"
+          >
+            <FileText className="w-4 h-4 ml-2" />
+            تقرير الفواتير
+          </Button>
         </div>
 
         {/* شريط الأدوات الاحترافي للمزامنة */}
@@ -1552,6 +1562,18 @@ useEffect(() => {
           settlementRequests={settlementRequests || []}
           onProcessSettlement={handleProcessSettlement}
           isProcessing={isSettlementProcessing}
+        />
+
+        {/* تقرير الفواتير - النطاق حسب الصلاحية والفلتر */}
+        <InvoicesProfitReportDialog
+          open={isInvoicesReportOpen}
+          onOpenChange={setIsInvoicesReportOpen}
+          scope={
+            filters.employeeId && filters.employeeId !== 'all'
+              ? 'employee'
+              : (isAdmin ? 'all' : (isDepartmentManager ? 'managed' : 'self'))
+          }
+          employeeId={filters.employeeId && filters.employeeId !== 'all' ? filters.employeeId : null}
         />
 
       </motion.div>

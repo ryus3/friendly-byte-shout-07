@@ -45,7 +45,7 @@ const computeRange = (period) => {
   return { from, to };
 };
 
-const InvoicesProfitReportDialog = ({ open, onOpenChange }) => {
+const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employeeId = null }) => {
   const { user } = useAuth();
   const { isAdmin, isDepartmentManager } = usePermissions();
   const userId = user?.user_id || user?.id;
@@ -74,18 +74,30 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange }) => {
       try {
         const fromIso = new Date(dateRange.from); fromIso.setHours(0, 0, 0, 0);
         const toIso = new Date(dateRange.to); toIso.setHours(23, 59, 59, 999);
-        let q = supabase
-          .from('delivery_invoices')
-          .select('id, external_id, amount, orders_count, partner, account_username, owner_user_id, created_at, received_at, status')
-          .gte('created_at', fromIso.toISOString())
-          .lte('created_at', toIso.toISOString())
-          .order('received_at', { ascending: false, nullsFirst: false })
-          .order('external_id', { ascending: false });
-        if (!isAdmin) q = q.eq('owner_user_id', userId);
-        const { data: invs } = await q;
+
+        // اختيار النطاق:
+        // - scope='employee' + employeeId محدد → فواتير ذلك الموظف
+        // - scope='managed' → فواتير المستخدم + موظفيه (مدير قسم)
+        // - scope='all' → كل الفواتير (مدير عام فقط)
+        // - الافتراضي 'self' → فواتيره فقط
+        let effectiveScope = scope;
+        if (scope === 'all' && !isAdmin) effectiveScope = isDepartmentManager ? 'managed' : 'self';
+        if (scope === 'managed' && !isDepartmentManager && !isAdmin) effectiveScope = 'self';
+
+        const { data: invs, error } = await supabase.rpc('get_visible_invoices_for_report', {
+          p_from: fromIso.toISOString(),
+          p_to: toIso.toISOString(),
+          p_scope: effectiveScope,
+          p_employee: effectiveScope === 'employee' ? employeeId : null,
+        });
+        if (error) throw error;
         if (cancelled) return;
-        setInvoices(invs || []);
-        setSelectedIds(new Set((invs || []).map(i => i.id)));
+        const list = (invs || []).map(inv => ({
+          ...inv,
+          // unify shape with previous code: id is DB uuid; keep external_id
+        }));
+        setInvoices(list);
+        setSelectedIds(new Set(list.map(i => i.id)));
 
         if (isDepartmentManager && !isAdmin && userId) {
           const { data: sup } = await supabase
@@ -93,12 +105,15 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange }) => {
             .eq('supervisor_id', userId).eq('is_active', true);
           if (!cancelled) setSupervisedIds((sup || []).map(r => r.employee_id));
         }
+      } catch (e) {
+        console.error('invoices report fetch error', e);
+        if (!cancelled) { setInvoices([]); setSelectedIds(new Set()); }
       } finally {
         if (!cancelled) setLoadingInvoices(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [open, dateRange?.from, dateRange?.to, userId, isAdmin, isDepartmentManager]);
+  }, [open, dateRange?.from, dateRange?.to, userId, isAdmin, isDepartmentManager, scope, employeeId]);
 
   useEffect(() => {
     if (!open) return;
