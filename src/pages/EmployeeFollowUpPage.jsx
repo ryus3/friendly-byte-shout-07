@@ -67,6 +67,7 @@ const EmployeeFollowUpPage = () => {
   
   // حالة معالجة التسوية
   const [isSettlementProcessing, setIsSettlementProcessing] = useState(false);
+  const [isInvoicesReportOpen, setIsInvoicesReportOpen] = useState(false);
   
   // جلب الموظفين الذين يشرف عليهم مدير القسم
   useEffect(() => {
