@@ -1562,6 +1562,18 @@ useEffect(() => {
           isProcessing={isSettlementProcessing}
         />
 
+        {/* تقرير الفواتير - النطاق حسب الصلاحية والفلتر */}
+        <InvoicesProfitReportDialog
+          open={isInvoicesReportOpen}
+          onOpenChange={setIsInvoicesReportOpen}
+          scope={
+            filters.employeeId && filters.employeeId !== 'all'
+              ? 'employee'
+              : (isAdmin ? 'all' : (isDepartmentManager ? 'managed' : 'self'))
+          }
+          employeeId={filters.employeeId && filters.employeeId !== 'all' ? filters.employeeId : null}
+        />
+
       </motion.div>
     </>
   );
