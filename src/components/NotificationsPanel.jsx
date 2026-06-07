@@ -452,7 +452,7 @@ const typeColorMap = {
 
 const NotificationsPanel = () => {
   const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification } = useNotifications();
-  const { orders } = useSuper(); // النظام الموحد للطلبات
+  const { orders, users = [] } = useSuper(); // النظام الموحد للطلبات والمستخدمين
   const [isOpen, setIsOpen] = useState(false);
   const [showPendingRegistrations, setShowPendingRegistrations] = useState(false);
   const [showAiOrdersManager, setShowAiOrdersManager] = useState(false);
