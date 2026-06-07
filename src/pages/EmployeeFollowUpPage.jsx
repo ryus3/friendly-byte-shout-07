@@ -1228,10 +1228,11 @@ useEffect(() => {
           </div>
           <Button
             onClick={() => setIsInvoicesReportOpen(true)}
-            className="bg-gradient-to-r from-violet-500 via-purple-500 to-pink-500 text-white shadow-lg hover:scale-105 transition-all"
+            variant="outline"
             size="sm"
+            className="h-9 px-3 gap-1.5 border-violet-300/50 bg-gradient-to-r from-violet-500/10 to-pink-500/10 hover:from-violet-500/20 hover:to-pink-500/20 text-violet-700 dark:text-violet-200 font-semibold shadow-sm"
           >
-            <FileText className="w-4 h-4 ml-2" />
+            <FileText className="w-4 h-4" />
             تقرير الفواتير
           </Button>
         </div>

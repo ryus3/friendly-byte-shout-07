@@ -452,7 +452,7 @@ const typeColorMap = {
 
 const NotificationsPanel = () => {
   const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification } = useNotifications();
-  const { orders } = useSuper(); // النظام الموحد للطلبات
+  const { orders, users = [] } = useSuper(); // النظام الموحد للطلبات والمستخدمين
   const [isOpen, setIsOpen] = useState(false);
   const [showPendingRegistrations, setShowPendingRegistrations] = useState(false);
   const [showAiOrdersManager, setShowAiOrdersManager] = useState(false);
@@ -890,8 +890,18 @@ const NotificationsPanel = () => {
                                 {(() => {
                                   const data = notification.data || {};
                                   const isStatusNotif = notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed';
-                                  // اسم منشئ الطلب (مهم للمدير ومدير القسم)
-                                  const creatorName = (data.creator_name || data.employee_name || '').trim();
+                                  // اسم منشئ الطلب (مهم للمدير ومدير القسم) — مع fallback من الطلب/قائمة المستخدمين
+                                  let creatorName = (data.creator_name || data.employee_name || '').trim();
+                                  if (!creatorName && isStatusNotif) {
+                                    const targetOrderId = data.order_id;
+                                    const ord = targetOrderId && Array.isArray(orders) ? orders.find(o => o.id === targetOrderId || o.tracking_number === data.tracking_number) : null;
+                                    const createdBy = ord?.created_by || data.employee_id;
+                                    if (createdBy && Array.isArray(users)) {
+                                      const u = users.find(x => x?.user_id === createdBy || x?.id === createdBy);
+                                      creatorName = (u?.full_name || u?.username || '').trim();
+                                    }
+                                  }
+
 
                                   // استخراج العنوان الأساسي
                                   const baseTitle = (() => {
