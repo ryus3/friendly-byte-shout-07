@@ -92,7 +92,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     revenueFromItemsAll += orderItemsRevenue;
 
     // التبديل/الاستبدال ليس خصماً ولا زيادة منتج — الفرق فيه = أجور توصيل فقط
-    const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange' || o.is_exchange === true;
+    const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange';
     const delta = isExchange ? 0 : (realRevenue - orderItemsRevenue);
     totalDelta += delta;
     if (Math.abs(delta) < 0.5) return;
@@ -164,7 +164,7 @@ export async function fetchInvoiceProfitsData(supabase, orderIds) {
   }
   const [{ data: oData }, { data: itemsData }, { data: pData }] = await Promise.all([
     supabase.from('orders')
-      .select('id, created_by, final_amount, total_amount, delivery_fee, order_type, is_exchange')
+      .select('id, created_by, final_amount, total_amount, delivery_fee, order_type')
       .in('id', orderIds),
     supabase.from('order_items')
       .select(`
