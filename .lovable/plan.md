@@ -1,137 +1,79 @@
+## الخطة الشاملة
 
-# الخطة الكاملة لإكمال "متجري"
+### 1. ربط السبدومين `Alshmry.ryusbrand.com` (شرح + تنفيذ)
 
-## القسم 1: شرح الدومين والسبدومين (توثيق فقط - بدون كود)
+**في Cloudflare (تعمله مرة واحدة فقط لكل المتاجر):**
+- DNS → Add record
+- Type: `CNAME` | Name: `*` | Target: `ryus.lovable.app` | Proxy: **DNS only (رمادي)** | TTL: Auto
+- (اختياري لـ Alshmry فقط بدل wildcard): Name: `alshmry` | Target: `ryus.lovable.app`
 
-### أ) السبدومين `alshmry.ryusbrand.com` - الخطوات الحقيقية:
-الكود الحالي في `StorefrontHostGate.jsx` **يدعم السبدومين تلقائياً** (يقرأ أول جزء من الهوست ويحوّله إلى slug). لكن لكي يعمل فعلياً يحتاج 3 خطوات يدوية خارج التطبيق:
+**في Lovable (مرة واحدة):**
+- Project Settings → Domains → Connect Domain → `*.ryusbrand.com` (يتطلب Business plan لـ wildcard SSL)
+- أو أضف كل سبدومين منفرداً: `alshmry.ryusbrand.com`
+- انتظر 5 دقائق – 24 ساعة لإصدار SSL
 
-1. **DNS Wildcard في مسجّل ryusbrand.com:**
-   - أضف سجل CNAME: `*` → `ryus.lovable.app`
-   - أو سجل A: `*` → `185.158.133.1`
-   
-2. **تسجيل الـ wildcard في Lovable:**
-   - افتح: Project Settings → Domains → Connect Domain
-   - أدخل: `*.ryusbrand.com` (Lovable Business plan مطلوب للـ wildcard SSL)
-   - بديل أرخص: تسجيل كل سبدومين يدوياً (`alshmry.ryusbrand.com`, `ahmed.ryusbrand.com`...)
-   
-3. **انتظار SSL** (حتى 24 ساعة) ثم يفتح تلقائياً.
+**في صفحة "متجري" (تنفيذ برمجي):**
+- في `StorefrontDomainPage.jsx` سأضيف:
+  - حقل "السبدومين المطلوب" (مثل alshmry)
+  - زر "تفعيل" → يحفظ في `employee_storefront_settings.slug`
+  - يعرض تعليمات مرئية: "رابطك الجاهز: alshmry.ryusbrand.com"
+  - مؤشر حالة DNS (✅ نشط / ⏳ بانتظار البروباغيشن) عبر edge function
 
-### ب) دومين خاص للموظف (مثل `my-shop.com`):
-1. الموظف يدخل صفحة "الدومين" في لوحة متجري ويضيف دومينه.
-2. يذهب لمسجّل دومينه ويضيف CNAME: `@` → `ryus.lovable.app`
-3. **خطوة ناقصة حالياً:** يجب على المسؤول (أنت) تسجيل الدومين في Lovable Domains لتفعيل SSL.
-4. سأضيف **تنبيه واضح في الصفحة** يشرح هذه الخطوة + زر "نسخ تعليمات للمسؤول".
+### 2. ربط دومين كامل خاص (مثل `ryusbrand.com` لمتجر معين)
 
-**ملاحظة مهمة:** زر "إعادة التحقق" حالياً وهمي - سأبني Edge Function `verify-custom-domain` يفحص DNS فعلياً عبر Google DNS API ويحدّث `status` تلقائياً.
+**صفحة "متجري → الدومين → دومين مخصص":**
+- يدخل المستخدم: `mystore.com`
+- النظام يعطيه DNS records:
+  - `A` @ → `185.158.133.1`
+  - `A` www → `185.158.133.1`
+  - `TXT` _lovable → `lovable_verify=XXX`
+- زر "تحقق الآن" يستدعي `verify-custom-domain` edge function (موجود)
+- بعد التحقق: يجب إضافته في **Project Settings → Domains** في Lovable للحصول على SSL
 
----
+### 3. إصلاح بطء وعدم فتح المتجر `/storefront/Alshmry`
 
-## القسم 2: إصلاح "المتجر شاشة فارغة"
-السبب: عند فتح `/storefront/demo-store` المعاينة فارغة. الأرجح:
-- إما `StorefrontGate` يفشل في جلب الـ settings (slug غير موجود)
-- أو `StorefrontPage` يعتمد على بيانات لم تُهيّأ بعد
+السبب المتوقع (سيتم التحقق):
+- استعلام `slug` حساس لحالة الأحرف (Alshmry ≠ alshmry)
+- `StorefrontGate` يحمّل بطء بسبب استعلامات متعددة متسلسلة
+- المنتجات لا تظهر لأن `employee_product_descriptions.is_in_storefront` فارغ
+- التصميم القديم بسبب كاش Service Worker (`public/sw.js`)
 
-**الإجراء:**
-1. فحص شامل لـ `StorefrontPage.jsx` و `useStorefrontSettings`
-2. ضمان عرض رسالة واضحة بدل الشاشة السوداء
-3. إصلاح حالة "no products" بتصميم احترافي
-4. إزالة الـ Splash الموجود في المتجر العام (يجب أن يفتح فوراً)
+**الإصلاحات:**
+- جعل البحث عن slug **case-insensitive** (`.ilike()` بدل `.eq()`)
+- توحيد slug عند الحفظ → lowercase دائماً
+- إضافة Skeleton فوري بدل شاشة سوداء
+- زيادة `staleTime` في useStorefrontSettings
+- تعديل `sw.js` لاستثناء مسارات `/storefront/*` من الكاش
+- زر "مزامنة المنتجات" يعمل تلقائياً عند فتح المتجر لأول مرة إذا كان فارغاً
 
----
+### 4. أخطاء الموافقة على الطلب الذكي (نفس حساب الوسيط لمستخدمين)
 
-## القسم 3: فصل "الثيمات" عن "الإعدادات"
+**التشخيص:** عند وجود token مشترك بين موظفين، الطلبات المتزامنة تسبب:
+- تضارب في `delivery_partner_tokens` (آخر تحديث يطغى)
+- خطأ "Token expired" عشوائياً
+- فشل create_order في الوسيط (rate limit / session conflict)
 
-الوضع الحالي خاطئ: كارت الثيمات يفتح صفحة الإعدادات العامة.
-
-**الهيكل الجديد المقترح للوحة متجري:**
-
-| الكارت | المحتوى |
-|---|---|
-| 🎨 **الثيمات والتصميم** | اختيار قالب، ألوان، خطوط، أنماط البطاقات، الأنيميشن |
-| ⚙️ **الإعدادات العامة** | اسم المتجر، الشعار، الوصف، معلومات الاتصال، العملة |
-| 🌐 **الدومين** | السبدومين + الدومين المخصص (موجود) |
-| 📜 **السياسات والصفحات** | الخصوصية، الإرجاع، الشروط، من نحن، اتصل بنا |
-| 🔔 **الإشعارات والبكسلات** | Meta Pixel, Google Analytics, TikTok |
-| 🚚 **الشحن والدفع** | طرق الشحن، طرق الدفع، المناطق |
-| 🎁 **برنامج الولاء** | النقاط، المكافآت، المستويات |
-| ⚡ **إعدادات متقدمة** | SEO، Robots، Sitemap، CSS مخصص، الحذف |
-
----
-
-## القسم 4: إكمال صفحات إعدادات متجري (كاملة بتصميم زجاجي)
-
-سأبني/أكمل بنفس تصميم Aurora Glassmorphism الموجود في الداشبورد:
-
-### صفحات جديدة:
-1. **`StorefrontThemesPage.jsx`** - معرض قوالب جاهزة (Minimal, Bold, Luxury, Vibrant) + محرر ألوان حي + معاينة فورية
-2. **`StorefrontPoliciesPage.jsx`** - 5 تبويبات (خصوصية/إرجاع/شروط/من نحن/اتصل) مع محرر نصوص غني
-3. **`StorefrontPixelsPage.jsx`** - إدارة Meta/Google/TikTok pixels (موجود `employee_marketing_pixels`)
-4. **`StorefrontShippingPage.jsx`** - مناطق الشحن، أسعار، طرق الدفع
-5. **`StorefrontLoyaltyPage.jsx`** - تفعيل/تعطيل النقاط، نسبة المكافأة، مستويات VIP
-6. **`StorefrontSeoPage.jsx`** - title/description/og لكل صفحة + sitemap
-
-### صفحات للتحديث:
-- **`StorefrontSettingsPage.jsx`** - تقتصر على المعلومات الأساسية فقط
-- **`AdvancedSettingsPage.jsx`** - إضافة CSS مخصص + خيار حذف المتجر
-- **`StorefrontDashboardPage.jsx`** - تحديث الكروت لتعكس الهيكل الجديد + توجيه صحيح
-
-### تحسينات عامة:
-- إزالة Splash المتجر العام
-- ضبط جميع الصفحات للموبايل (no horizontal scroll)
-- نفس بطاقات Glass + Aurora في الخلفية
-- Routes جديدة في `App.jsx`
+**الإصلاح:**
+- إضافة قفل متفائل (`optimistic lock`) على token عند الاستخدام
+- إعادة محاولة تلقائية (3 مرات) مع backoff عند فشل الوسيط
+- طابور (queue) لطلبات نفس الحساب تمنع التزامن
+- رسالة خطأ واضحة للمستخدم بدل الخطأ الخام
+- لوغ مفصل في `auto_sync_log` لكل محاولة موافقة
 
 ---
 
-## التفاصيل التقنية
+## ملفات سيتم تعديلها
+- `src/pages/employee-storefront/StorefrontDomainPage.jsx` — واجهة كاملة للسبدومين والدومين المخصص
+- `src/components/storefront/StorefrontHostGate.jsx` — case-insensitive
+- `src/pages/StorefrontPage.jsx` — Skeleton + auto-sync
+- `src/hooks/storefront/useStorefrontSettings.js` — `.ilike()` + caching
+- `public/sw.js` — استثناء storefront من الكاش
+- `src/contexts/AlWaseetUnifiedOrderCreator.jsx` — retry + queue + lock
+- migration: lowercase trigger على `slug` + index
 
-### Migrations مطلوبة:
-```sql
--- جدول السياسات
-CREATE TABLE storefront_pages (
-  id uuid PK, employee_id, page_type ('privacy'|'returns'|'terms'|'about'|'contact'),
-  content jsonb, is_published, ...
-);
+## الملفات الجديدة
+- `supabase/functions/check-storefront-dns/index.ts` — فحص DNS مباشر للسبدومين
 
--- جدول الشحن
-CREATE TABLE storefront_shipping_zones (...);
-
--- إعدادات الثيم (إضافة أعمدة لـ employee_storefront_settings)
-ALTER TABLE employee_storefront_settings 
-  ADD theme_preset, theme_colors jsonb, theme_fonts jsonb, custom_css text;
-```
-
-### Edge Function:
-- `verify-custom-domain`: يفحص CNAME عبر `https://dns.google/resolve` ويحدّث `storefront_custom_domains.status`
-
-### ملفات ستُعدّل:
-- `src/App.jsx` (routes جديدة)
-- `src/pages/employee-storefront/StorefrontDashboardPage.jsx` (إعادة ترتيب الكروت)
-- `src/pages/StorefrontPage.jsx` (إصلاح الشاشة الفارغة + إزالة Splash)
-- `src/pages/employee-storefront/StorefrontDomainPage.jsx` (تعليمات أوضح + ربط الفحص الحقيقي)
-- `src/pages/employee-storefront/AdvancedSettingsPage.jsx`
-- `src/pages/employee-storefront/StorefrontSettingsPage.jsx`
-
-### ملفات ستُنشأ:
-- `StorefrontThemesPage.jsx`
-- `StorefrontPoliciesPage.jsx`
-- `StorefrontPixelsPage.jsx`
-- `StorefrontShippingPage.jsx`
-- `StorefrontLoyaltyPage.jsx`
-- `StorefrontSeoPage.jsx`
-- `supabase/functions/verify-custom-domain/index.ts`
-- Migration للجداول الجديدة
-
----
-
-## خطة التنفيذ بالترتيب
-
-1. **المرحلة 1:** Migration + إصلاح المتجر الفارغ + إزالة Splash (الأولوية القصوى)
-2. **المرحلة 2:** إعادة هيكلة كروت الداشبورد + فصل الثيمات عن الإعدادات
-3. **المرحلة 3:** بناء `StorefrontThemesPage` و `StorefrontPoliciesPage`
-4. **المرحلة 4:** بناء `StorefrontPixelsPage`, `StorefrontShippingPage`, `StorefrontLoyaltyPage`, `StorefrontSeoPage`
-5. **المرحلة 5:** Edge Function للتحقق من الدومين + تحسين صفحة الدومين
-6. **المرحلة 6:** فحص نهائي للموبايل لكل الصفحات
-
-هل أبدأ التنفيذ الآن بهذا الترتيب الكامل بدون نقص؟
+## أسئلة قبل التنفيذ
+1. هل تريد تفعيل wildcard `*.ryusbrand.com` (يتطلب Business plan في Lovable) أم تضيف كل سبدومين يدوياً؟
+2. الدومين `ryusbrand.com` نفسه — هل تريده يفتح متجر معين (أي متجر؟) أم يبقى للوحة التحكم الرئيسية كما هو الآن؟
