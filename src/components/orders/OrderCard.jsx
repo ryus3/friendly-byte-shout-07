@@ -408,29 +408,27 @@ const OrderCard = React.memo(({
                 </div>
               )}
               
-              {/* وسط الأعلى: اسم حساب التوصيل (متحرك إذا طال) */}
-              {order.delivery_account_used && order.delivery_partner !== 'محلي' ? (
-                <div className="flex-1 flex justify-center px-2 min-w-0">
-                  <Badge
-                    variant="outline"
-                    className="text-[10px] font-bold bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-500 text-white border-blue-300/40 shadow-sm px-2 py-0.5 rounded-full max-w-[140px]"
-                    title={order.delivery_account_used}
-                  >
-                    <ScrollingText
-                      text={`@${String(order.delivery_account_used).toUpperCase()}`}
-                      maxWidth="120px"
-                    />
-                  </Badge>
-                </div>
-              ) : (
-                <div className="flex-1" />
-              )}
+              {/* وسط الأعلى: فراغ للتوازن — اسم حساب التوصيل نُقل أسفل رقم التتبع */}
+              <div className="flex-1" />
 
               <div className="flex items-start gap-2 min-w-0 shrink-0">
-                <div className="text-right" dir="ltr">
+                <div className="flex flex-col items-end gap-1" dir="ltr">
                   <h3 className="font-black text-lg text-foreground tracking-wide tabular-nums whitespace-nowrap">
                     {order.tracking_number || order.order_number}
                   </h3>
+                  {order.delivery_account_used && order.delivery_partner !== 'محلي' && (
+                    <Badge
+                      variant="outline"
+                      className="text-[10px] font-bold bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-500 text-white border-blue-300/40 shadow-sm px-2 py-0 rounded-full max-w-[140px]"
+                      title={order.delivery_account_used}
+                      dir="ltr"
+                    >
+                      <ScrollingText
+                        text={`@${String(order.delivery_account_used).toUpperCase()}`}
+                        maxWidth="120px"
+                      />
+                    </Badge>
+                  )}
                 </div>
                 <Checkbox
                   checked={isSelected}
@@ -534,9 +532,9 @@ const OrderCard = React.memo(({
                 </div>
                 
                 <div className="space-y-1 text-left">
-                  <div className="flex items-center gap-1 flex-row-reverse">
-                    <User className="h-4 w-4 text-primary shrink-0" />
-                    <span className="font-bold text-foreground text-sm truncate">{order.customer_name}</span>
+                  <div className="flex items-start gap-1 flex-row-reverse">
+                    <User className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <span className="font-bold text-foreground text-sm leading-tight break-words text-right" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{order.customer_name}</span>
                   </div>
                    <div className="flex items-center gap-1 text-xs text-muted-foreground flex-row-reverse">
                      <Phone className="h-3 w-3 shrink-0" />
