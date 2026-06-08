@@ -312,7 +312,7 @@ const EmployeeSettlementCard = ({
                   <p className="text-sm">سيتم:</p>
                   <ul className="list-disc list-inside space-y-1 text-sm">
                     <li>تسجيل المبلغ كمصروف في النظام</li>
-                    <li>أرشفة {employeeOrders.length} طلب تلقائياً</li>
+                    <li>أرشفة {payableOrders.length} طلب تلقائياً</li>
                     <li>تحديث سجلات الأرباح</li>
                     {pendingDeductions.total > 0 && <li>تطبيق الخصومات المعلقة</li>}
                   </ul>
