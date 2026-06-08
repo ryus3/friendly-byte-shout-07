@@ -8165,84 +8165,46 @@ export type Database = {
         Args: { p_permission_type: string; p_user_id: string }
         Returns: Json
       }
-      get_visible_invoices_for_report:
-        | {
-            Args: {
-              p_employee?: string
-              p_from: string
-              p_scope?: string
-              p_to: string
-            }
-            Returns: {
-              account_username: string | null
-              amount: number | null
-              created_at: string
-              external_id: string
-              id: string
-              issued_at: string | null
-              last_api_updated_at: string | null
-              last_synced_at: string | null
-              merchant_id: string | null
-              orders_count: number | null
-              orders_last_synced_at: string | null
-              owner_user_id: string | null
-              partner: string
-              partner_name_ar: string | null
-              raw: Json
-              raw_status: string | null
-              received: boolean
-              received_at: string | null
-              received_flag: boolean
-              status: string | null
-              status_normalized: string | null
-              updated_at: string
-            }[]
-            SetofOptions: {
-              from: "*"
-              to: "delivery_invoices"
-              isOneToOne: false
-              isSetofReturn: true
-            }
-          }
-        | {
-            Args: {
-              p_employee?: string
-              p_employees?: string[]
-              p_from: string
-              p_scope?: string
-              p_to: string
-            }
-            Returns: {
-              account_username: string | null
-              amount: number | null
-              created_at: string
-              external_id: string
-              id: string
-              issued_at: string | null
-              last_api_updated_at: string | null
-              last_synced_at: string | null
-              merchant_id: string | null
-              orders_count: number | null
-              orders_last_synced_at: string | null
-              owner_user_id: string | null
-              partner: string
-              partner_name_ar: string | null
-              raw: Json
-              raw_status: string | null
-              received: boolean
-              received_at: string | null
-              received_flag: boolean
-              status: string | null
-              status_normalized: string | null
-              updated_at: string
-            }[]
-            SetofOptions: {
-              from: "*"
-              to: "delivery_invoices"
-              isOneToOne: false
-              isSetofReturn: true
-            }
-          }
+      get_visible_invoices_for_report: {
+        Args: {
+          p_account_keys?: string[]
+          p_employee?: string
+          p_employees?: string[]
+          p_from: string
+          p_scope?: string
+          p_to: string
+        }
+        Returns: {
+          account_username: string | null
+          amount: number | null
+          created_at: string
+          external_id: string
+          id: string
+          issued_at: string | null
+          last_api_updated_at: string | null
+          last_synced_at: string | null
+          merchant_id: string | null
+          orders_count: number | null
+          orders_last_synced_at: string | null
+          owner_user_id: string | null
+          partner: string
+          partner_name_ar: string | null
+          raw: Json
+          raw_status: string | null
+          received: boolean
+          received_at: string | null
+          received_flag: boolean
+          status: string | null
+          status_normalized: string | null
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "delivery_invoices"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       handle_exchange_price_difference: {
         Args: {
           p_delivery_fee: number
