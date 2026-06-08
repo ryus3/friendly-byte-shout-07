@@ -1,13 +1,16 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, TrendingUp, Wallet, Users, Package, Crown, Boxes, Truck, FileText, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Loader2, TrendingUp, Wallet, Users, Package, Crown, Boxes, Truck, FileText,
+  ChevronLeft, ChevronRight, AlertCircle, UserCheck, Building2,
+} from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -19,7 +22,7 @@ const PERIODS = [
   { id: 'week', label: 'الأسبوع' },
   { id: 'month', label: 'الشهر' },
   { id: 'year', label: 'السنة' },
-  { id: 'all', label: 'كل الفترات' },
+  { id: 'all', label: 'الكل' },
   { id: 'custom', label: 'مخصص' },
 ];
 
@@ -45,21 +48,63 @@ const computeRange = (period) => {
   return { from, to };
 };
 
-const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employeeId = null }) => {
-  const { user } = useAuth();
+/**
+ * Props:
+ *  - defaultScope: 'active_accounts' | 'self' | 'employee' | 'employees' | 'managed' | 'all'
+ *  - employeeId: لفلترة موظف واحد محدد مسبقاً
+ *  - allowScopeSelection: إظهار اختيار النطاق (لصفحة متابعة الموظفين)
+ *  - supervisedEmployeeIds: لقصر قائمة الموظفين على المشرف عليهم
+ *  - scope: للتوافق مع الاستدعاءات القديمة
+ */
+const InvoicesProfitReportDialog = ({
+  open,
+  onOpenChange,
+  defaultScope,
+  scope: legacyScope,
+  employeeId = null,
+  allowScopeSelection = false,
+  supervisedEmployeeIds = [],
+}) => {
+  const initialScope = defaultScope || legacyScope || 'self';
+  const { user, allUsers = [] } = useAuth();
   const { isAdmin, isDepartmentManager } = usePermissions();
   const userId = user?.user_id || user?.id;
 
   const [period, setPeriod] = useState('month');
   const [dateRange, setDateRange] = useState(() => computeRange('month'));
+  const [scope, setScope] = useState(initialScope);
+  const [singleEmployee, setSingleEmployee] = useState(employeeId || 'all');
+  const [multiEmployeeIds, setMultiEmployeeIds] = useState([]);
+
   const [invoices, setInvoices] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [invoicesError, setInvoicesError] = useState(null);
+
   const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
   const [computing, setComputing] = useState(false);
-  const [supervisedIds, setSupervisedIds] = useState([]);
+  const [computeError, setComputeError] = useState(null);
   const [tabIndex, setTabIndex] = useState(0);
-  const tabsContainerRef = useRef(null);
+
+  const selectableEmployees = useMemo(() => {
+    const list = (allUsers || []).filter(u => u && (u.user_id || u.id));
+    if (isAdmin) return list;
+    if (isDepartmentManager) {
+      const ids = new Set(supervisedEmployeeIds || []);
+      return list.filter(u => ids.has(u.user_id || u.id));
+    }
+    return list.filter(u => (u.user_id || u.id) === userId);
+  }, [allUsers, isAdmin, isDepartmentManager, supervisedEmployeeIds, userId]);
+
+  useEffect(() => {
+    if (open) {
+      setScope(initialScope);
+      setSingleEmployee(employeeId || 'all');
+      setMultiEmployeeIds([]);
+      setTabIndex(0);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, initialScope, employeeId]);
 
   const handlePeriodChange = (p) => {
     setPeriod(p);
@@ -71,49 +116,60 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employ
     let cancelled = false;
     (async () => {
       setLoadingInvoices(true);
+      setInvoicesError(null);
       try {
         const fromIso = new Date(dateRange.from); fromIso.setHours(0, 0, 0, 0);
         const toIso = new Date(dateRange.to); toIso.setHours(23, 59, 59, 999);
 
-        // اختيار النطاق:
-        // - scope='employee' + employeeId محدد → فواتير ذلك الموظف
-        // - scope='managed' → فواتير المستخدم + موظفيه (مدير قسم)
-        // - scope='all' → كل الفواتير (مدير عام فقط)
-        // - الافتراضي 'self' → فواتيره فقط
         let effectiveScope = scope;
+        let pEmployee = null;
+        let pEmployees = null;
+
         if (scope === 'all' && !isAdmin) effectiveScope = isDepartmentManager ? 'managed' : 'self';
-        if (scope === 'managed' && !isDepartmentManager && !isAdmin) effectiveScope = 'self';
+        if (scope === 'managed' && !isAdmin && !isDepartmentManager) effectiveScope = 'self';
+
+        if (effectiveScope === 'employee') {
+          if (!singleEmployee || singleEmployee === 'all') {
+            effectiveScope = isAdmin ? 'all' : (isDepartmentManager ? 'managed' : 'self');
+          } else {
+            pEmployee = singleEmployee;
+          }
+        }
+        if (effectiveScope === 'employees') {
+          if (!multiEmployeeIds || multiEmployeeIds.length === 0) {
+            effectiveScope = isAdmin ? 'all' : (isDepartmentManager ? 'managed' : 'self');
+          } else {
+            pEmployees = multiEmployeeIds;
+          }
+        }
 
         const { data: invs, error } = await supabase.rpc('get_visible_invoices_for_report', {
           p_from: fromIso.toISOString(),
           p_to: toIso.toISOString(),
           p_scope: effectiveScope,
-          p_employee: effectiveScope === 'employee' ? employeeId : null,
+          p_employee: pEmployee,
+          p_employees: pEmployees,
         });
         if (error) throw error;
         if (cancelled) return;
-        const list = (invs || []).map(inv => ({
-          ...inv,
-          // unify shape with previous code: id is DB uuid; keep external_id
-        }));
+
+        const list = invs || [];
         setInvoices(list);
         setSelectedIds(new Set(list.map(i => i.id)));
-
-        if (isDepartmentManager && !isAdmin && userId) {
-          const { data: sup } = await supabase
-            .from('employee_supervisors').select('employee_id')
-            .eq('supervisor_id', userId).eq('is_active', true);
-          if (!cancelled) setSupervisedIds((sup || []).map(r => r.employee_id));
-        }
       } catch (e) {
         console.error('invoices report fetch error', e);
-        if (!cancelled) { setInvoices([]); setSelectedIds(new Set()); }
+        if (!cancelled) {
+          setInvoices([]);
+          setSelectedIds(new Set());
+          setInvoicesError(e?.message || 'تعذر جلب الفواتير');
+        }
       } finally {
         if (!cancelled) setLoadingInvoices(false);
       }
     })();
     return () => { cancelled = true; };
-  }, [open, dateRange?.from, dateRange?.to, userId, isAdmin, isDepartmentManager, scope, employeeId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, dateRange?.from?.getTime(), dateRange?.to?.getTime(), userId, isAdmin, isDepartmentManager, scope, singleEmployee, multiEmployeeIds.join(',')]);
 
   useEffect(() => {
     if (!open) return;
@@ -121,9 +177,11 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employ
     (async () => {
       if (selectedIds.size === 0) {
         setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
+        setComputeError(null);
         return;
       }
       setComputing(true);
+      setComputeError(null);
       try {
         const { data: rpc, error } = await supabase.rpc('get_invoice_profits_report', {
           p_invoice_ids: Array.from(selectedIds),
@@ -139,11 +197,13 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employ
         });
       } catch (e) {
         console.error('report rpc error', e);
+        if (!cancelled) setComputeError(e?.message || 'تعذر حساب الأرباح');
       } finally {
         if (!cancelled) setComputing(false);
       }
     })();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, Array.from(selectedIds).sort().join(',')]);
 
   const calc = useMemo(() => computeInvoiceProfits(data), [data]);
@@ -157,38 +217,50 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employ
   };
 
   const namesMap = data.namesMap;
-  const isManager = isDepartmentManager && !isAdmin;
   const ownerEntries = Object.entries(calc.byOwner)
-    .filter(([ownerId]) => !isManager || ownerId === userId)
     .map(([ownerId, stats]) => ({ ownerId, name: ownerId === '__system__' ? 'النظام' : (namesMap[ownerId] || 'مالك'), ...stats, netProfit: stats.revenue - stats.cost }))
     .sort((a, b) => b.netProfit - a.netProfit);
   const employeeEntries = Object.entries(calc.employeeCombinedByEmp)
-    .filter(([empId, v]) => Number(v) !== 0 && (!isManager || supervisedIds.includes(empId)))
+    .filter(([, v]) => Number(v) !== 0)
     .map(([empId, amount]) => ({ empId, name: namesMap[empId] || 'موظف', amount, bonus: calc.employeeBonusByEmp[empId] || 0 }));
 
   const goTab = (i) => setTabIndex(Math.max(0, Math.min(TABS.length - 1, i)));
+  const toggleMultiEmployee = (id) => {
+    setMultiEmployeeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+
+  const scopeLabel = (() => {
+    switch (scope) {
+      case 'active_accounts': return 'حساباتي النشطة';
+      case 'all': return 'كل الموظفين';
+      case 'managed': return 'موظفيّ';
+      case 'employee': {
+        const u = selectableEmployees.find(x => (x.user_id || x.id) === singleEmployee);
+        return u ? (u.full_name || u.username || 'موظف') : 'موظف محدد';
+      }
+      case 'employees': return `${multiEmployeeIds.length} موظف محدد`;
+      default: return 'فواتيري';
+    }
+  })();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[94vh] overflow-hidden flex flex-col p-0 gap-0" dir="rtl">
-        {/* Hero */}
-        <div className="relative overflow-hidden">
+      <DialogContent className="max-w-3xl w-[95vw] h-[90vh] sm:h-[85vh] overflow-hidden flex flex-col p-0 gap-0" dir="rtl">
+        <div className="relative overflow-hidden flex-shrink-0">
           <div className="absolute inset-0 bg-gradient-to-br from-primary via-purple-600 to-pink-500 opacity-95" />
-          <div className="absolute inset-0" style={{ background: 'radial-gradient(circle at 30% 0%, hsl(var(--primary-foreground) / 0.25), transparent 50%), radial-gradient(circle at 80% 100%, hsl(var(--primary-foreground) / 0.15), transparent 50%)' }} />
           <DialogHeader className="relative px-5 pt-5 pb-3">
             <DialogTitle className="flex items-center gap-3 text-white">
               <motion.div initial={{ scale: 0, rotate: -180 }} animate={{ scale: 1, rotate: 0 }} className="p-2.5 rounded-2xl bg-white/20 backdrop-blur-md shadow-xl shadow-black/20">
                 <FileText className="w-5 h-5" />
               </motion.div>
               <div className="flex flex-col items-start">
-                <span className="font-bold text-lg drop-shadow-md">تقرير الأرباح</span>
-                <span className="text-[11px] font-normal text-white/85 mt-0.5">فواتيرك وحساباتك فقط</span>
+                <span className="font-bold text-lg drop-shadow-md">تقرير أرباح الفواتير</span>
+                <span className="text-[11px] font-normal text-white/85 mt-0.5">{scopeLabel}</span>
               </div>
             </DialogTitle>
           </DialogHeader>
 
-          {/* Quick period filter */}
-          <div className="relative px-4 pb-3 flex gap-1.5 overflow-x-auto no-scrollbar">
+          <div className="relative px-4 pb-2 flex gap-1.5 overflow-x-auto no-scrollbar">
             {PERIODS.map(p => (
               <button key={p.id} onClick={() => handlePeriodChange(p.id)}
                 className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${period === p.id ? 'bg-white text-primary shadow-lg scale-105' : 'bg-white/15 text-white hover:bg-white/25'}`}>
@@ -201,10 +273,56 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employ
               <DateRangePicker date={dateRange} onDateChange={setDateRange} />
             </div>
           )}
+
+          {allowScopeSelection && (
+            <div className="relative px-4 pb-3 flex flex-wrap items-center gap-1.5">
+              <ScopeChip active={scope === 'active_accounts'} onClick={() => setScope('active_accounts')} icon={Building2}>حساباتي النشطة</ScopeChip>
+              {(isAdmin || isDepartmentManager) && (
+                <ScopeChip active={scope === (isAdmin ? 'all' : 'managed')} onClick={() => setScope(isAdmin ? 'all' : 'managed')} icon={Users}>
+                  {isAdmin ? 'كل الموظفين' : 'موظفيّ'}
+                </ScopeChip>
+              )}
+              <ScopeChip active={scope === 'employee'} onClick={() => setScope('employee')} icon={UserCheck}>موظف واحد</ScopeChip>
+              <ScopeChip active={scope === 'employees'} onClick={() => setScope('employees')} icon={Users}>عدة موظفين</ScopeChip>
+
+              {scope === 'employee' && (
+                <select value={singleEmployee} onChange={(e) => setSingleEmployee(e.target.value)}
+                  className="text-xs px-2 py-1 rounded-md bg-white/95 text-foreground border-0 max-w-[180px]">
+                  <option value="all">— اختر موظفاً —</option>
+                  {selectableEmployees.map(u => (
+                    <option key={u.user_id || u.id} value={u.user_id || u.id}>{u.full_name || u.username || 'موظف'}</option>
+                  ))}
+                </select>
+              )}
+
+              {scope === 'employees' && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="text-xs px-2.5 py-1 rounded-md bg-white/95 text-foreground font-bold">
+                      {multiEmployeeIds.length ? `${multiEmployeeIds.length} محدد` : 'اختر الموظفين'}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 max-h-64 overflow-y-auto p-2" dir="rtl">
+                    {selectableEmployees.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-3">لا يوجد موظفون</p>
+                    ) : selectableEmployees.map(u => {
+                      const id = u.user_id || u.id;
+                      const checked = multiEmployeeIds.includes(id);
+                      return (
+                        <label key={id} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm">
+                          <Checkbox checked={checked} onCheckedChange={() => toggleMultiEmployee(id)} />
+                          <span>{u.full_name || u.username || 'موظف'}</span>
+                        </label>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Tabs header */}
-        <div className="flex items-center justify-between px-3 pt-2 pb-1 border-b bg-background sticky top-0 z-10">
+        <div className="flex items-center justify-between px-3 pt-2 pb-1 border-b bg-background flex-shrink-0">
           <button onClick={() => goTab(tabIndex - 1)} disabled={tabIndex === 0} className="p-1 rounded-md hover:bg-muted disabled:opacity-30">
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -214,7 +332,7 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employ
               const active = i === tabIndex;
               return (
                 <button key={t.id} onClick={() => goTab(i)} className="relative px-2 py-1.5 flex flex-col items-center gap-0.5">
-                  <Icon className={`w-4 h-4 transition-colors ${active ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <Icon className={`w-4 h-4 ${active ? 'text-primary' : 'text-muted-foreground'}`} />
                   <span className={`text-[10px] font-medium ${active ? 'text-primary' : 'text-muted-foreground'}`}>{t.label}</span>
                   {active && <motion.div layoutId="tab-underline" className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full" />}
                 </button>
@@ -226,29 +344,18 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employ
           </button>
         </div>
 
-        {/* Swipeable content */}
-        <div className="flex-1 overflow-hidden relative" ref={tabsContainerRef}>
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-4">
           <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={tabIndex}
-              initial={{ opacity: 0, x: 30 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -30 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 overflow-y-auto px-4 py-4"
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={0.2}
-              onDragEnd={(_, info) => {
-                if (info.offset.x < -50) goTab(tabIndex + 1);
-                else if (info.offset.x > 50) goTab(tabIndex - 1);
-              }}
-            >
+            <motion.div key={tabIndex} initial={{ opacity: 0, x: 30 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -30 }} transition={{ duration: 0.2 }}
+              drag="x" dragConstraints={{ left: 0, right: 0 }} dragElastic={0.2}
+              onDragEnd={(_, info) => { if (info.offset.x < -60) goTab(tabIndex + 1); else if (info.offset.x > 60) goTab(tabIndex - 1); }}>
               {tabIndex === 0 && (
                 <div className="space-y-3">
-                  {computing ? (
+                  {invoicesError && <ErrorRow message={invoicesError} />}
+                  {computeError && <ErrorRow message={computeError} />}
+                  {loadingInvoices || computing ? (
                     <div className="flex justify-center py-12"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>
-                  ) : (
+                  ) : invoices.length === 0 ? <EmptyHint /> : (
                     <>
                       <div className="grid grid-cols-2 gap-2.5">
                         <Stat icon={TrendingUp} label="إجمالي الإيراد" sub="بدون توصيل" value={fmt(calc.totalRevenue)} color="blue" />
@@ -263,7 +370,7 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employ
                       {Math.abs(calc.totalDelta) > 1 && (
                         <div className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border border-dashed text-xs ${calc.totalDelta > 0 ? 'text-emerald-600 bg-emerald-500/5 border-emerald-500/30' : 'text-orange-600 bg-orange-500/5 border-orange-500/30'}`}>
                           <TrendingUp className="w-4 h-4" />
-                          <span>إجمالي {calc.totalDelta > 0 ? 'الزيادة' : 'الخصم'}: {fmt(Math.abs(calc.totalDelta))} {calc.employeeBonusTotal !== 0 ? `(منها ${fmt(calc.employeeBonusTotal)} للموظفين)` : '(للمالكين)'}</span>
+                          <span>إجمالي {calc.totalDelta > 0 ? 'الزيادة' : 'الخصم'}: {fmt(Math.abs(calc.totalDelta))}</span>
                         </div>
                       )}
                       {calc.totalDelivery > 0 && (
@@ -285,60 +392,56 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employ
                       {selectedIds.size === invoices.length ? 'إلغاء الكل' : 'تحديد الكل'}
                     </Button>
                   </div>
-                  {loadingInvoices ? (
-                    <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin" /></div>
-                  ) : invoices.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8 text-sm">لا توجد فواتير في هذه الفترة</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      {invoices.map(inv => {
-                        const selected = selectedIds.has(inv.id);
-                        return (
-                          <label key={inv.id} className={`flex items-center gap-2 p-2.5 rounded-lg cursor-pointer text-sm transition-all border ${selected ? 'bg-primary/10 border-primary/40' : 'bg-card hover:bg-muted/40 border-border'}`}>
-                            <Checkbox checked={selected} onCheckedChange={() => toggleOne(inv.id)} />
-                            <span className="font-mono text-xs font-bold">#{inv.external_id}</span>
-                            <Badge variant="outline" className="text-[10px]">{inv.partner}</Badge>
-                            {inv.account_username && (
-                              <Badge className="text-[10px] bg-primary/15 text-primary border-primary/30">{inv.account_username}</Badge>
-                            )}
-                            <span className="text-muted-foreground text-[11px]">{inv.orders_count} طلب</span>
-                            <span className="mr-auto font-bold text-emerald-600 text-xs">{fmt(inv.amount)}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
+                  {loadingInvoices ? <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin" /></div>
+                    : invoicesError ? <ErrorRow message={invoicesError} />
+                    : invoices.length === 0 ? <EmptyHint /> : (
+                      <div className="space-y-1.5">
+                        {invoices.map(inv => {
+                          const selected = selectedIds.has(inv.id);
+                          return (
+                            <label key={inv.id} className={`flex items-center gap-2 p-2.5 rounded-lg cursor-pointer text-sm transition-all border ${selected ? 'bg-primary/10 border-primary/40' : 'bg-card hover:bg-muted/40 border-border'}`}>
+                              <Checkbox checked={selected} onCheckedChange={() => toggleOne(inv.id)} />
+                              <span className="font-mono text-xs font-bold">#{inv.external_id}</span>
+                              <Badge variant="outline" className="text-[10px]">{inv.partner}</Badge>
+                              {inv.account_username && <Badge className="text-[10px] bg-primary/15 text-primary border-primary/30">{inv.account_username}</Badge>}
+                              <span className="text-muted-foreground text-[11px]">{inv.orders_count} طلب</span>
+                              <span className="mr-auto font-bold text-emerald-600 text-xs">{fmt(inv.amount)}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
                 </div>
               )}
 
               {tabIndex === 2 && (
-                calc.productsList.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8 text-sm">لا توجد بيانات منتجات</p>
-                ) : (
-                  <div className="space-y-1.5">
-                    {calc.productsList.map((p, idx) => (
-                      <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 gap-2 text-sm border border-border/50">
-                        <div className="flex items-center gap-2 min-w-0 flex-1">
-                          {idx === 0 && <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-                          <Package className="w-3.5 h-3.5 text-primary shrink-0" />
-                          <span className="font-medium truncate">{p.name}</span>
-                          <Badge variant="outline" className="text-[10px] shrink-0">×{p.qty}</Badge>
+                computing ? <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-primary" /></div>
+                  : calc.productsList.length === 0 ? <EmptyHint text="لا توجد بيانات منتجات للفواتير المحددة" />
+                  : (
+                    <div className="space-y-1.5">
+                      {calc.productsList.map((p, idx) => (
+                        <div key={p.id} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 gap-2 text-sm border border-border/50">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
+                            {idx === 0 && <Crown className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
+                            <Package className="w-3.5 h-3.5 text-primary shrink-0" />
+                            <span className="font-medium truncate">{p.name}</span>
+                            <Badge variant="outline" className="text-[10px] shrink-0">×{p.qty}</Badge>
+                          </div>
+                          <div className="text-left shrink-0">
+                            <div className="font-bold text-blue-600 text-xs">{fmt(p.revenue)}</div>
+                            <div className="text-[10px] text-emerald-600">ربح {fmt(p.revenue - p.cost)}</div>
+                          </div>
                         </div>
-                        <div className="text-left shrink-0">
-                          <div className="font-bold text-blue-600 text-xs">{fmt(p.revenue)}</div>
-                          <div className="text-[10px] text-emerald-600">ربح {fmt(p.revenue - p.cost)}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
+                      ))}
+                    </div>
+                  )
               )}
 
               {tabIndex === 3 && (
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-sm font-bold mb-2 flex items-center gap-2"><Crown className="w-4 h-4 text-amber-500" /> المالكون</h4>
-                    {ownerEntries.length === 0 ? <p className="text-xs text-muted-foreground text-center py-3">لا توجد بيانات</p> : (
+                    {ownerEntries.length === 0 ? <EmptyHint text="لا توجد بيانات توزيع" small /> : (
                       <div className="space-y-1.5">
                         {ownerEntries.map(o => (
                           <div key={o.ownerId} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 text-sm border border-border/50">
@@ -358,7 +461,7 @@ const InvoicesProfitReportDialog = ({ open, onOpenChange, scope = 'self', employ
                   </div>
                   <div>
                     <h4 className="text-sm font-bold mb-2 flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> الموظفون</h4>
-                    {employeeEntries.length === 0 ? <p className="text-xs text-muted-foreground text-center py-3">لا توجد مستحقات</p> : (
+                    {employeeEntries.length === 0 ? <EmptyHint text="لا توجد مستحقات للموظفين" small /> : (
                       <div className="space-y-1.5">
                         {employeeEntries.map(e => (
                           <div key={e.empId} className="flex items-center justify-between p-2.5 rounded-lg bg-muted/40 text-sm border border-border/50">
@@ -404,5 +507,27 @@ const Stat = ({ icon: Icon, label, sub, value, color = 'blue', highlight = false
     </motion.div>
   );
 };
+
+const ScopeChip = ({ active, onClick, icon: Icon, children }) => (
+  <button onClick={onClick}
+    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold transition-all ${active ? 'bg-white text-primary shadow-md scale-105' : 'bg-white/15 text-white hover:bg-white/25'}`}>
+    <Icon className="w-3 h-3" />
+    {children}
+  </button>
+);
+
+const ErrorRow = ({ message }) => (
+  <div className="flex items-center gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/30 text-destructive text-xs">
+    <AlertCircle className="w-4 h-4 shrink-0" />
+    <span className="font-medium">{message}</span>
+  </div>
+);
+
+const EmptyHint = ({ text = 'لا توجد فواتير في هذه الفترة', small = false }) => (
+  <div className={`flex flex-col items-center justify-center text-center text-muted-foreground gap-2 ${small ? 'py-4' : 'py-12'}`}>
+    <FileText className={`${small ? 'w-6 h-6' : 'w-10 h-10'} opacity-40`} />
+    <p className={small ? 'text-xs' : 'text-sm'}>{text}</p>
+  </div>
+);
 
 export default InvoicesProfitReportDialog;
