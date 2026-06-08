@@ -156,7 +156,9 @@ function AppContent() {
   const { user, loading } = useAuth();
   const { loading: permissionsLoading } = usePermissions();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
+  // 🚫 لا سبلاش على مسارات المتجر العامة — تفتح فوراً
   const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/storefront/')) return false;
     const hasShownSplash = sessionStorage.getItem('hasShownSplash');
     return !hasShownSplash;
   });
