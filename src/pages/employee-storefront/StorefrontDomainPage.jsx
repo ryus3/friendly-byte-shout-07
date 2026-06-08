@@ -8,7 +8,8 @@ import { Globe, Copy, Check, RefreshCw, Trash2, ExternalLink, Info, ChevronDown,
 import { toast } from '@/hooks/use-toast';
 import StorefrontPageShell, { GlassCard } from '@/components/employee-storefront/StorefrontPageShell';
 
-const CNAME_TARGET = 'ryus.lovable.app';
+// ✅ الدومين الرئيسي للموقع (pos.ryusbrand.com) — يستخدم كهدف لكل سبدومينات المتاجر
+const CNAME_TARGET = 'pos.ryusbrand.com';
 const A_RECORD_TARGET = '185.158.133.1';
 const BASE_DOMAIN = 'ryusbrand.com';
 
