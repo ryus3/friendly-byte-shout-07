@@ -14,13 +14,17 @@ import RichTextEditor from '@/components/storefront/RichTextEditor';
 import GradientButton from '@/components/storefront/ui/GradientButton';
 import { STOREFRONT_THEMES, DEFAULT_THEME_ID, getThemeById } from '@/lib/storefront-themes';
 
-const THEMES = STOREFRONT_THEMES.map((t) => ({
-  id: t.id,
-  name: t.name,
-  description: t.description,
-  gradient: t.gradient,
-  colors: t.colors,
-}));
+// Start with the 4 glassmorphism themes; rest will be enabled later.
+const ACTIVE_THEME_IDS = ['glass-luxury', 'glass-noir', 'glass-aurora', 'glass-minimal'];
+const THEMES = STOREFRONT_THEMES
+  .filter((t) => ACTIVE_THEME_IDS.includes(t.id))
+  .map((t) => ({
+    id: t.id,
+    name: t.name,
+    description: t.description,
+    gradient: t.gradient,
+    colors: t.colors,
+  }));
 
 const DEFAULT_CONTENT = {
   about_us: `مرحباً بك في متجرنا
@@ -99,11 +103,37 @@ const StorefrontSetupWizard = () => {
     primary_color: getThemeById(DEFAULT_THEME_ID).colors.primary,
     secondary_color: getThemeById(DEFAULT_THEME_ID).colors.secondary,
     accent_color: getThemeById(DEFAULT_THEME_ID).colors.accent,
+    logo_url: '',
+    banner_url: '',
+    custom_domain: '',
     about_us: DEFAULT_CONTENT.about_us,
     privacy_policy: DEFAULT_CONTENT.privacy_policy,
     terms_conditions: DEFAULT_CONTENT.terms_conditions,
     return_policy: DEFAULT_CONTENT.return_policy
   });
+  const [logoUploading, setLogoUploading] = useState(false);
+
+  const handleLogoUpload = async (file) => {
+    if (!file) return;
+    try {
+      setLogoUploading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('يجب تسجيل الدخول');
+      const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+      const path = `storefront-logos/${user.id}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
+      setFormData((prev) => ({ ...prev, logo_url: pub.publicUrl }));
+      toast({ title: 'تم رفع الشعار', description: 'تم حفظ شعار متجرك بنجاح' });
+    } catch (err) {
+      toast({ title: 'تعذر رفع الشعار', description: err.message, variant: 'destructive' });
+    } finally {
+      setLogoUploading(false);
+    }
+  };
 
   useEffect(() => {
     loadProfileData();
@@ -257,15 +287,58 @@ const StorefrontSetupWizard = () => {
 
                 <div className="space-y-4">
                   <div>
-                    <Label>رابط المتجر</Label>
+                    <Label>شعار المتجر</Label>
+                    <div className="flex items-center gap-4 mt-2">
+                      <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-muted/30 flex items-center justify-center overflow-hidden">
+                        {formData.logo_url ? (
+                          <img src={formData.logo_url} alt="logo" className="w-full h-full object-cover" />
+                        ) : (
+                          <Sparkles className="h-8 w-8 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleLogoUpload(e.target.files?.[0])}
+                          disabled={logoUploading}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {logoUploading ? 'جاري الرفع...' : 'PNG/JPG حتى 2MB'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>اسم المتجر بالإنجليزية (للرابط)</Label>
                     <Input
                       value={formData.slug}
-                      onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                      placeholder="my-shop"
+                      onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                      placeholder="alshmry"
                       dir="ltr"
                     />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      سيكون رابط متجرك: /storefront/{formData.slug}
+                    <div className="mt-2 rounded-lg border bg-muted/30 p-3 text-sm" dir="ltr">
+                      <div className="font-semibold text-foreground">رابط متجرك الجاهز:</div>
+                      <div className="text-primary font-mono mt-1">
+                        https://{formData.slug || 'your-shop'}.ryusbrand.com
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        أو: /storefront/{formData.slug || 'your-shop'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>دومين خاص بك (اختياري)</Label>
+                    <Input
+                      value={formData.custom_domain}
+                      onChange={(e) => setFormData(prev => ({ ...prev, custom_domain: e.target.value.toLowerCase().trim() }))}
+                      placeholder="alshmry.com"
+                      dir="ltr"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      بعد الحفظ: أضف سجل CNAME من دومينك إلى <span className="font-mono">ryus.lovable.app</span> ثم سيتم التفعيل خلال 24 ساعة.
                     </p>
                   </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target, Copy, Check, Globe } from 'lucide-react';
+import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target, Copy, Check, Globe, RefreshCw } from 'lucide-react';
 import StorefrontAnalytics from '@/components/employee-storefront/StorefrontAnalytics';
 import PremiumButton from '@/components/storefront/ui/PremiumButton';
 import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
@@ -19,6 +19,61 @@ const StorefrontDashboardPage = () => {
   const [newOrdersCount, setNewOrdersCount] = useState(0);
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+
+  const syncProducts = async () => {
+    try {
+      setSyncing(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('يجب تسجيل الدخول');
+
+      const { data: perms } = await supabase
+        .from('user_product_permissions')
+        .select('permission_type, allowed_items, has_full_access')
+        .eq('user_id', user.id);
+
+      const productIds = new Set();
+      (perms || []).forEach((p) => {
+        if (p?.permission_type === 'product' && Array.isArray(p.allowed_items)) {
+          p.allowed_items.forEach((id) => id && productIds.add(id));
+        }
+      });
+      const hasFullAccess = (perms || []).some((p) => p?.has_full_access);
+      if (hasFullAccess) {
+        const { data: allProducts } = await supabase
+          .from('products')
+          .select('id')
+          .eq('is_active', true);
+        (allProducts || []).forEach((p) => productIds.add(p.id));
+      }
+
+      if (productIds.size === 0) {
+        toast({ title: 'لا توجد منتجات مسموحة', variant: 'destructive' });
+        return;
+      }
+
+      const rows = Array.from(productIds).map((pid) => ({
+        employee_id: user.id,
+        product_id: pid,
+        is_active: true,
+        added_by: user.id,
+      }));
+
+      const { error } = await supabase
+        .from('employee_allowed_products')
+        .upsert(rows, { onConflict: 'employee_id,product_id', ignoreDuplicates: true });
+      if (error) throw error;
+
+      toast({
+        title: '✅ تمت المزامنة',
+        description: `تم استيراد ${productIds.size} منتج إلى متجرك`,
+      });
+    } catch (err) {
+      toast({ title: 'فشل المزامنة', description: err.message, variant: 'destructive' });
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   // رابط المتجر العام الكامل
   const getStoreUrl = () => {
@@ -196,6 +251,16 @@ const StorefrontDashboardPage = () => {
               >
                 {copied ? <Check className="h-4 w-4 ml-2" /> : <Copy className="h-4 w-4 ml-2" />}
                 {copied ? 'تم النسخ' : 'نسخ الرابط'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={syncProducts}
+                disabled={syncing}
+                className="flex-1 sm:flex-none"
+              >
+                <RefreshCw className={`h-4 w-4 ml-2 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'جاري المزامنة...' : 'مزامنة المنتجات'}
               </Button>
               <Button
                 size="sm"

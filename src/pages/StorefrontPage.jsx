@@ -15,6 +15,7 @@ import { ArrowLeft, Star, TrendingUp, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import devLog from '@/lib/devLogger';
+import { applyThemeTokens } from '@/lib/storefront-themes';
 
 const StorefrontHome = () => {
   const { settings, trackPageView } = useStorefront();
@@ -25,6 +26,13 @@ const StorefrontHome = () => {
   useEffect(() => {
     trackPageView();
   }, [trackPageView]);
+
+  // Apply selected theme tokens to <html> so all storefront components inherit it
+  useEffect(() => {
+    if (settings?.theme_name) {
+      applyThemeTokens(settings.theme_name);
+    }
+  }, [settings?.theme_name]);
 
   useEffect(() => {
     if (!settings?.employee_id) return;
@@ -85,10 +93,15 @@ const StorefrontHome = () => {
           ?.filter(d => d.is_featured && allowedProductIds.includes(d.product_id))
           .map(d => d.product_id) || [];
 
-        // جلب المنتجات المميزة أو أحدث المنتجات من المتجر
-        const productIdsToFetch = featuredProductIds.length > 0 
-          ? featuredProductIds 
-          : storefrontProductIds.slice(0, 12);
+        // اختيار IDs للعرض:
+        // 1) المميزة من المتجر إن وجدت
+        // 2) منتجات المتجر إن وجدت
+        // 3) ✅ Fallback: كل المنتجات المسموحة للموظف (حتى لو لم يُهيِّأ المتجر بعد)
+        let productIdsToFetch = featuredProductIds.length > 0
+          ? featuredProductIds
+          : (storefrontProductIds.length > 0
+              ? storefrontProductIds.slice(0, 24)
+              : allowedProductIds.slice(0, 24));
 
         devLog.log('🎯 Product IDs to fetch:', productIdsToFetch.length);
 

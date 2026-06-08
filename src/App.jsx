@@ -16,6 +16,7 @@ import EmployeeFollowUpPage from '@/pages/EmployeeFollowUpPage.jsx';
 // ملاحظة: useAppStartSync يعمل داخل AppProviders (AppStartSync) — لا تكرّره هنا
 import AppSplashScreen from '@/components/AppSplashScreen.jsx';
 import RouteFallback from '@/components/ui/RouteFallback.jsx';
+import StorefrontHostGate from '@/components/storefront/StorefrontHostGate.jsx';
 
 import { scrollToTopInstant } from '@/utils/scrollToTop';
 
@@ -336,7 +337,9 @@ function AppContent() {
 function App() {
   return (
     <HelmetProvider>
-      <AppContent />
+      <StorefrontHostGate>
+        <AppContent />
+      </StorefrontHostGate>
     </HelmetProvider>
   );
 }
