@@ -843,71 +843,42 @@ useEffect(() => {
       return sum;
     }, 0);
 
-    // المستحقات المدفوعة - مفلترة حسب الفترة الزمنية والموظفين المشرف عليهم
-    // ✅ لمدير القسم: guard صارم - لا fallback أبداً
-    let paidDues = 0;
-    if (isDepartmentManager && !isAdmin) {
-      // ✅ guard: إذا لم يتم تحميل القائمة بعد أو فارغة → 0 دائماً
-      if (!supervisedLoaded || supervisedEmployeeIds.length === 0) {
-        paidDues = 0;
-      } else {
-        // مدير القسم: فقط تسويات موظفيه المشرف عليهم
-        const supervisedSettlements = settlementInvoices?.filter(si => {
-          const empId = si.data?.employee_id || si.employee_id;
-          return empId && supervisedEmployeeIds.includes(empId);
-        }) || [];
-        paidDues = supervisedSettlements
-          .filter(si => {
-            if (filters.timePeriod === 'all') return true;
-            const createdAt = si.created_at;
-            if (!createdAt) return false;
-            const settlementDate = new Date(createdAt);
-            const now = new Date();
-            switch (filters.timePeriod) {
-              case 'today':
-                return settlementDate.toDateString() === now.toDateString();
-              case 'week':
-                return settlementDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-              case 'month':
-                return settlementDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-              case '3months':
-                return settlementDate >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-              default:
-                return true;
-            }
-          })
-          .reduce((sum, si) => sum + (Number(si.total_amount) || 0), 0);
+    // ✅ المستحقات المدفوعة - مصدر واحد موحد: expenses (مستحقات الموظفين المعتمدة)
+    // لمدير القسم: فلترة بـ metadata.employee_id ضمن الموظفين المشرف عليهم
+    const passesPeriod = (createdAt) => {
+      if (filters.timePeriod === 'all') return true;
+      if (!createdAt) return false;
+      const d = new Date(createdAt);
+      const now = new Date();
+      switch (filters.timePeriod) {
+        case 'today': return d.toDateString() === now.toDateString();
+        case 'week': return d >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        case 'month': return d >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+        case '3months': return d >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        default: return true;
       }
-    } else {
-      // المدير العام: كل المستحقات المدفوعة
-      paidDues = expenses && Array.isArray(expenses)
-        ? expenses.filter(expense => {
-            const isPaidDues = (
-              expense.category === 'مستحقات الموظفين' &&
-              expense.expense_type === 'system' &&
-              expense.status === 'approved'
-            );
-            if (!isPaidDues) return false;
+    };
 
-            if (filters.timePeriod === 'all') return true;
-            const createdAt = expense.created_at || expense.date || expense.expense_date;
-            if (!createdAt) return false;
-            const expenseDate = new Date(createdAt);
-            const now = new Date();
-            switch (filters.timePeriod) {
-              case 'today':
-                return expenseDate.toDateString() === now.toDateString();
-              case 'week':
-                return expenseDate >= new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-              case 'month':
-                return expenseDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-              case '3months':
-                return expenseDate >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-              default:
-                return true;
-            }
-          }).reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0)
-        : 0;
+    let paidDues = 0;
+    if (isDepartmentManager && !isAdmin && (!supervisedLoaded || supervisedEmployeeIds.length === 0)) {
+      paidDues = 0;
+    } else {
+      paidDues = (Array.isArray(expenses) ? expenses : [])
+        .filter(expense => {
+          const isPaidDues =
+            expense.category === 'مستحقات الموظفين' &&
+            expense.status === 'approved';
+          if (!isPaidDues) return false;
+
+          // مدير القسم: قيّد بالموظفين المشرف عليهم عبر metadata
+          if (isDepartmentManager && !isAdmin) {
+            const empId = expense.metadata?.employee_id || expense.metadata?.employee_user_id;
+            if (!empId || !supervisedEmployeeIds.includes(empId)) return false;
+          }
+
+          return passesPeriod(expense.created_at || expense.date || expense.expense_date);
+        })
+        .reduce((sum, expense) => sum + (Number(expense.amount) || 0), 0);
     }
 
     // المستحقات المعلقة - أرباح الموظفين من الطلبات المستلمة فواتيرها ولم تُسوى
