@@ -99,11 +99,37 @@ const StorefrontSetupWizard = () => {
     primary_color: getThemeById(DEFAULT_THEME_ID).colors.primary,
     secondary_color: getThemeById(DEFAULT_THEME_ID).colors.secondary,
     accent_color: getThemeById(DEFAULT_THEME_ID).colors.accent,
+    logo_url: '',
+    banner_url: '',
+    custom_domain: '',
     about_us: DEFAULT_CONTENT.about_us,
     privacy_policy: DEFAULT_CONTENT.privacy_policy,
     terms_conditions: DEFAULT_CONTENT.terms_conditions,
     return_policy: DEFAULT_CONTENT.return_policy
   });
+  const [logoUploading, setLogoUploading] = useState(false);
+
+  const handleLogoUpload = async (file) => {
+    if (!file) return;
+    try {
+      setLogoUploading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('يجب تسجيل الدخول');
+      const ext = (file.name.split('.').pop() || 'png').toLowerCase();
+      const path = `storefront-logos/${user.id}-${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('avatars')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('avatars').getPublicUrl(path);
+      setFormData((prev) => ({ ...prev, logo_url: pub.publicUrl }));
+      toast({ title: 'تم رفع الشعار', description: 'تم حفظ شعار متجرك بنجاح' });
+    } catch (err) {
+      toast({ title: 'تعذر رفع الشعار', description: err.message, variant: 'destructive' });
+    } finally {
+      setLogoUploading(false);
+    }
+  };
 
   useEffect(() => {
     loadProfileData();
