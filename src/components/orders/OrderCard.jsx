@@ -534,14 +534,15 @@ const OrderCard = React.memo(({
                 </div>
                 
                 <div className="space-y-1 text-left">
-                  <div className="flex items-center gap-2 flex-row-reverse">
-                    <User className="h-4 w-4 text-primary" />
-                    <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
+                  <div className="flex items-center gap-1 flex-row-reverse">
+                    <User className="h-4 w-4 text-primary shrink-0" />
+                    <span className="font-bold text-foreground text-sm truncate">{order.customer_name}</span>
                   </div>
-                   <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
-                     <Phone className="h-3 w-3" />
+                   <div className="flex items-center gap-1 text-xs text-muted-foreground flex-row-reverse">
+                     <Phone className="h-3 w-3 shrink-0" />
                      <span>{order.customer_phone}</span>
                    </div>
+
                    {(order.customer_city || order.customer_province) && (
                      <div className="flex items-center gap-1 text-xs text-muted-foreground flex-row-reverse">
                        <MapPin className="h-3 w-3 flex-shrink-0" />
