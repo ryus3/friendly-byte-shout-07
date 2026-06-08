@@ -14,13 +14,17 @@ import RichTextEditor from '@/components/storefront/RichTextEditor';
 import GradientButton from '@/components/storefront/ui/GradientButton';
 import { STOREFRONT_THEMES, DEFAULT_THEME_ID, getThemeById } from '@/lib/storefront-themes';
 
-const THEMES = STOREFRONT_THEMES.map((t) => ({
-  id: t.id,
-  name: t.name,
-  description: t.description,
-  gradient: t.gradient,
-  colors: t.colors,
-}));
+// Start with the 4 glassmorphism themes; rest will be enabled later.
+const ACTIVE_THEME_IDS = ['glass-luxury', 'glass-noir', 'glass-aurora', 'glass-minimal'];
+const THEMES = STOREFRONT_THEMES
+  .filter((t) => ACTIVE_THEME_IDS.includes(t.id))
+  .map((t) => ({
+    id: t.id,
+    name: t.name,
+    description: t.description,
+    gradient: t.gradient,
+    colors: t.colors,
+  }));
 
 const DEFAULT_CONTENT = {
   about_us: `مرحباً بك في متجرنا
