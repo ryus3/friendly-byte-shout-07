@@ -2802,6 +2802,8 @@ export type Database = {
           banner_url: string | null
           created_at: string | null
           custom_css: string | null
+          custom_domain: string | null
+          custom_domain_verified: boolean
           employee_id: string
           font_family: string
           header_style: string | null
@@ -2830,6 +2832,8 @@ export type Database = {
           banner_url?: string | null
           created_at?: string | null
           custom_css?: string | null
+          custom_domain?: string | null
+          custom_domain_verified?: boolean
           employee_id: string
           font_family?: string
           header_style?: string | null
@@ -2858,6 +2862,8 @@ export type Database = {
           banner_url?: string | null
           created_at?: string | null
           custom_css?: string | null
+          custom_domain?: string | null
+          custom_domain_verified?: boolean
           employee_id?: string
           font_family?: string
           header_style?: string | null
@@ -7427,6 +7433,10 @@ export type Database = {
         }[]
       }
       bytea_to_text: { Args: { data: string }; Returns: string }
+      calc_reserved_for_variant: {
+        Args: { p_variant_id: string }
+        Returns: number
+      }
       calculate_employee_item_profit: {
         Args: {
           p_base_profit_amount: number
@@ -8679,6 +8689,10 @@ export type Database = {
         Returns: Json
       }
       sync_recent_received_invoices: { Args: never; Returns: Json }
+      sync_reserved_for_variant: {
+        Args: { p_variant_id: string }
+        Returns: undefined
+      }
       sync_specific_order_by_tracking: {
         Args: { p_tracking_number: string }
         Returns: Json
