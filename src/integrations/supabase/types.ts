@@ -2077,6 +2077,12 @@ export type Database = {
           employee_id: string
           id: string
           is_active: boolean | null
+          link_categories: string[] | null
+          link_label: string | null
+          link_products: string[] | null
+          link_target_id: string | null
+          link_type: string | null
+          link_url: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2090,6 +2096,12 @@ export type Database = {
           employee_id: string
           id?: string
           is_active?: boolean | null
+          link_categories?: string[] | null
+          link_label?: string | null
+          link_products?: string[] | null
+          link_target_id?: string | null
+          link_type?: string | null
+          link_url?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2103,6 +2115,12 @@ export type Database = {
           employee_id?: string
           id?: string
           is_active?: boolean | null
+          link_categories?: string[] | null
+          link_label?: string | null
+          link_products?: string[] | null
+          link_target_id?: string | null
+          link_type?: string | null
+          link_url?: string | null
           updated_at?: string | null
         }
         Relationships: []
