@@ -45,7 +45,7 @@ const StorefrontProducts = () => {
     fetchFilters();
   }, []);
 
-  // جلب المنتجات
+  // جلب المنتجات - مقيدة بصلاحيات الموظف فقط
   useEffect(() => {
     if (!settings?.employee_id) return;
 
@@ -53,7 +53,35 @@ const StorefrontProducts = () => {
       try {
         setLoading(true);
 
-        let query = supabase
+        // ✅ 1) جلب IDs المنتجات المسموحة لهذا الموظف فقط
+        const { data: allowedProductsData } = await supabase
+          .from('employee_allowed_products')
+          .select('product_id')
+          .eq('employee_id', settings.employee_id)
+          .eq('is_active', true);
+
+        const allowedProductIds = allowedProductsData?.map(ap => ap.product_id) || [];
+        if (allowedProductIds.length === 0) {
+          setProducts([]);
+          setLoading(false);
+          return;
+        }
+
+        // ✅ 2) تفضيل المنتجات الموسومة "في المتجر" من employee_product_descriptions
+        const { data: descs } = await supabase
+          .from('employee_product_descriptions')
+          .select('product_id, is_in_storefront')
+          .eq('employee_id', settings.employee_id)
+          .eq('is_in_storefront', true);
+
+        const storefrontIds = (descs || [])
+          .map(d => d.product_id)
+          .filter(id => allowedProductIds.includes(id));
+
+        // Fallback: لو ما فيه عناصر مفعلّة بالمتجر، اعرض كل المسموحة
+        const idsToFetch = storefrontIds.length > 0 ? storefrontIds : allowedProductIds;
+
+        const { data, error } = await supabase
           .from('products')
           .select(`
             *,
@@ -68,12 +96,11 @@ const StorefrontProducts = () => {
               inventory!inventory_variant_id_fkey(quantity, reserved_quantity)
             )
           `)
+          .in('id', idsToFetch)
           .eq('is_active', true);
 
-        const { data, error } = await query;
         if (error) throw error;
 
-        // فلترة المنتجات المتاحة فقط - دعم هيكل مرن
         const available = data?.filter(p => 
           p.variants?.some(v => {
             const qty = v.inventory?.quantity ?? v.quantity ?? 0;

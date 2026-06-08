@@ -159,11 +159,11 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate, mana
     }
   };
 
-  // جلب جميع المنتجات
+  // جلب جميع المنتجات - مقيدة بنطاق المدير إن وُجد
   const fetchAllProducts = async () => {
     try {
       setLoadingProducts(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('products')
         .select(`
           id, 
@@ -180,6 +180,20 @@ const ProductPermissionsManager = ({ user: selectedUser, onClose, onUpdate, mana
         .eq('is_active', true)
         .order('name');
 
+      // ✅ إن كان هناك managerScope.ownedProductIds → قيد القائمة بها فقط
+      const scopedIds = managerScope?.ownedProductIds
+        ? Array.from(managerScope.ownedProductIds)
+        : null;
+      if (scopedIds) {
+        if (scopedIds.length === 0) {
+          setAllProducts([]);
+          setLoadingProducts(false);
+          return;
+        }
+        query = query.in('id', scopedIds);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       setAllProducts(data || []);
     } catch (error) {

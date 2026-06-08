@@ -1,11 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import StorefrontHeader from './StorefrontHeader';
 import StorefrontFooter from './StorefrontFooter';
 import { useStorefront } from '@/contexts/StorefrontContext';
 import PremiumLoader from './ui/PremiumLoader';
+import { applyThemeTokens } from '@/lib/storefront-themes';
 
 const StorefrontLayout = ({ products = [], children }) => {
   const { settings, settingsLoading, error } = useStorefront();
+
+  // ✅ تطبيق ثيم المتجر على جميع الصفحات (الرئيسية، المنتجات، التفاصيل، السلة)
+  useEffect(() => {
+    if (settings?.theme_name) {
+      applyThemeTokens(settings.theme_name);
+    }
+  }, [settings?.theme_name]);
 
   if (settingsLoading) {
     return <PremiumLoader message="جاري تحميل المتجر..." />;
@@ -24,7 +32,6 @@ const StorefrontLayout = ({ products = [], children }) => {
     );
   }
 
-  // تطبيق الألوان المخصصة من إعدادات المتجر
   const customColors = {
     '--storefront-primary': settings.primary_color || 'hsl(221, 83%, 53%)',
     '--storefront-accent': settings.accent_color || 'hsl(271, 48%, 55%)',

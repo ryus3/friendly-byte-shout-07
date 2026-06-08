@@ -410,14 +410,14 @@ const OrderCard = React.memo(({
               
                {/* معلومات مُسلّم/راجع موجودة في قسم التفاصيل بالأسفل */}
               
-               <div className="flex items-center gap-3">
+               <div className="flex items-center gap-2 min-w-0 max-w-full">
                  {order.delivery_account_used && order.delivery_partner !== 'محلي' && (
-                   <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-300/50 shadow-sm px-2 py-0.5 rounded-full">
+                   <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-300/50 shadow-sm px-2 py-0.5 rounded-full truncate max-w-[100px]">
                      ({order.delivery_account_used.toUpperCase()})
                    </Badge>
                  )}
-                 <div className="text-right" dir="ltr">
-                    <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums">
+                 <div className="text-right flex-shrink-0" dir="ltr">
+                    <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums whitespace-nowrap">
                       {order.tracking_number || order.order_number}
                     </h3>
                  </div>
