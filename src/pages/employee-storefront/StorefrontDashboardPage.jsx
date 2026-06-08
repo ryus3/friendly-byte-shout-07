@@ -27,24 +27,51 @@ const StorefrontDashboardPage = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('يجب تسجيل الدخول');
 
-      const { data: perms } = await supabase
-        .from('user_product_permissions')
-        .select('permission_type, allowed_items, has_full_access')
-        .eq('user_id', user.id);
+      // 1) جلب أدوار المستخدم — المدير العام/super_admin يحصل على كل المنتجات النشطة
+      const { data: rolesData } = await supabase
+        .from('user_roles')
+        .select('roles(name)')
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+      const roleNames = (rolesData || []).map(r => r.roles?.name).filter(Boolean);
+      const isAdmin = roleNames.some(n => ['super_admin', 'admin'].includes(n));
 
       const productIds = new Set();
-      (perms || []).forEach((p) => {
-        if (p?.permission_type === 'product' && Array.isArray(p.allowed_items)) {
-          p.allowed_items.forEach((id) => id && productIds.add(id));
-        }
-      });
-      const hasFullAccess = (perms || []).some((p) => p?.has_full_access);
-      if (hasFullAccess) {
+
+      if (isAdmin) {
+        // ✅ المدير العام: كل المنتجات النشطة
         const { data: allProducts } = await supabase
           .from('products')
           .select('id')
           .eq('is_active', true);
         (allProducts || []).forEach((p) => productIds.add(p.id));
+      } else {
+        // غير المدير: المنتجات المملوكة (owner_user_id) + صلاحيات المنتج
+        const { data: ownedProducts } = await supabase
+          .from('products')
+          .select('id')
+          .eq('owner_user_id', user.id)
+          .eq('is_active', true);
+        (ownedProducts || []).forEach((p) => productIds.add(p.id));
+
+        const { data: perms } = await supabase
+          .from('user_product_permissions')
+          .select('permission_type, allowed_items, has_full_access')
+          .eq('user_id', user.id);
+
+        (perms || []).forEach((p) => {
+          if (p?.permission_type === 'product' && Array.isArray(p.allowed_items)) {
+            p.allowed_items.forEach((id) => id && productIds.add(id));
+          }
+        });
+        const hasFullAccess = (perms || []).some((p) => p?.has_full_access);
+        if (hasFullAccess) {
+          const { data: allProducts } = await supabase
+            .from('products')
+            .select('id')
+            .eq('is_active', true);
+          (allProducts || []).forEach((p) => productIds.add(p.id));
+        }
       }
 
       if (productIds.size === 0) {
