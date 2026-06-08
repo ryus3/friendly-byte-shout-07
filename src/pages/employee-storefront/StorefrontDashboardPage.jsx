@@ -65,7 +65,8 @@ const StorefrontDashboardPage = () => {
         return;
       }
 
-      const rows = Array.from(productIds).map(pid => ({
+      const ids = Array.from(productIds);
+      const rows = ids.map(pid => ({
         employee_id: user.id, product_id: pid, is_active: true, added_by: user.id,
       }));
       const { error } = await supabase
@@ -73,7 +74,15 @@ const StorefrontDashboardPage = () => {
         .upsert(rows, { onConflict: 'employee_id,product_id', ignoreDuplicates: true });
       if (error) throw error;
 
-      toast({ title: '✅ تمت المزامنة', description: `${productIds.size} منتج تم استيراده` });
+      // Also publish to storefront (employee_product_descriptions)
+      const descRows = ids.map(pid => ({
+        employee_id: user.id, product_id: pid, is_in_storefront: true,
+      }));
+      await supabase
+        .from('employee_product_descriptions')
+        .upsert(descRows, { onConflict: 'employee_id,product_id', ignoreDuplicates: false });
+
+      toast({ title: '✅ تمت المزامنة', description: `${ids.length} منتج تم نشره في المتجر` });
       fetchStorefrontData();
     } catch (err) {
       toast({ title: 'فشل المزامنة', description: err.message, variant: 'destructive' });
@@ -81,6 +90,7 @@ const StorefrontDashboardPage = () => {
       setSyncing(false);
     }
   };
+
 
   const getStoreUrl = () => `${window.location.origin}/storefront/${settings?.slug}`;
 
@@ -186,10 +196,11 @@ const StorefrontDashboardPage = () => {
   ];
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-slate-950">
+    <div className="min-h-screen relative overflow-x-clip overflow-y-auto bg-slate-950 w-full max-w-[100vw]" dir="rtl">
       <Aurora />
 
-      <div className="relative z-10 p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="relative z-10 p-3 sm:p-6 md:p-8 space-y-5 sm:space-y-6 max-w-7xl mx-auto w-full">
+
         {/* ===== Header ===== */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
@@ -320,14 +331,15 @@ const StorefrontDashboardPage = () => {
   );
 };
 
-// Aurora background layer
+// Aurora background layer — clamped to viewport on mobile
 const Aurora = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-fuchsia-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
-    <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
-    <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
+    <div className="absolute top-0 left-1/4 w-[60vw] max-w-[600px] h-[60vw] max-h-[600px] bg-fuchsia-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+    <div className="absolute top-1/3 right-0 w-[50vw] max-w-[500px] h-[50vw] max-h-[500px] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
+    <div className="absolute bottom-0 left-0 w-[50vw] max-w-[500px] h-[50vw] max-h-[500px] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_0%,rgba(2,6,23,0.5)_100%)]" />
   </div>
 );
+
 
 export default StorefrontDashboardPage;
