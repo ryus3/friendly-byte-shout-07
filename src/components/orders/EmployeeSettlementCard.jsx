@@ -62,40 +62,97 @@ const EmployeeSettlementCard = ({
     fetchDeductions();
   }, [employee?.user_id]);
 
-  // حساب إجمالي المستحقات من جدول الأرباح المعلقة
+  // الطلبات الخاصة بهذا الموظف
+  const employeeOrders = useMemo(() => {
+    return (selectedOrders || []).filter(order => order.created_by === employee.user_id);
+  }, [selectedOrders, employee.user_id]);
+
+  // تحميل ملكية المنتجات لكل طلب لتحديد ما يستطيع المستخدم الحالي دفعه
+  useEffect(() => {
+    const loadOwnership = async () => {
+      if (!employeeOrders.length) {
+        setOwnership({ loaded: true, payableOrderIds: [], excludedCount: 0 });
+        return;
+      }
+      try {
+        const orderIds = employeeOrders.map(o => o.id);
+        const { data: items } = await supabase
+          .from('order_items')
+          .select('order_id, product_id')
+          .in('order_id', orderIds);
+        const productIds = [...new Set((items || []).map(i => i.product_id).filter(Boolean))];
+        let productOwnerMap = new Map();
+        if (productIds.length > 0) {
+          const { data: prods } = await supabase
+            .from('products')
+            .select('id, owner_user_id')
+            .in('id', productIds);
+          (prods || []).forEach(p => productOwnerMap.set(p.id, p.owner_user_id || null));
+        }
+        // لكل طلب، اجمع مجموعة ملاك المنتجات الفريدة
+        const ownersPerOrder = new Map();
+        (items || []).forEach(it => {
+          if (!ownersPerOrder.has(it.order_id)) ownersPerOrder.set(it.order_id, new Set());
+          ownersPerOrder.get(it.order_id).add(productOwnerMap.get(it.product_id) || null);
+        });
+
+        const currentUid = currentUser?.user_id || currentUser?.id;
+        const payable = [];
+        let excluded = 0;
+        for (const oid of orderIds) {
+          const owners = Array.from(ownersPerOrder.get(oid) || []);
+          if (isAdmin) {
+            // المدير العام: يدفع كل الطلبات التي ليست مملوكة بالكامل لمدير آخر
+            // إذا كل المنتجات لها مالك ≠ المدير العام → استثنِها (يدفعها مالك المنتجات)
+            const allOwnedByOther = owners.length > 0 && owners.every(o => o && o !== currentUid);
+            if (allOwnedByOther) { excluded++; continue; }
+            payable.push(oid);
+          } else if (isDepartmentManager) {
+            // مدير القسم: يدفع فقط الطلبات التي كل منتجاتها يملكها هو
+            const allMine = owners.length > 0 && owners.every(o => o === currentUid);
+            if (allMine) payable.push(oid);
+            else excluded++;
+          } else {
+            excluded++;
+          }
+        }
+        setOwnership({ loaded: true, payableOrderIds: payable, excludedCount: excluded });
+      } catch (err) {
+        console.error('خطأ في تحميل ملكية المنتجات:', err);
+        setOwnership({ loaded: true, payableOrderIds: employeeOrders.map(o => o.id), excludedCount: 0 });
+      }
+    };
+    loadOwnership();
+  }, [employeeOrders, isAdmin, isDepartmentManager, currentUser?.id, currentUser?.user_id]);
+
+  // الطلبات القابلة للدفع من قبل المستخدم الحالي
+  const payableOrders = useMemo(() => {
+    return employeeOrders.filter(o => ownership.payableOrderIds.includes(o.id));
+  }, [employeeOrders, ownership.payableOrderIds]);
+
+  // حساب إجمالي المستحقات للطلبات القابلة للدفع فقط
   const totalSettlement = useMemo(() => {
-    if (!profits || !selectedOrders) return 0;
-    
-    // البحث عن الأرباح المعلقة للطلبات المحددة
-    const selectedOrderIds = selectedOrders
-      .filter(order => order.created_by === employee.user_id)
-      .map(order => order.id);
-      
+    if (!profits || !payableOrders.length) return 0;
+    const ids = payableOrders.map(o => o.id);
     return profits
-      .filter(profit => 
+      .filter(profit =>
         profit.employee_id === employee.user_id &&
-        // استخدام دالة موحدة لفحص الحالات المعلقة
         isPendingStatus(profit.status) &&
-        selectedOrderIds.includes(profit.order_id)
+        ids.includes(profit.order_id)
       )
       .reduce((sum, profit) => sum + (profit.employee_profit || 0), 0);
-  }, [selectedOrders, employee.user_id, profits]);
+  }, [payableOrders, employee.user_id, profits]);
 
   // المبلغ النهائي بعد الخصومات
   const deductionToApply = Math.min(pendingDeductions.total, totalSettlement);
   const finalAmount = totalSettlement - deductionToApply;
 
-  // الطلبات الخاصة بهذا الموظف فقط
-  const employeeOrders = useMemo(() => {
-    return selectedOrders.filter(order => order.created_by === employee.user_id);
-  }, [selectedOrders, employee.user_id]);
-
   const handleSettlement = async () => {
-    if (employeeOrders.length === 0 || totalSettlement <= 0) {
-      toast({ 
-        title: 'خطأ', 
-        description: 'لا توجد طلبات محددة للتسوية أو المبلغ صفر.', 
-        variant: 'destructive' 
+    if (payableOrders.length === 0 || totalSettlement <= 0) {
+      toast({
+        title: 'خطأ',
+        description: 'لا توجد طلبات قابلة للدفع ضمن صلاحيتك أو المبلغ صفر.',
+        variant: 'destructive'
       });
       return;
     }
@@ -107,23 +164,24 @@ const EmployeeSettlementCard = ({
         return;
       }
       setIsSettling(true);
-      const orderIds = employeeOrders.map(order => order.id);
+      const orderIds = payableOrders.map(order => order.id);
       await settleEmployeeProfits(employee.user_id, totalSettlement, employee.full_name, orderIds);
-      onClearSelection(); // إلغاء التحديد بعد التسوية
+      onClearSelection();
     } catch (error) {
       console.error('Error in settlement:', error);
-      toast({ 
-        title: 'خطأ', 
-        description: 'حدث خطأ أثناء التسوية.', 
-        variant: 'destructive' 
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ أثناء التسوية.',
+        variant: 'destructive'
       });
     } finally {
       setIsSettling(false);
     }
   };
 
-  // عدم عرض كارت التسوية للمدير أو إذا لم توجد طلبات
+  // عدم عرض كارت التسوية للمدير الرئيسي أو إذا لم توجد طلبات
   if (employeeOrders.length === 0 || employee.user_id === ADMIN_ID) return null;
+
 
   return (
     <Card 
