@@ -372,14 +372,16 @@ const StatCard = ({ icon: Icon, label, sub, value, color = 'blue', highlight = f
     purple: 'from-purple-500/10 to-purple-500/5 border-purple-500/30 text-purple-600',
   };
   return (
-    <Card className={`bg-gradient-to-br ${colorMap[color]} ${highlight ? 'ring-2 ring-emerald-500/40' : ''}`}>
-      <CardContent className="p-3">
-        <div className="flex items-center gap-2 mb-1">
+    <Card className={`h-full min-h-[104px] bg-gradient-to-br ${colorMap[color]} ${highlight ? 'ring-2 ring-emerald-500/40' : ''}`}>
+      <CardContent className="p-3 h-full flex flex-col justify-between">
+        <div className="flex items-center gap-2">
           <Icon className="w-4 h-4" />
           <span className="text-xs text-muted-foreground">{label}</span>
         </div>
-        <div className="text-lg font-bold">{value}</div>
-        {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+        <div>
+          <div className="text-lg font-bold leading-tight">{value}</div>
+          {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+        </div>
       </CardContent>
     </Card>
   );
