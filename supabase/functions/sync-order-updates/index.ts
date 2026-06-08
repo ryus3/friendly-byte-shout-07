@@ -542,7 +542,9 @@ Deno.serve(async (req) => {
             let notificationMessage: string;
             let notificationTitle: string;
             const creatorName = creatorNames[localOrder.created_by] || '';
-            const namePrefix = creatorName ? `(${creatorName}) ` : '';
+            // الإشعار يُسلَّم لمنشئ الطلب نفسه → لا نضع اسمه في العنوان بين قوسين.
+            // اسم الموظف يبقى ضمن data.creator_name لاستخدامه في واجهات المدير/مدير القسم.
+            const namePrefix = '';
             if (statusChanged) {
               notificationTitle = locationLabel
                 ? `${namePrefix}${locationLabel} | ${statusText}`
