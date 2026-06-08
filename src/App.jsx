@@ -80,6 +80,12 @@ const StorefrontSetupWizard = lazy(() => import('@/pages/employee-storefront/Sto
 const AdvancedSettingsPage = lazy(() => import('@/pages/employee-storefront/AdvancedSettingsPage.jsx'));
 const StorefrontDomainPage = lazy(() => import('@/pages/employee-storefront/StorefrontDomainPage.jsx'));
 const StorefrontCategoriesPage = lazy(() => import('@/pages/employee-storefront/StorefrontCategoriesPage.jsx'));
+const StorefrontThemesPage = lazy(() => import('@/pages/employee-storefront/StorefrontThemesPage.jsx'));
+const StorefrontPoliciesPage = lazy(() => import('@/pages/employee-storefront/StorefrontPoliciesPage.jsx'));
+const StorefrontPixelsPage = lazy(() => import('@/pages/employee-storefront/StorefrontPixelsPage.jsx'));
+const StorefrontShippingPage = lazy(() => import('@/pages/employee-storefront/StorefrontShippingPage.jsx'));
+const StorefrontLoyaltyPage = lazy(() => import('@/pages/employee-storefront/StorefrontLoyaltyPage.jsx'));
+const StorefrontSeoPage = lazy(() => import('@/pages/employee-storefront/StorefrontSeoPage.jsx'));
 
 
 // Public Storefront Pages
