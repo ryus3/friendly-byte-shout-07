@@ -532,9 +532,9 @@ const OrderCard = React.memo(({
                 </div>
                 
                 <div className="space-y-1 text-left">
-                  <div className="flex items-center gap-1 flex-row-reverse">
-                    <User className="h-4 w-4 text-primary shrink-0" />
-                    <span className="font-bold text-foreground text-sm truncate">{order.customer_name}</span>
+                  <div className="flex items-start gap-1 flex-row-reverse">
+                    <User className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <span className="font-bold text-foreground text-sm leading-tight break-words text-right" style={{ display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{order.customer_name}</span>
                   </div>
                    <div className="flex items-center gap-1 text-xs text-muted-foreground flex-row-reverse">
                      <Phone className="h-3 w-3 shrink-0" />
