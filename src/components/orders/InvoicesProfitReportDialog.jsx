@@ -295,7 +295,10 @@ const InvoicesProfitReportDialog = ({
     switch (scope) {
       case 'active_accounts': {
         if (!activeAccounts.length) return 'حساباتي النشطة';
-        return activeAccounts.map(a => `${partnerLabel(a.partner)}: ${a.account_username}`).join(' • ');
+        const list = selectedAccountKeys.length
+          ? activeAccounts.filter(a => selectedAccountKeys.includes(`${a.partner}::${a.account_username.toLowerCase()}`))
+          : activeAccounts;
+        return list.map(a => `${partnerLabel(a.partner)}: ${a.account_username}`).join(' • ');
       }
       case 'all': return 'كل الموظفين';
       case 'managed': return 'موظفيّ';
