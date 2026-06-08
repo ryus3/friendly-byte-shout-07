@@ -82,14 +82,23 @@ const InvoicesProfitReportDialog = ({
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [invoicesError, setInvoicesError] = useState(null);
+  const [activeAccounts, setActiveAccounts] = useState([]); // [{partner, account_username}]
 
   const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
   const [computing, setComputing] = useState(false);
   const [computeError, setComputeError] = useState(null);
   const [tabIndex, setTabIndex] = useState(0);
 
+  // ✅ قائمة الموظفين القابلين للاختيار: استبعاد المدير العام دائماً، واستبعاد الذات للمدير
   const selectableEmployees = useMemo(() => {
-    const list = (allUsers || []).filter(u => u && (u.user_id || u.id));
+    const list = (allUsers || []).filter(u => {
+      if (!u) return false;
+      const id = u.user_id || u.id;
+      if (!id) return false;
+      if (id === GENERAL_MANAGER_ID) return false;
+      if (isAdmin && id === userId) return false; // المدير العام لا يرى نفسه
+      return true;
+    });
     if (isAdmin) return list;
     if (isDepartmentManager) {
       const ids = new Set(supervisedEmployeeIds || []);
