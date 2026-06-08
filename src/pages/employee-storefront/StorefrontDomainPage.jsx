@@ -115,15 +115,18 @@ const StorefrontDomainPage = () => {
               <Globe className="h-5 w-5 text-primary" />
               <h2 className="font-bold text-lg">رابط المتجر الافتراضي</h2>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">{window.location.origin}/storefront/</span>
-              <Input
-                value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase())}
-                placeholder="my-store"
-                className="flex-1"
-              />
-              <Button onClick={saveSlug} disabled={saving}>{saving ? 'حفظ...' : 'حفظ'}</Button>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs text-muted-foreground break-all" dir="ltr">{window.location.origin}/storefront/</span>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value.toLowerCase())}
+                  placeholder="my-store"
+                  className="flex-1 min-w-0"
+                  dir="ltr"
+                />
+                <Button onClick={saveSlug} disabled={saving} className="shrink-0">{saving ? 'حفظ...' : 'حفظ'}</Button>
+              </div>
             </div>
             {slugError && <p className="text-xs text-destructive">{slugError}</p>}
             {storeUrl && (
