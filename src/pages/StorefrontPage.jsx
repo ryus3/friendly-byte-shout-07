@@ -295,6 +295,26 @@ const StorefrontHome = () => {
   );
 };
 
+const StorefrontGate = ({ children }) => {
+  const { settings, settingsLoading, error } = useStorefront();
+  if (settingsLoading) return <PremiumLoader message="جاري تحميل المتجر..." />;
+  if (error || !settings) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white p-6" dir="rtl">
+        <div className="max-w-md text-center backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl p-8">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center">
+            <Sparkles className="h-8 w-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-black mb-2">المتجر غير موجود</h1>
+          <p className="text-white/60 text-sm mb-6">الرابط الذي حاولت فتحه غير صحيح أو أن المتجر غير نشط حالياً.</p>
+          <Link to="/"><Button variant="outline" className="text-white border-white/20">العودة للرئيسية</Button></Link>
+        </div>
+      </div>
+    );
+  }
+  return children;
+};
+
 const StorefrontPageWrapper = () => {
   const { slug } = useParams();
   const [allProducts, setAllProducts] = useState([]);
@@ -316,9 +336,11 @@ const StorefrontPageWrapper = () => {
 
   return (
     <StorefrontProvider slug={slug}>
-      <StorefrontLayout products={allProducts}>
-        <StorefrontHome />
-      </StorefrontLayout>
+      <StorefrontGate>
+        <StorefrontLayout products={allProducts}>
+          <StorefrontHome />
+        </StorefrontLayout>
+      </StorefrontGate>
     </StorefrontProvider>
   );
 };
