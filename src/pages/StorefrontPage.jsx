@@ -15,6 +15,7 @@ import { ArrowLeft, Star, TrendingUp, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import devLog from '@/lib/devLogger';
+import { applyThemeTokens } from '@/lib/storefront-themes';
 
 const StorefrontHome = () => {
   const { settings, trackPageView } = useStorefront();
