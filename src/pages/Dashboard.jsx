@@ -907,9 +907,11 @@ const Dashboard = () => {
                             </motion.div>
                           );
                         })}
-                        <motion.div key="my-received-profits" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                          <EmployeeReceivedProfitsCard />
-                        </motion.div>
+                        {!isDepartmentManager && (
+                          <motion.div key="my-received-profits" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                            <EmployeeReceivedProfitsCard />
+                          </motion.div>
+                        )}
                         {allStatCards.slice(2, 8).map((stat, index) => {
                           const { key: statKey, ...statProps } = stat;
                           return (
