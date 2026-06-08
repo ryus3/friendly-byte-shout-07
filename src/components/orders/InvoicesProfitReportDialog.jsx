@@ -9,13 +9,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader2, TrendingUp, Wallet, Users, Package, Crown, Boxes, Truck, FileText,
-  ChevronLeft, ChevronRight, AlertCircle, UserCheck, Building2,
+  ChevronLeft, ChevronRight, AlertCircle, UserCheck, Building2, ChevronDown, Check,
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { computeInvoiceProfits } from '@/lib/invoiceProfitsCalc';
 import { startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay } from 'date-fns';
+
+const GENERAL_MANAGER_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
 const PERIODS = [
   { id: 'day', label: 'اليوم' },
