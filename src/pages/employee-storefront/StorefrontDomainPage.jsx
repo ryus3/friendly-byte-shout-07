@@ -8,7 +8,8 @@ import { Globe, Copy, Check, RefreshCw, Trash2, ExternalLink, Info, ChevronDown,
 import { toast } from '@/hooks/use-toast';
 import StorefrontPageShell, { GlassCard } from '@/components/employee-storefront/StorefrontPageShell';
 
-const CNAME_TARGET = 'ryus.lovable.app';
+// ✅ الدومين الرئيسي للموقع (pos.ryusbrand.com) — يستخدم كهدف لكل سبدومينات المتاجر
+const CNAME_TARGET = 'pos.ryusbrand.com';
 const A_RECORD_TARGET = '185.158.133.1';
 const BASE_DOMAIN = 'ryusbrand.com';
 
@@ -225,13 +226,20 @@ const StorefrontDomainPage = () => {
               </div>
             </div>
             <div>
-              <p className="text-white font-bold mb-2">للدومين الرئيسي (yourdomain.com):</p>
+              <p className="text-white font-bold mb-2">للدومين الرئيسي (yourdomain.com أو ryusbrand.com):</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 bg-black/40 p-2 rounded text-xs text-amber-200" dir="ltr">A | @ | {A_RECORD_TARGET}</code>
                 <Button variant="ghost" size="sm" onClick={() => copy(A_RECORD_TARGET, 'arec')}>
                   {copiedKey === 'arec' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
+              <div className="flex items-center gap-2 mt-2">
+                <code className="flex-1 bg-black/40 p-2 rounded text-xs text-amber-200" dir="ltr">A | www | {A_RECORD_TARGET}</code>
+                <Button variant="ghost" size="sm" onClick={() => copy(A_RECORD_TARGET, 'arec2')}>
+                  {copiedKey === 'arec2' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-cyan-300 text-xs mt-2">💡 ryusbrand.com مملوك للشركة — يمكن ربطه بأي متجر بإضافته هنا والتحقق منه.</p>
             </div>
             <p className="text-white/60 text-xs">قد يستغرق انتشار DNS حتى 24 ساعة. سيتم إصدار شهادة SSL تلقائياً بعد التحقق.</p>
             <p className="text-amber-300 text-xs">⚠️ بعد إضافة سجلات DNS، أبلغ المسؤول لتسجيل الدومين في Lovable لإصدار شهادة SSL.</p>

@@ -2272,7 +2272,8 @@ export const SuperProvider = ({ children }) => {
         try {
           devLog.log('🔄 الحصول على توكن المنشئ للحساب:', actualAccount);
 
-          const { data: accountData } = await supabase
+          // 1) أولاً: حاول جلب توكن صاحب الطلب نفسه (createdBy) — هذا الأصح لأن المدير العام يستخدم توكنه الخاص
+          let { data: accountData } = await supabase
             .from('delivery_partner_tokens')
             .select('id, token, expires_at, account_username, partner_name, partner_data, user_id, is_default, last_used_at')
             .eq('user_id', createdBy)
@@ -2283,10 +2284,29 @@ export const SuperProvider = ({ children }) => {
             .limit(1)
             .maybeSingle();
 
+          // 2) Fallback: إذا لم يوجد توكن لصاحب الطلب، استخدم أي توكن نشط لنفس الحساب
+          //    (حالات الحساب المشترك بين عدة مستخدمين — التوكن نفسه يعمل لأن الحساب الخارجي واحد)
+          if (!accountData?.token) {
+            const { data: anyAccountData } = await supabase
+              .from('delivery_partner_tokens')
+              .select('id, token, expires_at, account_username, partner_name, partner_data, user_id, is_default, last_used_at')
+              .eq('partner_name', destination)
+              .ilike('account_username', actualAccount)
+              .eq('is_active', true)
+              .order('expires_at', { ascending: false })
+              .limit(1)
+              .maybeSingle();
+            if (anyAccountData?.token) {
+              accountData = anyAccountData;
+              devLog.log('🔁 استخدام توكن مشترك لنفس الحساب (حساب مشارَك)');
+            }
+          }
+
           devLog.log('🔍 [DEBUG approveAiOrder] نتيجة جلب التوكن:', {
             requestedAccount: actualAccount,
             requestedPartner: destination,
             owner: createdBy,
+            tokenOwner: accountData?.user_id,
             foundToken: !!accountData?.token,
             tokenExpiry: accountData?.expires_at
           });
@@ -2295,7 +2315,7 @@ export const SuperProvider = ({ children }) => {
             const partnerLabel = destination === 'modon' ? 'مدن' : 'الوسيط';
             return {
               success: false,
-              error: `لا يوجد توكن محفوظ لحساب "${rawAccount}" في ${partnerLabel} لمنشئ الطلب. يجب تسجيل دخوله من إدارة شركات التوصيل أولاً.`
+              error: `لا يوجد توكن محفوظ لحساب "${rawAccount}" في ${partnerLabel}. يجب تسجيل الدخول إليه من إدارة شركات التوصيل أولاً.`
             };
           }
 
