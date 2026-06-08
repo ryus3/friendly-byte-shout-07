@@ -329,20 +329,45 @@ const InvoicesProfitReportDialog = ({
               <ScopeChip active={scope === 'employees'} onClick={() => setScope('employees')} icon={Users}>عدة موظفين</ScopeChip>
 
               {scope === 'employee' && (
-                <select value={singleEmployee} onChange={(e) => setSingleEmployee(e.target.value)}
-                  className="text-xs px-2 py-1 rounded-md bg-white/95 text-foreground border-0 max-w-[180px]">
-                  <option value="all">— اختر موظفاً —</option>
-                  {selectableEmployees.map(u => (
-                    <option key={u.user_id || u.id} value={u.user_id || u.id}>{u.full_name || u.username || 'موظف'}</option>
-                  ))}
-                </select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/95 text-primary shadow-md max-w-[200px] truncate">
+                      <UserCheck className="w-3 h-3 shrink-0" />
+                      <span className="truncate">
+                        {(() => {
+                          if (!singleEmployee || singleEmployee === 'all') return 'اختر موظفاً';
+                          const u = selectableEmployees.find(x => (x.user_id || x.id) === singleEmployee);
+                          return u ? (u.full_name || u.username || 'موظف') : 'اختر موظفاً';
+                        })()}
+                      </span>
+                      <ChevronDown className="w-3 h-3 shrink-0 opacity-70" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-60 max-h-64 overflow-y-auto p-1.5" dir="rtl">
+                    {selectableEmployees.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-3">لا يوجد موظفون</p>
+                    ) : selectableEmployees.map(u => {
+                      const id = u.user_id || u.id;
+                      const active = singleEmployee === id;
+                      return (
+                        <button key={id} onClick={() => setSingleEmployee(id)}
+                          className={`w-full flex items-center gap-2 p-2 rounded text-sm text-right ${active ? 'bg-primary/15 text-primary font-bold' : 'hover:bg-muted/60'}`}>
+                          {active && <Check className="w-3.5 h-3.5" />}
+                          <span className="truncate flex-1">{u.full_name || u.username || 'موظف'}</span>
+                        </button>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
               )}
 
               {scope === 'employees' && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="text-xs px-2.5 py-1 rounded-md bg-white/95 text-foreground font-bold">
+                    <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/95 text-primary shadow-md">
+                      <Users className="w-3 h-3" />
                       {multiEmployeeIds.length ? `${multiEmployeeIds.length} محدد` : 'اختر الموظفين'}
+                      <ChevronDown className="w-3 h-3 opacity-70" />
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64 max-h-64 overflow-y-auto p-2" dir="rtl">
