@@ -331,14 +331,15 @@ const StorefrontDashboardPage = () => {
   );
 };
 
-// Aurora background layer
+// Aurora background layer — clamped to viewport on mobile
 const Aurora = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none">
-    <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-fuchsia-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
-    <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
-    <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
+    <div className="absolute top-0 left-1/4 w-[60vw] max-w-[600px] h-[60vw] max-h-[600px] bg-fuchsia-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+    <div className="absolute top-1/3 right-0 w-[50vw] max-w-[500px] h-[50vw] max-h-[500px] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
+    <div className="absolute bottom-0 left-0 w-[50vw] max-w-[500px] h-[50vw] max-h-[500px] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
     <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_0%,rgba(2,6,23,0.5)_100%)]" />
   </div>
 );
+
 
 export default StorefrontDashboardPage;
