@@ -22,6 +22,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { useNotifications } from '@/contexts/NotificationsContext';
 import { useSuper } from '@/contexts/SuperProvider';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 import PendingRegistrations from './dashboard/PendingRegistrations';
 import AiOrdersManager from './dashboard/AiOrdersManager';
 import { formatDistanceToNowStrict } from 'date-fns';
@@ -453,6 +454,8 @@ const typeColorMap = {
 const NotificationsPanel = () => {
   const { notifications, markAsRead, markAllAsRead, clearAll, deleteNotification } = useNotifications();
   const { orders, users = [] } = useSuper(); // النظام الموحد للطلبات والمستخدمين
+  const { user: currentUser } = useAuth();
+  const currentUserId = currentUser?.user_id || currentUser?.id;
   const [isOpen, setIsOpen] = useState(false);
   const [showPendingRegistrations, setShowPendingRegistrations] = useState(false);
   const [showAiOrdersManager, setShowAiOrdersManager] = useState(false);
@@ -892,15 +895,21 @@ const NotificationsPanel = () => {
                                   const isStatusNotif = notificationType === 'alwaseet_status_change' || notificationType === 'order_status_update' || notificationType === 'order_status_changed';
                                   // اسم منشئ الطلب (مهم للمدير ومدير القسم) — مع fallback من الطلب/قائمة المستخدمين
                                   let creatorName = (data.creator_name || data.employee_name || '').trim();
-                                  if (!creatorName && isStatusNotif) {
+                                  let resolvedCreatorId = data.created_by || data.employee_id || null;
+                                  if (isStatusNotif) {
                                     const targetOrderId = data.order_id;
                                     const ord = targetOrderId && Array.isArray(orders) ? orders.find(o => o.id === targetOrderId || o.tracking_number === data.tracking_number) : null;
-                                    const createdBy = ord?.created_by || data.employee_id;
-                                    if (createdBy && Array.isArray(users)) {
-                                      const u = users.find(x => x?.user_id === createdBy || x?.id === createdBy);
+                                    if (!resolvedCreatorId && ord?.created_by) resolvedCreatorId = ord.created_by;
+                                    if (!creatorName && resolvedCreatorId && Array.isArray(users)) {
+                                      const u = users.find(x => x?.user_id === resolvedCreatorId || x?.id === resolvedCreatorId);
                                       creatorName = (u?.full_name || u?.username || '').trim();
                                     }
                                   }
+                                  // إخفاء الاسم عندما يكون منشئ الطلب هو المستخدم الحالي نفسه (إشعارات طلباتي)
+                                  const isOwnOrder =
+                                    (resolvedCreatorId && currentUserId && resolvedCreatorId === currentUserId) ||
+                                    (notification.user_id && currentUserId && notification.user_id === currentUserId && !resolvedCreatorId);
+                                  if (isOwnOrder) creatorName = '';
 
 
                                   // استخراج العنوان الأساسي
