@@ -1442,6 +1442,52 @@ useEffect(() => {
                 </h2>
               </div>
 
+              {/* شريط تحديد الكل للطلبات المؤهلة للتحاسب */}
+              {(() => {
+                const eligibleOrders = paginatedOrders.filter(o => {
+                  if (!o?.receipt_received) return false;
+                  const pr = profits?.find(p => p.order_id === o.id);
+                  return pr && isPendingStatus(pr.status) && (pr.employee_profit || 0) > 0;
+                });
+                if (eligibleOrders.length === 0) return null;
+                const eligibleIds = eligibleOrders.map(o => o.id);
+                const allSelected = eligibleIds.every(id => selectedOrders.includes(id));
+                const someSelected = eligibleIds.some(id => selectedOrders.includes(id));
+                const selectedSum = eligibleOrders
+                  .filter(o => selectedOrders.includes(o.id))
+                  .reduce((s, o) => {
+                    const pr = profits?.find(p => p.order_id === o.id);
+                    return s + (pr?.employee_profit || 0);
+                  }, 0);
+                return (
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 via-background to-primary/5 p-3">
+                    <div className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={allSelected}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedOrders(prev => Array.from(new Set([...prev, ...eligibleIds])));
+                          } else {
+                            setSelectedOrders(prev => prev.filter(id => !eligibleIds.includes(id)));
+                          }
+                        }}
+                        className="scale-110"
+                      />
+                      <span className="font-bold">
+                        تحديد كل المؤهلة ({eligibleOrders.length})
+                      </span>
+                      {someSelected && (
+                        <Button variant="ghost" size="sm" onClick={() => handleClearSelection()}>
+                          إلغاء التحديد
+                        </Button>
+                      )}
+                    </div>
+                    <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                      إجمالي المحدد: {selectedSum.toLocaleString()} د.ع
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* قائمة الطلبات */}
               <OrderList 
