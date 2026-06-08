@@ -60,7 +60,25 @@ const StorefrontProducts = () => {
           .eq('employee_id', settings.employee_id)
           .eq('is_active', true);
 
-        const allowedProductIds = allowedProductsData?.map(ap => ap.product_id) || [];
+        let allowedProductIds = allowedProductsData?.map(ap => ap.product_id) || [];
+
+        // ✅ Fallback للمدير العام: إن لم تتم المزامنة، اعرض كل المنتجات النشطة
+        if (allowedProductIds.length === 0) {
+          const { data: ownerRoles } = await supabase
+            .from('user_roles')
+            .select('roles(name)')
+            .eq('user_id', settings.employee_id)
+            .eq('is_active', true);
+          const ownerIsAdmin = (ownerRoles || []).some(r => ['super_admin', 'admin'].includes(r.roles?.name));
+          if (ownerIsAdmin) {
+            const { data: allActive } = await supabase
+              .from('products')
+              .select('id')
+              .eq('is_active', true);
+            allowedProductIds = (allActive || []).map(p => p.id);
+          }
+        }
+
         if (allowedProductIds.length === 0) {
           setProducts([]);
           setLoading(false);
@@ -80,6 +98,7 @@ const StorefrontProducts = () => {
 
         // Fallback: لو ما فيه عناصر مفعلّة بالمتجر، اعرض كل المسموحة
         const idsToFetch = storefrontIds.length > 0 ? storefrontIds : allowedProductIds;
+
 
         const { data, error } = await supabase
           .from('products')

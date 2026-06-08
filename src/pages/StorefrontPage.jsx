@@ -63,10 +63,28 @@ const StorefrontHome = () => {
           .eq('is_active', true);
 
         devLog.log('📋 Allowed products:', allowedProductsData?.length || 0, 'Error:', allowedError);
-        const allowedProductIds = allowedProductsData?.map(ap => ap.product_id) || [];
+        let allowedProductIds = allowedProductsData?.map(ap => ap.product_id) || [];
+
+        // ✅ Fallback للمدير العام: إذا كان صاحب المتجر مديراً ولا توجد منتجات مسموحة بعد، اعرض جميع المنتجات النشطة
+        if (allowedProductIds.length === 0) {
+          const { data: ownerRoles } = await supabase
+            .from('user_roles')
+            .select('roles(name)')
+            .eq('user_id', settings.employee_id)
+            .eq('is_active', true);
+          const ownerIsAdmin = (ownerRoles || []).some(r => ['super_admin', 'admin'].includes(r.roles?.name));
+          if (ownerIsAdmin) {
+            const { data: allActive } = await supabase
+              .from('products')
+              .select('id')
+              .eq('is_active', true);
+            allowedProductIds = (allActive || []).map(p => p.id);
+            devLog.log('🛡️ Admin fallback active products:', allowedProductIds.length);
+          }
+        }
 
         if (allowedProductIds.length === 0) {
-          devLog.log('⚠️ No allowed products for this employee');
+          devLog.log('⚠️ No products available for this storefront');
           setProducts([]);
           setIsLoading(false);
           return;
@@ -81,22 +99,14 @@ const StorefrontHome = () => {
 
         devLog.log('🏪 Storefront descriptions:', storefrontDescriptions?.length || 0, 'Error:', descError);
 
-        // المنتجات التي يجب عرضها = المسموحة و في المتجر
         const storefrontProductIds = storefrontDescriptions
           ?.filter(d => allowedProductIds.includes(d.product_id))
           .map(d => d.product_id) || [];
 
-        devLog.log('📦 Storefront product IDs:', storefrontProductIds.length);
-
-        // المنتجات المميزة (للصفحة الرئيسية)
         const featuredProductIds = storefrontDescriptions
           ?.filter(d => d.is_featured && allowedProductIds.includes(d.product_id))
           .map(d => d.product_id) || [];
 
-        // اختيار IDs للعرض:
-        // 1) المميزة من المتجر إن وجدت
-        // 2) منتجات المتجر إن وجدت
-        // 3) ✅ Fallback: كل المنتجات المسموحة للموظف (حتى لو لم يُهيِّأ المتجر بعد)
         let productIdsToFetch = featuredProductIds.length > 0
           ? featuredProductIds
           : (storefrontProductIds.length > 0
@@ -111,6 +121,7 @@ const StorefrontHome = () => {
           setIsLoading(false);
           return;
         }
+
 
         const { data: productsData, error: prodError } = await supabase
           .from('products')

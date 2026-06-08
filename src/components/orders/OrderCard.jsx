@@ -410,21 +410,32 @@ const OrderCard = React.memo(({
               
                {/* معلومات مُسلّم/راجع موجودة في قسم التفاصيل بالأسفل */}
               
-               <div className="flex items-center gap-2 min-w-0 max-w-full">
-                 {order.delivery_account_used && order.delivery_partner !== 'محلي' && (
-                   <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-300/50 shadow-sm px-2 py-0.5 rounded-full truncate max-w-[100px]">
-                     ({order.delivery_account_used.toUpperCase()})
-                   </Badge>
-                 )}
-                 <div className="text-right flex-shrink-0" dir="ltr">
-                    <h3 className="font-black text-lg text-foreground tracking-wide bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text tabular-nums whitespace-nowrap">
-                      {order.tracking_number || order.order_number}
-                    </h3>
+               <div className="flex items-start gap-2 min-w-0 max-w-full">
+                 <div className="flex flex-col items-end gap-1 min-w-0">
+                    <div className="text-right" dir="ltr">
+                       <h3 className="font-black text-lg text-foreground tracking-wide tabular-nums whitespace-nowrap">
+                         {order.tracking_number || order.order_number}
+                       </h3>
+                    </div>
+                    {order.delivery_account_used && order.delivery_partner !== 'محلي' && (
+                      <div className="max-w-[180px] overflow-hidden">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-bold bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-500 text-white border-blue-300/40 shadow-sm px-2 py-0.5 rounded-full"
+                          title={order.delivery_account_used}
+                        >
+                          <ScrollingText
+                            text={`@${String(order.delivery_account_used).toUpperCase()}`}
+                            maxWidth="160px"
+                          />
+                        </Badge>
+                      </div>
+                    )}
                  </div>
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => onSelect?.(order.id)}
-                  className="shrink-0 scale-125 border-2"
+                  className="shrink-0 scale-125 border-2 mt-1"
                 />
               </div>
               
