@@ -192,6 +192,7 @@ const InvoicesProfitReportDialog = ({
           p_scope: effectiveScope,
           p_employee: pEmployee,
           p_employees: pEmployees,
+          p_account_keys: (effectiveScope === 'active_accounts' && selectedAccountKeys.length > 0) ? selectedAccountKeys : null,
         });
         if (error) throw error;
         if (cancelled) return;
@@ -212,7 +213,7 @@ const InvoicesProfitReportDialog = ({
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, dateRange?.from?.getTime(), dateRange?.to?.getTime(), userId, isAdmin, isDepartmentManager, scope, singleEmployee, multiEmployeeIds.join(',')]);
+  }, [open, dateRange?.from?.getTime(), dateRange?.to?.getTime(), userId, isAdmin, isDepartmentManager, scope, singleEmployee, multiEmployeeIds.join(','), selectedAccountKeys.join(',')]);
 
   useEffect(() => {
     if (!open) return;
