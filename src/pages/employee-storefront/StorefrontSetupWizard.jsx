@@ -287,15 +287,58 @@ const StorefrontSetupWizard = () => {
 
                 <div className="space-y-4">
                   <div>
-                    <Label>رابط المتجر</Label>
+                    <Label>شعار المتجر</Label>
+                    <div className="flex items-center gap-4 mt-2">
+                      <div className="w-20 h-20 rounded-2xl border-2 border-dashed border-muted-foreground/30 bg-muted/30 flex items-center justify-center overflow-hidden">
+                        {formData.logo_url ? (
+                          <img src={formData.logo_url} alt="logo" className="w-full h-full object-cover" />
+                        ) : (
+                          <Sparkles className="h-8 w-8 text-muted-foreground" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <Input
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => handleLogoUpload(e.target.files?.[0])}
+                          disabled={logoUploading}
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {logoUploading ? 'جاري الرفع...' : 'PNG/JPG حتى 2MB'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>اسم المتجر بالإنجليزية (للرابط)</Label>
                     <Input
                       value={formData.slug}
-                      onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
-                      placeholder="my-shop"
+                      onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '') }))}
+                      placeholder="alshmry"
                       dir="ltr"
                     />
-                    <p className="text-sm text-muted-foreground mt-1">
-                      سيكون رابط متجرك: /storefront/{formData.slug}
+                    <div className="mt-2 rounded-lg border bg-muted/30 p-3 text-sm" dir="ltr">
+                      <div className="font-semibold text-foreground">رابط متجرك الجاهز:</div>
+                      <div className="text-primary font-mono mt-1">
+                        https://{formData.slug || 'your-shop'}.ryusbrand.com
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        أو: /storefront/{formData.slug || 'your-shop'}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label>دومين خاص بك (اختياري)</Label>
+                    <Input
+                      value={formData.custom_domain}
+                      onChange={(e) => setFormData(prev => ({ ...prev, custom_domain: e.target.value.toLowerCase().trim() }))}
+                      placeholder="alshmry.com"
+                      dir="ltr"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      بعد الحفظ: أضف سجل CNAME من دومينك إلى <span className="font-mono">ryus.lovable.app</span> ثم سيتم التفعيل خلال 24 ساعة.
                     </p>
                   </div>
 
