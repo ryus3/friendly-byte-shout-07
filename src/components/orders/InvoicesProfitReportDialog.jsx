@@ -625,16 +625,82 @@ const Stat = ({ icon: Icon, label, sub, value, color = 'blue', highlight = false
     purple: 'from-purple-500/15 to-purple-500/5 border-purple-500/30 text-purple-600',
   };
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className={`bg-gradient-to-br ${map[color]} backdrop-blur-sm ${highlight ? 'ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10' : ''}`}>
-        <CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="h-full">
+      <Card className={`h-full min-h-[104px] bg-gradient-to-br ${map[color]} backdrop-blur-sm ${highlight ? 'ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10' : ''}`}>
+        <CardContent className="p-3 h-full flex flex-col justify-between">
+          <div className="flex items-center gap-2">
             <Icon className="w-4 h-4" />
             <span className="text-[11px] text-muted-foreground font-medium">{label}</span>
           </div>
-          <div className="text-lg font-bold">{value}</div>
-          {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+          <div>
+            <div className="text-lg font-bold leading-tight">{value}</div>
+            {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+          </div>
         </CardContent>
+      </Card>
+    </motion.div>
+  );
+};
+
+const EmployeeDuesCard = ({ entries, total, fmt, expanded, onToggle }) => {
+  const count = entries.length;
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+      <Card className="bg-gradient-to-br from-purple-500/15 to-fuchsia-500/5 border-purple-500/30 backdrop-blur-sm overflow-hidden">
+        <button
+          type="button"
+          onClick={onToggle}
+          disabled={count === 0}
+          className="w-full p-3 flex items-center justify-between gap-2 hover:bg-white/5 transition-colors disabled:cursor-default"
+        >
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-purple-600" />
+            <div className="flex flex-col items-start">
+              <span className="text-[11px] text-muted-foreground font-medium">مستحقات الموظفين</span>
+              <span className="text-lg font-bold text-purple-600">{fmt(total)}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="bg-purple-500/15 text-purple-600 border border-purple-500/30 text-[10px]">
+              {count} موظف
+            </Badge>
+            {count > 0 && (
+              <ChevronDown className={`w-4 h-4 text-purple-600 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+            )}
+          </div>
+        </button>
+        <AnimatePresence initial={false}>
+          {expanded && count > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="border-t border-purple-500/20"
+            >
+              <div className="p-2 space-y-1.5">
+                {entries.map(e => (
+                  <div key={e.empId} className="flex items-center justify-between gap-2 p-2 rounded-md bg-white/5 border border-purple-500/15">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500/30 to-fuchsia-500/20 flex items-center justify-center text-[11px] font-bold text-purple-700 dark:text-purple-300 shrink-0">
+                        {(e.name || '?').charAt(0)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold truncate">{e.name}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {e.ordersCount} طلب{e.bonus !== 0 ? ` • زيادة/خصم ${fmt(e.bonus)}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <Badge className="bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 font-bold text-[11px] shrink-0">
+                      {fmt(e.amount)}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Card>
     </motion.div>
   );
