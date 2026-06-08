@@ -253,6 +253,16 @@ const StorefrontDashboardPage = () => {
                 {copied ? 'تم النسخ' : 'نسخ الرابط'}
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                onClick={syncProducts}
+                disabled={syncing}
+                className="flex-1 sm:flex-none"
+              >
+                <RefreshCw className={`h-4 w-4 ml-2 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'جاري المزامنة...' : 'مزامنة المنتجات'}
+              </Button>
+              <Button
                 size="sm"
                 onClick={() => window.open(getStoreUrl(), '_blank')}
                 className="flex-1 sm:flex-none bg-gradient-to-r from-primary to-purple-600 hover:opacity-90"
