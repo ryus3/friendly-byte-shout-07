@@ -77,6 +77,8 @@ const InvoicesProfitReportDialog = ({
   const [scope, setScope] = useState(initialScope);
   const [singleEmployee, setSingleEmployee] = useState(employeeId || 'all');
   const [multiEmployeeIds, setMultiEmployeeIds] = useState([]);
+  const [selectedAccountKeys, setSelectedAccountKeys] = useState([]); // [] = جميع الحسابات النشطة
+  const [duesExpanded, setDuesExpanded] = useState(false);
 
   const [invoices, setInvoices] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
