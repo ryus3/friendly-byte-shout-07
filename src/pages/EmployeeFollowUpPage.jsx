@@ -1226,15 +1226,6 @@ useEffect(() => {
             <h1 className="text-3xl font-bold gradient-text">متابعة الموظفين</h1>
             <p className="text-muted-foreground">نظرة شاملة على أداء فريق العمل وإدارة المزامنة الذكية.</p>
           </div>
-          <Button
-            onClick={() => setIsInvoicesReportOpen(true)}
-            variant="outline"
-            size="sm"
-            className="h-9 px-3 gap-1.5 border-violet-300/50 bg-gradient-to-r from-violet-500/10 to-pink-500/10 hover:from-violet-500/20 hover:to-pink-500/20 text-violet-700 dark:text-violet-200 font-semibold shadow-sm"
-          >
-            <FileText className="w-4 h-4" />
-            تقرير الفواتير
-          </Button>
         </div>
 
         {/* شريط الأدوات الاحترافي للمزامنة */}
@@ -1509,10 +1500,19 @@ useEffect(() => {
           {/* تبويب فواتير الموظفين */}
           <TabsContent value="invoices" className="mt-6">
             <div className="bg-card p-4 rounded-xl border">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
                 <h2 className="text-xl font-semibold">
                   فواتير شركة التوصيل
                 </h2>
+                <Button
+                  onClick={() => setIsInvoicesReportOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="inline-flex items-center gap-2 border-primary/40 bg-gradient-to-br from-primary/10 to-accent/10 hover:from-primary/20 hover:to-accent/20 text-primary"
+                >
+                  <span>تقرير الفواتير</span>
+                  <FileText className="h-4 w-4" />
+                </Button>
               </div>
               <EmployeeDeliveryInvoicesTab employeeId={filters.employeeId} />
             </div>
@@ -1569,7 +1569,9 @@ useEffect(() => {
         <InvoicesProfitReportDialog
           open={isInvoicesReportOpen}
           onOpenChange={setIsInvoicesReportOpen}
-          scope={
+          allowScopeSelection={true}
+          supervisedEmployeeIds={supervisedEmployeeIds}
+          defaultScope={
             filters.employeeId && filters.employeeId !== 'all'
               ? 'employee'
               : (isAdmin ? 'all' : (isDepartmentManager ? 'managed' : 'self'))
