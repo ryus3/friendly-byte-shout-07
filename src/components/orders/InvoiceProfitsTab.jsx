@@ -153,7 +153,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
 
     return (
       <div className="space-y-4 p-1" dir="rtl">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           <StatCard icon={TrendingUp} label="إيراد منتجاتك" sub="بدون توصيل" value={fmt(myOwnerStats.revenue)} color="blue" />
           <StatCard icon={Package} label="تكلفة منتجاتك" value={fmt(myOwnerStats.cost)} color="orange" />
           <StatCard icon={Boxes} label="عدد القطع" value={`${myOwnerStats.items}`} color="purple" />
