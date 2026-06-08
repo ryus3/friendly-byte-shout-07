@@ -19,7 +19,6 @@ const THEMES = STOREFRONT_THEMES.map((t) => ({
   name: t.name,
   description: t.description,
   gradient: t.gradient,
-  preview: t.preview,
   colors: t.colors,
 }));
 
