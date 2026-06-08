@@ -194,17 +194,20 @@ const StorefrontSetupWizard = () => {
 
       const { error } = await supabase
         .from('employee_storefront_settings')
-        .insert({
+        .upsert({
           employee_id: user.id,
           ...formData,
           is_active: true
-        });
+        }, { onConflict: 'employee_id' });
 
       if (error) throw error;
 
+      // Auto-seed the storefront with the employee's allowed products
+      await seedAllowedProducts(user.id);
+
       toast({
         title: '🎉 تم إنشاء المتجر بنجاح',
-        description: 'يمكنك الآن إدارة متجرك الإلكتروني'
+        description: 'تم تفعيل متجرك واستيراد منتجاتك المسموحة تلقائياً'
       });
 
       navigate('/dashboard/storefront');
