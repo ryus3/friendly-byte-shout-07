@@ -5,6 +5,7 @@ import {
   Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package,
   Sparkles, Target, Copy, Check, Globe, RefreshCw, Image as ImageIcon,
   Percent, Palette, FolderTree, ArrowUpRight, Zap, Eye, DollarSign,
+  FileText, BarChart3, Truck, Gift, Search,
 } from 'lucide-react';
 import StorefrontAnalytics from '@/components/employee-storefront/StorefrontAnalytics';
 import PremiumButton from '@/components/storefront/ui/PremiumButton';
