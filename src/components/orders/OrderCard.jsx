@@ -408,36 +408,37 @@ const OrderCard = React.memo(({
                 </div>
               )}
               
-               {/* معلومات مُسلّم/راجع موجودة في قسم التفاصيل بالأسفل */}
-              
-               <div className="flex items-start gap-2 min-w-0 max-w-full">
-                 <div className="flex flex-col items-end gap-1 min-w-0">
-                    <div className="text-right" dir="ltr">
-                       <h3 className="font-black text-lg text-foreground tracking-wide tabular-nums whitespace-nowrap">
-                         {order.tracking_number || order.order_number}
-                       </h3>
-                    </div>
-                    {order.delivery_account_used && order.delivery_partner !== 'محلي' && (
-                      <div className="max-w-[180px] overflow-hidden">
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] font-bold bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-500 text-white border-blue-300/40 shadow-sm px-2 py-0.5 rounded-full"
-                          title={order.delivery_account_used}
-                        >
-                          <ScrollingText
-                            text={`@${String(order.delivery_account_used).toUpperCase()}`}
-                            maxWidth="160px"
-                          />
-                        </Badge>
-                      </div>
-                    )}
-                 </div>
+              {/* وسط الأعلى: اسم حساب التوصيل (متحرك إذا طال) */}
+              {order.delivery_account_used && order.delivery_partner !== 'محلي' ? (
+                <div className="flex-1 flex justify-center px-2 min-w-0">
+                  <Badge
+                    variant="outline"
+                    className="text-[10px] font-bold bg-gradient-to-r from-indigo-500 via-blue-500 to-cyan-500 text-white border-blue-300/40 shadow-sm px-2 py-0.5 rounded-full max-w-[140px]"
+                    title={order.delivery_account_used}
+                  >
+                    <ScrollingText
+                      text={`@${String(order.delivery_account_used).toUpperCase()}`}
+                      maxWidth="120px"
+                    />
+                  </Badge>
+                </div>
+              ) : (
+                <div className="flex-1" />
+              )}
+
+              <div className="flex items-start gap-2 min-w-0 shrink-0">
+                <div className="text-right" dir="ltr">
+                  <h3 className="font-black text-lg text-foreground tracking-wide tabular-nums whitespace-nowrap">
+                    {order.tracking_number || order.order_number}
+                  </h3>
+                </div>
                 <Checkbox
                   checked={isSelected}
                   onCheckedChange={() => onSelect?.(order.id)}
                   className="shrink-0 scale-125 border-2 mt-1"
                 />
               </div>
+
               
               {order.status === 'completed' && order.isArchived && (
                 <Badge className="bg-gradient-to-r from-green-500 to-emerald-500 text-white border-green-300/50 shadow-lg shadow-green-400/40 font-bold">
@@ -451,44 +452,39 @@ const OrderCard = React.memo(({
               <div className="grid grid-cols-3 gap-3 items-center">
                 
                 <div className="space-y-1 text-left">
-                  <div className="flex items-center gap-2 justify-start">
+                  <div className="flex items-center gap-1.5 justify-start">
                     <Calendar className="h-4 w-4 text-primary" />
                     <span className="text-sm font-bold text-foreground">{formatDate(order.created_at)}</span>
                   </div>
-                  <div className="flex items-center gap-2 justify-start">
+                  <div className="flex items-center gap-1.5 justify-start">
                     <Clock className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
                   </div>
-                   {order.created_by_name && (
-                      <div className="flex items-center gap-2 justify-start">
-                        <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
-                          <User className="h-3 w-3 inline-block ml-1" />
-                          {order.created_by_name}
-                        </span>
-                      </div>
-                   )}
-                   <div className="flex flex-col gap-1 items-start">
-                       <div className="flex justify-start w-full">
-                            <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold min-w-[90px] shadow-sm flex items-center justify-center gap-1 h-6`}>
-                              <Building className="h-3 w-3" />
-                              <span className="truncate">
-                                {order.delivery_partner === 'alwaseet' ? 'AL WASEET' : 
-                                 order.delivery_partner === 'modon' ? 'MODON' : 
-                                 order.delivery_partner || 'محلي'}
-                              </span>
-                            </Badge>
-                       </div>
+                  {order.created_by_name && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20 max-w-[120px]">
+                      <User className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{order.created_by_name}</span>
+                    </span>
+                  )}
+                  <div className="flex flex-col gap-1 items-start">
+                    <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold min-w-[90px] shadow-sm flex items-center justify-center gap-1 h-6`}>
+                      <Building className="h-3 w-3" />
+                      <span className="truncate">
+                        {order.delivery_partner === 'alwaseet' ? 'AL WASEET' :
+                         order.delivery_partner === 'modon' ? 'MODON' :
+                         order.delivery_partner || 'محلي'}
+                      </span>
+                    </Badge>
 
-                       {order.delivery_partner_invoice_id && (
-                         <div className="flex justify-start w-full">
-                           <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-2 py-1 rounded-full min-w-[90px] flex items-center justify-center gap-1 h-6 whitespace-nowrap">
-                             <CreditCard className="h-3 w-3" />
-                             <span className="truncate">#{order.delivery_partner_invoice_id}</span>
-                           </Badge>
-                         </div>
-                       )}
-                   </div>
+                    {order.delivery_partner_invoice_id && (
+                      <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-2 py-1 rounded-full min-w-[90px] flex items-center justify-center gap-1 h-6 whitespace-nowrap">
+                        <CreditCard className="h-3 w-3" />
+                        <span className="truncate">#{order.delivery_partner_invoice_id}</span>
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+
                 
                 <div className="flex items-center justify-center gap-1">
                   
@@ -538,14 +534,15 @@ const OrderCard = React.memo(({
                 </div>
                 
                 <div className="space-y-1 text-left">
-                  <div className="flex items-center gap-2 flex-row-reverse">
-                    <User className="h-4 w-4 text-primary" />
-                    <span className="font-bold text-foreground text-sm">{order.customer_name}</span>
+                  <div className="flex items-center gap-1 flex-row-reverse">
+                    <User className="h-4 w-4 text-primary shrink-0" />
+                    <span className="font-bold text-foreground text-sm truncate">{order.customer_name}</span>
                   </div>
-                   <div className="flex items-center gap-2 text-xs text-muted-foreground flex-row-reverse">
-                     <Phone className="h-3 w-3" />
+                   <div className="flex items-center gap-1 text-xs text-muted-foreground flex-row-reverse">
+                     <Phone className="h-3 w-3 shrink-0" />
                      <span>{order.customer_phone}</span>
                    </div>
+
                    {(order.customer_city || order.customer_province) && (
                      <div className="flex items-center gap-1 text-xs text-muted-foreground flex-row-reverse">
                        <MapPin className="h-3 w-3 flex-shrink-0" />
