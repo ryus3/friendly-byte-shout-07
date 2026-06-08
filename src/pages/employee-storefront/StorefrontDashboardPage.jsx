@@ -196,10 +196,11 @@ const StorefrontDashboardPage = () => {
   ];
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-slate-950">
+    <div className="min-h-screen relative overflow-x-clip overflow-y-auto bg-slate-950 w-full max-w-[100vw]" dir="rtl">
       <Aurora />
 
-      <div className="relative z-10 p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="relative z-10 p-3 sm:p-6 md:p-8 space-y-5 sm:space-y-6 max-w-7xl mx-auto w-full">
+
         {/* ===== Header ===== */}
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
