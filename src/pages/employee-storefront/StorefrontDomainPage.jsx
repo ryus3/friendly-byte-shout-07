@@ -43,17 +43,22 @@ const StorefrontDomainPage = () => {
   const validateSlug = (val) => /^[a-z0-9-]{3,40}$/.test(val);
 
   const saveSlug = async () => {
-    if (!validateSlug(slug)) {
+    const normalized = (slug || '').trim().toLowerCase();
+    if (!validateSlug(normalized)) {
       setSlugError('السلاج: حروف إنجليزية صغيرة وأرقام و - فقط (3-40 حرف)');
       return;
     }
     setSlugError('');
     setSaving(true);
-    const { error } = await supabase.from('employee_storefront_settings').update({ slug }).eq('employee_id', user.id);
+    const { error } = await supabase
+      .from('employee_storefront_settings')
+      .update({ slug: normalized })
+      .eq('employee_id', user.id);
     setSaving(false);
     if (error) {
       toast({ title: 'فشل الحفظ', description: error.message?.includes('duplicate') ? 'هذا السلاج محجوز' : error.message, variant: 'destructive' });
     } else {
+      setSlug(normalized);
       toast({ title: '✅ تم تحديث رابط المتجر' });
       init();
     }
