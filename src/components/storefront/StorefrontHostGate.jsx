@@ -63,13 +63,13 @@ const StorefrontHostGate = ({ children }) => {
       }
     }
 
-    // Custom domain lookup
+    // Custom domain lookup (case-insensitive)
     (async () => {
       try {
         const { data } = await supabase
           .from('employee_storefront_settings')
           .select('slug, custom_domain_verified')
-          .eq('custom_domain', host)
+          .ilike('custom_domain', host)
           .eq('is_active', true)
           .maybeSingle();
         if (data?.slug && data?.custom_domain_verified) {
