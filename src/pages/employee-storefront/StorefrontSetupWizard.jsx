@@ -12,33 +12,15 @@ import ThemeCard from '@/components/storefront/dashboard/ThemeCard';
 import ColorGradientPicker from '@/components/storefront/dashboard/ColorGradientPicker';
 import RichTextEditor from '@/components/storefront/RichTextEditor';
 import GradientButton from '@/components/storefront/ui/GradientButton';
+import { STOREFRONT_THEMES, DEFAULT_THEME_ID, getThemeById } from '@/lib/storefront-themes';
 
-const THEMES = [
-  {
-    name: 'Modern Minimalist',
-    description: 'تصميم عصري نظيف',
-    gradient: 'from-blue-500 to-cyan-500',
-    colors: { primary: '#3B82F6', secondary: '#06B6D4', accent: '#8B5CF6' }
-  },
-  {
-    name: 'Luxury Fashion',
-    description: 'تصميم فاخر أنيق',
-    gradient: 'from-purple-600 to-pink-600',
-    colors: { primary: '#9333EA', secondary: '#EC4899', accent: '#F59E0B' }
-  },
-  {
-    name: 'Vibrant Street Style',
-    description: 'تصميم حيوي جريء',
-    gradient: 'from-orange-500 to-red-600',
-    colors: { primary: '#F97316', secondary: '#DC2626', accent: '#FBBF24' }
-  },
-  {
-    name: 'Natural & Organic',
-    description: 'تصميم طبيعي هادئ',
-    gradient: 'from-emerald-500 to-teal-600',
-    colors: { primary: '#10B981', secondary: '#0D9488', accent: '#84CC16' }
-  }
-];
+const THEMES = STOREFRONT_THEMES.map((t) => ({
+  id: t.id,
+  name: t.name,
+  description: t.description,
+  gradient: t.gradient,
+  colors: t.colors,
+}));
 
 const DEFAULT_CONTENT = {
   about_us: `مرحباً بك في متجرنا
@@ -113,10 +95,10 @@ const StorefrontSetupWizard = () => {
   const [formData, setFormData] = useState({
     slug: '',
     meta_description: '',
-    theme_name: 'modern',
-    primary_color: '#3B82F6',
-    secondary_color: '#06B6D4',
-    accent_color: '#8B5CF6',
+    theme_name: DEFAULT_THEME_ID,
+    primary_color: getThemeById(DEFAULT_THEME_ID).colors.primary,
+    secondary_color: getThemeById(DEFAULT_THEME_ID).colors.secondary,
+    accent_color: getThemeById(DEFAULT_THEME_ID).colors.accent,
     about_us: DEFAULT_CONTENT.about_us,
     privacy_policy: DEFAULT_CONTENT.privacy_policy,
     terms_conditions: DEFAULT_CONTENT.terms_conditions,
@@ -153,11 +135,54 @@ const StorefrontSetupWizard = () => {
   const selectTheme = (theme) => {
     setFormData(prev => ({
       ...prev,
-      theme_name: theme.name.toLowerCase().replace(/\s+/g, '-'),
+      theme_name: theme.id,
       primary_color: theme.colors.primary,
       secondary_color: theme.colors.secondary,
       accent_color: theme.colors.accent
     }));
+  };
+
+  const seedAllowedProducts = async (employeeId) => {
+    try {
+      // Pull this user's allowed products from user_product_permissions and
+      // mirror them into employee_allowed_products so the storefront shows them.
+      const { data: perms } = await supabase
+        .from('user_product_permissions')
+        .select('permission_type, allowed_items, has_full_access')
+        .eq('user_id', employeeId);
+
+      const productIds = new Set();
+      (perms || []).forEach((p) => {
+        if (p?.permission_type === 'product' && Array.isArray(p.allowed_items)) {
+          p.allowed_items.forEach((id) => id && productIds.add(id));
+        }
+      });
+
+      // If full access, pull every active product
+      const hasFullAccess = (perms || []).some((p) => p?.has_full_access);
+      if (hasFullAccess) {
+        const { data: allProducts } = await supabase
+          .from('products')
+          .select('id')
+          .eq('is_active', true);
+        (allProducts || []).forEach((p) => productIds.add(p.id));
+      }
+
+      if (productIds.size === 0) return;
+
+      const rows = Array.from(productIds).map((pid) => ({
+        employee_id: employeeId,
+        product_id: pid,
+        is_active: true,
+        added_by: employeeId,
+      }));
+
+      await supabase
+        .from('employee_allowed_products')
+        .upsert(rows, { onConflict: 'employee_id,product_id', ignoreDuplicates: true });
+    } catch (err) {
+      console.warn('seedAllowedProducts skipped:', err?.message);
+    }
   };
 
   const createStore = async () => {
@@ -168,17 +193,20 @@ const StorefrontSetupWizard = () => {
 
       const { error } = await supabase
         .from('employee_storefront_settings')
-        .insert({
+        .upsert({
           employee_id: user.id,
           ...formData,
           is_active: true
-        });
+        }, { onConflict: 'employee_id' });
 
       if (error) throw error;
 
+      // Auto-seed the storefront with the employee's allowed products
+      await seedAllowedProducts(user.id);
+
       toast({
         title: '🎉 تم إنشاء المتجر بنجاح',
-        description: 'يمكنك الآن إدارة متجرك الإلكتروني'
+        description: 'تم تفعيل متجرك واستيراد منتجاتك المسموحة تلقائياً'
       });
 
       navigate('/dashboard/storefront');
@@ -265,9 +293,9 @@ const StorefrontSetupWizard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   {THEMES.map((theme) => (
                     <ThemeCard
-                      key={theme.name}
+                      key={theme.id}
                       {...theme}
-                      selected={formData.theme_name === theme.name.toLowerCase().replace(/\s+/g, '-')}
+                      selected={formData.theme_name === theme.id}
                       onClick={() => selectTheme(theme)}
                     />
                   ))}
@@ -365,7 +393,7 @@ const StorefrontSetupWizard = () => {
                   </div>
                   <div className="flex justify-between items-center border-b pb-3">
                     <span className="font-semibold">الثيم:</span>
-                    <span className="text-muted-foreground">{formData.theme_name}</span>
+                    <span className="text-muted-foreground">{getThemeById(formData.theme_name)?.name || formData.theme_name}</span>
                   </div>
                   <div className="flex gap-2">
                     <div className="h-10 w-10 rounded" style={{ backgroundColor: formData.primary_color }} />
