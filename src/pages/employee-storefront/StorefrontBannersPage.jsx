@@ -31,22 +31,19 @@ const StorefrontBannersPage = () => {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-8 space-y-6">
-      <h1 className="text-3xl font-bold">إدارة البانرات</h1>
-
+    <div className="w-full max-w-[100vw] overflow-x-clip px-3 sm:px-6 py-4 sm:py-8 space-y-4" dir="rtl">
+      <h1 className="text-2xl sm:text-3xl font-bold">إدارة البانرات</h1>
       <Card>
-        <CardHeader>
-          <CardTitle>البانرات الإعلانية</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg sm:text-xl">البانرات الإعلانية — ربط ذكي مع المنتجات والأقسام</CardTitle>
         </CardHeader>
-        <CardContent>
-          <BannerManager
-            banners={banners}
-            onUpdate={fetchBanners}
-          />
+        <CardContent className="px-3 sm:px-6">
+          <BannerManager banners={banners} onUpdate={fetchBanners} />
         </CardContent>
       </Card>
     </div>
   );
 };
+
 
 export default StorefrontBannersPage;
