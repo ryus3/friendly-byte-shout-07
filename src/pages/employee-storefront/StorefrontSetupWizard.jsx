@@ -12,33 +12,16 @@ import ThemeCard from '@/components/storefront/dashboard/ThemeCard';
 import ColorGradientPicker from '@/components/storefront/dashboard/ColorGradientPicker';
 import RichTextEditor from '@/components/storefront/RichTextEditor';
 import GradientButton from '@/components/storefront/ui/GradientButton';
+import { STOREFRONT_THEMES, DEFAULT_THEME_ID, getThemeById } from '@/lib/storefront-themes';
 
-const THEMES = [
-  {
-    name: 'Modern Minimalist',
-    description: 'تصميم عصري نظيف',
-    gradient: 'from-blue-500 to-cyan-500',
-    colors: { primary: '#3B82F6', secondary: '#06B6D4', accent: '#8B5CF6' }
-  },
-  {
-    name: 'Luxury Fashion',
-    description: 'تصميم فاخر أنيق',
-    gradient: 'from-purple-600 to-pink-600',
-    colors: { primary: '#9333EA', secondary: '#EC4899', accent: '#F59E0B' }
-  },
-  {
-    name: 'Vibrant Street Style',
-    description: 'تصميم حيوي جريء',
-    gradient: 'from-orange-500 to-red-600',
-    colors: { primary: '#F97316', secondary: '#DC2626', accent: '#FBBF24' }
-  },
-  {
-    name: 'Natural & Organic',
-    description: 'تصميم طبيعي هادئ',
-    gradient: 'from-emerald-500 to-teal-600',
-    colors: { primary: '#10B981', secondary: '#0D9488', accent: '#84CC16' }
-  }
-];
+const THEMES = STOREFRONT_THEMES.map((t) => ({
+  id: t.id,
+  name: t.name,
+  description: t.description,
+  gradient: t.gradient,
+  preview: t.preview,
+  colors: t.colors,
+}));
 
 const DEFAULT_CONTENT = {
   about_us: `مرحباً بك في متجرنا
