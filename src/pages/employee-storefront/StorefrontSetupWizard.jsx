@@ -394,7 +394,7 @@ const StorefrontSetupWizard = () => {
                   </div>
                   <div className="flex justify-between items-center border-b pb-3">
                     <span className="font-semibold">الثيم:</span>
-                    <span className="text-muted-foreground">{formData.theme_name}</span>
+                    <span className="text-muted-foreground">{getThemeById(formData.theme_name)?.name || formData.theme_name}</span>
                   </div>
                   <div className="flex gap-2">
                     <div className="h-10 w-10 rounded" style={{ backgroundColor: formData.primary_color }} />
