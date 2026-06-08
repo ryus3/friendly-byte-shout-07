@@ -345,6 +345,38 @@ const InvoicesProfitReportDialog = ({
           {allowScopeSelection && (
             <div className="relative px-4 pb-3 flex flex-wrap items-center gap-1.5">
               <ScopeChip active={scope === 'active_accounts'} onClick={() => setScope('active_accounts')} icon={Building2}>حساباتي النشطة</ScopeChip>
+
+              {scope === 'active_accounts' && activeAccounts.length > 1 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/95 text-primary shadow-md">
+                      <Building2 className="w-3 h-3" />
+                      {selectedAccountKeys.length === 0 ? `كل الحسابات (${activeAccounts.length})` : `${selectedAccountKeys.length}/${activeAccounts.length} حساب`}
+                      <ChevronDown className="w-3 h-3 opacity-70" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 max-h-72 overflow-y-auto p-2" dir="rtl">
+                    <div className="flex items-center justify-between mb-2 pb-2 border-b">
+                      <span className="text-[11px] font-bold text-muted-foreground">اختر الحسابات</span>
+                      <button onClick={() => setSelectedAccountKeys([])} className="text-[10px] text-primary font-bold hover:underline">
+                        تحديد الكل
+                      </button>
+                    </div>
+                    {activeAccounts.map(a => {
+                      const key = `${a.partner}::${a.account_username.toLowerCase()}`;
+                      const checked = selectedAccountKeys.length === 0 || selectedAccountKeys.includes(key);
+                      return (
+                        <label key={key} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm">
+                          <Checkbox checked={checked} onCheckedChange={() => toggleAccountKey(key)} />
+                          <span className="flex-1 truncate">{a.account_username}</span>
+                          <Badge variant="outline" className="text-[10px] shrink-0">{partnerLabel(a.partner)}</Badge>
+                        </label>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
+              )}
+
               {(isAdmin || isDepartmentManager) && (
                 <ScopeChip active={scope === (isAdmin ? 'all' : 'managed')} onClick={() => setScope(isAdmin ? 'all' : 'managed')} icon={Users}>
                   {isAdmin ? 'كل الموظفين' : 'موظفيّ'}
