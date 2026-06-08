@@ -47,3 +47,8 @@ verify_jwt = false
 # Background token renewal - called by pg_cron hourly
 [functions.refresh-delivery-partner-tokens]
 verify_jwt = false
+
+# Custom domain DNS verification
+[functions.verify-custom-domain]
+verify_jwt = true
+

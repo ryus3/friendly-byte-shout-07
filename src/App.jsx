@@ -80,6 +80,12 @@ const StorefrontSetupWizard = lazy(() => import('@/pages/employee-storefront/Sto
 const AdvancedSettingsPage = lazy(() => import('@/pages/employee-storefront/AdvancedSettingsPage.jsx'));
 const StorefrontDomainPage = lazy(() => import('@/pages/employee-storefront/StorefrontDomainPage.jsx'));
 const StorefrontCategoriesPage = lazy(() => import('@/pages/employee-storefront/StorefrontCategoriesPage.jsx'));
+const StorefrontThemesPage = lazy(() => import('@/pages/employee-storefront/StorefrontThemesPage.jsx'));
+const StorefrontPoliciesPage = lazy(() => import('@/pages/employee-storefront/StorefrontPoliciesPage.jsx'));
+const StorefrontPixelsPage = lazy(() => import('@/pages/employee-storefront/StorefrontPixelsPage.jsx'));
+const StorefrontShippingPage = lazy(() => import('@/pages/employee-storefront/StorefrontShippingPage.jsx'));
+const StorefrontLoyaltyPage = lazy(() => import('@/pages/employee-storefront/StorefrontLoyaltyPage.jsx'));
+const StorefrontSeoPage = lazy(() => import('@/pages/employee-storefront/StorefrontSeoPage.jsx'));
 
 
 // Public Storefront Pages
@@ -156,7 +162,9 @@ function AppContent() {
   const { user, loading } = useAuth();
   const { loading: permissionsLoading } = usePermissions();
   const { aiChatOpen, setAiChatOpen } = useAiChat();
+  // 🚫 لا سبلاش على مسارات المتجر العامة — تفتح فوراً
   const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.pathname.startsWith('/storefront/')) return false;
     const hasShownSplash = sessionStorage.getItem('hasShownSplash');
     return !hasShownSplash;
   });
@@ -306,6 +314,12 @@ function AppContent() {
           <Route path="/dashboard/storefront/orders" element={<ProtectedRoute>{childrenWithProps(StorefrontOrdersPage)}</ProtectedRoute>} />
           <Route path="/dashboard/storefront/domain" element={<ProtectedRoute>{childrenWithProps(StorefrontDomainPage)}</ProtectedRoute>} />
           <Route path="/dashboard/storefront/categories" element={<ProtectedRoute>{childrenWithProps(StorefrontCategoriesPage)}</ProtectedRoute>} />
+          <Route path="/dashboard/storefront/themes" element={<ProtectedRoute>{childrenWithProps(StorefrontThemesPage)}</ProtectedRoute>} />
+          <Route path="/dashboard/storefront/policies" element={<ProtectedRoute>{childrenWithProps(StorefrontPoliciesPage)}</ProtectedRoute>} />
+          <Route path="/dashboard/storefront/pixels" element={<ProtectedRoute>{childrenWithProps(StorefrontPixelsPage)}</ProtectedRoute>} />
+          <Route path="/dashboard/storefront/shipping" element={<ProtectedRoute>{childrenWithProps(StorefrontShippingPage)}</ProtectedRoute>} />
+          <Route path="/dashboard/storefront/loyalty" element={<ProtectedRoute>{childrenWithProps(StorefrontLoyaltyPage)}</ProtectedRoute>} />
+          <Route path="/dashboard/storefront/seo" element={<ProtectedRoute>{childrenWithProps(StorefrontSeoPage)}</ProtectedRoute>} />
 
           
           {/* Public Storefront Routes (No Auth Required) */}

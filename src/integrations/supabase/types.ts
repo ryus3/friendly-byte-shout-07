@@ -2865,17 +2865,27 @@ export type Database = {
           is_active: boolean | null
           layout_config: Json | null
           logo_url: string | null
+          loyalty_enabled: boolean | null
+          loyalty_points_per_1000: number | null
+          loyalty_redemption_rate: number | null
           meta_description: string | null
           meta_title: string | null
+          og_image_url: string | null
           primary_color: string
           privacy_policy: string | null
           return_policy: string | null
           secondary_color: string
+          seo_description: string | null
+          seo_keywords: string | null
+          seo_title: string | null
           show_categories: boolean | null
           show_search: boolean | null
           slug: string
           terms_conditions: string | null
+          theme_colors: Json | null
+          theme_fonts: Json | null
           theme_name: string
+          theme_preset: string | null
           updated_at: string | null
         }
         Insert: {
@@ -2895,17 +2905,27 @@ export type Database = {
           is_active?: boolean | null
           layout_config?: Json | null
           logo_url?: string | null
+          loyalty_enabled?: boolean | null
+          loyalty_points_per_1000?: number | null
+          loyalty_redemption_rate?: number | null
           meta_description?: string | null
           meta_title?: string | null
+          og_image_url?: string | null
           primary_color?: string
           privacy_policy?: string | null
           return_policy?: string | null
           secondary_color?: string
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
           show_categories?: boolean | null
           show_search?: boolean | null
           slug: string
           terms_conditions?: string | null
+          theme_colors?: Json | null
+          theme_fonts?: Json | null
           theme_name?: string
+          theme_preset?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -2925,17 +2945,27 @@ export type Database = {
           is_active?: boolean | null
           layout_config?: Json | null
           logo_url?: string | null
+          loyalty_enabled?: boolean | null
+          loyalty_points_per_1000?: number | null
+          loyalty_redemption_rate?: number | null
           meta_description?: string | null
           meta_title?: string | null
+          og_image_url?: string | null
           primary_color?: string
           privacy_policy?: string | null
           return_policy?: string | null
           secondary_color?: string
+          seo_description?: string | null
+          seo_keywords?: string | null
+          seo_title?: string | null
           show_categories?: boolean | null
           show_search?: boolean | null
           slug?: string
           terms_conditions?: string | null
+          theme_colors?: Json | null
+          theme_fonts?: Json | null
           theme_name?: string
+          theme_preset?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -6948,6 +6978,87 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      storefront_pages: {
+        Row: {
+          content: string
+          created_at: string
+          employee_id: string
+          id: string
+          is_published: boolean
+          meta: Json
+          page_type: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          created_at?: string
+          employee_id: string
+          id?: string
+          is_published?: boolean
+          meta?: Json
+          page_type: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          employee_id?: string
+          id?: string
+          is_published?: boolean
+          meta?: Json
+          page_type?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      storefront_shipping_zones: {
+        Row: {
+          cities: Json
+          created_at: string
+          display_order: number
+          employee_id: string
+          estimated_days_max: number
+          estimated_days_min: number
+          free_shipping_min: number | null
+          id: string
+          is_active: boolean
+          shipping_fee: number
+          updated_at: string
+          zone_name: string
+        }
+        Insert: {
+          cities?: Json
+          created_at?: string
+          display_order?: number
+          employee_id: string
+          estimated_days_max?: number
+          estimated_days_min?: number
+          free_shipping_min?: number | null
+          id?: string
+          is_active?: boolean
+          shipping_fee?: number
+          updated_at?: string
+          zone_name: string
+        }
+        Update: {
+          cities?: Json
+          created_at?: string
+          display_order?: number
+          employee_id?: string
+          estimated_days_max?: number
+          estimated_days_min?: number
+          free_shipping_min?: number | null
+          id?: string
+          is_active?: boolean
+          shipping_fee?: number
+          updated_at?: string
+          zone_name?: string
+        }
+        Relationships: []
       }
       sync_progress_events: {
         Row: {

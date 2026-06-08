@@ -1,130 +1,137 @@
-## الخطة
 
-### 1) إعادة تصميم كرت الطلب (OrderCard) — بدون أي مساس بالمنطق
+# الخطة الكاملة لإكمال "متجري"
 
-الهدف: كرت مدمج، أنيق، لا سطور إضافية، اسم حساب التوصيل في الأعلى بالمنتصف بشكل متحرك إذا طال.
+## القسم 1: شرح الدومين والسبدومين (توثيق فقط - بدون كود)
 
-التغييرات (UI فقط في `src/components/orders/OrderCard.jsx`):
+### أ) السبدومين `alshmry.ryusbrand.com` - الخطوات الحقيقية:
+الكود الحالي في `StorefrontHostGate.jsx` **يدعم السبدومين تلقائياً** (يقرأ أول جزء من الهوست ويحوّله إلى slug). لكن لكي يعمل فعلياً يحتاج 3 خطوات يدوية خارج التطبيق:
 
-- الصف العلوي يصبح ثلاثة عناصر: 
-  - يسار: شارة الحالة (قيد التجهيز…)
-  - وسط: شارة `@RYUSIQ` (اسم حساب التوصيل) — `ScrollingText` مع `max-w-[140px]` ضمن حاوية مركزية لا تتمدد، فلا تدفع رقم التتبع خارج الكرت.
-  - يمين: رقم التتبع + Checkbox بجانبه مباشرة (بدون عمود تحتها لحساب التوصيل بعد الآن).
-- إزالة كتلة `delivery_account_used` من تحت رقم التتبع (التي كانت تخلق سطر ثاني).
-- صف المعلومات (date/actions/customer) يُختصر:
-  - عمود اسم الزبون: السطر الأول `User icon` + اسم الزبون + بجانبه مباشرة `Calendar` + التاريخ (سطر واحد، responsive: ينقل التاريخ تحت إذا ضاق فقط)؛ السطر الثاني: الهاتف؛ السطر الثالث: العنوان.
-  - إزالة شارة `created_by_name` المنفصلة بـ padding كبير، واستبدالها بـ chip صغير inline بجانب الاسم بدون `px-3 py-1.5` (تخفيض إلى `px-2 py-0.5` وإزالة الفراغ تحت).
-  - تقليل الـ gap بين أيقونة المستخدم والاسم من `gap-2` إلى `gap-1` وحذف أي `space-y` فائض.
-- بطاقة `AL WASEET` تبقى أسفل التاريخ كما هي (المنطق سليم) لكن مع `min-w-0` ودون عمود إضافي.
-- نتيجة بصرية: ارتفاع الكرت يقل ~25%، رقم التتبع داخل الكرت دائماً، حساب التوصيل ظاهر وسط الأعلى، التاريخ والاسم في صف منطقي واحد.
+1. **DNS Wildcard في مسجّل ryusbrand.com:**
+   - أضف سجل CNAME: `*` → `ryus.lovable.app`
+   - أو سجل A: `*` → `185.158.133.1`
+   
+2. **تسجيل الـ wildcard في Lovable:**
+   - افتح: Project Settings → Domains → Connect Domain
+   - أدخل: `*.ryusbrand.com` (Lovable Business plan مطلوب للـ wildcard SSL)
+   - بديل أرخص: تسجيل كل سبدومين يدوياً (`alshmry.ryusbrand.com`, `ahmed.ryusbrand.com`...)
+   
+3. **انتظار SSL** (حتى 24 ساعة) ثم يفتح تلقائياً.
 
-### 2) كرت "متابعة الموظفين" لمدير القسم
+### ب) دومين خاص للموظف (مثل `my-shop.com`):
+1. الموظف يدخل صفحة "الدومين" في لوحة متجري ويضيف دومينه.
+2. يذهب لمسجّل دومينه ويضيف CNAME: `@` → `ryus.lovable.app`
+3. **خطوة ناقصة حالياً:** يجب على المسؤول (أنت) تسجيل الدومين في Lovable Domains لتفعيل SSL.
+4. سأضيف **تنبيه واضح في الصفحة** يشرح هذه الخطوة + زر "نسخ تعليمات للمسؤول".
 
-في `src/pages/Dashboard.jsx` السطر 780:
-- تغيير شرط الظهور من `canViewAllData &&` إلى `(canViewAllData || isDepartmentManager) &&` لكي يظهر الكرت لمديري الأقسام ويفتح `/employee-follow-up`.
-- صفحة `EmployeeFollowUpPage` تعمل أصلاً لمدير القسم (تم سابقاً).
+**ملاحظة مهمة:** زر "إعادة التحقق" حالياً وهمي - سأبني Edge Function `verify-custom-domain` يفحص DNS فعلياً عبر Google DNS API ويحدّث `status` تلقائياً.
 
-### 3) ثورة كاملة لصفحة "متجري" (Glass / Premium)
+---
 
-نقطة الدخول: `src/pages/employee-storefront/StorefrontDashboardPage.jsx` + صفحات فرعية.
+## القسم 2: إصلاح "المتجر شاشة فارغة"
+السبب: عند فتح `/storefront/demo-store` المعاينة فارغة. الأرجح:
+- إما `StorefrontGate` يفشل في جلب الـ settings (slug غير موجود)
+- أو `StorefrontPage` يعتمد على بيانات لم تُهيّأ بعد
 
-#### A. تصميم زجاجي (Glassmorphism) للوحة التحكم
-- خلفية متدرجة داكنة (`from-slate-950 via-purple-950/40 to-slate-950`) مع `Aurora`/`Meteors` خفيفة من MagicUI (lazy).
-- كل البطاقات: `backdrop-blur-xl bg-white/5 border border-white/10 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]`.
-- Header: اسم المتجر بخط ضخم gradient، شريط حالة المتجر (مفعل/متوقف، رابط، عدد الزوار اليوم).
+**الإجراء:**
+1. فحص شامل لـ `StorefrontPage.jsx` و `useStorefrontSettings`
+2. ضمان عرض رسالة واضحة بدل الشاشة السوداء
+3. إصلاح حالة "no products" بتصميم احترافي
+4. إزالة الـ Splash الموجود في المتجر العام (يجب أن يفتح فوراً)
 
-#### B. شريط الرابط والدومين (حقيقي)
-- بطاقة Glass تعرض: 
-  - الرابط الافتراضي `ryus.lovable.app/storefront/{slug}` + نسخ + فتح.
-  - **اختيار سَب-دومين** (تعديل `slug`) بمدخل live-validation عبر `employee_storefront_settings.slug` (تحقق فريد).
-  - **دومين مخصص**: إدخال `custom_domain`، حفظ في DB، عرض تعليمات DNS (CNAME → `ryus.lovable.app`) مع زر نسخ، وحالة التحقق (pending/verified) من خلال جدول جديد `storefront_custom_domains` (domain, status, verified_at).
-- يتم الحفظ مباشرة عبر Supabase (تحديث `employee_storefront_settings`).
+---
 
-#### C. شبكة تحكم شاملة (Real Controls)
-استبدال grid الحالي بـ 12 بطاقة زجاجية كل واحدة تفتح صفحة وظيفية حقيقية:
+## القسم 3: فصل "الثيمات" عن "الإعدادات"
 
-1. **المنتجات** — `StorefrontProductsManagePage` (موجود — تفعيل ميزة "مميز/Featured"، "ترتيب يدوي drag&drop"، وصف مخصص لكل منتج).
-2. **الأقسام والفئات** — صفحة جديدة `StorefrontCategoriesPage`:
-   - يختار الموظف أي categories/departments تظهر في متجره وترتيبها وصورها الدائرية (مثل صورة `IMG_2832`).
-   - جدول `employee_storefront_categories` (employee_id, category_id, display_order, custom_image_url, is_visible).
-3. **البنرات الإعلانية** — صفحة موجودة + دعم سلايدر بنرات الهيدر (مثل `IMG_2831`) مع روابط/CTA.
-4. **الخصومات والعروض** — `StorefrontPromotionsPage` (موجود — توسعة: كوبونات، خصم على فئة، Flash Deal بتوقيت).
-5. **الثيمات** — تعديل `StorefrontSettingsPage` لاستخدام `STOREFRONT_THEMES` ال8 مع معاينة حية.
-6. **التصميم المتقدم** — ألوان مخصصة، فونت، شكل الكرت (zalej/cards).
-7. **الهيدر/الفوتر** — تخصيص لوغو، اسم تجاري، روابط، أيقونات سوشيال.
-8. **الطلبات** — `StorefrontOrdersPage` + Badge للطلبات الجديدة.
-9. **العملاء** — قائمة عملاء متجري + إحصائياتهم.
-10. **التحليلات** — visitors, sales, conversion (موجود توسعته).
-11. **الدومين** — نفس بطاقة B (اختصار).
-12. **الإعدادات العامة** — حالة المتجر (تفعيل/إيقاف صيانة)، طرق الدفع/الشحن.
+الوضع الحالي خاطئ: كارت الثيمات يفتح صفحة الإعدادات العامة.
 
-#### D. الواجهة العامة للمتجر (Public)
-- `StorefrontLayout` + `StorefrontPage`: تصميم Glass حسب الثيم المختار مع:
-  - Hero/Banner Slider يقرأ من جدول `storefront_banners`.
-  - شريط أقسام/فئات دائرية أفقي قابل للتمرير.
-  - قسم "عروض ساخنة" يقرأ من `storefront_promotions`.
-  - قسم "منتجات مميزة" (`employee_product_descriptions.is_featured`).
-  - شبكة منتجات متجاوبة.
-  - Bottom Tab Bar (السلة/البحث/الفئات/الرئيسية/حسابي).
+**الهيكل الجديد المقترح للوحة متجري:**
 
-#### E. قاعدة البيانات (Migration واحدة)
+| الكارت | المحتوى |
+|---|---|
+| 🎨 **الثيمات والتصميم** | اختيار قالب، ألوان، خطوط، أنماط البطاقات، الأنيميشن |
+| ⚙️ **الإعدادات العامة** | اسم المتجر، الشعار، الوصف، معلومات الاتصال، العملة |
+| 🌐 **الدومين** | السبدومين + الدومين المخصص (موجود) |
+| 📜 **السياسات والصفحات** | الخصوصية، الإرجاع، الشروط، من نحن، اتصل بنا |
+| 🔔 **الإشعارات والبكسلات** | Meta Pixel, Google Analytics, TikTok |
+| 🚚 **الشحن والدفع** | طرق الشحن، طرق الدفع، المناطق |
+| 🎁 **برنامج الولاء** | النقاط، المكافآت، المستويات |
+| ⚡ **إعدادات متقدمة** | SEO، Robots، Sitemap، CSS مخصص، الحذف |
 
+---
+
+## القسم 4: إكمال صفحات إعدادات متجري (كاملة بتصميم زجاجي)
+
+سأبني/أكمل بنفس تصميم Aurora Glassmorphism الموجود في الداشبورد:
+
+### صفحات جديدة:
+1. **`StorefrontThemesPage.jsx`** - معرض قوالب جاهزة (Minimal, Bold, Luxury, Vibrant) + محرر ألوان حي + معاينة فورية
+2. **`StorefrontPoliciesPage.jsx`** - 5 تبويبات (خصوصية/إرجاع/شروط/من نحن/اتصل) مع محرر نصوص غني
+3. **`StorefrontPixelsPage.jsx`** - إدارة Meta/Google/TikTok pixels (موجود `employee_marketing_pixels`)
+4. **`StorefrontShippingPage.jsx`** - مناطق الشحن، أسعار، طرق الدفع
+5. **`StorefrontLoyaltyPage.jsx`** - تفعيل/تعطيل النقاط، نسبة المكافأة، مستويات VIP
+6. **`StorefrontSeoPage.jsx`** - title/description/og لكل صفحة + sitemap
+
+### صفحات للتحديث:
+- **`StorefrontSettingsPage.jsx`** - تقتصر على المعلومات الأساسية فقط
+- **`AdvancedSettingsPage.jsx`** - إضافة CSS مخصص + خيار حذف المتجر
+- **`StorefrontDashboardPage.jsx`** - تحديث الكروت لتعكس الهيكل الجديد + توجيه صحيح
+
+### تحسينات عامة:
+- إزالة Splash المتجر العام
+- ضبط جميع الصفحات للموبايل (no horizontal scroll)
+- نفس بطاقات Glass + Aurora في الخلفية
+- Routes جديدة في `App.jsx`
+
+---
+
+## التفاصيل التقنية
+
+### Migrations مطلوبة:
 ```sql
--- 1) دومين مخصص
-CREATE TABLE public.storefront_custom_domains (
-  id uuid primary key default gen_random_uuid(),
-  employee_id uuid not null references auth.users(id) on delete cascade,
-  domain text not null unique,
-  status text not null default 'pending' check (status in ('pending','verified','failed')),
-  verified_at timestamptz,
-  created_at timestamptz default now()
+-- جدول السياسات
+CREATE TABLE storefront_pages (
+  id uuid PK, employee_id, page_type ('privacy'|'returns'|'terms'|'about'|'contact'),
+  content jsonb, is_published, ...
 );
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.storefront_custom_domains TO authenticated;
-GRANT ALL ON public.storefront_custom_domains TO service_role;
-ALTER TABLE public.storefront_custom_domains ENABLE ROW LEVEL SECURITY;
-CREATE POLICY own_domain ON public.storefront_custom_domains
-  FOR ALL TO authenticated USING (employee_id = auth.uid()) WITH CHECK (employee_id = auth.uid());
 
--- 2) فئات/أقسام مخصصة لمتجر الموظف
-CREATE TABLE public.employee_storefront_categories (
-  id uuid primary key default gen_random_uuid(),
-  employee_id uuid not null,
-  category_id uuid,
-  department_id uuid,
-  display_order int default 0,
-  custom_image_url text,
-  is_visible boolean default true,
-  created_at timestamptz default now()
-);
-GRANT SELECT, INSERT, UPDATE, DELETE ON public.employee_storefront_categories TO authenticated;
-GRANT SELECT ON public.employee_storefront_categories TO anon;
-GRANT ALL ON public.employee_storefront_categories TO service_role;
-ALTER TABLE public.employee_storefront_categories ENABLE ROW LEVEL SECURITY;
-CREATE POLICY own_cats ON public.employee_storefront_categories
-  FOR ALL TO authenticated USING (employee_id = auth.uid()) WITH CHECK (employee_id = auth.uid());
-CREATE POLICY public_read_cats ON public.employee_storefront_categories
-  FOR SELECT TO anon USING (is_visible = true);
+-- جدول الشحن
+CREATE TABLE storefront_shipping_zones (...);
 
--- 3) منتج مميز + ترتيب يدوي
-ALTER TABLE public.employee_product_descriptions
-  ADD COLUMN IF NOT EXISTS is_featured boolean default false,
-  ADD COLUMN IF NOT EXISTS display_order int default 0;
+-- إعدادات الثيم (إضافة أعمدة لـ employee_storefront_settings)
+ALTER TABLE employee_storefront_settings 
+  ADD theme_preset, theme_colors jsonb, theme_fonts jsonb, custom_css text;
 ```
 
-### تفاصيل تقنية
+### Edge Function:
+- `verify-custom-domain`: يفحص CNAME عبر `https://dns.google/resolve` ويحدّث `storefront_custom_domains.status`
 
-- لا أي تعديل على: `reserved_quantity`, triggers, partial delivery, returns, exchanges, settlement logic.
-- ملفات معدّلة:
-  - `src/components/orders/OrderCard.jsx` (UI فقط)
-  - `src/pages/Dashboard.jsx` (شرط واحد)
-  - `src/pages/employee-storefront/StorefrontDashboardPage.jsx` (إعادة كتابة كاملة Glass)
-  - `src/pages/employee-storefront/StorefrontSettingsPage.jsx` (دومين + ثيمات حية)
-  - `src/pages/StorefrontPage.jsx` و `StorefrontLayout` (تصميم Glass + بنرات + أقسام)
-  - صفحة جديدة `src/pages/employee-storefront/StorefrontCategoriesPage.jsx`
-  - صفحة جديدة `src/pages/employee-storefront/StorefrontDomainPage.jsx`
-  - مهاجرة SQL واحدة بالأعلى.
-- استخدام MagicUI: `Meteors`, `BorderBeam`, `ShimmerButton`, `BentoGrid` (lazy import).
+### ملفات ستُعدّل:
+- `src/App.jsx` (routes جديدة)
+- `src/pages/employee-storefront/StorefrontDashboardPage.jsx` (إعادة ترتيب الكروت)
+- `src/pages/StorefrontPage.jsx` (إصلاح الشاشة الفارغة + إزالة Splash)
+- `src/pages/employee-storefront/StorefrontDomainPage.jsx` (تعليمات أوضح + ربط الفحص الحقيقي)
+- `src/pages/employee-storefront/AdvancedSettingsPage.jsx`
+- `src/pages/employee-storefront/StorefrontSettingsPage.jsx`
 
-### بعد التنفيذ
-- فحص بصري للكرت على الموبايل (لا قص، لا سطرين).
-- اختبار: مدير قسم يرى الكرت، يدخل المتجر، يربط دومين، ينشئ بنر/خصم/فئة، ويظهر فوراً في الصفحة العامة.
+### ملفات ستُنشأ:
+- `StorefrontThemesPage.jsx`
+- `StorefrontPoliciesPage.jsx`
+- `StorefrontPixelsPage.jsx`
+- `StorefrontShippingPage.jsx`
+- `StorefrontLoyaltyPage.jsx`
+- `StorefrontSeoPage.jsx`
+- `supabase/functions/verify-custom-domain/index.ts`
+- Migration للجداول الجديدة
+
+---
+
+## خطة التنفيذ بالترتيب
+
+1. **المرحلة 1:** Migration + إصلاح المتجر الفارغ + إزالة Splash (الأولوية القصوى)
+2. **المرحلة 2:** إعادة هيكلة كروت الداشبورد + فصل الثيمات عن الإعدادات
+3. **المرحلة 3:** بناء `StorefrontThemesPage` و `StorefrontPoliciesPage`
+4. **المرحلة 4:** بناء `StorefrontPixelsPage`, `StorefrontShippingPage`, `StorefrontLoyaltyPage`, `StorefrontSeoPage`
+5. **المرحلة 5:** Edge Function للتحقق من الدومين + تحسين صفحة الدومين
+6. **المرحلة 6:** فحص نهائي للموبايل لكل الصفحات
+
+هل أبدأ التنفيذ الآن بهذا الترتيب الكامل بدون نقص؟
