@@ -20,7 +20,7 @@ export const useStorefrontSettings = (slug) => {
         setLoading(true);
         setError(null);
 
-        // جلب إعدادات المتجر مع بيانات الموظف من profiles
+        // ✅ Case-insensitive slug lookup (Alshmry == alshmry)
         const { data, error: fetchError } = await supabase
           .from('employee_storefront_settings')
           .select(`
@@ -33,12 +33,12 @@ export const useStorefrontSettings = (slug) => {
               business_links
             )
           `)
-          .eq('slug', slug)
+          .ilike('slug', slug)
           .eq('is_active', true)
-          .maybeSingle(); // ✅ تغيير من .single() إلى .maybeSingle()
+          .maybeSingle();
 
         if (fetchError) throw fetchError;
-        
+
         setSettings(data);
       } catch (err) {
         console.error('Error fetching storefront settings:', err);
