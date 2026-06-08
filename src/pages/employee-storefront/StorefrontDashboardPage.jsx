@@ -1,22 +1,30 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
-import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target, Copy, Check, Globe, RefreshCw, Image as ImageIcon, Percent, Palette, FileBarChart, FolderTree } from 'lucide-react';
+import {
+  Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package,
+  Sparkles, Target, Copy, Check, Globe, RefreshCw, Image as ImageIcon,
+  Percent, Palette, FolderTree, ArrowUpRight, Zap, Eye, DollarSign,
+} from 'lucide-react';
 import StorefrontAnalytics from '@/components/employee-storefront/StorefrontAnalytics';
 import PremiumButton from '@/components/storefront/ui/PremiumButton';
 import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
-import GradientText from '@/components/storefront/ui/GradientText';
-import StatCard from '@/components/storefront/dashboard/StatCard';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 
+/**
+ * لوحة تحكم المتجر — تصميم زجاجي عالمي (Glassmorphism Aurora)
+ * مستوحى من Stitch / Apple / iOS 18 / Tesla dashboard
+ */
 const StorefrontDashboardPage = () => {
   const navigate = useNavigate();
   const [settings, setSettings] = useState(null);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [newOrdersCount, setNewOrdersCount] = useState(0);
+  const [productsCount, setProductsCount] = useState(0);
+  const [promotionsCount, setPromotionsCount] = useState(0);
+  const [bannersCount, setBannersCount] = useState(0);
   const [creating, setCreating] = useState(false);
   const [copied, setCopied] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -27,50 +35,28 @@ const StorefrontDashboardPage = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('يجب تسجيل الدخول');
 
-      // 1) جلب أدوار المستخدم — المدير العام/super_admin يحصل على كل المنتجات النشطة
       const { data: rolesData } = await supabase
-        .from('user_roles')
-        .select('roles(name)')
-        .eq('user_id', user.id)
-        .eq('is_active', true);
+        .from('user_roles').select('roles(name)').eq('user_id', user.id).eq('is_active', true);
       const roleNames = (rolesData || []).map(r => r.roles?.name).filter(Boolean);
       const isAdmin = roleNames.some(n => ['super_admin', 'admin'].includes(n));
 
       const productIds = new Set();
-
       if (isAdmin) {
-        // ✅ المدير العام: كل المنتجات النشطة
-        const { data: allProducts } = await supabase
-          .from('products')
-          .select('id')
-          .eq('is_active', true);
-        (allProducts || []).forEach((p) => productIds.add(p.id));
+        const { data } = await supabase.from('products').select('id').eq('is_active', true);
+        (data || []).forEach(p => productIds.add(p.id));
       } else {
-        // غير المدير: المنتجات المملوكة (owner_user_id) + صلاحيات المنتج
-        const { data: ownedProducts } = await supabase
-          .from('products')
-          .select('id')
-          .eq('owner_user_id', user.id)
-          .eq('is_active', true);
-        (ownedProducts || []).forEach((p) => productIds.add(p.id));
-
+        const { data: owned } = await supabase.from('products').select('id').eq('owner_user_id', user.id).eq('is_active', true);
+        (owned || []).forEach(p => productIds.add(p.id));
         const { data: perms } = await supabase
-          .from('user_product_permissions')
-          .select('permission_type, allowed_items, has_full_access')
-          .eq('user_id', user.id);
-
-        (perms || []).forEach((p) => {
+          .from('user_product_permissions').select('permission_type, allowed_items, has_full_access').eq('user_id', user.id);
+        (perms || []).forEach(p => {
           if (p?.permission_type === 'product' && Array.isArray(p.allowed_items)) {
-            p.allowed_items.forEach((id) => id && productIds.add(id));
+            p.allowed_items.forEach(id => id && productIds.add(id));
           }
         });
-        const hasFullAccess = (perms || []).some((p) => p?.has_full_access);
-        if (hasFullAccess) {
-          const { data: allProducts } = await supabase
-            .from('products')
-            .select('id')
-            .eq('is_active', true);
-          (allProducts || []).forEach((p) => productIds.add(p.id));
+        if ((perms || []).some(p => p?.has_full_access)) {
+          const { data } = await supabase.from('products').select('id').eq('is_active', true);
+          (data || []).forEach(p => productIds.add(p.id));
         }
       }
 
@@ -79,22 +65,16 @@ const StorefrontDashboardPage = () => {
         return;
       }
 
-      const rows = Array.from(productIds).map((pid) => ({
-        employee_id: user.id,
-        product_id: pid,
-        is_active: true,
-        added_by: user.id,
+      const rows = Array.from(productIds).map(pid => ({
+        employee_id: user.id, product_id: pid, is_active: true, added_by: user.id,
       }));
-
       const { error } = await supabase
         .from('employee_allowed_products')
         .upsert(rows, { onConflict: 'employee_id,product_id', ignoreDuplicates: true });
       if (error) throw error;
 
-      toast({
-        title: '✅ تمت المزامنة',
-        description: `تم استيراد ${productIds.size} منتج إلى متجرك`,
-      });
+      toast({ title: '✅ تمت المزامنة', description: `${productIds.size} منتج تم استيراده` });
+      fetchStorefrontData();
     } catch (err) {
       toast({ title: 'فشل المزامنة', description: err.message, variant: 'destructive' });
     } finally {
@@ -102,61 +82,50 @@ const StorefrontDashboardPage = () => {
     }
   };
 
-  // رابط المتجر العام الكامل
-  const getStoreUrl = () => {
-    const baseUrl = window.location.origin;
-    return `${baseUrl}/storefront/${settings?.slug}`;
-  };
+  const getStoreUrl = () => `${window.location.origin}/storefront/${settings?.slug}`;
 
   const copyStoreLink = async () => {
     try {
       await navigator.clipboard.writeText(getStoreUrl());
       setCopied(true);
-      toast({ title: 'تم نسخ الرابط!' });
+      toast({ title: '✅ تم نسخ الرابط' });
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
+    } catch {
       toast({ title: 'خطأ في النسخ', variant: 'destructive' });
     }
   };
 
-  useEffect(() => {
-    fetchStorefrontData();
-  }, []);
+  useEffect(() => { fetchStorefrontData(); }, []);
 
   const fetchStorefrontData = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // جلب إعدادات المتجر
       const { data: settingsData } = await supabase
-        .from('employee_storefront_settings')
-        .select('*')
-        .eq('employee_id', user.id)
-        .single();
-
+        .from('employee_storefront_settings').select('*').eq('employee_id', user.id).maybeSingle();
       setSettings(settingsData);
 
-      // جلب إحصائيات اليوم
       if (settingsData) {
         const today = new Date().toISOString().split('T')[0];
-        const { data: statsData } = await supabase
-          .from('storefront_analytics')
-          .select('*')
-          .eq('employee_id', user.id)
-          .eq('date', today)
-          .single();
-
+        const [
+          { data: statsData },
+          { count: ordersCnt },
+          { count: prodCnt },
+          { count: promoCnt },
+          { count: bannerCnt },
+        ] = await Promise.all([
+          supabase.from('storefront_analytics').select('*').eq('employee_id', user.id).eq('date', today).maybeSingle(),
+          supabase.from('storefront_orders').select('*', { count: 'exact', head: true }).eq('employee_id', user.id).eq('status', 'pending_approval'),
+          supabase.from('employee_product_descriptions').select('*', { count: 'exact', head: true }).eq('employee_id', user.id).eq('is_in_storefront', true),
+          supabase.from('employee_promotions').select('*', { count: 'exact', head: true }).eq('employee_id', user.id).eq('is_active', true),
+          supabase.from('employee_banners').select('*', { count: 'exact', head: true }).eq('employee_id', user.id).eq('is_active', true),
+        ]);
         setStats(statsData);
-        
-        // جلب عدد الطلبات الجديدة
-        const { count } = await supabase
-          .from('storefront_orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('employee_id', user.id)
-          .eq('status', 'pending_approval');
-        
-        setNewOrdersCount(count || 0);
+        setNewOrdersCount(ordersCnt || 0);
+        setProductsCount(prodCnt || 0);
+        setPromotionsCount(promoCnt || 0);
+        setBannersCount(bannerCnt || 0);
       }
     } catch (err) {
       console.error('Error fetching storefront data:', err);
@@ -165,218 +134,200 @@ const StorefrontDashboardPage = () => {
     }
   };
 
-  const createStorefront = async () => {
-    try {
-      setCreating(true);
-      
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('يجب تسجيل الدخول أولاً');
-
-      // التوجيه مباشرة إلى Setup Wizard
-      navigate('/dashboard/storefront/setup-wizard');
-      
-    } catch (err) {
-      toast({
-        title: 'خطأ',
-        description: err.message,
-        variant: 'destructive'
-      });
-    } finally {
-      setCreating(false);
-    }
+  const createStorefront = () => {
+    setCreating(true);
+    navigate('/dashboard/storefront/setup-wizard');
   };
 
-  if (loading) {
-    return <PremiumLoader message="جاري تحميل لوحة التحكم..." />;
-  }
+  if (loading) return <PremiumLoader message="جاري تحميل لوحة التحكم..." />;
 
+  // ====== Empty state ======
   if (!settings) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-purple-950/20 dark:via-pink-950/20 dark:to-blue-950/20 flex items-center justify-center p-4 sm:p-6 md:p-8">
-        <Card className="max-w-3xl w-full shadow-2xl border-2 min-h-[500px] flex items-center">
-          <CardContent className="text-center space-y-6 sm:space-y-8 md:space-y-10 p-6 sm:p-8 md:p-12 lg:p-16">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-400 to-purple-500 blur-3xl opacity-20" />
-              <Store className="h-20 w-20 sm:h-24 sm:w-24 md:h-32 md:w-32 lg:h-40 lg:w-40 mx-auto relative z-10" style={{ 
-                background: 'linear-gradient(135deg, #D946EF 0%, #8B5CF6 50%, #3B82F6 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }} />
+      <div className="min-h-screen relative overflow-hidden bg-slate-950 flex items-center justify-center p-4">
+        <Aurora />
+        <div className="relative z-10 max-w-2xl w-full backdrop-blur-2xl bg-white/5 border border-white/10 rounded-[2rem] p-8 sm:p-12 text-center shadow-2xl">
+          <div className="relative inline-block mb-6">
+            <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500 to-blue-500 blur-3xl opacity-40" />
+            <div className="relative w-24 h-24 rounded-3xl bg-gradient-to-br from-fuchsia-500 to-purple-600 flex items-center justify-center shadow-2xl shadow-fuchsia-500/50">
+              <Store className="h-12 w-12 text-white" />
             </div>
-            
-            <div className="space-y-4 sm:space-y-6">
-              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl xl:text-8xl font-black bg-gradient-to-br from-fuchsia-600 via-purple-600 to-blue-600 bg-clip-text text-transparent leading-[1.1] px-4">
-                أنشئ متجرك
-                <br className="hidden sm:inline" />
-                {' '}الإلكتروني
-              </h1>
-              <p className="text-base sm:text-lg md:text-xl lg:text-2xl xl:text-3xl text-foreground/80 font-semibold max-w-2xl mx-auto leading-relaxed px-4">
-                احصل على متجر احترافي عالمي
-                <br />
-                لعرض منتجاتك واستقبال الطلبات
-              </p>
-            </div>
-            
-            <PremiumButton
-              variant="primary"
-              size="lg"
-              onClick={createStorefront}
-              disabled={creating}
-              className="text-sm sm:text-base md:text-lg lg:text-xl xl:text-2xl px-4 py-3 sm:px-6 sm:py-4 md:px-8 md:py-6 lg:px-12 lg:py-8"
-            >
-              {creating ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 lg:h-8 lg:w-8 border-2 border-white border-t-transparent ml-2 sm:ml-3" />
-                  جاري الإنشاء...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 lg:h-8 lg:w-8 ml-2 sm:ml-3" />
-                  إنشاء المتجر الآن
-                </>
-              )}
-            </PremiumButton>
-          </CardContent>
-        </Card>
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-black bg-gradient-to-br from-white via-fuchsia-200 to-blue-200 bg-clip-text text-transparent mb-4 leading-tight">
+            أنشئ متجرك الإلكتروني
+          </h1>
+          <p className="text-base sm:text-lg text-white/70 mb-8">احصل على متجر احترافي عالمي بتصميم زجاجي مذهل</p>
+          <PremiumButton variant="primary" size="lg" onClick={createStorefront} disabled={creating}>
+            {creating ? <>جاري الإنشاء...</> : <><Sparkles className="h-5 w-5 ml-2" /> ابدأ الآن</>}
+          </PremiumButton>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="p-4 sm:p-6 md:p-8 bg-gradient-to-br from-background via-background to-purple-50 dark:to-purple-950/20 min-h-screen">
-      {/* Header */}
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black bg-gradient-to-br from-fuchsia-600 via-purple-600 to-blue-600 bg-clip-text text-transparent mb-3 leading-tight">
-          {settings.business_name || 'متجري'}
-        </h1>
-        <p className="text-base sm:text-lg md:text-xl lg:text-2xl text-muted-foreground font-medium">
-          إدارة متجرك الإلكتروني الاحترافي
-        </p>
-      </div>
+  // ====== Action cards configuration ======
+  const actionCards = [
+    { label: 'معاينة المتجر', icon: ExternalLink, grad: 'from-blue-500 via-cyan-500 to-teal-500', desc: 'افتح متجرك العام', onClick: () => window.open(getStoreUrl(), '_blank') },
+    { label: 'المنتجات', icon: Package, grad: 'from-emerald-500 to-green-500', desc: `${productsCount} منتج معروض`, onClick: () => navigate('/dashboard/storefront/products') },
+    { label: 'الأقسام والفئات', icon: FolderTree, grad: 'from-cyan-500 to-blue-500', desc: 'صور وتسميات مخصصة', onClick: () => navigate('/dashboard/storefront/categories') },
+    { label: 'العروض والخصومات', icon: Percent, grad: 'from-pink-500 via-fuchsia-500 to-purple-500', desc: `${promotionsCount} عرض نشط`, onClick: () => navigate('/dashboard/storefront/promotions') },
+    { label: 'البنرات الإعلانية', icon: ImageIcon, grad: 'from-amber-500 to-orange-500', desc: `${bannersCount} بانر`, onClick: () => navigate('/dashboard/storefront/banners') },
+    { label: 'الطلبات', icon: ShoppingCart, grad: 'from-violet-500 to-purple-500', desc: 'طلبات المتجر', onClick: () => navigate('/dashboard/storefront/orders'), badge: newOrdersCount },
+    { label: 'الثيمات والتصميم', icon: Palette, grad: 'from-fuchsia-500 to-rose-500', desc: '8 ثيمات زجاجية', onClick: () => navigate('/dashboard/storefront/settings') },
+    { label: 'الدومين المخصص', icon: Globe, grad: 'from-sky-500 to-indigo-500', desc: 'رابط متجرك', onClick: () => navigate('/dashboard/storefront/domain') },
+    { label: 'الإعدادات المتقدمة', icon: Settings, grad: 'from-slate-500 to-zinc-600', desc: 'SEO والتحليلات', onClick: () => navigate('/dashboard/storefront/advanced-settings') },
+  ];
 
-      {/* رابط المتجر العام - بارز جداً */}
-      <Card className="mb-6 sm:mb-8 border-2 border-primary/30 bg-gradient-to-r from-primary/5 to-purple-500/5">
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="p-3 rounded-xl bg-gradient-to-r from-primary to-purple-600 text-white">
-                <Globe className="h-6 w-6" />
+  const heroStats = [
+    { label: 'زوار اليوم', value: stats?.visitors || 0, icon: Eye, color: 'from-cyan-400 to-blue-500' },
+    { label: 'طلبات جديدة', value: newOrdersCount, icon: ShoppingCart, color: 'from-fuchsia-400 to-purple-500', badge: newOrdersCount > 0 },
+    { label: 'مبيعات اليوم', value: `${(stats?.revenue || 0).toLocaleString('ar-IQ')}`, suffix: 'IQD', icon: DollarSign, color: 'from-emerald-400 to-teal-500' },
+    { label: 'التحويل', value: `${stats?.conversion_rate || 0}%`, icon: Target, color: 'from-orange-400 to-red-500' },
+  ];
+
+  return (
+    <div className="min-h-screen relative overflow-hidden bg-slate-950">
+      <Aurora />
+
+      <div className="relative z-10 p-4 sm:p-6 md:p-8 space-y-6 max-w-7xl mx-auto">
+        {/* ===== Header ===== */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-r from-fuchsia-500 to-blue-500 blur-2xl opacity-50" />
+              <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br from-fuchsia-500 via-purple-600 to-blue-600 flex items-center justify-center shadow-2xl">
+                <Store className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">رابط متجرك العام</p>
-                <p className="font-mono text-sm sm:text-base break-all text-primary font-semibold">
-                  {getStoreUrl()}
-                </p>
+            </div>
+            <div>
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-black bg-gradient-to-br from-white via-fuchsia-200 to-blue-200 bg-clip-text text-transparent leading-tight">
+                {settings.business_name || 'متجري'}
+              </h1>
+              <p className="text-xs sm:text-sm text-white/60 mt-0.5 flex items-center gap-1.5">
+                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                لوحة تحكم احترافية — متجر إلكتروني عالمي
+              </p>
+            </div>
+          </div>
+
+          <Button
+            onClick={syncProducts}
+            disabled={syncing}
+            className="backdrop-blur-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white shadow-lg"
+            variant="outline"
+          >
+            <RefreshCw className={`h-4 w-4 ml-2 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'جاري المزامنة...' : 'مزامنة المنتجات'}
+          </Button>
+        </div>
+
+        {/* ===== Store URL Hero Card ===== */}
+        <div className="relative overflow-hidden backdrop-blur-2xl bg-gradient-to-br from-white/10 via-white/5 to-white/[0.02] border border-white/15 rounded-3xl p-5 sm:p-6 shadow-2xl">
+          <div className="absolute -top-32 -right-32 w-64 h-64 bg-fuchsia-500/30 rounded-full blur-3xl" />
+          <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-blue-500/30 rounded-full blur-3xl" />
+
+          <div className="relative flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="p-3 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-purple-600 shadow-lg shadow-fuchsia-500/40 flex-shrink-0">
+                <Globe className="h-5 w-5 text-white" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-white/60">رابط متجرك العام</p>
+                <p className="font-mono text-xs sm:text-sm text-white truncate font-semibold mt-0.5">{getStoreUrl()}</p>
               </div>
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={copyStoreLink}
-                className="flex-1 sm:flex-none"
-              >
-                {copied ? <Check className="h-4 w-4 ml-2" /> : <Copy className="h-4 w-4 ml-2" />}
-                {copied ? 'تم النسخ' : 'نسخ الرابط'}
+              <Button onClick={copyStoreLink} size="sm" variant="outline" className="flex-1 sm:flex-none backdrop-blur-xl bg-white/5 border-white/10 hover:bg-white/10 text-white">
+                {copied ? <Check className="h-4 w-4 ml-1" /> : <Copy className="h-4 w-4 ml-1" />}
+                {copied ? 'تم النسخ' : 'نسخ'}
               </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={syncProducts}
-                disabled={syncing}
-                className="flex-1 sm:flex-none"
-              >
-                <RefreshCw className={`h-4 w-4 ml-2 ${syncing ? 'animate-spin' : ''}`} />
-                {syncing ? 'جاري المزامنة...' : 'مزامنة المنتجات'}
-              </Button>
-              <Button
-                size="sm"
-                onClick={() => window.open(getStoreUrl(), '_blank')}
-                className="flex-1 sm:flex-none bg-gradient-to-r from-primary to-purple-600 hover:opacity-90"
-              >
-                <ExternalLink className="h-4 w-4 ml-2" />
-                افتح المتجر
+              <Button onClick={() => window.open(getStoreUrl(), '_blank')} size="sm" className="flex-1 sm:flex-none bg-gradient-to-r from-fuchsia-500 to-purple-600 hover:opacity-90 shadow-lg shadow-fuchsia-500/30 text-white">
+                <ExternalLink className="h-4 w-4 ml-1" /> افتح
               </Button>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Quick Actions - شبكة شاملة بكل أدوات إدارة المتجر */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        {[
-          { label: 'المتجر', icon: ExternalLink, grad: 'from-blue-500 to-cyan-500', onClick: () => window.open(`/storefront/${settings.slug}`, '_blank') },
-          { label: 'المنتجات', icon: Package, grad: 'from-emerald-500 to-teal-500', onClick: () => navigate('/dashboard/storefront/products') },
-          { label: 'الأقسام والفئات', icon: FolderTree, grad: 'from-cyan-500 to-blue-500', onClick: () => navigate('/dashboard/storefront/categories') },
-          { label: 'الخصومات والعروض', icon: Percent, grad: 'from-pink-500 to-rose-500', onClick: () => navigate('/dashboard/storefront/promotions') },
-          { label: 'البنرات', icon: ImageIcon, grad: 'from-amber-500 to-orange-500', onClick: () => navigate('/dashboard/storefront/banners') },
-          { label: 'الطلبات', icon: ShoppingCart, grad: 'from-violet-500 to-purple-500', onClick: () => navigate('/dashboard/storefront/orders'), badge: newOrdersCount },
-          { label: 'الثيمات والتصميم', icon: Palette, grad: 'from-fuchsia-500 to-purple-500', onClick: () => navigate('/dashboard/storefront/settings') },
-          { label: 'الدومين والرابط', icon: Globe, grad: 'from-sky-500 to-blue-500', onClick: () => navigate('/dashboard/storefront/domain') },
-          { label: 'الإعدادات المتقدمة', icon: Settings, grad: 'from-indigo-500 to-purple-500', onClick: () => navigate('/dashboard/storefront/advanced-settings') },
-        ].map((card, idx) => (
-
-          <Card
-            key={idx}
-            className="relative overflow-hidden border-2 transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl cursor-pointer group min-h-[110px]"
-            onClick={card.onClick}
-          >
-            <div className={`absolute inset-0 bg-gradient-to-br ${card.grad} opacity-5 group-hover:opacity-10 transition-opacity`} />
-            <CardContent className="p-3 sm:p-4 relative z-10 flex flex-col items-center justify-center h-full">
-              <div className={`p-2 sm:p-3 rounded-xl bg-gradient-to-br ${card.grad} text-white shadow-lg mb-2 relative`}>
-                <card.icon className="h-5 w-5 sm:h-6 sm:w-6" />
-                {card.badge > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center font-bold">
-                    {card.badge}
-                  </span>
-                )}
+        {/* ===== Hero Stats ===== */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+          {heroStats.map((s, i) => (
+            <div
+              key={i}
+              className="group relative overflow-hidden backdrop-blur-2xl bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 hover:bg-white/[0.07] hover:border-white/20 transition-all shadow-xl"
+            >
+              <div className={`absolute -top-12 -right-12 w-28 h-28 bg-gradient-to-br ${s.color} opacity-20 rounded-full blur-3xl group-hover:opacity-40 transition-opacity`} />
+              <div className="relative flex items-start justify-between">
+                <div className={`p-2 rounded-xl bg-gradient-to-br ${s.color} shadow-lg`}>
+                  <s.icon className="h-4 w-4 text-white" />
+                </div>
+                {s.badge && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
               </div>
-              <div className={`text-sm sm:text-base font-black text-transparent bg-clip-text bg-gradient-to-r ${card.grad} text-center leading-tight`}>
-                {card.label}
+              <div className="relative mt-3">
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl sm:text-3xl font-black text-white">{s.value}</span>
+                  {s.suffix && <span className="text-[10px] text-white/50">{s.suffix}</span>}
+                </div>
+                <p className="text-[11px] sm:text-xs text-white/60 mt-1">{s.label}</p>
               </div>
-            </CardContent>
-          </Card>
-        ))}
+            </div>
+          ))}
+        </div>
+
+        {/* ===== Quick Actions Grid (Bento) ===== */}
+        <div>
+          <h2 className="text-lg sm:text-xl font-bold text-white mb-3 flex items-center gap-2">
+            <Zap className="h-5 w-5 text-fuchsia-400" /> أدوات إدارة المتجر
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+            {actionCards.map((card, i) => (
+              <button
+                key={i}
+                onClick={card.onClick}
+                className="group relative overflow-hidden backdrop-blur-2xl bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 text-right hover:bg-white/[0.08] hover:border-white/25 hover:scale-[1.02] transition-all shadow-xl active:scale-[0.99]"
+              >
+                <div className={`absolute -top-16 -right-16 w-32 h-32 bg-gradient-to-br ${card.grad} opacity-20 rounded-full blur-3xl group-hover:opacity-40 transition-opacity`} />
+
+                <div className="relative flex items-start justify-between mb-3">
+                  <div className={`p-2.5 rounded-xl bg-gradient-to-br ${card.grad} shadow-lg relative`}>
+                    <card.icon className="h-5 w-5 text-white" />
+                    {card.badge > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center font-bold ring-2 ring-slate-950">
+                        {card.badge}
+                      </span>
+                    )}
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 text-white/40 group-hover:text-white group-hover:translate-x-[-2px] group-hover:translate-y-[-2px] transition-all" />
+                </div>
+
+                <div className="relative">
+                  <div className="font-bold text-sm sm:text-base text-white leading-tight">{card.label}</div>
+                  <div className="text-[11px] text-white/50 mt-1 truncate">{card.desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ===== Analytics ===== */}
+        <div className="backdrop-blur-2xl bg-white/5 border border-white/10 rounded-3xl p-4 sm:p-6 shadow-2xl">
+          <h2 className="text-lg sm:text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="h-5 w-5 text-emerald-400" /> التحليلات والإحصائيات
+          </h2>
+          <StorefrontAnalytics employeeId={settings.employee_id} />
+        </div>
       </div>
-
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        <StatCard
-          title="زوار اليوم"
-          value={stats?.visitors || 0}
-          icon={<Users className="h-6 w-6" />}
-          gradient="from-blue-500 to-cyan-500"
-          shadowColor="blue"
-        />
-        <StatCard
-          title="طلبات جديدة"
-          value={newOrdersCount}
-          icon={<ShoppingCart className="h-6 w-6" />}
-          gradient="from-purple-500 to-pink-500"
-          shadowColor="purple"
-          badge={newOrdersCount > 0}
-        />
-        <StatCard
-          title="مبيعات اليوم"
-          value={`${(stats?.revenue || 0).toLocaleString('ar-IQ')} IQD`}
-          icon={<TrendingUp className="h-6 w-6" />}
-          gradient="from-emerald-500 to-teal-500"
-          shadowColor="emerald"
-        />
-        <StatCard
-          title="معدل التحويل"
-          value={`${stats?.conversion_rate || 0}%`}
-          icon={<Target className="h-6 w-6" />}
-          gradient="from-orange-500 to-red-500"
-          shadowColor="orange"
-        />
-      </div>
-
-      {/* Analytics */}
-      <StorefrontAnalytics employeeId={settings.employee_id} />
     </div>
   );
 };
+
+// Aurora background layer
+const Aurora = () => (
+  <div className="absolute inset-0 overflow-hidden pointer-events-none">
+    <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-fuchsia-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '8s' }} />
+    <div className="absolute top-1/3 right-0 w-[500px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
+    <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[120px] animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
+    <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,transparent_0%,rgba(2,6,23,0.5)_100%)]" />
+  </div>
+);
 
 export default StorefrontDashboardPage;
