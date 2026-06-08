@@ -452,44 +452,39 @@ const OrderCard = React.memo(({
               <div className="grid grid-cols-3 gap-3 items-center">
                 
                 <div className="space-y-1 text-left">
-                  <div className="flex items-center gap-2 justify-start">
+                  <div className="flex items-center gap-1.5 justify-start">
                     <Calendar className="h-4 w-4 text-primary" />
                     <span className="text-sm font-bold text-foreground">{formatDate(order.created_at)}</span>
                   </div>
-                  <div className="flex items-center gap-2 justify-start">
+                  <div className="flex items-center gap-1.5 justify-start">
                     <Clock className="h-3 w-3 text-muted-foreground" />
                     <span className="text-xs text-muted-foreground">{formatTime(order.created_at)}</span>
                   </div>
-                   {order.created_by_name && (
-                      <div className="flex items-center gap-2 justify-start">
-                        <span className="text-xs font-bold text-primary bg-gradient-to-r from-primary/10 to-primary/20 px-3 py-1.5 rounded-full border border-primary/20 shadow-sm backdrop-blur-sm">
-                          <User className="h-3 w-3 inline-block ml-1" />
-                          {order.created_by_name}
-                        </span>
-                      </div>
-                   )}
-                   <div className="flex flex-col gap-1 items-start">
-                       <div className="flex justify-start w-full">
-                            <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold min-w-[90px] shadow-sm flex items-center justify-center gap-1 h-6`}>
-                              <Building className="h-3 w-3" />
-                              <span className="truncate">
-                                {order.delivery_partner === 'alwaseet' ? 'AL WASEET' : 
-                                 order.delivery_partner === 'modon' ? 'MODON' : 
-                                 order.delivery_partner || 'محلي'}
-                              </span>
-                            </Badge>
-                       </div>
+                  {order.created_by_name && (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full border border-primary/20 max-w-[120px]">
+                      <User className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{order.created_by_name}</span>
+                    </span>
+                  )}
+                  <div className="flex flex-col gap-1 items-start">
+                    <Badge className={`${deliveryBadgeColor} px-2 py-1 text-xs rounded-full font-bold min-w-[90px] shadow-sm flex items-center justify-center gap-1 h-6`}>
+                      <Building className="h-3 w-3" />
+                      <span className="truncate">
+                        {order.delivery_partner === 'alwaseet' ? 'AL WASEET' :
+                         order.delivery_partner === 'modon' ? 'MODON' :
+                         order.delivery_partner || 'محلي'}
+                      </span>
+                    </Badge>
 
-                       {order.delivery_partner_invoice_id && (
-                         <div className="flex justify-start w-full">
-                           <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-2 py-1 rounded-full min-w-[90px] flex items-center justify-center gap-1 h-6 whitespace-nowrap">
-                             <CreditCard className="h-3 w-3" />
-                             <span className="truncate">#{order.delivery_partner_invoice_id}</span>
-                           </Badge>
-                         </div>
-                       )}
-                   </div>
+                    {order.delivery_partner_invoice_id && (
+                      <Badge variant="outline" className="text-xs font-bold bg-gradient-to-r from-purple-500 to-pink-500 text-white border-purple-300/50 shadow-lg shadow-purple-400/30 px-2 py-1 rounded-full min-w-[90px] flex items-center justify-center gap-1 h-6 whitespace-nowrap">
+                        <CreditCard className="h-3 w-3" />
+                        <span className="truncate">#{order.delivery_partner_invoice_id}</span>
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+
                 
                 <div className="flex items-center justify-center gap-1">
                   
