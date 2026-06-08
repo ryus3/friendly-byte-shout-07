@@ -294,9 +294,9 @@ const StorefrontSetupWizard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   {THEMES.map((theme) => (
                     <ThemeCard
-                      key={theme.name}
+                      key={theme.id}
                       {...theme}
-                      selected={formData.theme_name === theme.name.toLowerCase().replace(/\s+/g, '-')}
+                      selected={formData.theme_name === theme.id}
                       onClick={() => selectTheme(theme)}
                     />
                   ))}
