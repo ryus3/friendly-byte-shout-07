@@ -6792,6 +6792,51 @@ export type Database = {
         }
         Relationships: []
       }
+      storefront_custom_categories: {
+        Row: {
+          created_at: string
+          display_order: number
+          employee_id: string
+          id: string
+          image_url: string | null
+          is_visible: boolean
+          linked_category_ids: string[]
+          linked_department_ids: string[]
+          linked_product_ids: string[]
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_order?: number
+          employee_id: string
+          id?: string
+          image_url?: string | null
+          is_visible?: boolean
+          linked_category_ids?: string[]
+          linked_department_ids?: string[]
+          linked_product_ids?: string[]
+          name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_order?: number
+          employee_id?: string
+          id?: string
+          image_url?: string | null
+          is_visible?: boolean
+          linked_category_ids?: string[]
+          linked_department_ids?: string[]
+          linked_product_ids?: string[]
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       storefront_custom_domains: {
         Row: {
           created_at: string
