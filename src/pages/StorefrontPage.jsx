@@ -93,10 +93,15 @@ const StorefrontHome = () => {
           ?.filter(d => d.is_featured && allowedProductIds.includes(d.product_id))
           .map(d => d.product_id) || [];
 
-        // جلب المنتجات المميزة أو أحدث المنتجات من المتجر
-        const productIdsToFetch = featuredProductIds.length > 0 
-          ? featuredProductIds 
-          : storefrontProductIds.slice(0, 12);
+        // اختيار IDs للعرض:
+        // 1) المميزة من المتجر إن وجدت
+        // 2) منتجات المتجر إن وجدت
+        // 3) ✅ Fallback: كل المنتجات المسموحة للموظف (حتى لو لم يُهيِّأ المتجر بعد)
+        let productIdsToFetch = featuredProductIds.length > 0
+          ? featuredProductIds
+          : (storefrontProductIds.length > 0
+              ? storefrontProductIds.slice(0, 24)
+              : allowedProductIds.slice(0, 24));
 
         devLog.log('🎯 Product IDs to fetch:', productIdsToFetch.length);
 
