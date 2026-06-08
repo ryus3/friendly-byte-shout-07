@@ -377,28 +377,27 @@ const AlWaseetInvoicesTab = () => {
       {/* Filters and Actions */}
       <Card dir="rtl">
         <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <div className="flex gap-2">
-              <Button 
-                onClick={handleRefresh} 
+          <CardTitle className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleRefresh}
                 disabled={refreshing}
                 size="sm"
-                className="inline-flex items-center gap-2"
+                className="h-9 px-3 inline-flex items-center gap-1.5 text-xs sm:text-sm"
               >
-                <span>تحديث</span>
                 <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+                <span>تحديث</span>
               </Button>
               <Button
                 onClick={() => setProfitReportOpen(true)}
                 size="sm"
-                variant="outline"
-                className="inline-flex items-center gap-2 border-primary/40 bg-gradient-to-br from-primary/10 to-accent/10 hover:from-primary/20 hover:to-accent/20 text-primary"
+                className="h-9 px-3 inline-flex items-center gap-1.5 text-xs sm:text-sm border-0 text-white shadow-md bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 hover:from-violet-600 hover:via-fuchsia-600 hover:to-pink-600"
               >
-                <span>تقرير الفواتير</span>
                 <FileText className="h-4 w-4" />
+                <span>تقرير الفواتير</span>
               </Button>
             </div>
-            <span className="text-right text-lg font-bold">
+            <span className="text-right text-base sm:text-lg font-bold">
               فواتير شركات التوصيل
             </span>
           </CardTitle>
