@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { DollarSign, Loader2, User, CheckCircle, AlertTriangle, MinusCircle } from 'lucide-react';
+import { DollarSign, Loader2, User, CheckCircle, AlertTriangle, MinusCircle, Info } from 'lucide-react';
 import { useInventory } from '@/contexts/InventoryContext';
 import { toast } from '@/hooks/use-toast';
 import { useUnifiedPermissionsSystem } from '@/hooks/useUnifiedPermissionsSystem';
 import { isPendingStatus } from '@/utils/profitStatusHelper';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/UnifiedAuthContext';
 
 // معرف المدير الرئيسي - يجب عدم عرض التسوية له
 const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604';
@@ -20,9 +21,12 @@ const EmployeeSettlementCard = ({
   calculateProfit 
 }) => {
   const { settleEmployeeProfits, profits } = useInventory();
-  const { canManageEmployees, isAdmin } = useUnifiedPermissionsSystem();
+  const { canManageEmployees, isAdmin, isDepartmentManager } = useUnifiedPermissionsSystem();
+  const { user: currentUser } = useAuth();
   const [isSettling, setIsSettling] = useState(false);
   const [pendingDeductions, setPendingDeductions] = useState({ total: 0, count: 0, items: [] });
+  const [ownership, setOwnership] = useState({ loaded: false, payableOrderIds: [], excludedCount: 0 });
+
 
   // التحقق من صلاحية المدير لدفع المستحقات
   if (!canManageEmployees && !isAdmin) {
