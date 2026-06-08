@@ -1,7 +1,7 @@
 // Verify a custom domain by checking DNS CNAME via Google Public DNS-over-HTTPS
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
-const CNAME_TARGETS = ['ryus.lovable.app', 'pos.ryusbrand.com'];
+const CNAME_TARGETS = ['pos.ryusbrand.com', 'ryus.lovable.app'];
 const A_TARGET = '185.158.133.1';
 
 Deno.serve(async (req) => {
