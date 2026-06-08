@@ -404,19 +404,28 @@ const Layout = ({ children }) => {
           </div>
         </header>
 
-        <main data-scroll-container className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 pb-24 lg:pb-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={location.key || location.pathname}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.3, ease: 'easeInOut' }}
+        {(() => {
+          const isStorefrontDash = location.pathname.startsWith('/dashboard/storefront');
+          return (
+            <main
+              data-scroll-container
+              className={`flex-1 overflow-y-auto overflow-x-hidden ${isStorefrontDash ? 'p-0 pb-24 lg:pb-0' : 'p-3 sm:p-4 md:p-6 pb-24 lg:pb-6'}`}
             >
-              {childrenWithProps}
-            </motion.div>
-          </AnimatePresence>
-        </main>
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={location.key || location.pathname}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3, ease: 'easeInOut' }}
+                  className={isStorefrontDash ? 'w-full max-w-[100vw] overflow-x-hidden' : ''}
+                >
+                  {childrenWithProps}
+                </motion.div>
+              </AnimatePresence>
+            </main>
+          );
+        })()}
         
         <BottomNav />
         {!isMobile && <FloatingCartButton onOpenCart={() => setDialogs(prev => ({ ...prev, cart: true }))} />}
