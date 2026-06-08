@@ -48,6 +48,11 @@ self.addEventListener('fetch', (event) => {
     return; // مرور مباشر للشبكة
   }
 
+  // 🚫 لا تعترض مسارات المتجر العام (تجنّب عرض إصدار قديم)
+  if (url.pathname.startsWith('/storefront/')) {
+    return;
+  }
+
   // 🚫 لا تعترض WebSocket
   if (request.headers.get('upgrade') === 'websocket') {
     return;
