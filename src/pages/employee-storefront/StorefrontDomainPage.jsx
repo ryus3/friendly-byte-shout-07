@@ -160,19 +160,38 @@ const StorefrontDomainPage = () => {
                 <code className="text-white font-mono text-sm" dir="ltr">{subdomainUrl}</code>
               </div>
             )}
-            <div className="text-white/80 space-y-2">
-              <p className="font-bold">📌 خطوات تفعيل السبدومين (يحتاج تنفيذ من المسؤول):</p>
-              <ol className="list-decimal pr-5 space-y-1.5 text-white/70">
-                <li>إضافة سجل <b>Wildcard</b> في DNS الدومين الرئيسي ({BASE_DOMAIN}):
-                  <div className="bg-black/30 p-2 rounded mt-1 font-mono text-xs" dir="ltr">
-                    Type: CNAME | Name: * | Value: {CNAME_TARGET}
-                  </div>
-                </li>
-                <li>تسجيل <b>*.{BASE_DOMAIN}</b> في Project Settings → Domains في Lovable لتفعيل SSL.</li>
-                <li>الانتظار حتى 24 ساعة لانتشار DNS وتفعيل الشهادة.</li>
-                <li>بعد ذلك يفتح متجر كل موظف تلقائياً على <code>{`{slug}.${BASE_DOMAIN}`}</code></li>
-              </ol>
-              <p className="text-amber-300 text-xs mt-2">💡 Wildcard SSL يتطلب خطة Lovable Business. كبديل، يمكن تسجيل كل سبدومين يدوياً.</p>
+            <div className="text-white/80 space-y-3">
+              <div>
+                <p className="font-bold mb-1">1️⃣ في Cloudflare (مرة واحدة فقط لكل المتاجر):</p>
+                <p className="text-white/60 text-xs mb-1">DNS → Add record</p>
+                <div className="bg-black/30 p-2 rounded font-mono text-xs space-y-1" dir="ltr">
+                  <div>Type: <b>CNAME</b></div>
+                  <div>Name: <b>*</b>  (نجمة wildcard)</div>
+                  <div>Target: <b>{CNAME_TARGET}</b></div>
+                  <div>Proxy status: <b>DNS only</b> (الغيمة رمادية)</div>
+                  <div>TTL: Auto</div>
+                </div>
+                <p className="text-white/60 text-xs mt-1">💡 بدل النجمة يمكنك إضافة كل سبدومين منفرداً مثل: Name = <code>alshmry</code></p>
+              </div>
+
+              <div>
+                <p className="font-bold mb-1">2️⃣ في Lovable (Project Settings → Domains):</p>
+                <ul className="list-disc pr-5 space-y-1 text-white/70 text-xs">
+                  <li>اضغط Connect Domain → أدخل <code>*.{BASE_DOMAIN}</code> (يتطلب Business plan لـ wildcard SSL)</li>
+                  <li>أو أضف كل سبدومين يدوياً، مثلاً: <code>alshmry.{BASE_DOMAIN}</code></li>
+                  <li>انتظر إصدار SSL (5 دقائق – 24 ساعة).</li>
+                </ul>
+              </div>
+
+              <div>
+                <p className="font-bold mb-1">3️⃣ في صفحة "متجري" (هذه الصفحة):</p>
+                <ul className="list-disc pr-5 space-y-1 text-white/70 text-xs">
+                  <li>اكتب اسم متجرك في الحقل أعلاه (مثل <code>alshmry</code>) واضغط حفظ.</li>
+                  <li>سيفتح متجرك تلقائياً على <b dir="ltr">{`${slug || 'alshmry'}.${BASE_DOMAIN}`}</b></li>
+                </ul>
+              </div>
+
+              <p className="text-amber-300 text-xs">⚠️ ملاحظة: ربط الدومين الرئيسي في Cloudflare و Lovable يحتاج مسؤول النظام (مرة واحدة فقط).</p>
             </div>
           </div>
         )}
