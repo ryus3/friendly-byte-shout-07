@@ -9,13 +9,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Loader2, TrendingUp, Wallet, Users, Package, Crown, Boxes, Truck, FileText,
-  ChevronLeft, ChevronRight, AlertCircle, UserCheck, Building2,
+  ChevronLeft, ChevronRight, AlertCircle, UserCheck, Building2, ChevronDown, Check,
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { computeInvoiceProfits } from '@/lib/invoiceProfitsCalc';
 import { startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay } from 'date-fns';
+
+const GENERAL_MANAGER_ID = '91484496-b887-44f7-9e5d-be9db5567604';
 
 const PERIODS = [
   { id: 'day', label: 'اليوم' },
@@ -80,14 +82,23 @@ const InvoicesProfitReportDialog = ({
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [loadingInvoices, setLoadingInvoices] = useState(false);
   const [invoicesError, setInvoicesError] = useState(null);
+  const [activeAccounts, setActiveAccounts] = useState([]); // [{partner, account_username}]
 
   const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
   const [computing, setComputing] = useState(false);
   const [computeError, setComputeError] = useState(null);
   const [tabIndex, setTabIndex] = useState(0);
 
+  // ✅ قائمة الموظفين القابلين للاختيار: استبعاد المدير العام دائماً، واستبعاد الذات للمدير
   const selectableEmployees = useMemo(() => {
-    const list = (allUsers || []).filter(u => u && (u.user_id || u.id));
+    const list = (allUsers || []).filter(u => {
+      if (!u) return false;
+      const id = u.user_id || u.id;
+      if (!id) return false;
+      if (id === GENERAL_MANAGER_ID) return false;
+      if (isAdmin && id === userId) return false; // المدير العام لا يرى نفسه
+      return true;
+    });
     if (isAdmin) return list;
     if (isDepartmentManager) {
       const ids = new Set(supervisedEmployeeIds || []);
@@ -105,6 +116,34 @@ const InvoicesProfitReportDialog = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialScope, employeeId]);
+
+  // جلب حسابات المستخدم النشطة لعرضها في رأس التقرير
+  useEffect(() => {
+    if (!open || !userId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: toks } = await supabase
+          .from('delivery_partner_tokens')
+          .select('partner_name, account_username, normalized_username')
+          .eq('user_id', userId)
+          .eq('is_active', true);
+        if (cancelled) return;
+        const seen = new Set();
+        const list = [];
+        (toks || []).forEach(t => {
+          const u = (t.account_username || t.normalized_username || '').trim();
+          if (!u) return;
+          const key = `${t.partner_name}::${u.toLowerCase()}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          list.push({ partner: t.partner_name, account_username: u });
+        });
+        setActiveAccounts(list);
+      } catch { /* silent */ }
+    })();
+    return () => { cancelled = true; };
+  }, [open, userId]);
 
   const handlePeriodChange = (p) => {
     setPeriod(p);
@@ -229,16 +268,20 @@ const InvoicesProfitReportDialog = ({
     setMultiEmployeeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  const partnerLabel = (p) => (p === 'modon' ? 'مدن' : p === 'alwaseet' ? 'الوسيط' : p);
   const scopeLabel = (() => {
     switch (scope) {
-      case 'active_accounts': return 'حساباتي النشطة';
+      case 'active_accounts': {
+        if (!activeAccounts.length) return 'حساباتي النشطة';
+        return activeAccounts.map(a => `${partnerLabel(a.partner)}: ${a.account_username}`).join(' • ');
+      }
       case 'all': return 'كل الموظفين';
       case 'managed': return 'موظفيّ';
       case 'employee': {
         const u = selectableEmployees.find(x => (x.user_id || x.id) === singleEmployee);
-        return u ? (u.full_name || u.username || 'موظف') : 'موظف محدد';
+        return u ? (u.full_name || u.username || 'موظف') : 'اختر موظفاً';
       }
-      case 'employees': return `${multiEmployeeIds.length} موظف محدد`;
+      case 'employees': return multiEmployeeIds.length ? `${multiEmployeeIds.length} موظف محدد` : 'اختر عدة موظفين';
       default: return 'فواتيري';
     }
   })();
@@ -286,20 +329,45 @@ const InvoicesProfitReportDialog = ({
               <ScopeChip active={scope === 'employees'} onClick={() => setScope('employees')} icon={Users}>عدة موظفين</ScopeChip>
 
               {scope === 'employee' && (
-                <select value={singleEmployee} onChange={(e) => setSingleEmployee(e.target.value)}
-                  className="text-xs px-2 py-1 rounded-md bg-white/95 text-foreground border-0 max-w-[180px]">
-                  <option value="all">— اختر موظفاً —</option>
-                  {selectableEmployees.map(u => (
-                    <option key={u.user_id || u.id} value={u.user_id || u.id}>{u.full_name || u.username || 'موظف'}</option>
-                  ))}
-                </select>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/95 text-primary shadow-md max-w-[200px] truncate">
+                      <UserCheck className="w-3 h-3 shrink-0" />
+                      <span className="truncate">
+                        {(() => {
+                          if (!singleEmployee || singleEmployee === 'all') return 'اختر موظفاً';
+                          const u = selectableEmployees.find(x => (x.user_id || x.id) === singleEmployee);
+                          return u ? (u.full_name || u.username || 'موظف') : 'اختر موظفاً';
+                        })()}
+                      </span>
+                      <ChevronDown className="w-3 h-3 shrink-0 opacity-70" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-60 max-h-64 overflow-y-auto p-1.5" dir="rtl">
+                    {selectableEmployees.length === 0 ? (
+                      <p className="text-xs text-muted-foreground text-center py-3">لا يوجد موظفون</p>
+                    ) : selectableEmployees.map(u => {
+                      const id = u.user_id || u.id;
+                      const active = singleEmployee === id;
+                      return (
+                        <button key={id} onClick={() => setSingleEmployee(id)}
+                          className={`w-full flex items-center gap-2 p-2 rounded text-sm text-right ${active ? 'bg-primary/15 text-primary font-bold' : 'hover:bg-muted/60'}`}>
+                          {active && <Check className="w-3.5 h-3.5" />}
+                          <span className="truncate flex-1">{u.full_name || u.username || 'موظف'}</span>
+                        </button>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
               )}
 
               {scope === 'employees' && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button className="text-xs px-2.5 py-1 rounded-md bg-white/95 text-foreground font-bold">
+                    <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/95 text-primary shadow-md">
+                      <Users className="w-3 h-3" />
                       {multiEmployeeIds.length ? `${multiEmployeeIds.length} محدد` : 'اختر الموظفين'}
+                      <ChevronDown className="w-3 h-3 opacity-70" />
                     </button>
                   </PopoverTrigger>
                   <PopoverContent className="w-64 max-h-64 overflow-y-auto p-2" dir="rtl">
@@ -358,14 +426,13 @@ const InvoicesProfitReportDialog = ({
                   ) : invoices.length === 0 ? <EmptyHint /> : (
                     <>
                       <div className="grid grid-cols-2 gap-2.5">
+                        <Stat icon={FileText} label="عدد الفواتير" sub={`${selectedIds.size}/${invoices.length} محدّد`} value={`${invoices.length}`} color="blue" />
                         <Stat icon={TrendingUp} label="إجمالي الإيراد" sub="بدون توصيل" value={fmt(calc.totalRevenue)} color="blue" />
                         <Stat icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
                         <Stat icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج`} value={`${calc.totalQty}`} color="purple" />
                         <Stat icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2.5">
-                        <Stat icon={Users} label="مستحقات الموظفين" value={fmt(calc.employeeTotalCombined)} color="purple" />
                         <Stat icon={Crown} label="صافي للمالكين" value={fmt(calc.netForOwners)} color="emerald" />
+                        <Stat icon={Users} label="مستحقات الموظفين" sub={`${Object.keys(calc.employeeCombinedByEmp || {}).filter(k => Number(calc.employeeCombinedByEmp[k]) !== 0).length} موظف`} value={fmt(calc.employeeTotalCombined)} color="purple" />
                       </div>
                       {Math.abs(calc.totalDelta) > 1 && (
                         <div className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border border-dashed text-xs ${calc.totalDelta > 0 ? 'text-emerald-600 bg-emerald-500/5 border-emerald-500/30' : 'text-orange-600 bg-orange-500/5 border-orange-500/30'}`}>

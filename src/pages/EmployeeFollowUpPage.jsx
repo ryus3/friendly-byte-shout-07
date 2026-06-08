@@ -1501,17 +1501,16 @@ useEffect(() => {
           <TabsContent value="invoices" className="mt-6">
             <div className="bg-card p-4 rounded-xl border">
               <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-                <h2 className="text-xl font-semibold">
+                <h2 className="text-base sm:text-xl font-semibold">
                   فواتير شركة التوصيل
                 </h2>
                 <Button
                   onClick={() => setIsInvoicesReportOpen(true)}
-                  variant="outline"
                   size="sm"
-                  className="inline-flex items-center gap-2 border-primary/40 bg-gradient-to-br from-primary/10 to-accent/10 hover:from-primary/20 hover:to-accent/20 text-primary"
+                  className="h-9 px-3 inline-flex items-center gap-1.5 text-xs sm:text-sm border-0 text-white shadow-md bg-gradient-to-br from-violet-500 via-fuchsia-500 to-pink-500 hover:from-violet-600 hover:via-fuchsia-600 hover:to-pink-600"
                 >
-                  <span>تقرير الفواتير</span>
                   <FileText className="h-4 w-4" />
+                  <span>تقرير الفواتير</span>
                 </Button>
               </div>
               <EmployeeDeliveryInvoicesTab employeeId={filters.employeeId} />
