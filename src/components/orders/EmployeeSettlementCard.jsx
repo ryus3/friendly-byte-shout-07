@@ -28,10 +28,11 @@ const EmployeeSettlementCard = ({
   const [ownership, setOwnership] = useState({ loaded: false, payableOrderIds: [], excludedCount: 0 });
 
 
-  // التحقق من صلاحية المدير لدفع المستحقات
-  if (!canManageEmployees && !isAdmin) {
+  // التحقق من صلاحية المدير/مدير القسم لدفع المستحقات
+  if (!canManageEmployees && !isAdmin && !isDepartmentManager) {
     return null;
   }
+
 
   // جلب الخصومات المعلقة للموظف
   useEffect(() => {
