@@ -426,14 +426,13 @@ const InvoicesProfitReportDialog = ({
                   ) : invoices.length === 0 ? <EmptyHint /> : (
                     <>
                       <div className="grid grid-cols-2 gap-2.5">
+                        <Stat icon={FileText} label="عدد الفواتير" sub={`${selectedIds.size}/${invoices.length} محدّد`} value={`${invoices.length}`} color="blue" />
                         <Stat icon={TrendingUp} label="إجمالي الإيراد" sub="بدون توصيل" value={fmt(calc.totalRevenue)} color="blue" />
                         <Stat icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
                         <Stat icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج`} value={`${calc.totalQty}`} color="purple" />
                         <Stat icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
-                      </div>
-                      <div className="grid grid-cols-2 gap-2.5">
-                        <Stat icon={Users} label="مستحقات الموظفين" value={fmt(calc.employeeTotalCombined)} color="purple" />
                         <Stat icon={Crown} label="صافي للمالكين" value={fmt(calc.netForOwners)} color="emerald" />
+                        <Stat icon={Users} label="مستحقات الموظفين" sub={`${Object.keys(calc.employeeCombinedByEmp || {}).filter(k => Number(calc.employeeCombinedByEmp[k]) !== 0).length} موظف`} value={fmt(calc.employeeTotalCombined)} color="purple" />
                       </div>
                       {Math.abs(calc.totalDelta) > 1 && (
                         <div className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border border-dashed text-xs ${calc.totalDelta > 0 ? 'text-emerald-600 bg-emerald-500/5 border-emerald-500/30' : 'text-orange-600 bg-orange-500/5 border-orange-500/30'}`}>
