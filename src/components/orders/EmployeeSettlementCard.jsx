@@ -197,9 +197,9 @@ const EmployeeSettlementCard = ({
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
-            <p className="text-sm text-muted-foreground">عدد الطلبات المحددة</p>
+            <p className="text-sm text-muted-foreground">عدد الطلبات القابلة للدفع</p>
             <Badge variant="secondary" className="text-lg font-semibold">
-              {employeeOrders.length} طلب
+              {payableOrders.length} / {employeeOrders.length} طلب
             </Badge>
           </div>
           <div className="space-y-1 text-right">
@@ -209,6 +209,16 @@ const EmployeeSettlementCard = ({
             </p>
           </div>
         </div>
+
+        {ownership.loaded && ownership.excludedCount > 0 && (
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 flex items-start gap-2">
+            <Info className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+            <div className="text-xs text-blue-800 dark:text-blue-200">
+              {ownership.excludedCount} طلب خارج صلاحيتك (منتجاتها لمالك آخر) — يدفع مستحقاتها مالك المنتج. حصتك فقط تُدفع الآن.
+            </div>
+          </div>
+        )}
+
 
         {/* عرض الخصومات المعلقة إن وجدت */}
         {pendingDeductions.total > 0 && (
