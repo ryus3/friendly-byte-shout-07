@@ -27,6 +27,13 @@ const StorefrontHome = () => {
     trackPageView();
   }, [trackPageView]);
 
+  // Apply selected theme tokens to <html> so all storefront components inherit it
+  useEffect(() => {
+    if (settings?.theme_name) {
+      applyThemeTokens(settings.theme_name);
+    }
+  }, [settings?.theme_name]);
+
   useEffect(() => {
     if (!settings?.employee_id) return;
 
