@@ -23,16 +23,16 @@ const BannerManager = ({ banners, onUpdate }) => {
 
       const fileExt = file.name.split('.').pop();
       const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `storefront-banners/${fileName}`;
+      const filePath = `storefront-banners/${user.id}/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('storefront_assets')
-        .upload(filePath, file);
+        .from('product-images')
+        .upload(filePath, file, { upsert: false });
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('storefront_assets')
+        .from('product-images')
         .getPublicUrl(filePath);
 
       const { error: insertError } = await supabase
