@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target, Copy, Check, Globe, RefreshCw } from 'lucide-react';
+import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target, Copy, Check, Globe, RefreshCw, Image as ImageIcon, Percent, Palette, FileBarChart } from 'lucide-react';
 import StorefrontAnalytics from '@/components/employee-storefront/StorefrontAnalytics';
 import PremiumButton from '@/components/storefront/ui/PremiumButton';
 import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
