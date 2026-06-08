@@ -65,7 +65,8 @@ const StorefrontDashboardPage = () => {
         return;
       }
 
-      const rows = Array.from(productIds).map(pid => ({
+      const ids = Array.from(productIds);
+      const rows = ids.map(pid => ({
         employee_id: user.id, product_id: pid, is_active: true, added_by: user.id,
       }));
       const { error } = await supabase
@@ -73,7 +74,15 @@ const StorefrontDashboardPage = () => {
         .upsert(rows, { onConflict: 'employee_id,product_id', ignoreDuplicates: true });
       if (error) throw error;
 
-      toast({ title: '✅ تمت المزامنة', description: `${productIds.size} منتج تم استيراده` });
+      // Also publish to storefront (employee_product_descriptions)
+      const descRows = ids.map(pid => ({
+        employee_id: user.id, product_id: pid, is_in_storefront: true,
+      }));
+      await supabase
+        .from('employee_product_descriptions')
+        .upsert(descRows, { onConflict: 'employee_id,product_id', ignoreDuplicates: false });
+
+      toast({ title: '✅ تمت المزامنة', description: `${ids.length} منتج تم نشره في المتجر` });
       fetchStorefrontData();
     } catch (err) {
       toast({ title: 'فشل المزامنة', description: err.message, variant: 'destructive' });
@@ -81,6 +90,7 @@ const StorefrontDashboardPage = () => {
       setSyncing(false);
     }
   };
+
 
   const getStoreUrl = () => `${window.location.origin}/storefront/${settings?.slug}`;
 
