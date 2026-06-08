@@ -268,16 +268,20 @@ const InvoicesProfitReportDialog = ({
     setMultiEmployeeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   };
 
+  const partnerLabel = (p) => (p === 'modon' ? 'مدن' : p === 'alwaseet' ? 'الوسيط' : p);
   const scopeLabel = (() => {
     switch (scope) {
-      case 'active_accounts': return 'حساباتي النشطة';
+      case 'active_accounts': {
+        if (!activeAccounts.length) return 'حساباتي النشطة';
+        return activeAccounts.map(a => `${partnerLabel(a.partner)}: ${a.account_username}`).join(' • ');
+      }
       case 'all': return 'كل الموظفين';
       case 'managed': return 'موظفيّ';
       case 'employee': {
         const u = selectableEmployees.find(x => (x.user_id || x.id) === singleEmployee);
-        return u ? (u.full_name || u.username || 'موظف') : 'موظف محدد';
+        return u ? (u.full_name || u.username || 'موظف') : 'اختر موظفاً';
       }
-      case 'employees': return `${multiEmployeeIds.length} موظف محدد`;
+      case 'employees': return multiEmployeeIds.length ? `${multiEmployeeIds.length} موظف محدد` : 'اختر عدة موظفين';
       default: return 'فواتيري';
     }
   })();
