@@ -302,72 +302,42 @@ const StorefrontDashboardPage = () => {
         </CardContent>
       </Card>
 
-      {/* Quick Actions - تصميم كروت احترافية 2x2 */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
-        {/* المتجر */}
-        <Card 
-          className="relative overflow-hidden border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-blue/20 cursor-pointer group min-h-[100px] sm:min-h-[120px]"
-          onClick={() => window.open(`/storefront/${settings.slug}`, '_blank')}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-cyan-500 opacity-5" />
-          <CardContent className="p-3 sm:p-4 md:p-6 relative z-10 flex flex-col items-center justify-center h-full">
-            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg mb-2 sm:mb-3">
-              <ExternalLink className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8" />
-            </div>
-            <div className="text-base sm:text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-500 to-cyan-500 text-center">
-              المتجر
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* الإعدادات */}
-        <Card 
-          className="relative overflow-hidden border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-indigo/20 cursor-pointer group min-h-[100px] sm:min-h-[120px]"
-          onClick={() => navigate('/dashboard/storefront/settings')}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-500 opacity-5" />
-          <CardContent className="p-3 sm:p-4 md:p-6 relative z-10 flex flex-col items-center justify-center h-full">
-            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-white shadow-lg mb-2 sm:mb-3">
-              <Settings className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8" />
-            </div>
-            <div className="text-base sm:text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-500 text-center">
-              الإعدادات
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* المنتجات */}
-        <Card 
-          className="relative overflow-hidden border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-emerald/20 cursor-pointer group min-h-[100px] sm:min-h-[120px]"
-          onClick={() => navigate('/dashboard/storefront/products')}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500 to-teal-500 opacity-5" />
-          <CardContent className="p-3 sm:p-4 md:p-6 relative z-10 flex flex-col items-center justify-center h-full">
-            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-lg mb-2 sm:mb-3">
-              <Package className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8" />
-            </div>
-            <div className="text-base sm:text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-teal-500 text-center">
-              المنتجات
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* إعدادات متقدمة */}
-        <Card 
-          className="relative overflow-hidden border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl shadow-orange/20 cursor-pointer group min-h-[100px] sm:min-h-[120px]"
-          onClick={() => navigate('/dashboard/storefront/advanced-settings')}
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-orange-500 to-red-500 opacity-5" />
-          <CardContent className="p-3 sm:p-4 md:p-6 relative z-10 flex flex-col items-center justify-center h-full">
-            <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 text-white shadow-lg mb-2 sm:mb-3">
-              <Sparkles className="h-5 w-5 sm:h-6 sm:w-6 md:h-8 md:w-8" />
-            </div>
-            <div className="text-base sm:text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-orange-500 to-red-500 text-center">
-              متقدم
-            </div>
-          </CardContent>
-        </Card>
+      {/* Quick Actions - شبكة شاملة بكل أدوات إدارة المتجر */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 mb-6 sm:mb-8">
+        {[
+          { label: 'المتجر', icon: ExternalLink, grad: 'from-blue-500 to-cyan-500', onClick: () => window.open(`/storefront/${settings.slug}`, '_blank') },
+          { label: 'المنتجات', icon: Package, grad: 'from-emerald-500 to-teal-500', onClick: () => navigate('/dashboard/storefront/products') },
+          { label: 'الخصومات والعروض', icon: Percent, grad: 'from-pink-500 to-rose-500', onClick: () => navigate('/dashboard/storefront/promotions') },
+          { label: 'البنرات', icon: ImageIcon, grad: 'from-amber-500 to-orange-500', onClick: () => navigate('/dashboard/storefront/banners') },
+          { label: 'الطلبات', icon: ShoppingCart, grad: 'from-violet-500 to-purple-500', onClick: () => navigate('/dashboard/storefront/orders'), badge: newOrdersCount },
+          { label: 'الثيمات والتصميم', icon: Palette, grad: 'from-fuchsia-500 to-purple-500', onClick: () => navigate('/dashboard/storefront/settings') },
+          { label: 'الإعدادات', icon: Settings, grad: 'from-indigo-500 to-purple-500', onClick: () => navigate('/dashboard/storefront/settings') },
+          { label: 'الدومين المخصص', icon: Globe, grad: 'from-sky-500 to-blue-500', onClick: () => navigate('/dashboard/storefront/advanced-settings') },
+          { label: 'متقدم', icon: Sparkles, grad: 'from-orange-500 to-red-500', onClick: () => navigate('/dashboard/storefront/advanced-settings') },
+        ].map((card, idx) => (
+          <Card
+            key={idx}
+            className="relative overflow-hidden border-2 transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl cursor-pointer group min-h-[110px]"
+            onClick={card.onClick}
+          >
+            <div className={`absolute inset-0 bg-gradient-to-br ${card.grad} opacity-5 group-hover:opacity-10 transition-opacity`} />
+            <CardContent className="p-3 sm:p-4 relative z-10 flex flex-col items-center justify-center h-full">
+              <div className={`p-2 sm:p-3 rounded-xl bg-gradient-to-br ${card.grad} text-white shadow-lg mb-2 relative`}>
+                <card.icon className="h-5 w-5 sm:h-6 sm:w-6" />
+                {card.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] rounded-full h-5 min-w-[20px] px-1 flex items-center justify-center font-bold">
+                    {card.badge}
+                  </span>
+                )}
+              </div>
+              <div className={`text-sm sm:text-base font-black text-transparent bg-clip-text bg-gradient-to-r ${card.grad} text-center leading-tight`}>
+                {card.label}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
+
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-6 sm:mb-8">
