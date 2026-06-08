@@ -184,9 +184,15 @@ const StorefrontDashboardPage = () => {
     { label: 'العروض والخصومات', icon: Percent, grad: 'from-pink-500 via-fuchsia-500 to-purple-500', desc: `${promotionsCount} عرض نشط`, onClick: () => navigate('/dashboard/storefront/promotions') },
     { label: 'البنرات الإعلانية', icon: ImageIcon, grad: 'from-amber-500 to-orange-500', desc: `${bannersCount} بانر`, onClick: () => navigate('/dashboard/storefront/banners') },
     { label: 'الطلبات', icon: ShoppingCart, grad: 'from-violet-500 to-purple-500', desc: 'طلبات المتجر', onClick: () => navigate('/dashboard/storefront/orders'), badge: newOrdersCount },
-    { label: 'الثيمات والتصميم', icon: Palette, grad: 'from-fuchsia-500 to-rose-500', desc: '8 ثيمات زجاجية', onClick: () => navigate('/dashboard/storefront/settings') },
-    { label: 'الدومين المخصص', icon: Globe, grad: 'from-sky-500 to-indigo-500', desc: 'رابط متجرك', onClick: () => navigate('/dashboard/storefront/domain') },
-    { label: 'الإعدادات المتقدمة', icon: Settings, grad: 'from-slate-500 to-zinc-600', desc: 'SEO والتحليلات', onClick: () => navigate('/dashboard/storefront/advanced-settings') },
+    { label: 'الثيمات والتصميم', icon: Palette, grad: 'from-fuchsia-500 to-rose-500', desc: 'قوالب وألوان وخطوط', onClick: () => navigate('/dashboard/storefront/themes') },
+    { label: 'الإعدادات العامة', icon: Settings, grad: 'from-slate-500 to-zinc-600', desc: 'اسم، شعار، وصف', onClick: () => navigate('/dashboard/storefront/settings') },
+    { label: 'الدومين', icon: Globe, grad: 'from-sky-500 to-indigo-500', desc: 'سبدومين ودومين مخصص', onClick: () => navigate('/dashboard/storefront/domain') },
+    { label: 'السياسات والصفحات', icon: FileText, grad: 'from-indigo-500 to-blue-600', desc: 'خصوصية، إرجاع، شروط', onClick: () => navigate('/dashboard/storefront/policies') },
+    { label: 'الشحن والمناطق', icon: Truck, grad: 'from-orange-500 to-red-500', desc: 'مناطق ورسوم الشحن', onClick: () => navigate('/dashboard/storefront/shipping') },
+    { label: 'برنامج الولاء', icon: Gift, grad: 'from-rose-500 to-pink-600', desc: 'النقاط والمكافآت', onClick: () => navigate('/dashboard/storefront/loyalty') },
+    { label: 'بكسلات التتبع', icon: BarChart3, grad: 'from-purple-500 to-fuchsia-600', desc: 'Meta, Google, TikTok', onClick: () => navigate('/dashboard/storefront/pixels') },
+    { label: 'SEO و الفهرسة', icon: Search, grad: 'from-teal-500 to-emerald-600', desc: 'عنوان ووصف وكلمات', onClick: () => navigate('/dashboard/storefront/seo') },
+    { label: 'إعدادات متقدمة', icon: Zap, grad: 'from-zinc-500 to-slate-600', desc: 'CSS مخصص وأكثر', onClick: () => navigate('/dashboard/storefront/advanced-settings') },
   ];
 
   const heroStats = [
