@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target, Copy, Check, Globe, RefreshCw, Image as ImageIcon, Percent, Palette, FileBarChart } from 'lucide-react';
+import { Store, TrendingUp, Users, ShoppingCart, Settings, ExternalLink, Package, Sparkles, Target, Copy, Check, Globe, RefreshCw, Image as ImageIcon, Percent, Palette, FileBarChart, FolderTree } from 'lucide-react';
 import StorefrontAnalytics from '@/components/employee-storefront/StorefrontAnalytics';
 import PremiumButton from '@/components/storefront/ui/PremiumButton';
 import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
@@ -307,14 +307,15 @@ const StorefrontDashboardPage = () => {
         {[
           { label: 'المتجر', icon: ExternalLink, grad: 'from-blue-500 to-cyan-500', onClick: () => window.open(`/storefront/${settings.slug}`, '_blank') },
           { label: 'المنتجات', icon: Package, grad: 'from-emerald-500 to-teal-500', onClick: () => navigate('/dashboard/storefront/products') },
+          { label: 'الأقسام والفئات', icon: FolderTree, grad: 'from-cyan-500 to-blue-500', onClick: () => navigate('/dashboard/storefront/categories') },
           { label: 'الخصومات والعروض', icon: Percent, grad: 'from-pink-500 to-rose-500', onClick: () => navigate('/dashboard/storefront/promotions') },
           { label: 'البنرات', icon: ImageIcon, grad: 'from-amber-500 to-orange-500', onClick: () => navigate('/dashboard/storefront/banners') },
           { label: 'الطلبات', icon: ShoppingCart, grad: 'from-violet-500 to-purple-500', onClick: () => navigate('/dashboard/storefront/orders'), badge: newOrdersCount },
           { label: 'الثيمات والتصميم', icon: Palette, grad: 'from-fuchsia-500 to-purple-500', onClick: () => navigate('/dashboard/storefront/settings') },
-          { label: 'الإعدادات', icon: Settings, grad: 'from-indigo-500 to-purple-500', onClick: () => navigate('/dashboard/storefront/settings') },
-          { label: 'الدومين المخصص', icon: Globe, grad: 'from-sky-500 to-blue-500', onClick: () => navigate('/dashboard/storefront/advanced-settings') },
-          { label: 'متقدم', icon: Sparkles, grad: 'from-orange-500 to-red-500', onClick: () => navigate('/dashboard/storefront/advanced-settings') },
+          { label: 'الدومين والرابط', icon: Globe, grad: 'from-sky-500 to-blue-500', onClick: () => navigate('/dashboard/storefront/domain') },
+          { label: 'الإعدادات المتقدمة', icon: Settings, grad: 'from-indigo-500 to-purple-500', onClick: () => navigate('/dashboard/storefront/advanced-settings') },
         ].map((card, idx) => (
+
           <Card
             key={idx}
             className="relative overflow-hidden border-2 transition-all duration-300 hover:scale-[1.03] hover:shadow-2xl cursor-pointer group min-h-[110px]"
