@@ -394,8 +394,8 @@ const AlWaseetInvoicesTab = () => {
                 variant="outline"
                 className="inline-flex items-center gap-2 border-primary/40 bg-gradient-to-br from-primary/10 to-accent/10 hover:from-primary/20 hover:to-accent/20 text-primary"
               >
-                <span>تقريري</span>
-                <TrendingUp className="h-4 w-4" />
+                <span>تقرير الفواتير</span>
+                <FileText className="h-4 w-4" />
               </Button>
             </div>
             <span className="text-right text-lg font-bold">
@@ -567,6 +567,7 @@ const AlWaseetInvoicesTab = () => {
       <InvoicesProfitReportDialog
         open={profitReportOpen}
         onOpenChange={setProfitReportOpen}
+        defaultScope="active_accounts"
       />
     </div>
   );
