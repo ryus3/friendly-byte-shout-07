@@ -136,11 +136,54 @@ const StorefrontSetupWizard = () => {
   const selectTheme = (theme) => {
     setFormData(prev => ({
       ...prev,
-      theme_name: theme.name.toLowerCase().replace(/\s+/g, '-'),
+      theme_name: theme.id,
       primary_color: theme.colors.primary,
       secondary_color: theme.colors.secondary,
       accent_color: theme.colors.accent
     }));
+  };
+
+  const seedAllowedProducts = async (employeeId) => {
+    try {
+      // Pull this user's allowed products from user_product_permissions and
+      // mirror them into employee_allowed_products so the storefront shows them.
+      const { data: perms } = await supabase
+        .from('user_product_permissions')
+        .select('permission_type, allowed_items, has_full_access')
+        .eq('user_id', employeeId);
+
+      const productIds = new Set();
+      (perms || []).forEach((p) => {
+        if (p?.permission_type === 'product' && Array.isArray(p.allowed_items)) {
+          p.allowed_items.forEach((id) => id && productIds.add(id));
+        }
+      });
+
+      // If full access, pull every active product
+      const hasFullAccess = (perms || []).some((p) => p?.has_full_access);
+      if (hasFullAccess) {
+        const { data: allProducts } = await supabase
+          .from('products')
+          .select('id')
+          .eq('is_active', true);
+        (allProducts || []).forEach((p) => productIds.add(p.id));
+      }
+
+      if (productIds.size === 0) return;
+
+      const rows = Array.from(productIds).map((pid) => ({
+        employee_id: employeeId,
+        product_id: pid,
+        is_active: true,
+        added_by: employeeId,
+      }));
+
+      await supabase
+        .from('employee_allowed_products')
+        .upsert(rows, { onConflict: 'employee_id,product_id', ignoreDuplicates: true });
+    } catch (err) {
+      console.warn('seedAllowedProducts skipped:', err?.message);
+    }
   };
 
   const createStore = async () => {
