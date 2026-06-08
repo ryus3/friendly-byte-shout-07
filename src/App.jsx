@@ -337,7 +337,9 @@ function AppContent() {
 function App() {
   return (
     <HelmetProvider>
-      <AppContent />
+      <StorefrontHostGate>
+        <AppContent />
+      </StorefrontHostGate>
     </HelmetProvider>
   );
 }
