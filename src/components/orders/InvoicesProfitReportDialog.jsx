@@ -77,6 +77,8 @@ const InvoicesProfitReportDialog = ({
   const [scope, setScope] = useState(initialScope);
   const [singleEmployee, setSingleEmployee] = useState(employeeId || 'all');
   const [multiEmployeeIds, setMultiEmployeeIds] = useState([]);
+  const [selectedAccountKeys, setSelectedAccountKeys] = useState([]); // [] = جميع الحسابات النشطة
+  const [duesExpanded, setDuesExpanded] = useState(false);
 
   const [invoices, setInvoices] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -112,6 +114,8 @@ const InvoicesProfitReportDialog = ({
       setScope(initialScope);
       setSingleEmployee(employeeId || 'all');
       setMultiEmployeeIds([]);
+      setSelectedAccountKeys([]);
+      setDuesExpanded(false);
       setTabIndex(0);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,6 +192,7 @@ const InvoicesProfitReportDialog = ({
           p_scope: effectiveScope,
           p_employee: pEmployee,
           p_employees: pEmployees,
+          p_account_keys: (effectiveScope === 'active_accounts' && selectedAccountKeys.length > 0) ? selectedAccountKeys : null,
         });
         if (error) throw error;
         if (cancelled) return;
@@ -208,7 +213,7 @@ const InvoicesProfitReportDialog = ({
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, dateRange?.from?.getTime(), dateRange?.to?.getTime(), userId, isAdmin, isDepartmentManager, scope, singleEmployee, multiEmployeeIds.join(',')]);
+  }, [open, dateRange?.from?.getTime(), dateRange?.to?.getTime(), userId, isAdmin, isDepartmentManager, scope, singleEmployee, multiEmployeeIds.join(','), selectedAccountKeys.join(',')]);
 
   useEffect(() => {
     if (!open) return;
@@ -259,13 +264,30 @@ const InvoicesProfitReportDialog = ({
   const ownerEntries = Object.entries(calc.byOwner)
     .map(([ownerId, stats]) => ({ ownerId, name: ownerId === '__system__' ? 'النظام' : (namesMap[ownerId] || 'مالك'), ...stats, netProfit: stats.revenue - stats.cost }))
     .sort((a, b) => b.netProfit - a.netProfit);
+  // عدد الطلبات لكل موظف (مستخلص من profits)
+  const employeeOrderCounts = useMemo(() => {
+    const map = {};
+    (data.profits || []).forEach(p => {
+      if (!p.employee_id || !p.order_id) return;
+      if (!map[p.employee_id]) map[p.employee_id] = new Set();
+      map[p.employee_id].add(p.order_id);
+    });
+    const result = {};
+    Object.entries(map).forEach(([k, v]) => { result[k] = v.size; });
+    return result;
+  }, [data.profits]);
+
   const employeeEntries = Object.entries(calc.employeeCombinedByEmp)
     .filter(([, v]) => Number(v) !== 0)
-    .map(([empId, amount]) => ({ empId, name: namesMap[empId] || 'موظف', amount, bonus: calc.employeeBonusByEmp[empId] || 0 }));
+    .map(([empId, amount]) => ({ empId, name: namesMap[empId] || 'موظف', amount, bonus: calc.employeeBonusByEmp[empId] || 0, ordersCount: employeeOrderCounts[empId] || 0 }))
+    .sort((a, b) => b.amount - a.amount);
 
   const goTab = (i) => setTabIndex(Math.max(0, Math.min(TABS.length - 1, i)));
   const toggleMultiEmployee = (id) => {
     setMultiEmployeeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleAccountKey = (key) => {
+    setSelectedAccountKeys(prev => prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]);
   };
 
   const partnerLabel = (p) => (p === 'modon' ? 'مدن' : p === 'alwaseet' ? 'الوسيط' : p);
@@ -273,7 +295,10 @@ const InvoicesProfitReportDialog = ({
     switch (scope) {
       case 'active_accounts': {
         if (!activeAccounts.length) return 'حساباتي النشطة';
-        return activeAccounts.map(a => `${partnerLabel(a.partner)}: ${a.account_username}`).join(' • ');
+        const list = selectedAccountKeys.length
+          ? activeAccounts.filter(a => selectedAccountKeys.includes(`${a.partner}::${a.account_username.toLowerCase()}`))
+          : activeAccounts;
+        return list.map(a => `${partnerLabel(a.partner)}: ${a.account_username}`).join(' • ');
       }
       case 'all': return 'كل الموظفين';
       case 'managed': return 'موظفيّ';
@@ -320,6 +345,38 @@ const InvoicesProfitReportDialog = ({
           {allowScopeSelection && (
             <div className="relative px-4 pb-3 flex flex-wrap items-center gap-1.5">
               <ScopeChip active={scope === 'active_accounts'} onClick={() => setScope('active_accounts')} icon={Building2}>حساباتي النشطة</ScopeChip>
+
+              {scope === 'active_accounts' && activeAccounts.length > 1 && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-white/95 text-primary shadow-md">
+                      <Building2 className="w-3 h-3" />
+                      {selectedAccountKeys.length === 0 ? `كل الحسابات (${activeAccounts.length})` : `${selectedAccountKeys.length}/${activeAccounts.length} حساب`}
+                      <ChevronDown className="w-3 h-3 opacity-70" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-72 max-h-72 overflow-y-auto p-2" dir="rtl">
+                    <div className="flex items-center justify-between mb-2 pb-2 border-b">
+                      <span className="text-[11px] font-bold text-muted-foreground">اختر الحسابات</span>
+                      <button onClick={() => setSelectedAccountKeys([])} className="text-[10px] text-primary font-bold hover:underline">
+                        تحديد الكل
+                      </button>
+                    </div>
+                    {activeAccounts.map(a => {
+                      const key = `${a.partner}::${a.account_username.toLowerCase()}`;
+                      const checked = selectedAccountKeys.length === 0 || selectedAccountKeys.includes(key);
+                      return (
+                        <label key={key} className="flex items-center gap-2 p-1.5 rounded hover:bg-muted/50 cursor-pointer text-sm">
+                          <Checkbox checked={checked} onCheckedChange={() => toggleAccountKey(key)} />
+                          <span className="flex-1 truncate">{a.account_username}</span>
+                          <Badge variant="outline" className="text-[10px] shrink-0">{partnerLabel(a.partner)}</Badge>
+                        </label>
+                      );
+                    })}
+                  </PopoverContent>
+                </Popover>
+              )}
+
               {(isAdmin || isDepartmentManager) && (
                 <ScopeChip active={scope === (isAdmin ? 'all' : 'managed')} onClick={() => setScope(isAdmin ? 'all' : 'managed')} icon={Users}>
                   {isAdmin ? 'كل الموظفين' : 'موظفيّ'}
@@ -425,15 +482,23 @@ const InvoicesProfitReportDialog = ({
                     <div className="flex justify-center py-12"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>
                   ) : invoices.length === 0 ? <EmptyHint /> : (
                     <>
-                      <div className="grid grid-cols-2 gap-2.5">
+                      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
                         <Stat icon={FileText} label="عدد الفواتير" sub={`${selectedIds.size}/${invoices.length} محدّد`} value={`${invoices.length}`} color="blue" />
                         <Stat icon={TrendingUp} label="إجمالي الإيراد" sub="بدون توصيل" value={fmt(calc.totalRevenue)} color="blue" />
                         <Stat icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
                         <Stat icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج`} value={`${calc.totalQty}`} color="purple" />
                         <Stat icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
                         <Stat icon={Crown} label="صافي للمالكين" value={fmt(calc.netForOwners)} color="emerald" />
-                        <Stat icon={Users} label="مستحقات الموظفين" sub={`${Object.keys(calc.employeeCombinedByEmp || {}).filter(k => Number(calc.employeeCombinedByEmp[k]) !== 0).length} موظف`} value={fmt(calc.employeeTotalCombined)} color="purple" />
                       </div>
+
+                      <EmployeeDuesCard
+                        entries={employeeEntries}
+                        total={calc.employeeTotalCombined}
+                        fmt={fmt}
+                        expanded={duesExpanded}
+                        onToggle={() => setDuesExpanded(v => !v)}
+                      />
+
                       {Math.abs(calc.totalDelta) > 1 && (
                         <div className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border border-dashed text-xs ${calc.totalDelta > 0 ? 'text-emerald-600 bg-emerald-500/5 border-emerald-500/30' : 'text-orange-600 bg-orange-500/5 border-orange-500/30'}`}>
                           <TrendingUp className="w-4 h-4" />
@@ -560,16 +625,82 @@ const Stat = ({ icon: Icon, label, sub, value, color = 'blue', highlight = false
     purple: 'from-purple-500/15 to-purple-500/5 border-purple-500/30 text-purple-600',
   };
   return (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-      <Card className={`bg-gradient-to-br ${map[color]} backdrop-blur-sm ${highlight ? 'ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10' : ''}`}>
-        <CardContent className="p-3">
-          <div className="flex items-center gap-2 mb-1">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="h-full">
+      <Card className={`h-full min-h-[104px] bg-gradient-to-br ${map[color]} backdrop-blur-sm ${highlight ? 'ring-2 ring-emerald-500/40 shadow-lg shadow-emerald-500/10' : ''}`}>
+        <CardContent className="p-3 h-full flex flex-col justify-between">
+          <div className="flex items-center gap-2">
             <Icon className="w-4 h-4" />
             <span className="text-[11px] text-muted-foreground font-medium">{label}</span>
           </div>
-          <div className="text-lg font-bold">{value}</div>
-          {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+          <div>
+            <div className="text-lg font-bold leading-tight">{value}</div>
+            {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+          </div>
         </CardContent>
+      </Card>
+    </motion.div>
+  );
+};
+
+const EmployeeDuesCard = ({ entries, total, fmt, expanded, onToggle }) => {
+  const count = entries.length;
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+      <Card className="bg-gradient-to-br from-purple-500/15 to-fuchsia-500/5 border-purple-500/30 backdrop-blur-sm overflow-hidden">
+        <button
+          type="button"
+          onClick={onToggle}
+          disabled={count === 0}
+          className="w-full p-3 flex items-center justify-between gap-2 hover:bg-white/5 transition-colors disabled:cursor-default"
+        >
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-purple-600" />
+            <div className="flex flex-col items-start">
+              <span className="text-[11px] text-muted-foreground font-medium">مستحقات الموظفين</span>
+              <span className="text-lg font-bold text-purple-600">{fmt(total)}</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="bg-purple-500/15 text-purple-600 border border-purple-500/30 text-[10px]">
+              {count} موظف
+            </Badge>
+            {count > 0 && (
+              <ChevronDown className={`w-4 h-4 text-purple-600 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+            )}
+          </div>
+        </button>
+        <AnimatePresence initial={false}>
+          {expanded && count > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="border-t border-purple-500/20"
+            >
+              <div className="p-2 space-y-1.5">
+                {entries.map(e => (
+                  <div key={e.empId} className="flex items-center justify-between gap-2 p-2 rounded-md bg-white/5 border border-purple-500/15">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <div className="w-7 h-7 rounded-full bg-gradient-to-br from-purple-500/30 to-fuchsia-500/20 flex items-center justify-center text-[11px] font-bold text-purple-700 dark:text-purple-300 shrink-0">
+                        {(e.name || '?').charAt(0)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold truncate">{e.name}</div>
+                        <div className="text-[10px] text-muted-foreground">
+                          {e.ordersCount} طلب{e.bonus !== 0 ? ` • زيادة/خصم ${fmt(e.bonus)}` : ''}
+                        </div>
+                      </div>
+                    </div>
+                    <Badge className="bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 font-bold text-[11px] shrink-0">
+                      {fmt(e.amount)}
+                    </Badge>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Card>
     </motion.div>
   );

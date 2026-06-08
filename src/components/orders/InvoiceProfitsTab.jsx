@@ -153,7 +153,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
 
     return (
       <div className="space-y-4 p-1" dir="rtl">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           <StatCard icon={TrendingUp} label="إيراد منتجاتك" sub="بدون توصيل" value={fmt(myOwnerStats.revenue)} color="blue" />
           <StatCard icon={Package} label="تكلفة منتجاتك" value={fmt(myOwnerStats.cost)} color="orange" />
           <StatCard icon={Boxes} label="عدد القطع" value={`${myOwnerStats.items}`} color="purple" />
@@ -210,19 +210,59 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       bonus: calc.employeeBonusByEmp[empId] || 0,
     }));
 
+  // عدد الطلبات لكل موظف (من profits)
+  const employeeOrderCounts = {};
+  (data.profits || []).forEach(p => {
+    if (!p.employee_id || !p.order_id) return;
+    if (!employeeOrderCounts[p.employee_id]) employeeOrderCounts[p.employee_id] = new Set();
+    employeeOrderCounts[p.employee_id].add(p.order_id);
+  });
+  const employeeEntriesWithCounts = employeeEntries.map(e => ({
+    ...e,
+    ordersCount: (employeeOrderCounts[e.empId]?.size) || 0,
+  })).sort((a, b) => b.amount - a.amount);
+
   return (
     <div className="space-y-4 p-1" dir="rtl">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <StatCard icon={TrendingUp} label="إجمالي الإيراد" sub="حسب شركة التوصيل بدون توصيل" value={fmt(calc.totalRevenue)} color="blue" />
         <StatCard icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
         <StatCard icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج`} value={`${calc.totalQty}`} color="purple" />
         <StatCard icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
+        <StatCard icon={Crown} label="صافي للمالكين" value={fmt(calc.netForOwners)} color="emerald" />
+        <StatCard icon={Users} label="مستحقات الموظفين" sub={`${employeeEntriesWithCounts.length} موظف`} value={fmt(calc.employeeTotalCombined)} color="purple" />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <StatCard icon={Users} label="مستحقات الموظفين" value={fmt(calc.employeeTotalCombined)} color="purple" />
-        <StatCard icon={Crown} label="صافي للمالكين" value={fmt(calc.netForOwners)} color="emerald" />
-      </div>
+      {employeeEntriesWithCounts.length > 0 && (
+        <Card className="bg-gradient-to-br from-purple-500/10 to-fuchsia-500/5 border-purple-500/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-right text-sm">
+              <Users className="w-4 h-4 text-purple-600" />
+              تفاصيل مستحقات الموظفين ({fmt(calc.employeeTotalCombined)})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            {employeeEntriesWithCounts.map(e => (
+              <div key={e.empId} className="flex items-center justify-between gap-2 p-2 rounded-md bg-background/40 border border-purple-500/15">
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500/30 to-fuchsia-500/20 flex items-center justify-center text-xs font-bold text-purple-700 dark:text-purple-300 shrink-0">
+                    {(e.name || '?').charAt(0)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold truncate">{e.name}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {e.ordersCount} طلب{e.bonus !== 0 ? ` • زيادة/خصم ${fmt(e.bonus)}` : ''}
+                    </div>
+                  </div>
+                </div>
+                <Badge className="bg-emerald-500/15 text-emerald-600 border border-emerald-500/30 font-bold shrink-0">
+                  {fmt(e.amount)}
+                </Badge>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {calc.productsList.length > 0 && (
         <ProductsBreakdown products={calc.productsList} fmt={fmt} />
@@ -262,34 +302,6 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
           <p className="text-xs text-muted-foreground mt-3 text-center">
             * الإيراد لكل مالك يشمل حصته من الزيادة/الخصم (لما لا يأخذها موظف صاحب قاعدة ربح)
           </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-right">
-            <Users className="w-5 h-5 text-primary" />
-            مستحقات الموظفين ({fmt(calc.employeeTotalCombined)})
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {employeeEntries.length === 0 ? (
-            <p className="text-center text-muted-foreground py-4">لا توجد مستحقات موظفين</p>
-          ) : (
-            <div className="space-y-2">
-              {employeeEntries.map(e => (
-                <div key={e.empId} className="flex items-center justify-between p-3 rounded-lg bg-muted/40">
-                  <div className="flex flex-col">
-                    <span className="font-medium">{e.name}</span>
-                    {e.bonus !== 0 && (
-                      <span className="text-[10px] text-amber-600">+ {fmt(e.bonus)} زيادة/خصم</span>
-                    )}
-                  </div>
-                  <Badge variant="secondary" className="text-emerald-600 bg-emerald-500/10">{fmt(e.amount)}</Badge>
-                </div>
-              ))}
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -360,14 +372,16 @@ const StatCard = ({ icon: Icon, label, sub, value, color = 'blue', highlight = f
     purple: 'from-purple-500/10 to-purple-500/5 border-purple-500/30 text-purple-600',
   };
   return (
-    <Card className={`bg-gradient-to-br ${colorMap[color]} ${highlight ? 'ring-2 ring-emerald-500/40' : ''}`}>
-      <CardContent className="p-3">
-        <div className="flex items-center gap-2 mb-1">
+    <Card className={`h-full min-h-[104px] bg-gradient-to-br ${colorMap[color]} ${highlight ? 'ring-2 ring-emerald-500/40' : ''}`}>
+      <CardContent className="p-3 h-full flex flex-col justify-between">
+        <div className="flex items-center gap-2">
           <Icon className="w-4 h-4" />
           <span className="text-xs text-muted-foreground">{label}</span>
         </div>
-        <div className="text-lg font-bold">{value}</div>
-        {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+        <div>
+          <div className="text-lg font-bold leading-tight">{value}</div>
+          {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+        </div>
       </CardContent>
     </Card>
   );
