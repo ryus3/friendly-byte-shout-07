@@ -3317,6 +3317,33 @@ export type Database = {
           },
         ]
       }
+      inventory_reserved_backup_20260608: {
+        Row: {
+          backed_up_at: string | null
+          id: string | null
+          product_id: string | null
+          quantity: number | null
+          reserved_quantity: number | null
+          variant_id: string | null
+        }
+        Insert: {
+          backed_up_at?: string | null
+          id?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          reserved_quantity?: number | null
+          variant_id?: string | null
+        }
+        Update: {
+          backed_up_at?: string | null
+          id?: string | null
+          product_id?: string | null
+          quantity?: number | null
+          reserved_quantity?: number | null
+          variant_id?: string | null
+        }
+        Relationships: []
+      }
       invoice_notifications: {
         Row: {
           created_at: string | null
