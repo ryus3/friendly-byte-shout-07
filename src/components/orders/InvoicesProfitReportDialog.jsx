@@ -264,13 +264,30 @@ const InvoicesProfitReportDialog = ({
   const ownerEntries = Object.entries(calc.byOwner)
     .map(([ownerId, stats]) => ({ ownerId, name: ownerId === '__system__' ? 'النظام' : (namesMap[ownerId] || 'مالك'), ...stats, netProfit: stats.revenue - stats.cost }))
     .sort((a, b) => b.netProfit - a.netProfit);
+  // عدد الطلبات لكل موظف (مستخلص من profits)
+  const employeeOrderCounts = useMemo(() => {
+    const map = {};
+    (data.profits || []).forEach(p => {
+      if (!p.employee_id || !p.order_id) return;
+      if (!map[p.employee_id]) map[p.employee_id] = new Set();
+      map[p.employee_id].add(p.order_id);
+    });
+    const result = {};
+    Object.entries(map).forEach(([k, v]) => { result[k] = v.size; });
+    return result;
+  }, [data.profits]);
+
   const employeeEntries = Object.entries(calc.employeeCombinedByEmp)
     .filter(([, v]) => Number(v) !== 0)
-    .map(([empId, amount]) => ({ empId, name: namesMap[empId] || 'موظف', amount, bonus: calc.employeeBonusByEmp[empId] || 0 }));
+    .map(([empId, amount]) => ({ empId, name: namesMap[empId] || 'موظف', amount, bonus: calc.employeeBonusByEmp[empId] || 0, ordersCount: employeeOrderCounts[empId] || 0 }))
+    .sort((a, b) => b.amount - a.amount);
 
   const goTab = (i) => setTabIndex(Math.max(0, Math.min(TABS.length - 1, i)));
   const toggleMultiEmployee = (id) => {
     setMultiEmployeeIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+  };
+  const toggleAccountKey = (key) => {
+    setSelectedAccountKeys(prev => prev.includes(key) ? prev.filter(x => x !== key) : [...prev, key]);
   };
 
   const partnerLabel = (p) => (p === 'modon' ? 'مدن' : p === 'alwaseet' ? 'الوسيط' : p);
