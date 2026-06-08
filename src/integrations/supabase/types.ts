@@ -2702,6 +2702,42 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_storefront_categories: {
+        Row: {
+          category_id: string | null
+          created_at: string
+          custom_image_url: string | null
+          custom_label: string | null
+          department_id: string | null
+          display_order: number
+          employee_id: string
+          id: string
+          is_visible: boolean
+        }
+        Insert: {
+          category_id?: string | null
+          created_at?: string
+          custom_image_url?: string | null
+          custom_label?: string | null
+          department_id?: string | null
+          display_order?: number
+          employee_id: string
+          id?: string
+          is_visible?: boolean
+        }
+        Update: {
+          category_id?: string | null
+          created_at?: string
+          custom_image_url?: string | null
+          custom_label?: string | null
+          department_id?: string | null
+          display_order?: number
+          employee_id?: string
+          id?: string
+          is_visible?: boolean
+        }
+        Relationships: []
+      }
       employee_storefront_popups: {
         Row: {
           content: string | null
@@ -6735,6 +6771,36 @@ export type Database = {
           traffic_sources?: Json | null
           unique_visitors?: number | null
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      storefront_custom_domains: {
+        Row: {
+          created_at: string
+          domain: string
+          employee_id: string
+          id: string
+          status: string
+          updated_at: string
+          verified_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          employee_id: string
+          id?: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          employee_id?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          verified_at?: string | null
         }
         Relationships: []
       }
