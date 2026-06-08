@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Globe, Copy, Check, RefreshCw, Trash2, ExternalLink, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { Globe, Copy, Check, RefreshCw, Trash2, ExternalLink, Info, ChevronDown, ChevronUp, Star } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import StorefrontPageShell, { GlassCard } from '@/components/employee-storefront/StorefrontPageShell';
 
-// ✅ الدومين الرئيسي للموقع (pos.ryusbrand.com) — يستخدم كهدف لكل سبدومينات المتاجر
-const CNAME_TARGET = 'pos.ryusbrand.com';
-const A_RECORD_TARGET = '185.158.133.1';
+// ✅ استضافة Vercel — كل دومين مخصص يجب أن يشير إليها
+const CNAME_TARGET = 'cname.vercel-dns.com';
+const A_RECORD_TARGET = '76.76.21.21';
 const BASE_DOMAIN = 'ryusbrand.com';
 
 const StorefrontDomainPage = () => {
@@ -76,14 +75,36 @@ const StorefrontDomainPage = () => {
       toast({ title: 'فشل الإضافة', description: error.message?.includes('duplicate') ? 'هذا الدومين مسجل مسبقاً' : error.message, variant: 'destructive' });
     } else {
       setNewDomain('');
-      toast({ title: '✅ تمت إضافة الدومين', description: 'أضف سجل CNAME ثم اضغط إعادة التحقق' });
+      toast({ title: '✅ تمت إضافة الدومين', description: 'تأكد من إضافته في Vercel ثم اضغط إعادة التحقق' });
       init();
     }
   };
 
-  const deleteDomain = async (id) => {
-    await supabase.from('storefront_custom_domains').delete().eq('id', id);
+  const deleteDomain = async (d) => {
+    await supabase.from('storefront_custom_domains').delete().eq('id', d.id);
+    // إذا كان هذا هو الدومين الافتراضي لمتجرك، أزله من الإعدادات
+    if (settings?.custom_domain && settings.custom_domain.toLowerCase() === d.domain.toLowerCase()) {
+      await supabase.from('employee_storefront_settings')
+        .update({ custom_domain: null, custom_domain_verified: false })
+        .eq('employee_id', user.id);
+    }
     init();
+  };
+
+  const setAsPrimary = async (d) => {
+    if (d.status !== 'verified') {
+      toast({ title: 'يجب التحقق من الدومين أولاً', variant: 'destructive' });
+      return;
+    }
+    const { error } = await supabase.from('employee_storefront_settings')
+      .update({ custom_domain: d.domain, custom_domain_verified: true })
+      .eq('employee_id', user.id);
+    if (error) {
+      toast({ title: 'فشل التعيين', description: error.message, variant: 'destructive' });
+    } else {
+      toast({ title: '✅ تم تعيين الدومين الافتراضي', description: `${d.domain} سيفتح متجرك مباشرة` });
+      init();
+    }
   };
 
   const recheck = async (d) => {
@@ -93,9 +114,19 @@ const StorefrontDomainPage = () => {
       if (error) throw error;
       if (data?.verified) {
         await supabase.from('storefront_custom_domains').update({ status: 'verified' }).eq('id', d.id);
-        toast({ title: '✅ تم التحقق', description: 'دومينك مُهيّأ بشكل صحيح' });
+
+        // ✅ اربط الدومين تلقائياً بمتجر هذا الموظف إذا لم يكن له دومين افتراضي بعد
+        const hasPrimary = settings?.custom_domain && settings?.custom_domain_verified;
+        if (!hasPrimary) {
+          await supabase.from('employee_storefront_settings')
+            .update({ custom_domain: d.domain, custom_domain_verified: true })
+            .eq('employee_id', user.id);
+          toast({ title: '✅ تم التحقق والربط', description: `${d.domain} أصبح يفتح متجرك مباشرة` });
+        } else {
+          toast({ title: '✅ تم التحقق', description: 'الدومين موثّق. اضغط النجمة لجعله الافتراضي.' });
+        }
       } else {
-        toast({ title: '⏳ لم يُتحقق بعد', description: data?.reason || 'تأكد من سجل CNAME وانتظر انتشار DNS' });
+        toast({ title: '⏳ لم يُتحقق بعد', description: data?.reason || 'تأكد من سجلات DNS وانتظر انتشار DNS' });
       }
       init();
     } catch (e) {
@@ -111,11 +142,12 @@ const StorefrontDomainPage = () => {
 
   const storeUrl = settings?.slug ? `${window.location.origin}/storefront/${settings.slug}` : '';
   const subdomainUrl = settings?.slug ? `https://${settings.slug}.${BASE_DOMAIN}` : '';
+  const primaryDomain = settings?.custom_domain || '';
 
   if (loading) return <StorefrontPageShell title="الدومين" icon={Globe}><GlassCard><p className="text-white/60 text-center">جاري التحميل...</p></GlassCard></StorefrontPageShell>;
 
   return (
-    <StorefrontPageShell title="الدومين والرابط" subtitle="رابط افتراضي، سبدومين، أو دومين مخصص" icon={Globe} accent="from-sky-500 to-indigo-500">
+    <StorefrontPageShell title="الدومين والرابط" subtitle="رابط افتراضي، سبدومين، أو دومين مخصص (Vercel)" icon={Globe} accent="from-sky-500 to-indigo-500">
       {/* Default Slug */}
       <GlassCard>
         <div className="flex items-center gap-2 mb-3">
@@ -141,6 +173,13 @@ const StorefrontDomainPage = () => {
             </Button>
           </div>
         )}
+        {primaryDomain && (
+          <div className="flex items-center gap-2 p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/30 mt-3">
+            <Star className="h-4 w-4 text-emerald-400 fill-emerald-400" />
+            <span className="text-xs text-emerald-300">الدومين الافتراضي:</span>
+            <code className="flex-1 text-sm font-mono text-emerald-200 truncate" dir="ltr">{primaryDomain}</code>
+          </div>
+        )}
       </GlassCard>
 
       {/* Subdomain Guide */}
@@ -148,7 +187,7 @@ const StorefrontDomainPage = () => {
         <button onClick={() => setShowSubdomainGuide(s => !s)} className="w-full flex items-center justify-between text-right">
           <div className="flex items-center gap-2">
             <Info className="h-5 w-5 text-cyan-400" />
-            <h2 className="font-bold text-lg text-white">سبدومين على {BASE_DOMAIN}</h2>
+            <h2 className="font-bold text-lg text-white">سبدومين على {BASE_DOMAIN} (Vercel)</h2>
           </div>
           {showSubdomainGuide ? <ChevronUp className="h-5 w-5 text-white/60" /> : <ChevronDown className="h-5 w-5 text-white/60" />}
         </button>
@@ -163,36 +202,33 @@ const StorefrontDomainPage = () => {
             )}
             <div className="text-white/80 space-y-3">
               <div>
-                <p className="font-bold mb-1">1️⃣ في Cloudflare (مرة واحدة فقط لكل المتاجر):</p>
+                <p className="font-bold mb-1">1️⃣ في Cloudflare (مرة واحدة لكل السبدومينات):</p>
                 <p className="text-white/60 text-xs mb-1">DNS → Add record</p>
                 <div className="bg-black/30 p-2 rounded font-mono text-xs space-y-1" dir="ltr">
                   <div>Type: <b>CNAME</b></div>
-                  <div>Name: <b>*</b>  (نجمة wildcard)</div>
+                  <div>Name: <b>*</b>  (نجمة wildcard لكل السبدومينات)</div>
                   <div>Target: <b>{CNAME_TARGET}</b></div>
-                  <div>Proxy status: <b>DNS only</b> (الغيمة رمادية)</div>
+                  <div>Proxy: <b>DNS only</b> (الغيمة رمادية)</div>
                   <div>TTL: Auto</div>
                 </div>
-                <p className="text-white/60 text-xs mt-1">💡 بدل النجمة يمكنك إضافة كل سبدومين منفرداً مثل: Name = <code>alshmry</code></p>
+                <p className="text-white/60 text-xs mt-1">💡 بدلاً من النجمة يمكن إضافة كل سبدومين منفرداً: Name = <code>alshmry</code></p>
               </div>
 
               <div>
-                <p className="font-bold mb-1">2️⃣ في Lovable (Project Settings → Domains):</p>
+                <p className="font-bold mb-1">2️⃣ في Vercel → Project → Settings → Domains:</p>
                 <ul className="list-disc pr-5 space-y-1 text-white/70 text-xs">
-                  <li>اضغط Connect Domain → أدخل <code>*.{BASE_DOMAIN}</code> (يتطلب Business plan لـ wildcard SSL)</li>
-                  <li>أو أضف كل سبدومين يدوياً، مثلاً: <code>alshmry.{BASE_DOMAIN}</code></li>
-                  <li>انتظر إصدار SSL (5 دقائق – 24 ساعة).</li>
+                  <li>Add Domain → اكتب: <code>alshmry.{BASE_DOMAIN}</code> → Production.</li>
+                  <li>Vercel سيُصدر SSL تلقائياً خلال دقائق.</li>
                 </ul>
               </div>
 
               <div>
                 <p className="font-bold mb-1">3️⃣ في صفحة "متجري" (هذه الصفحة):</p>
                 <ul className="list-disc pr-5 space-y-1 text-white/70 text-xs">
-                  <li>اكتب اسم متجرك في الحقل أعلاه (مثل <code>alshmry</code>) واضغط حفظ.</li>
+                  <li>اكتب السلاج في الحقل أعلاه (مثل <code>alshmry</code>) واضغط حفظ.</li>
                   <li>سيفتح متجرك تلقائياً على <b dir="ltr">{`${slug || 'alshmry'}.${BASE_DOMAIN}`}</b></li>
                 </ul>
               </div>
-
-              <p className="text-amber-300 text-xs">⚠️ ملاحظة: ربط الدومين الرئيسي في Cloudflare و Lovable يحتاج مسؤول النظام (مرة واحدة فقط).</p>
             </div>
           </div>
         )}
@@ -202,7 +238,7 @@ const StorefrontDomainPage = () => {
       <GlassCard>
         <div className="flex items-center gap-2 mb-3">
           <Globe className="h-5 w-5 text-fuchsia-400" />
-          <h2 className="font-bold text-lg text-white">دومين مخصص (Custom Domain)</h2>
+          <h2 className="font-bold text-lg text-white">دومين مخصص (Custom Domain — Vercel)</h2>
         </div>
         <div className="flex items-center gap-2 mb-3">
           <Input value={newDomain} onChange={(e) => setNewDomain(e.target.value)} placeholder="shop.example.com" className="flex-1" dir="ltr" />
@@ -210,7 +246,7 @@ const StorefrontDomainPage = () => {
         </div>
 
         <button onClick={() => setShowCustomGuide(s => !s)} className="w-full flex items-center justify-between text-right p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
-          <span className="text-amber-300 text-sm font-bold">📌 تعليمات ربط الدومين</span>
+          <span className="text-amber-300 text-sm font-bold">📌 تعليمات ربط الدومين (Vercel)</span>
           {showCustomGuide ? <ChevronUp className="h-4 w-4 text-amber-300" /> : <ChevronDown className="h-4 w-4 text-amber-300" />}
         </button>
 
@@ -226,7 +262,7 @@ const StorefrontDomainPage = () => {
               </div>
             </div>
             <div>
-              <p className="text-white font-bold mb-2">للدومين الرئيسي (yourdomain.com أو ryusbrand.com):</p>
+              <p className="text-white font-bold mb-2">للدومين الرئيسي (yourdomain.com):</p>
               <div className="flex items-center gap-2">
                 <code className="flex-1 bg-black/40 p-2 rounded text-xs text-amber-200" dir="ltr">A | @ | {A_RECORD_TARGET}</code>
                 <Button variant="ghost" size="sm" onClick={() => copy(A_RECORD_TARGET, 'arec')}>
@@ -234,38 +270,53 @@ const StorefrontDomainPage = () => {
                 </Button>
               </div>
               <div className="flex items-center gap-2 mt-2">
-                <code className="flex-1 bg-black/40 p-2 rounded text-xs text-amber-200" dir="ltr">A | www | {A_RECORD_TARGET}</code>
-                <Button variant="ghost" size="sm" onClick={() => copy(A_RECORD_TARGET, 'arec2')}>
-                  {copiedKey === 'arec2' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                <code className="flex-1 bg-black/40 p-2 rounded text-xs text-amber-200" dir="ltr">CNAME | www | {CNAME_TARGET}</code>
+                <Button variant="ghost" size="sm" onClick={() => copy(CNAME_TARGET, 'cname2')}>
+                  {copiedKey === 'cname2' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
-              <p className="text-cyan-300 text-xs mt-2">💡 ryusbrand.com مملوك للشركة — يمكن ربطه بأي متجر بإضافته هنا والتحقق منه.</p>
             </div>
-            <p className="text-white/60 text-xs">قد يستغرق انتشار DNS حتى 24 ساعة. سيتم إصدار شهادة SSL تلقائياً بعد التحقق.</p>
-            <p className="text-amber-300 text-xs">⚠️ بعد إضافة سجلات DNS، أبلغ المسؤول لتسجيل الدومين في Lovable لإصدار شهادة SSL.</p>
+            <ol className="text-white/70 text-xs list-decimal pr-5 space-y-1">
+              <li>أضف الدومين في Vercel → Settings → Domains (Add → Production).</li>
+              <li>Vercel يضيف سجلات Cloudflare تلقائياً (Authorize)، أو أضفها يدوياً كما بالأعلى.</li>
+              <li>عُد هنا واضغط 🔄 إعادة التحقق — سيُربط الدومين بمتجرك تلقائياً.</li>
+            </ol>
+            <p className="text-white/60 text-xs">قد يستغرق انتشار DNS حتى 24 ساعة. SSL يُصدر تلقائياً من Vercel.</p>
           </div>
         )}
 
         <div className="space-y-2 mt-4">
           {domains.length === 0 ? (
             <p className="text-center text-white/50 py-6 text-sm">لا توجد دومينات مخصصة بعد</p>
-          ) : domains.map((d) => (
-            <div key={d.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-white/10">
-              <div className="flex-1 min-w-0">
-                <p className="font-mono font-bold truncate text-white" dir="ltr">{d.domain}</p>
-                <p className="text-xs text-white/50">{new Date(d.created_at).toLocaleDateString('ar-IQ')}</p>
+          ) : domains.map((d) => {
+            const isPrimary = settings?.custom_domain && settings.custom_domain.toLowerCase() === d.domain.toLowerCase();
+            return (
+              <div key={d.id} className="flex items-center gap-2 p-3 bg-white/5 rounded-xl border border-white/10">
+                <div className="flex-1 min-w-0">
+                  <p className="font-mono font-bold truncate text-white" dir="ltr">{d.domain}</p>
+                  <p className="text-xs text-white/50">{new Date(d.created_at).toLocaleDateString('ar-IQ')}</p>
+                </div>
+                <Badge variant={d.status === 'verified' ? 'default' : d.status === 'failed' ? 'destructive' : 'secondary'}>
+                  {d.status === 'verified' ? '✅ موثّق' : d.status === 'failed' ? '❌ فشل' : '⏳ معلّق'}
+                </Badge>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  title={isPrimary ? 'الدومين الافتراضي' : 'اجعله الدومين الافتراضي'}
+                  onClick={() => setAsPrimary(d)}
+                  disabled={d.status !== 'verified'}
+                >
+                  <Star className={`h-4 w-4 ${isPrimary ? 'text-emerald-400 fill-emerald-400' : 'text-white/40'}`} />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => recheck(d)}>
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => deleteDomain(d)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
               </div>
-              <Badge variant={d.status === 'verified' ? 'default' : d.status === 'failed' ? 'destructive' : 'secondary'}>
-                {d.status === 'verified' ? '✅ موثّق' : d.status === 'failed' ? '❌ فشل' : '⏳ معلّق'}
-              </Badge>
-              <Button variant="ghost" size="sm" onClick={() => recheck(d)}>
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => deleteDomain(d.id)}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </GlassCard>
     </StorefrontPageShell>
