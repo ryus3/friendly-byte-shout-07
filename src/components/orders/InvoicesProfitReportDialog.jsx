@@ -117,6 +117,34 @@ const InvoicesProfitReportDialog = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, initialScope, employeeId]);
 
+  // جلب حسابات المستخدم النشطة لعرضها في رأس التقرير
+  useEffect(() => {
+    if (!open || !userId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: toks } = await supabase
+          .from('delivery_partner_tokens')
+          .select('partner_name, account_username, normalized_username')
+          .eq('user_id', userId)
+          .eq('is_active', true);
+        if (cancelled) return;
+        const seen = new Set();
+        const list = [];
+        (toks || []).forEach(t => {
+          const u = (t.account_username || t.normalized_username || '').trim();
+          if (!u) return;
+          const key = `${t.partner_name}::${u.toLowerCase()}`;
+          if (seen.has(key)) return;
+          seen.add(key);
+          list.push({ partner: t.partner_name, account_username: u });
+        });
+        setActiveAccounts(list);
+      } catch { /* silent */ }
+    })();
+    return () => { cancelled = true; };
+  }, [open, userId]);
+
   const handlePeriodChange = (p) => {
     setPeriod(p);
     if (p !== 'custom') setDateRange(computeRange(p));
