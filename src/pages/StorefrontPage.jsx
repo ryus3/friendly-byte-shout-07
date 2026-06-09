@@ -2,20 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { StorefrontProvider, useStorefront } from '@/contexts/StorefrontContext';
 import StorefrontLayout from '@/components/storefront/StorefrontLayout';
-import HeroSlider from '@/components/storefront/HeroSlider';
-import ProfessionalCategories from '@/components/storefront/ProfessionalCategories';
-import ProfessionalBanners from '@/components/storefront/ProfessionalBanners';
-import FlashSaleSection from '@/components/storefront/FlashSaleSection';
 import MobileBottomNav from '@/components/storefront/MobileBottomNav';
-import PremiumProductCard from '@/components/storefront/PremiumProductCard';
-import GradientText from '@/components/storefront/ui/GradientText';
 import PremiumLoader from '@/components/storefront/ui/PremiumLoader';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Star, TrendingUp, Sparkles } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import devLog from '@/lib/devLogger';
 import { applyThemeTokens } from '@/lib/storefront-themes';
+// Aurora design system
+import { AuroraThemeProvider, ThemeToggle } from '@/components/storefront/aurora/AuroraTheme';
+import AuroraBackdrop from '@/components/storefront/aurora/AuroraBackdrop';
+import HeroAurora from '@/components/storefront/aurora/HeroAurora';
+import CategoryOrbs from '@/components/storefront/aurora/CategoryOrbs';
+import FlashDealsRail from '@/components/storefront/aurora/FlashDealsRail';
+import BentoFeatured from '@/components/storefront/aurora/BentoFeatured';
+import ProductCardAurora from '@/components/storefront/aurora/ProductCardAurora';
+import StickyMiniCart from '@/components/storefront/aurora/StickyMiniCart';
+import TrustStrip from '@/components/storefront/aurora/TrustStrip';
 
 const StorefrontHome = () => {
   const { settings, trackPageView } = useStorefront();
