@@ -5,6 +5,7 @@ import App from '@/App.jsx';
 import { AppProviders } from '@/contexts/Providers.jsx';
 import '@/index.css';
 import '@/print.css';
+import '@/styles/aurora.css';
 import 'react-day-picker/dist/style.css';
 import { disableReactDevTools } from '@fvilers/disable-react-devtools';
 import { setupRealtime } from '@/utils/realtime-setup.js';
