@@ -40,7 +40,10 @@ Deno.serve(async (req) => {
     const aRes = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(clean)}&type=A`);
     const a = await aRes.json();
     const aIps = (a?.Answer || []).map((x: any) => String(x.data || ''));
-    const aOk = aIps.some(ip => A_TARGETS.includes(ip));
+    const aOk = aIps.some(ip =>
+      A_TARGETS.includes(ip) ||
+      A_PREFIX_MATCH.some(pfx => ip.startsWith(pfx))
+    );
 
     if (cnameOk || aOk) {
       return new Response(JSON.stringify({ verified: true, method: cnameOk ? 'CNAME' : 'A' }), {
@@ -49,9 +52,16 @@ Deno.serve(async (req) => {
     }
     return new Response(JSON.stringify({
       verified: false,
-      reason: 'لم يتم العثور على سجل Vercel صحيح. تأكد من CNAME → cname.vercel-dns.com أو A → 76.76.21.21، وانتظر انتشار DNS.',
+      reason: 'لم يتم العثور على سجل Vercel صحيح. تأكد من CNAME → cname.vercel-dns.com أو A → 76.76.21.21 / 64.29.17.x / 216.198.79.x، وانتظر انتشار DNS.',
       found: { cname: cnames, a: aIps },
     }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+  } catch (e) {
+    return new Response(JSON.stringify({ verified: false, reason: e.message }), {
+      status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+});
   } catch (e) {
     return new Response(JSON.stringify({ verified: false, reason: e.message }), {
       status: 500,
