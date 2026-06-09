@@ -1,8 +1,14 @@
 // Verify a custom domain (Vercel-hosted) via Google Public DNS-over-HTTPS
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 
-// Vercel targets
-const A_TARGETS = ['76.76.21.21'];
+// Vercel targets (Anycast IPs — legacy + current)
+const A_TARGETS = [
+  '76.76.21.21',                    // legacy
+  '64.29.17.1', '64.29.17.65',      // current
+  '216.198.79.1', '216.198.79.65',  // current
+];
+// Accept any IP in Vercel's current Anycast ranges
+const A_PREFIX_MATCH = ['64.29.17.', '216.198.79.', '76.76.21.'];
 const CNAME_EXACT = ['cname.vercel-dns.com'];
 // Vercel also issues unique CNAMEs like xxxxxxxx.vercel-dns-NNN.com
 const CNAME_SUFFIX_MATCH = ['.vercel-dns.com'];
