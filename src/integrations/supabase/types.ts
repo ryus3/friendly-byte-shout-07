@@ -8699,30 +8699,18 @@ export type Database = {
         Args: { p_address_text: string }
         Returns: Json
       }
-      pay_employee_dues_with_invoice:
-        | {
-            Args: {
-              p_amount: number
-              p_description?: string
-              p_employee_id: string
-              p_order_ids?: string[]
-              p_paid_by?: string
-              p_profit_ids?: string[]
-            }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_amount: number
-              p_description?: string
-              p_employee_id: string
-              p_order_ids?: string[]
-              p_owner_user_id?: string
-              p_paid_by?: string
-              p_profit_ids?: string[]
-            }
-            Returns: Json
-          }
+      pay_employee_dues_with_invoice: {
+        Args: {
+          p_amount: number
+          p_description?: string
+          p_employee_id: string
+          p_order_ids?: string[]
+          p_owner_user_id?: string
+          p_paid_by?: string
+          p_profit_ids?: string[]
+        }
+        Returns: Json
+      }
       process_telegram_order: {
         Args: {
           p_city_id?: number
