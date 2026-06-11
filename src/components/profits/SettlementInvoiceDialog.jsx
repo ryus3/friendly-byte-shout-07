@@ -343,21 +343,21 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                 <p className="text-lg">لا توجد طلبات مسددة في هذه الفاتورة</p>
                                                             </div>
                                                         ) : (
-                                                            finalOrdersDetails.map((order, index) => (
+                                                            finalOrdersDetails.map((order, index) => {
+                                                                const inc = Number(order.price_increase) || 0;
+                                                                const disc = Number(order.discount) || 0;
+                                                                return (
                                                                 <div 
                                                                     key={order.id} 
                                                                     className={`grid grid-cols-5 gap-6 py-6 px-8 text-center transition-all duration-300 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 ${
                                                                         index % 2 === 0 ? 'bg-slate-50/50 dark:bg-slate-900/30' : 'bg-white dark:bg-slate-800'
                                                                     }`}
                                                                 >
-                                                                    {/* رقم الطلب */}
                                                                     <div className="flex items-center justify-center">
                                                                         <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-4 py-3 rounded-xl shadow-lg text-lg hover:scale-105 transition-transform">
-                                                                            #{order.order_number || order.trackingnumber || 'غير محدد'}
+                                                                            #{order.tracking_number || order.order_number || 'غير محدد'}
                                                                         </span>
                                                                     </div>
-                                                                    
-                                                                    {/* تاريخ الطلب */}
                                                                     <div className="flex items-center justify-center">
                                                                         <div className="text-base text-slate-700 dark:text-slate-300">
                                                                             {(() => {
@@ -374,23 +374,31 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                             })()}
                                                                         </div>
                                                                     </div>
-                                                                    
-                                                                    {/* العميل */}
                                                                     <div className="flex items-center justify-center">
                                                                         <div className="text-lg font-bold text-slate-700 dark:text-slate-300">
                                                                             {order.customer_name || order.customerinfo?.name || 'غير محدد'}
                                                                         </div>
                                                                     </div>
-                                                                    
-                                                                    {/* المبلغ */}
-                                                                    <div className="flex flex-col items-center justify-center">
-                                                                        <div className="text-3xl font-black text-green-600 dark:text-green-400 mb-1">
+                                                                    <div className="flex flex-col items-center justify-center gap-1">
+                                                                        <div className="text-2xl font-black text-green-600 dark:text-green-400">
                                                                             {(order.final_amount || order.total_amount || order.total || 0).toLocaleString()}
+                                                                            <span className="text-xs text-green-500 font-semibold mr-1">د.ع</span>
                                                                         </div>
-                                                                        <div className="text-sm text-green-500 font-semibold">د.ع</div>
+                                                                        {(inc > 0 || disc > 0) && (
+                                                                            <div className="flex gap-1 justify-center flex-wrap">
+                                                                                {inc > 0 && (
+                                                                                    <span className="text-xs px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-bold">
+                                                                                        + زيادة {inc.toLocaleString()}
+                                                                                    </span>
+                                                                                )}
+                                                                                {disc > 0 && (
+                                                                                    <span className="text-xs px-2 py-0.5 rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 font-bold">
+                                                                                        − خصم {disc.toLocaleString()}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                        )}
                                                                     </div>
-                                                                    
-                                                                    {/* الإجراءات */}
                                                                     <div className="flex items-center justify-center">
                                                                         <Button 
                                                                             variant="outline" 
@@ -403,7 +411,8 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                         </Button>
                                                                     </div>
                                                                 </div>
-                                                            ))
+                                                                );
+                                                            })
                                                         )}
                                                     </div>
                                                 </div>
