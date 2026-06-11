@@ -1901,145 +1901,39 @@ export const SuperProvider = ({ children }) => {
       if (upsertErr) throw upsertErr;
       devLog.debug('✅ تم إدراج سجلات الأرباح بنجاح');
 
-      // جلب القاصة الرئيسية
-      const { data: cashSource, error: cashErr } = await supabase
-        .from('cash_sources')
-        .select('id, current_balance, name')
-        .eq('is_active', true)
-        .eq('name', 'القاصة الرئيسية')
-        .maybeSingle();
-      
-      if (cashErr) {
-        console.error('❌ خطأ في جلب القاصة:', cashErr);
+      // 🎯 تسوية موحدة عبر RPC: قاصة المالك الفعلي + حركة نقد + فاتورة + مصروف + تسوية أرباح (ذرّياً)
+      const profitIdsToSettle = (upserts || []).map(u => u.id).filter(Boolean);
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('pay_employee_dues_with_invoice', {
+        p_employee_id: employeeId,
+        p_amount: finalSettlementAmount,
+        p_order_ids: orderIds,
+        p_profit_ids: profitIdsToSettle,
+        p_description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - ${orderIds.length} طلب`
+          + (deductionToApply > 0 ? ` (خصم معلق: ${deductionToApply.toLocaleString()} د.ع)` : ''),
+        p_paid_by: user?.user_id || user?.id || null,
+        p_owner_user_id: null // ستُستنتج تلقائياً من order_items
+      });
+      if (rpcErr) {
+        console.error('❌ فشل RPC pay_employee_dues_with_invoice:', rpcErr);
+        throw rpcErr;
       }
-
-      // جلب كود الموظف
-      const { data: employeeProfile } = await supabase
-        .from('profiles')
-        .select('employee_code')
-        .eq('user_id', employeeId)
-        .maybeSingle();
-      
-      const employeeCode = employeeProfile?.employee_code || 'EMP';
-
-      // إنشاء فاتورة تسوية احترافية
-      const invoiceNumber = `RY-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-
-      const { data: invoice, error: invoiceErr } = await supabase
-        .from('settlement_invoices')
-        .insert({
-          invoice_number: invoiceNumber,
-          employee_id: employeeId,
-          employee_name: employeeName || 'غير محدد',
-          employee_code: employeeCode,
-          order_ids: orderIds,
-          total_amount: finalSettlementAmount, // المبلغ النهائي بعد الخصومات
-          payment_method: 'cash',
-          status: 'completed',
-          settlement_date: now,
-          settled_orders: settledOrdersDetails,
-          description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - ${orderIds.length} طلب` + 
-            (deductionToApply > 0 ? ` (خصم معلق: ${deductionToApply.toLocaleString()} د.ع)` : ''),
-          created_by: user?.user_id || user?.id
-        })
-        .select()
-        .single();
-
-      if (invoiceErr) {
-        console.error('❌ خطأ في إنشاء فاتورة التسوية:', invoiceErr);
-      } else {
-        devLog.debug('✅ تم إنشاء فاتورة التسوية:', invoiceNumber);
-        
-        // تطبيق الخصومات المعلقة على هذه التسوية
-        if (deductionToApply > 0 && invoice?.id) {
-          const { data: appliedAmount, error: applyErr } = await supabase
-            .rpc('apply_pending_deductions_on_settlement', {
-              p_employee_id: employeeId,
-              p_settlement_id: invoice.id,
-              p_max_amount: actualTotalSettlement
-            });
-          
-          if (applyErr) {
-            console.error('⚠️ خطأ في تطبيق الخصومات المعلقة:', applyErr);
-          } else {
-            devLog.debug('✅ تم تطبيق الخصومات المعلقة:', appliedAmount);
-          }
-        }
+      if (!rpcRes?.success) {
+        throw new Error(rpcRes?.error || 'فشل دفع المستحقات');
       }
+      const invoiceNumber = rpcRes.invoice_number;
+      const invoice = { id: rpcRes.settlement_invoice_id, invoice_number: invoiceNumber };
+      devLog.debug('✅ تسوية ذرية ناجحة:', rpcRes);
 
-      // إضافة مصروف مستحقات الموظف (المبلغ النهائي بعد الخصومات)
-      const expenseData = {
-        amount: finalSettlementAmount,
-        category: 'مستحقات الموظفين',
-        expense_type: 'system',
-        description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - فاتورة ${invoiceNumber}` +
-          (deductionToApply > 0 ? ` (بعد خصم ${deductionToApply.toLocaleString()} د.ع)` : ''),
-        receipt_number: invoiceNumber,
-        vendor_name: employeeName || 'موظف',
-        status: 'approved',
-        created_by: user?.user_id || user?.id,
-        approved_by: user?.user_id || user?.id,
-        approved_at: now,
-        metadata: {
-          employee_id: employeeId,
-          employee_name: employeeName,
-          employee_code: employeeCode,
-          order_ids: orderIds,
-          settlement_type: 'employee_dues',
-          invoice_id: invoice?.id,
-          invoice_number: invoiceNumber,
-          original_amount: actualTotalSettlement,
-          deductions_applied: deductionToApply
-        }
-      };
-
-      const { data: expenseRecord, error: expenseErr } = await supabase
-        .from('expenses')
-        .insert(expenseData)
-        .select()
-        .single();
-      
-      if (expenseErr) {
-        console.error('❌ خطأ في إضافة مصروف مستحقات الموظف:', expenseErr);
-        throw expenseErr;
-      }
-      devLog.debug('✅ تم إضافة مصروف مستحقات الموظف:', expenseRecord.id);
-
-      // إضافة حركة نقدية (خروج نقد) - المبلغ النهائي فقط
-      if (cashSource && finalSettlementAmount > 0) {
-        const movementData = {
-          cash_source_id: cashSource.id,
-          amount: finalSettlementAmount,
-          movement_type: 'employee_dues',
-          reference_type: 'settlement_invoice',
-          reference_id: invoice?.id || expenseRecord.id,
-          description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - فاتورة ${invoiceNumber}`,
-          balance_before: cashSource.current_balance,
-          balance_after: cashSource.current_balance - finalSettlementAmount,
-          created_by: user?.user_id || user?.id
-        };
-
-        const { error: movementErr } = await supabase
-          .from('cash_movements')
-          .insert(movementData);
-        
-        if (movementErr) {
-          console.error('❌ خطأ في إضافة حركة نقدية:', movementErr);
-        } else {
-          devLog.debug('✅ تم إضافة حركة نقدية لمستحقات الموظف');
-          
-          // تحديث رصيد القاصة
-          const { error: updateErr } = await supabase
-            .from('cash_sources')
-            .update({ current_balance: cashSource.current_balance - finalSettlementAmount })
-            .eq('id', cashSource.id);
-          
-          if (updateErr) {
-            console.error('❌ خطأ في تحديث رصيد القاصة:', updateErr);
-          } else {
-            devLog.debug('✅ تم تحديث رصيد القاصة بعد خصم مستحقات الموظف');
-          }
-        }
+      // تطبيق الخصومات المعلقة (إذا وُجدت) - لا يزال خارج الـ RPC للحفاظ على التوافق
+      if (deductionToApply > 0 && invoice?.id) {
+        const { data: appliedAmount, error: applyErr } = await supabase
+          .rpc('apply_pending_deductions_on_settlement', {
+            p_employee_id: employeeId,
+            p_settlement_id: invoice.id,
+            p_max_amount: actualTotalSettlement
+          });
+        if (applyErr) console.error('⚠️ خطأ في تطبيق الخصومات المعلقة:', applyErr);
+        else devLog.debug('✅ تم تطبيق الخصومات المعلقة:', appliedAmount);
       }
 
       // أرشفة الطلبات بعد التسوية
