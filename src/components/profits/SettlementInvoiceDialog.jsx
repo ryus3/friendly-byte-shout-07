@@ -246,16 +246,16 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                 <p className="text-lg">لا توجد طلبات مسددة في هذه الفاتورة</p>
                                                             </div>
                                                         ) : (
-                                                            finalOrdersDetails.map((order) => (
+                                                            finalOrdersDetails.map((order) => {
+                                                                const inc = Number(order.price_increase) || 0;
+                                                                const disc = Number(order.discount) || 0;
+                                                                return (
                                                                 <MobileTableRow key={order.id}>
-                                                                    {/* رقم الطلب بشكل بارز */}
                                                                     <MobileTableCell primary>
                                                                         <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-4 py-2 rounded-xl shadow-lg text-base">
-                                                                            #{order.order_number || order.trackingnumber || 'غير محدد'}
+                                                                            #{order.tracking_number || order.order_number || 'غير محدد'}
                                                                         </span>
                                                                     </MobileTableCell>
-                                                                    
-                                                                    {/* معلومات الطلب */}
                                                                     <MobileTableCell label="تاريخ الطلب">
                                                                         {(() => {
                                                                             if (order.created_at) {
@@ -270,23 +270,33 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                             return 'غير محدد';
                                                                         })()}
                                                                     </MobileTableCell>
-                                                                    
                                                                     <MobileTableCell label="العميل">
                                                                         <span className="font-semibold text-slate-800 dark:text-slate-200">
                                                                             {order.customer_name || order.customerinfo?.name || 'غير محدد'}
                                                                         </span>
                                                                     </MobileTableCell>
-                                                                    
                                                                     <MobileTableCell label="المبلغ">
                                                                         <div className="text-right">
                                                                             <div className="text-xl font-black text-green-600 dark:text-green-400">
                                                                                 {(order.final_amount || order.total_amount || order.total || 0).toLocaleString()}
                                                                             </div>
                                                                             <div className="text-sm text-green-500 font-semibold">دينار عراقي</div>
+                                                                            {(inc > 0 || disc > 0) && (
+                                                                                <div className="flex gap-2 justify-end mt-2 flex-wrap">
+                                                                                    {inc > 0 && (
+                                                                                        <span className="text-xs px-2 py-1 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-bold">
+                                                                                            + زيادة {inc.toLocaleString()}
+                                                                                        </span>
+                                                                                    )}
+                                                                                    {disc > 0 && (
+                                                                                        <span className="text-xs px-2 py-1 rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 font-bold">
+                                                                                            − خصم {disc.toLocaleString()}
+                                                                                        </span>
+                                                                                    )}
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     </MobileTableCell>
-                                                                    
-                                                                    {/* زر عرض التفاصيل */}
                                                                     <MobileTableCell actions>
                                                                         <Button 
                                                                             variant="outline" 
@@ -299,7 +309,8 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                         </Button>
                                                                     </MobileTableCell>
                                                                 </MobileTableRow>
-                                                            ))
+                                                                );
+                                                            })
                                                         )}
                                                     </MobileTableBody>
                                                 </MobileTable>
