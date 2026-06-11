@@ -1815,19 +1815,20 @@ export const SuperProvider = ({ children }) => {
           }
         });
         
-        // خصم الخصم من ربح الموظف (فقط للموظفين الذين لديهم قاعدة ربح)
+        // 🎯 المنطق الكامل: الزيادة والخصم تذهبان للموظف الذي يملك قاعدة ربح
+        // إذا لا يملك قاعدة → تذهبان لمالك المنتج (يبقى ربح الموظف 0)
         const discount = Number(order?.discount) || 0;
-        
-        // ✅ المنطق الجديد: الخصم يكون من الموظف فقط إذا كان لديه قاعدة ربح
-        // إذا لا يوجد قاعدة ربح → الخصم يكون من ربح النظام
-        if (hasAnyRule && discount > 0) {
-          totalProfit = totalProfit - discount;
-          devLog.debug(`📊 ربح الموظف للطلب ${order?.tracking_number}: ${totalProfit} (قبل الخصم: ${totalProfit + discount}, خصم: ${discount})`);
-        } else if (!hasAnyRule && discount > 0) {
-          devLog.debug(`📊 الخصم ${discount} للطلب ${order?.tracking_number} سيكون من ربح النظام (الموظف بدون قاعدة ربح)`);
+        const priceIncrease = Number(order?.price_increase) || 0;
+
+        if (hasAnyRule) {
+          // الزيادة تُضاف لربح الموظف، الخصم يُطرح منه
+          totalProfit = totalProfit + priceIncrease - discount;
+          devLog.debug(`📊 ربح الموظف ${order?.tracking_number}: قاعدة(${totalProfit - priceIncrease + discount}) + زيادة(${priceIncrease}) - خصم(${discount}) = ${totalProfit}`);
+        } else if (discount > 0 || priceIncrease > 0) {
+          devLog.debug(`📊 الطلب ${order?.tracking_number}: زيادة(${priceIncrease}) خصم(${discount}) → لمالك المنتج (الموظف بدون قاعدة)`);
         }
-        
-        return { profit: Math.max(0, totalProfit), hasRule: hasAnyRule, discountFromSystem: !hasAnyRule && discount > 0 };
+
+        return { profit: Math.max(0, totalProfit), hasRule: hasAnyRule, priceIncrease, discount };
       };
 
       // جلب السجلات الحالية
