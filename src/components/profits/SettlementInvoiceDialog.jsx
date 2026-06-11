@@ -324,10 +324,10 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                     {/* Header */}
                                                     <div className="bg-gradient-to-r from-slate-800 to-slate-900 text-white px-8 py-6">
                                                         <div className="grid grid-cols-5 gap-6 text-center font-bold text-lg">
-                                                            <div className="text-blue-300">رقم الطلب</div>
+                                                            <div className="text-blue-300">رقم التتبع</div>
                                                             <div className="text-slate-300">تاريخ الطلب</div>
                                                             <div className="text-green-300">العميل</div>
-                                                            <div className="text-orange-300">المبلغ</div>
+                                                            <div className="text-orange-300">المبلغ / تعديلات</div>
                                                             <div className="text-purple-300">الإجراءات</div>
                                                         </div>
                                                     </div>
