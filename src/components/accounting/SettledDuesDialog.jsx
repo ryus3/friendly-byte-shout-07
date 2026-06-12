@@ -264,7 +264,7 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
                         return (
                           <div key={order.id} className="bg-white/10 rounded-xl p-3 backdrop-blur-sm space-y-2">
                             <div className="flex justify-between items-center">
-                              <span className="text-blue-300 font-bold text-sm">#{order.order_number || 'N/A'}</span>
+                              <span className="text-blue-300 font-bold text-sm">#{order.tracking_number || order.delivery_partner_order_id || order.order_number || 'N/A'}</span>
                               <span className="text-cyan-300 text-xs">
                                 {format(parseISO(order.created_at), 'dd/MM/yyyy', { locale: ar })}
                               </span>
