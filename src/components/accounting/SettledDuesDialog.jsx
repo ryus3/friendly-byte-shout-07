@@ -335,7 +335,7 @@ const InvoicePreviewDialog = ({ invoice, open, onOpenChange, settledProfits, all
                                 {/* رقم الطلب */}
                                 <div className="flex items-center justify-center">
                                   <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-2 md:px-4 py-1 md:py-3 rounded-lg md:rounded-xl shadow-lg text-xs md:text-lg hover:scale-105 transition-transform relative overflow-hidden">
-                                    {order.order_number || order.trackingnumber || 'N/A'}
+                                    {order.tracking_number || order.delivery_partner_order_id || order.order_number || order.trackingnumber || 'N/A'}
                                     <div className="absolute -bottom-1 -right-1 w-2 h-2 md:w-3 md:h-3 bg-white/20 rounded-full"></div>
                                   </div>
                                 </div>
