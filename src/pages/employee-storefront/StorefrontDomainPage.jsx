@@ -201,6 +201,21 @@ const StorefrontDomainPage = () => {
             <code className="flex-1 text-sm font-mono text-emerald-200 truncate" dir="ltr">{primaryDomain}</code>
           </div>
         )}
+        {settings?.slug && (
+          <div className="flex items-center justify-between gap-2 p-3 bg-amber-500/10 rounded-xl border border-amber-500/30 mt-3">
+            <div className="flex-1 text-xs text-amber-200">
+              <p className="font-semibold mb-1">متجر الجذر — {BASE_DOMAIN}</p>
+              <p className="text-amber-200/70">عند تفعيله، فتح {BASE_DOMAIN} مباشرة يفتح هذا المتجر.</p>
+            </div>
+            {settings?.is_root_storefront ? (
+              <Badge className="bg-amber-500 text-white">مفعّل</Badge>
+            ) : (
+              <Button size="sm" variant="outline" onClick={setAsRootStorefront} disabled={saving}>
+                اجعله متجر الجذر
+              </Button>
+            )}
+          </div>
+        )}
       </GlassCard>
 
       {/* Subdomain Guide */}
