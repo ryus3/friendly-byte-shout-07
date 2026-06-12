@@ -2863,6 +2863,7 @@ export type Database = {
           header_style: string | null
           id: string
           is_active: boolean | null
+          is_root_storefront: boolean
           layout_config: Json | null
           logo_url: string | null
           loyalty_enabled: boolean | null
@@ -2903,6 +2904,7 @@ export type Database = {
           header_style?: string | null
           id?: string
           is_active?: boolean | null
+          is_root_storefront?: boolean
           layout_config?: Json | null
           logo_url?: string | null
           loyalty_enabled?: boolean | null
@@ -2943,6 +2945,7 @@ export type Database = {
           header_style?: string | null
           id?: string
           is_active?: boolean | null
+          is_root_storefront?: boolean
           layout_config?: Json | null
           logo_url?: string | null
           loyalty_enabled?: boolean | null
