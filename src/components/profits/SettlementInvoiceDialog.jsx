@@ -246,10 +246,8 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                 <p className="text-lg">لا توجد طلبات مسددة في هذه الفاتورة</p>
                                                             </div>
                                                         ) : (
-                                                            finalOrdersDetails.map((order) => {
-                                                                const inc = Number(order.price_increase) || 0;
-                                                                const disc = Number(order.discount) || 0;
-                                                                return (
+                                                             finalOrdersDetails.map((order) => {
+                                                                 return (
                                                                 <MobileTableRow key={order.id}>
                                                                     <MobileTableCell primary>
                                                                         <span className="inline-flex items-center justify-center bg-gradient-to-r from-blue-500 to-blue-600 text-white font-mono font-bold px-4 py-2 rounded-xl shadow-lg text-base">
