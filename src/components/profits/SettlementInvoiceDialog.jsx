@@ -278,21 +278,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                             <div className="text-xl font-black text-green-600 dark:text-green-400">
                                                                                 {(order.final_amount || order.total_amount || order.total || 0).toLocaleString()}
                                                                             </div>
-                                                                            <div className="text-sm text-green-500 font-semibold">دينار عراقي</div>
-                                                                            {(inc > 0 || disc > 0) && (
-                                                                                <div className="flex gap-2 justify-end mt-2 flex-wrap">
-                                                                                    {inc > 0 && (
-                                                                                        <span className="text-xs px-2 py-1 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-bold">
-                                                                                            + زيادة {inc.toLocaleString()}
-                                                                                        </span>
-                                                                                    )}
-                                                                                    {disc > 0 && (
-                                                                                        <span className="text-xs px-2 py-1 rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 font-bold">
-                                                                                            − خصم {disc.toLocaleString()}
-                                                                                        </span>
-                                                                                    )}
-                                                                                </div>
-                                                                            )}
+                                                                             <div className="text-sm text-green-500 font-semibold">دينار عراقي</div>
                                                                         </div>
                                                                     </MobileTableCell>
                                                                     <MobileTableCell actions>
