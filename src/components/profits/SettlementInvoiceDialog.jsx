@@ -328,8 +328,6 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                             </div>
                                                         ) : (
                                                             finalOrdersDetails.map((order, index) => {
-                                                                const inc = Number(order.price_increase) || 0;
-                                                                const disc = Number(order.discount) || 0;
                                                                 return (
                                                                 <div 
                                                                     key={order.id} 
