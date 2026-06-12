@@ -144,6 +144,27 @@ const StorefrontDomainPage = () => {
   const subdomainUrl = settings?.slug ? `https://${settings.slug}.${BASE_DOMAIN}` : '';
   const primaryDomain = settings?.custom_domain || '';
 
+  const setAsRootStorefront = async () => {
+    if (!user || !settings?.slug) return;
+    setSaving(true);
+    // إلغاء أي متجر جذر سابق ثم تعيين هذا
+    const { error: clearErr } = await supabase
+      .from('employee_storefront_settings')
+      .update({ is_root_storefront: false })
+      .neq('employee_id', user.id);
+    if (!clearErr) {
+      const { error } = await supabase
+        .from('employee_storefront_settings')
+        .update({ is_root_storefront: true })
+        .eq('employee_id', user.id);
+      if (error) toast({ title: 'فشل', description: error.message, variant: 'destructive' });
+      else { toast({ title: 'تم', description: `${BASE_DOMAIN} يفتح الآن هذا المتجر` }); init(); }
+    } else {
+      toast({ title: 'فشل', description: clearErr.message, variant: 'destructive' });
+    }
+    setSaving(false);
+  };
+
   if (loading) return <StorefrontPageShell title="الدومين" icon={Globe}><GlassCard><p className="text-white/60 text-center">جاري التحميل...</p></GlassCard></StorefrontPageShell>;
 
   return (
