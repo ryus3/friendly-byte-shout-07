@@ -365,21 +365,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                         <div className="text-2xl font-black text-green-600 dark:text-green-400">
                                                                             {(order.final_amount || order.total_amount || order.total || 0).toLocaleString()}
                                                                             <span className="text-xs text-green-500 font-semibold mr-1">د.ع</span>
-                                                                        </div>
-                                                                        {(inc > 0 || disc > 0) && (
-                                                                            <div className="flex gap-1 justify-center flex-wrap">
-                                                                                {inc > 0 && (
-                                                                                    <span className="text-xs px-2 py-0.5 rounded-md bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 font-bold">
-                                                                                        + زيادة {inc.toLocaleString()}
-                                                                                    </span>
-                                                                                )}
-                                                                                {disc > 0 && (
-                                                                                    <span className="text-xs px-2 py-0.5 rounded-md bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 font-bold">
-                                                                                        − خصم {disc.toLocaleString()}
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                        )}
+                                                                    </div>
                                                                     </div>
                                                                     <div className="flex items-center justify-center">
                                                                         <Button 
