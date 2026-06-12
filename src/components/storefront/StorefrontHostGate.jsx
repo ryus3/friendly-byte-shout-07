@@ -27,13 +27,11 @@ const StorefrontHostGate = ({ children }) => {
     const host = window.location.hostname.toLowerCase();
     const path = window.location.pathname;
 
-    // Skip if already on a storefront-prefixed path or on dashboard/api routes
     if (path.startsWith('/storefront/') || path.startsWith('/dashboard')) {
       setReady(true);
       return;
     }
 
-    // Skip well-known main hosts and Lovable preview hosts
     if (
       MAIN_HOSTS.has(host) ||
       host.endsWith('.lovable.app') ||
@@ -53,10 +51,32 @@ const StorefrontHostGate = ({ children }) => {
       setReady(true);
     };
 
+    // Apex/www of ryusbrand.com → root storefront (متجر المدير العام)
+    if (host === BASE_DOMAIN || host === `www.${BASE_DOMAIN}`) {
+      (async () => {
+        try {
+          const { data } = await supabase
+            .from('employee_storefront_settings')
+            .select('slug')
+            .eq('is_root_storefront', true)
+            .eq('is_active', true)
+            .maybeSingle();
+          if (data?.slug) {
+            rewriteTo(data.slug);
+          } else {
+            setReady(true);
+          }
+        } catch (e) {
+          devLog.warn('Root storefront lookup failed:', e?.message);
+          setReady(true);
+        }
+      })();
+      return;
+    }
+
     // Subdomain of ryusbrand.com (but NOT the apex or pos.)
     if (host.endsWith(`.${BASE_DOMAIN}`) && host !== BASE_DOMAIN) {
-      const sub = host.slice(0, -1 * (BASE_DOMAIN.length + 1)); // remove .ryusbrand.com
-      // Single-label subdomain like "alshmry" -> treat as slug
+      const sub = host.slice(0, -1 * (BASE_DOMAIN.length + 1));
       if (sub && !sub.includes('.') && sub !== 'pos' && sub !== 'www') {
         rewriteTo(sub);
         return;

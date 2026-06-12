@@ -144,6 +144,27 @@ const StorefrontDomainPage = () => {
   const subdomainUrl = settings?.slug ? `https://${settings.slug}.${BASE_DOMAIN}` : '';
   const primaryDomain = settings?.custom_domain || '';
 
+  const setAsRootStorefront = async () => {
+    if (!user || !settings?.slug) return;
+    setSaving(true);
+    // إلغاء أي متجر جذر سابق ثم تعيين هذا
+    const { error: clearErr } = await supabase
+      .from('employee_storefront_settings')
+      .update({ is_root_storefront: false })
+      .neq('employee_id', user.id);
+    if (!clearErr) {
+      const { error } = await supabase
+        .from('employee_storefront_settings')
+        .update({ is_root_storefront: true })
+        .eq('employee_id', user.id);
+      if (error) toast({ title: 'فشل', description: error.message, variant: 'destructive' });
+      else { toast({ title: 'تم', description: `${BASE_DOMAIN} يفتح الآن هذا المتجر` }); init(); }
+    } else {
+      toast({ title: 'فشل', description: clearErr.message, variant: 'destructive' });
+    }
+    setSaving(false);
+  };
+
   if (loading) return <StorefrontPageShell title="الدومين" icon={Globe}><GlassCard><p className="text-white/60 text-center">جاري التحميل...</p></GlassCard></StorefrontPageShell>;
 
   return (
@@ -178,6 +199,21 @@ const StorefrontDomainPage = () => {
             <Star className="h-4 w-4 text-emerald-400 fill-emerald-400" />
             <span className="text-xs text-emerald-300">الدومين الافتراضي:</span>
             <code className="flex-1 text-sm font-mono text-emerald-200 truncate" dir="ltr">{primaryDomain}</code>
+          </div>
+        )}
+        {settings?.slug && (
+          <div className="flex items-center justify-between gap-2 p-3 bg-amber-500/10 rounded-xl border border-amber-500/30 mt-3">
+            <div className="flex-1 text-xs text-amber-200">
+              <p className="font-semibold mb-1">متجر الجذر — {BASE_DOMAIN}</p>
+              <p className="text-amber-200/70">عند تفعيله، فتح {BASE_DOMAIN} مباشرة يفتح هذا المتجر.</p>
+            </div>
+            {settings?.is_root_storefront ? (
+              <Badge className="bg-amber-500 text-white">مفعّل</Badge>
+            ) : (
+              <Button size="sm" variant="outline" onClick={setAsRootStorefront} disabled={saving}>
+                اجعله متجر الجذر
+              </Button>
+            )}
           </div>
         )}
       </GlassCard>
