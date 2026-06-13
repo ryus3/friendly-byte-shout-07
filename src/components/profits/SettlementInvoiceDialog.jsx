@@ -58,7 +58,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
         }
     };
 
-    // جلب البيانات الحقيقية للطلبات من قاعدة البيانات
+    // جلب البيانات الحقيقية للطلبات + الأرباح المخزّنة من قاعدة البيانات
     const fetchRealOrdersData = async () => {
         if (!invoice.order_ids || invoice.order_ids.length === 0) {
             devLog.log('لا توجد order_ids في الفاتورة');
@@ -69,18 +69,18 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
         try {
             const { supabase } = await import('@/lib/customSupabaseClient');
             
-            const { data, error } = await supabase
-                .from('orders')
-                .select('*')
-                .in('id', invoice.order_ids);
+            const [{ data: ordersData, error: ordersErr }, { data: profitsData, error: profitsErr }] = await Promise.all([
+                supabase.from('orders').select('*').in('id', invoice.order_ids),
+                supabase.from('profits').select('order_id, employee_profit').in('order_id', invoice.order_ids),
+            ]);
 
-            if (error) {
-                console.error('خطأ في جلب بيانات الطلبات:', error);
-                return;
-            }
+            if (ordersErr) console.error('خطأ في جلب الطلبات:', ordersErr);
+            if (profitsErr) console.error('خطأ في جلب الأرباح:', profitsErr);
 
-            devLog.log('🔥 البيانات الحقيقية للطلبات:', data);
-            setRealOrdersData(data || []);
+            const map = {};
+            (profitsData || []).forEach(p => { map[p.order_id] = Number(p.employee_profit) || 0; });
+            setProfitsByOrder(map);
+            setRealOrdersData(ordersData || []);
         } catch (error) {
             console.error('خطأ غير متوقع:', error);
         } finally {
