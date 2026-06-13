@@ -1734,225 +1734,58 @@ export const SuperProvider = ({ children }) => {
         throw new Error('لا توجد طلبات لتسويتها');
       }
 
-      devLog.debug('🔧 بدء تسوية مستحقات الموظف:', { employeeId, totalSettlement, employeeName, orderIds });
+      devLog.debug('🔧 بدء تسوية ذرّية لمستحقات الموظف:', { employeeId, employeeName, ordersCount: orderIds.length });
 
-      const now = new Date().toISOString();
-      const ordersMap = new Map((allData.orders || []).map(o => [o.id, o]));
-      
-      // جلب قواعد الربح للموظف
-      const { data: profitRules, error: rulesErr } = await supabase
-        .from('employee_profit_rules')
-        .select('*')
-        .eq('employee_id', employeeId)
-        .eq('is_active', true);
-      
-      if (rulesErr) throw rulesErr;
-      devLog.debug('📋 قواعد الربح المتوفرة:', profitRules?.length || 0);
-
-      // جلب الخصومات المعلقة للموظف
-      const { data: pendingDeductionsData, error: deductionsErr } = await supabase
-        .rpc('get_employee_pending_deductions', { p_employee_id: employeeId });
-      
-      if (deductionsErr) {
-        console.error('⚠️ خطأ في جلب الخصومات المعلقة:', deductionsErr);
-      }
-      
-      const pendingDeductions = pendingDeductionsData?.[0]?.total_pending_deductions || 0;
-      const deductionsCount = pendingDeductionsData?.[0]?.deductions_count || 0;
-      devLog.debug('💳 الخصومات المعلقة:', { pendingDeductions, deductionsCount });
-
-      // جلب عناصر الطلبات
-      const { data: orderItems, error: itemsErr } = await supabase
-        .from('order_items')
-        .select('order_id, product_id, quantity')
-        .in('order_id', orderIds);
-      
-      if (itemsErr) throw itemsErr;
-      
-      // تجميع عناصر كل طلب
-      const itemsByOrder = {};
-      (orderItems || []).forEach(item => {
-        if (!itemsByOrder[item.order_id]) itemsByOrder[item.order_id] = [];
-        itemsByOrder[item.order_id].push(item);
-      });
-
-      // دالة حساب ربح الموظف من قواعد الربح الثابتة
-      const calcEmployeeProfitFromRules = (orderId, order) => {
-        const items = itemsByOrder[orderId] || [];
-        if (items.length === 0) return { profit: 0, hasRule: false };
-        
-        const orderDate = new Date(order?.created_at || now);
-        let totalProfit = 0;
-        let hasAnyRule = false;
-        
-        items.forEach(item => {
-          const productId = item.product_id;
-          if (!productId) return;
-          
-          // البحث عن قاعدة ربح سارية وقت إنشاء الطلب
-          const rule = (profitRules || []).find(r => 
-            r.target_id === productId &&
-            r.rule_type === 'product' &&
-            new Date(r.created_at) <= orderDate // القاعدة يجب أن تكون موجودة قبل أو وقت إنشاء الطلب
-          );
-          
-          if (rule) {
-            hasAnyRule = true;
-            
-            if (rule.profit_percentage === 100) {
-              // ✅ كامل الربح: سعر البيع - سعر التكلفة
-              const sellingPrice = item.price || item.unit_price || 0;
-              const costPrice = item.cost_price || item.product_variants?.cost_price || 0;
-              const fullProfit = (sellingPrice - costPrice) * (item.quantity || 1);
-              totalProfit += Math.max(0, fullProfit);
-              devLog.debug(`✅ كامل الربح للمنتج ${productId}: (${sellingPrice} - ${costPrice}) × ${item.quantity} = ${fullProfit}`);
-            } else {
-              totalProfit += (rule.profit_amount || 0) * (item.quantity || 1);
-              devLog.debug(`✅ قاعدة ربح للمنتج ${productId}: ${rule.profit_amount} × ${item.quantity}`);
-            }
-          } else {
-            devLog.debug(`⚠️ لا توجد قاعدة ربح سارية للمنتج ${productId} وقت الطلب ${orderDate.toISOString()}`);
-          }
-        });
-        
-        // 🎯 المنطق الكامل: الزيادة والخصم تذهبان للموظف الذي يملك قاعدة ربح
-        // إذا لا يملك قاعدة → تذهبان لمالك المنتج (يبقى ربح الموظف 0)
-        const discount = Number(order?.discount) || 0;
-        const priceIncrease = Number(order?.price_increase) || 0;
-
-        if (hasAnyRule) {
-          // الزيادة تُضاف لربح الموظف، الخصم يُطرح منه
-          totalProfit = totalProfit + priceIncrease - discount;
-          devLog.debug(`📊 ربح الموظف ${order?.tracking_number}: قاعدة(${totalProfit - priceIncrease + discount}) + زيادة(${priceIncrease}) - خصم(${discount}) = ${totalProfit}`);
-        } else if (discount > 0 || priceIncrease > 0) {
-          devLog.debug(`📊 الطلب ${order?.tracking_number}: زيادة(${priceIncrease}) خصم(${discount}) → لمالك المنتج (الموظف بدون قاعدة)`);
-        }
-
-        return { profit: Math.max(0, totalProfit), hasRule: hasAnyRule, priceIncrease, discount };
-      };
-
-      // جلب السجلات الحالية
-      const { data: existing, error: existingErr } = await supabase
-        .from('profits')
-        .select('id, order_id, profit_amount, employee_profit, employee_id, status, settled_at')
-        .in('order_id', orderIds);
-      if (existingErr) throw existingErr;
-      const existingMap = new Map((existing || []).map(e => [e.order_id, e]));
-
-      // حساب المبلغ الفعلي من قواعد الربح
-      let actualTotalSettlement = 0;
-      const settledOrdersDetails = [];
-
-      // تحضير upsert
-      const upserts = orderIds.map(orderId => {
-        const order = ordersMap.get(orderId);
-        const existingRow = existingMap.get(orderId);
-        
-        // حساب ربح الموظف من القواعد الثابتة
-        const profitInfo = calcEmployeeProfitFromRules(orderId, order);
-        actualTotalSettlement += profitInfo.profit;
-        
-        // حسابات دقيقة لكل طلب للإيراد والتكلفة
-        const items = itemsByOrder[orderId] || [];
-        const finalAmount = Number(order?.final_amount ?? order?.total_amount ?? 0) || 0;
-        const deliveryFee = Number(order?.delivery_fee ?? 0) || 0;
-        const revenueWithoutDelivery = finalAmount - deliveryFee;
-        
-        // تفاصيل الطلب المسوى
-        settledOrdersDetails.push({
-          order_id: orderId,
-          order_number: order?.order_number,
-          tracking_number: order?.tracking_number,
-          customer_name: order?.customer_name,
-          order_date: order?.created_at,
-          order_total: finalAmount,
-          employee_profit: profitInfo.profit,
-          has_rule: profitInfo.hasRule,
-          discount: order?.discount || 0,
-          price_increase: order?.price_increase || 0
-        });
-
-        devLog.debug('🔧 حساب ربح الطلب:', { 
-          orderId: order?.order_number,
-          trackingNumber: order?.tracking_number,
-          employee_profit: profitInfo.profit,
-          hasRule: profitInfo.hasRule
-        });
-
-        return {
-          ...(existingRow ? { id: existingRow.id } : {}),
-          order_id: orderId,
-          employee_id: employeeId || order?.created_by,
-          total_revenue: revenueWithoutDelivery,
-          total_cost: Math.max(0, revenueWithoutDelivery - profitInfo.profit),
-          profit_amount: profitInfo.profit,
-          employee_profit: profitInfo.profit,
-          status: profitInfo.hasRule ? 'settled' : 'no_rule_settled',
-          settled_at: now
-        };
-      });
-
-      // حساب المبلغ النهائي بعد خصم الخصومات المعلقة
-      const deductionToApply = Math.min(pendingDeductions, actualTotalSettlement);
-      const finalSettlementAmount = actualTotalSettlement - deductionToApply;
-      
-      devLog.debug(`💰 إجمالي المستحقات: ${actualTotalSettlement}, الخصومات المطبقة: ${deductionToApply}, المبلغ النهائي: ${finalSettlementAmount}`);
-
-      const { error: upsertErr } = await supabase.from('profits').upsert(upserts);
-      if (upsertErr) throw upsertErr;
-      devLog.debug('✅ تم إدراج سجلات الأرباح بنجاح');
-
-      // 🎯 تسوية موحدة عبر RPC: قاصة المالك الفعلي + حركة نقد + فاتورة + مصروف + تسوية أرباح (ذرّياً)
-      const profitIdsToSettle = (upserts || []).map(u => u.id).filter(Boolean);
+      // 🎯 دفع ذرّي بالكامل عبر RPC:
+      // - الدالة تحسب المبلغ من جدول الأرباح بنفسها (تجاهل أي مبلغ مُرسل)
+      // - ترفض الدفع إذا كان المجموع صفراً أو سالباً
+      // - تنشئ الفاتورة + حركة النقد + المصروف + تحديث الأرباح + الأرشفة ذرّياً
+      // - أي خطأ يلغي الكل، يستحيل أن يصبح طلب "مدفوع" بدون فاتورة وحركة نقد
       const { data: rpcRes, error: rpcErr } = await supabase.rpc('pay_employee_dues_with_invoice', {
         p_employee_id: employeeId,
-        p_amount: finalSettlementAmount,
         p_order_ids: orderIds,
-        p_profit_ids: profitIdsToSettle,
-        p_description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - ${orderIds.length} طلب`
-          + (deductionToApply > 0 ? ` (خصم معلق: ${deductionToApply.toLocaleString()} د.ع)` : ''),
+        p_description: `دفع مستحقات الموظف ${employeeName || 'غير محدد'} - ${orderIds.length} طلب`,
         p_paid_by: user?.user_id || user?.id || null,
-        p_owner_user_id: null // ستُستنتج تلقائياً من order_items
+        p_owner_user_id: null
       });
+
       if (rpcErr) {
         console.error('❌ فشل RPC pay_employee_dues_with_invoice:', rpcErr);
-        throw rpcErr;
+        throw new Error(rpcErr.message || 'فشل دفع المستحقات');
       }
       if (!rpcRes?.success) {
         throw new Error(rpcRes?.error || 'فشل دفع المستحقات');
       }
+
       const invoiceNumber = rpcRes.invoice_number;
-      const invoice = { id: rpcRes.settlement_invoice_id, invoice_number: invoiceNumber };
+      const finalSettlementAmount = Number(rpcRes.amount) || 0;
+      const settlementInvoiceId = rpcRes.settlement_invoice_id;
       devLog.debug('✅ تسوية ذرية ناجحة:', rpcRes);
 
-      // تطبيق الخصومات المعلقة (إذا وُجدت) - لا يزال خارج الـ RPC للحفاظ على التوافق
-      if (deductionToApply > 0 && invoice?.id) {
-        const { data: appliedAmount, error: applyErr } = await supabase
-          .rpc('apply_pending_deductions_on_settlement', {
-            p_employee_id: employeeId,
-            p_settlement_id: invoice.id,
-            p_max_amount: actualTotalSettlement
-          });
-        if (applyErr) console.error('⚠️ خطأ في تطبيق الخصومات المعلقة:', applyErr);
-        else devLog.debug('✅ تم تطبيق الخصومات المعلقة:', appliedAmount);
+      // تطبيق الخصومات المعلقة (إن وجدت) — بعد نجاح الدفع
+      let deductionToApply = 0;
+      try {
+        const { data: pendingDeductionsData } = await supabase
+          .rpc('get_employee_pending_deductions', { p_employee_id: employeeId });
+        const pendingDeductions = pendingDeductionsData?.[0]?.total_pending_deductions || 0;
+        if (pendingDeductions > 0 && settlementInvoiceId) {
+          const { data: appliedAmount } = await supabase
+            .rpc('apply_pending_deductions_on_settlement', {
+              p_employee_id: employeeId,
+              p_settlement_id: settlementInvoiceId,
+              p_max_amount: finalSettlementAmount
+            });
+          deductionToApply = Number(appliedAmount) || 0;
+        }
+      } catch (e) {
+        console.warn('⚠️ خطأ في تطبيق الخصومات المعلقة (لا يؤثر على الدفع):', e);
       }
 
-      // أرشفة الطلبات بعد التسوية
-      const { error: ordersErr } = await supabase
-        .from('orders')
-        .update({ isarchived: true })
-        .in('id', orderIds);
-      if (ordersErr) {
-        console.error('❌ خطأ في أرشفة الطلبات:', ordersErr);
-        throw ordersErr;
-      }
-      devLog.debug('✅ تم أرشفة الطلبات بنجاح');
-
-      // تحديث الذاكرة وCache
+      // تحديث الذاكرة والكاش
       superAPI.invalidate('all_data');
       await fetchAllData();
 
-      const toastDescription = deductionToApply > 0 
+      const toastDescription = deductionToApply > 0
         ? `${employeeName || 'الموظف'} - عدد الطلبات ${orderIds.length} - المبلغ ${finalSettlementAmount.toLocaleString()} دينار (بعد خصم ${deductionToApply.toLocaleString()} د.ع)`
         : `${employeeName || 'الموظف'} - عدد الطلبات ${orderIds.length} - المبلغ ${finalSettlementAmount.toLocaleString()} دينار`;
 
@@ -1962,19 +1795,19 @@ export const SuperProvider = ({ children }) => {
         variant: 'success'
       });
 
-      return { 
-        success: true, 
-        actualAmount: finalSettlementAmount, 
-        originalAmount: actualTotalSettlement,
+      return {
+        success: true,
+        actualAmount: finalSettlementAmount,
+        originalAmount: finalSettlementAmount,
         deductionsApplied: deductionToApply,
-        invoiceNumber 
+        invoiceNumber
       };
     } catch (error) {
       console.error('❌ خطأ في تسوية مستحقات الموظف:', error);
       toast({ title: 'خطأ في التسوية', description: error.message, variant: 'destructive' });
       return { success: false, error: error.message };
     }
-  }, [allData.orders, user, fetchAllData]);
+  }, [user, fetchAllData]);
   // تم نقل تعريف Set للطلبات المحذوفة نهائياً إلى الأعلى لضمان التعريف قبل الاستخدام
 
   // دوال أخرى مطلوبة للتوافق
