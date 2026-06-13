@@ -312,7 +312,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                             <div className="text-blue-300">رقم التتبع</div>
                                                             <div className="text-slate-300">تاريخ الطلب</div>
                                                             <div className="text-green-300">العميل</div>
-                                                            <div className="text-orange-300">المبلغ / تعديلات</div>
+                                                            <div className="text-orange-300">ربح الموظف</div>
                                                             <div className="text-purple-300">الإجراءات</div>
                                                         </div>
                                                     </div>
