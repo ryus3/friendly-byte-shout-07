@@ -274,12 +274,12 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                             {order.customer_name || order.customerinfo?.name || 'غير محدد'}
                                                                         </span>
                                                                     </MobileTableCell>
-                                                                    <MobileTableCell label="المبلغ">
+                                                                    <MobileTableCell label="ربح الموظف">
                                                                         <div className="text-right">
-                                                                            <div className="text-xl font-black text-green-600 dark:text-green-400">
-                                                                                {(order.final_amount || order.total_amount || order.total || 0).toLocaleString()}
+                                                                            <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                                                                                {(profitsByOrder[order.id] || 0).toLocaleString()}
                                                                             </div>
-                                                                             <div className="text-sm text-green-500 font-semibold">دينار عراقي</div>
+                                                                             <div className="text-sm text-emerald-500 font-semibold">د.ع</div>
                                                                         </div>
                                                                     </MobileTableCell>
                                                                     <MobileTableCell actions>
