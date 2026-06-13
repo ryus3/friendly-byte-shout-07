@@ -128,16 +128,16 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
   const employeeBonusTotal = Object.values(employeeBonusByEmp).reduce((s, v) => s + v, 0);
   const employeeProfitTotal = Object.values(employeeProfitByEmp).reduce((s, v) => s + v, 0);
-  const employeeTotalCombined = employeeProfitTotal + employeeBonusTotal;
+  // المصدر الوحيد للحقيقة: جدول profits.employee_profit (يتضمن الزيادة/الخصم أصلاً)
+  const employeeTotalCombined = employeeProfitTotal;
 
   const totalProfit = totalRevenue - totalCost;
   const netForOwners = totalProfit - employeeTotalCombined;
 
-  // دمج بونص الـ delta مع profits لعرض موحَّد للموظف
+  // ❗ employeeProfitByEmp مأخوذ من جدول profits المخزّن، وهو يتضمن أصلاً الزيادة/الخصم
+  // (الترِجر يحسب: قاعدة + زيادة − خصم). لا نُضيف employeeBonusByEmp فوقه لتجنب الازدواج.
+  // employeeBonusByEmp يبقى للإعلام فقط (سطر "يشمل ... من الزيادة/الخصم").
   const employeeCombinedByEmp = { ...employeeProfitByEmp };
-  Object.entries(employeeBonusByEmp).forEach(([k, v]) => {
-    employeeCombinedByEmp[k] = (employeeCombinedByEmp[k] || 0) + v;
-  });
 
   const productsList = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
 

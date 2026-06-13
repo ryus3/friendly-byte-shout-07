@@ -8704,7 +8704,7 @@ export type Database = {
       }
       pay_employee_dues_with_invoice: {
         Args: {
-          p_amount: number
+          p_amount?: number
           p_description?: string
           p_employee_id: string
           p_order_ids?: string[]

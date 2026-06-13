@@ -20,6 +20,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     const [realOrdersData, setRealOrdersData] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
     const [realInvoiceData, setRealInvoiceData] = useState(null);
+    const [profitsByOrder, setProfitsByOrder] = useState({});
     const [isMobile, setIsMobile] = useState(false);
 
     // Add null check for invoice
@@ -57,7 +58,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
         }
     };
 
-    // جلب البيانات الحقيقية للطلبات من قاعدة البيانات
+    // جلب البيانات الحقيقية للطلبات + الأرباح المخزّنة من قاعدة البيانات
     const fetchRealOrdersData = async () => {
         if (!invoice.order_ids || invoice.order_ids.length === 0) {
             devLog.log('لا توجد order_ids في الفاتورة');
@@ -68,18 +69,18 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
         try {
             const { supabase } = await import('@/lib/customSupabaseClient');
             
-            const { data, error } = await supabase
-                .from('orders')
-                .select('*')
-                .in('id', invoice.order_ids);
+            const [{ data: ordersData, error: ordersErr }, { data: profitsData, error: profitsErr }] = await Promise.all([
+                supabase.from('orders').select('*').in('id', invoice.order_ids),
+                supabase.from('profits').select('order_id, employee_profit').in('order_id', invoice.order_ids),
+            ]);
 
-            if (error) {
-                console.error('خطأ في جلب بيانات الطلبات:', error);
-                return;
-            }
+            if (ordersErr) console.error('خطأ في جلب الطلبات:', ordersErr);
+            if (profitsErr) console.error('خطأ في جلب الأرباح:', profitsErr);
 
-            devLog.log('🔥 البيانات الحقيقية للطلبات:', data);
-            setRealOrdersData(data || []);
+            const map = {};
+            (profitsData || []).forEach(p => { map[p.order_id] = Number(p.employee_profit) || 0; });
+            setProfitsByOrder(map);
+            setRealOrdersData(ordersData || []);
         } catch (error) {
             console.error('خطأ غير متوقع:', error);
         } finally {
@@ -273,12 +274,12 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                             {order.customer_name || order.customerinfo?.name || 'غير محدد'}
                                                                         </span>
                                                                     </MobileTableCell>
-                                                                    <MobileTableCell label="المبلغ">
+                                                                    <MobileTableCell label="ربح الموظف">
                                                                         <div className="text-right">
-                                                                            <div className="text-xl font-black text-green-600 dark:text-green-400">
-                                                                                {(order.final_amount || order.total_amount || order.total || 0).toLocaleString()}
+                                                                            <div className="text-xl font-black text-emerald-600 dark:text-emerald-400">
+                                                                                {(profitsByOrder[order.id] || 0).toLocaleString()}
                                                                             </div>
-                                                                             <div className="text-sm text-green-500 font-semibold">دينار عراقي</div>
+                                                                             <div className="text-sm text-emerald-500 font-semibold">د.ع</div>
                                                                         </div>
                                                                     </MobileTableCell>
                                                                     <MobileTableCell actions>
@@ -311,7 +312,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                             <div className="text-blue-300">رقم التتبع</div>
                                                             <div className="text-slate-300">تاريخ الطلب</div>
                                                             <div className="text-green-300">العميل</div>
-                                                            <div className="text-orange-300">المبلغ / تعديلات</div>
+                                                            <div className="text-orange-300">ربح الموظف</div>
                                                             <div className="text-purple-300">الإجراءات</div>
                                                         </div>
                                                     </div>
@@ -362,9 +363,9 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
                                                                         </div>
                                                                     </div>
                                                                     <div className="flex flex-col items-center justify-center gap-1">
-                                                                        <div className="text-2xl font-black text-green-600 dark:text-green-400">
-                                                                            {(order.final_amount || order.total_amount || order.total || 0).toLocaleString()}
-                                                                            <span className="text-xs text-green-500 font-semibold mr-1">د.ع</span>
+                                                                        <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                                                                            {(profitsByOrder[order.id] || 0).toLocaleString()}
+                                                                            <span className="text-xs text-emerald-500 font-semibold mr-1">د.ع</span>
                                                                     </div>
                                                                     </div>
                                                                     <div className="flex items-center justify-center">
