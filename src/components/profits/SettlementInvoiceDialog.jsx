@@ -20,6 +20,7 @@ const SettlementInvoiceDialog = ({ invoice, open, onOpenChange, allUsers }) => {
     const [realOrdersData, setRealOrdersData] = useState([]);
     const [loadingOrders, setLoadingOrders] = useState(false);
     const [realInvoiceData, setRealInvoiceData] = useState(null);
+    const [profitsByOrder, setProfitsByOrder] = useState({});
     const [isMobile, setIsMobile] = useState(false);
 
     // Add null check for invoice
