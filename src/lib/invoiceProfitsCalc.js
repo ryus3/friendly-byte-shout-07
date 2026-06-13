@@ -128,7 +128,8 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
   const employeeBonusTotal = Object.values(employeeBonusByEmp).reduce((s, v) => s + v, 0);
   const employeeProfitTotal = Object.values(employeeProfitByEmp).reduce((s, v) => s + v, 0);
-  const employeeTotalCombined = employeeProfitTotal + employeeBonusTotal;
+  // المصدر الوحيد للحقيقة: جدول profits.employee_profit (يتضمن الزيادة/الخصم أصلاً)
+  const employeeTotalCombined = employeeProfitTotal;
 
   const totalProfit = totalRevenue - totalCost;
   const netForOwners = totalProfit - employeeTotalCombined;
