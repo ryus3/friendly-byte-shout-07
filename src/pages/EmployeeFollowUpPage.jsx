@@ -278,62 +278,62 @@ const EmployeeFollowUpPage = () => {
     setIsSettlementProcessing(true);
     
     try {
-      // جلب معلومات الموظف من الإشعار
+      // 1) محاولة من إشعار التحاسب
       const notification = settlementRequests?.find(n => 
         n.data?.order_ids?.some(id => selectedOrderIds.includes(id))
       );
-      
-      const employeeId = notification?.data?.employee_id;
-      const employeeName = notification?.data?.employee_name || 'غير محدد';
-      const totalAmount = notification?.data?.total_profit || 0;
-      
+      let employeeId = notification?.data?.employee_id || null;
+      let employeeName = notification?.data?.employee_name || null;
+
+      // 2) Fallback: من رابط URL
+      if (!employeeId && employeeFromUrl) {
+        employeeId = employeeFromUrl;
+      }
+
+      // 3) Fallback: من الطلبات نفسها (profits أو orders.created_by)
       if (!employeeId) {
-        toast({ title: 'لم يتم تحديد الموظف', variant: 'destructive' });
+        try {
+          const { data: pRows } = await supabase
+            .from('profits').select('employee_id').in('order_id', selectedOrderIds).limit(1);
+          employeeId = pRows?.[0]?.employee_id || null;
+        } catch {}
+      }
+      if (!employeeId) {
+        try {
+          const { data: oRows } = await supabase
+            .from('orders').select('created_by').in('id', selectedOrderIds).limit(1);
+          employeeId = oRows?.[0]?.created_by || null;
+        } catch {}
+      }
+
+      if (!employeeId) {
+        toast({ title: 'تعذر تحديد الموظف من الطلبات المختارة', variant: 'destructive' });
         return;
       }
+
+      // اسم الموظف للعرض إن لم يأت من الإشعار
+      if (!employeeName) {
+        const found = allUsers?.find(u => (u.user_id || u.id) === employeeId);
+        employeeName = found?.full_name || 'الموظف';
+      }
+
+      const result = await settleEmployeeProfits(employeeId, 0, employeeName, selectedOrderIds);
       
-      // استدعاء settleEmployeeProfits
-      const result = await settleEmployeeProfits(employeeId, totalAmount, employeeName, selectedOrderIds);
-      
-      if (result.success) {
-        // إرسال إشعار للموظف
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: employeeId,
-            type: 'settlement_completed',
-            title: 'تمت تسوية مستحقاتك 💰',
-            message: `تم دفع مبلغ ${result.actualAmount?.toLocaleString() || 0} دينار - فاتورة رقم ${result.invoiceNumber}`,
-            data: {
-              invoice_number: result.invoiceNumber,
-              amount: result.actualAmount,
-              original_amount: result.originalAmount,
-              deductions_applied: result.deductionsApplied,
-              order_count: selectedOrderIds.length,
-              settled_at: new Date().toISOString()
-            },
-            is_read: false
-          });
-        
-        // حذف إشعار طلب التحاسب الأصلي
+      if (result?.success) {
+        // الإشعار للموظف يُنشأ داخل RPC — نحذف فقط إشعار طلب التحاسب الأصلي
         if (notification?.id) {
-          await supabase
-            .from('notifications')
-            .delete()
-            .eq('id', notification.id);
+          await supabase.from('notifications').delete().eq('id', notification.id);
         }
         
-        // تحديث البيانات
         await fetchProfitsData?.();
         await refreshOrders?.();
         
-        // إعادة تعيين التحديد وإغلاق النافذة
         setSelectedOrders([]);
         setIsSettlementRequestsDialogOpen(false);
         
         toast({
           title: 'تمت التسوية بنجاح ✅',
-          description: `تم دفع ${result.actualAmount?.toLocaleString()} دينار للموظف ${employeeName}`,
+          description: `تم دفع ${(result.actualAmount || result.amount || 0).toLocaleString()} دينار للموظف ${employeeName}`,
           variant: 'success'
         });
       }
@@ -344,6 +344,7 @@ const EmployeeFollowUpPage = () => {
       setIsSettlementProcessing(false);
     }
   };
+  
   
   const ITEMS_PER_PAGE = 15;
   const [currentPage, setCurrentPage] = useState(1);
