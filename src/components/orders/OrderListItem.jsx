@@ -47,10 +47,14 @@ const OrderListItem = ({
   const { hasPermission } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
-  // حساب ربح الموظف وحالة التسوية
+  // حساب ربح الموظف وحالة التسوية - المصدر الحقيقي من جدول profits
   const profitRecord = profits?.find(p => p.order_id === order.id);
-  const employeeProfit = calculateProfit ? 
-    (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0) : 0;
+  const employeeProfit = (profitRecord && profitRecord.employee_profit !== null && profitRecord.employee_profit !== undefined)
+    ? Number(profitRecord.employee_profit) || 0
+    : (calculateProfit
+        ? (order.items || []).reduce((sum, item) => sum + (calculateProfit(item, order.created_by) || 0), 0)
+          + ((Number(order.price_increase) || 0) - (Number(order.discount) || 0))
+        : 0);
   const isSettled = profitRecord?.settled_at ? true : false;
   
   // تحديد الـ badges الخاصة بالربح والفاتورة
