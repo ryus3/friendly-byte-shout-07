@@ -558,9 +558,9 @@ const OrderCard = React.memo(({
               <div className="flex items-center justify-between">
                  <div className="flex items-center gap-2 text-right">
                   <div className="space-y-1">
-                    {employeeProfit > 0 && (
+                    {employeeProfit !== 0 && (
                       <div className="flex items-center gap-1 text-xs justify-end">
-                        <span className="font-bold text-emerald-600">
+                        <span className={`font-bold ${employeeProfit < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
                           {employeeProfit.toLocaleString()} د.ع
                         </span>
                         <span className="text-muted-foreground">:ربح الموظف</span>
