@@ -8,7 +8,6 @@ import { useUnifiedPermissionsSystem as usePermissions } from '@/hooks/useUnifie
 import { useSuper } from '@/contexts/SuperProvider';
 import { useProfits } from '@/contexts/ProfitsContext';
 import { useUnifiedProfits } from '@/hooks/useUnifiedProfits';
-import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
 
 import { UserPlus, TrendingUp, DollarSign, PackageCheck, ShoppingCart, Users, Package, MapPin, User as UserIcon, Bot, Briefcase, TrendingDown, Hourglass, CheckCircle } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -126,11 +125,10 @@ const Dashboard = () => {
     });
 
     // الآن يمكن استخدام periods بأمان
-    const { supervisedEmployeeIds } = useSupervisedEmployees();
-    const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits(periods.netProfit, supervisedEmployeeIds);
+    const { profitData: unifiedProfitData, loading: unifiedProfitLoading, error: unifiedProfitError } = useUnifiedProfits(periods.netProfit);
     
     // استدعاء منفصل للأرباح المعلقة مع الفترة الزمنية الصحيحة - نحتاج allProfits للحساب المحلي
-    const { profitData: pendingProfitData, loading: pendingProfitLoading, allProfits } = useUnifiedProfits(periods.pendingProfit, supervisedEmployeeIds);
+    const { profitData: pendingProfitData, loading: pendingProfitLoading, allProfits } = useUnifiedProfits(periods.pendingProfit);
     
     // إضافة devLog لتتبع البيانات
     useEffect(() => {

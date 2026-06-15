@@ -286,19 +286,19 @@ const OrderCard = React.memo(({
   }, [needsPartialDeliverySelection]);
 
   const employeeProfit = useMemo(() => {
-    // ✅ المصدر الحقيقي: profits.employee_profit (يتضمن الزيادة/الخصم)
-    if (Array.isArray(profits)) {
-      const profitRecord = profits.find(p => p.order_id === order.id);
-      if (profitRecord && profitRecord.employee_profit !== null && profitRecord.employee_profit !== undefined) {
-        return Number(profitRecord.employee_profit) || 0;
-      }
-    }
-    // قبل التسليم: عرض القاعدة + (زيادة - خصم) كتقدير حقيقي
     if (!calculateProfit || !order.items) return 0;
+    
+    if (!Array.isArray(profits)) return 0;
+    
+    const profitRecord = profits.find(p => p.order_id === order.id);
+    if (profitRecord && profitRecord.employee_profit) {
+      return profitRecord.employee_profit;
+    }
+    
     const validItems = order.items.filter(item => item != null);
-    const baseProfit = validItems.reduce((sum, item) => sum + (calculateProfit(item, order.created_by) || 0), 0);
-    const adjustment = (Number(order.price_increase) || 0) - (Number(order.discount) || 0);
-    return baseProfit + adjustment;
+    return validItems.reduce((sum, item) => {
+      return sum + (calculateProfit(item, order.created_by) || 0);
+    }, 0);
   }, [calculateProfit, order, profits]);
 
   const paymentStatus = useMemo(() => {
@@ -558,9 +558,9 @@ const OrderCard = React.memo(({
               <div className="flex items-center justify-between">
                  <div className="flex items-center gap-2 text-right">
                   <div className="space-y-1">
-                    {employeeProfit !== 0 && (
+                    {employeeProfit > 0 && (
                       <div className="flex items-center gap-1 text-xs justify-end">
-                        <span className={`font-bold ${employeeProfit < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+                        <span className="font-bold text-emerald-600">
                           {employeeProfit.toLocaleString()} د.ع
                         </span>
                         <span className="text-muted-foreground">:ربح الموظف</span>

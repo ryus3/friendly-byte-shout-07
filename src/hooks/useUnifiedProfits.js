@@ -68,38 +68,17 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EM
       const safeOrders = Array.isArray(orders) ? orders : [];
       const safeExpenses = Array.isArray(accounting?.expenses) ? accounting.expenses : [];
 
-      // ✅ المنتجات المملوكة للمستخدم الحالي (للمدير صاحب المنتجات)
-      const ownedProductIds = new Set(
-        (Array.isArray(products) ? products : [])
-          .filter(p => p.owner_user_id && (p.owner_user_id === currentUser?.id || p.owner_user_id === currentUser?.user_id))
-          .map(p => p.id)
-      );
-      const orderHasOwnedProduct = (o) => {
-        if (ownedProductIds.size === 0) return false;
-        if (!Array.isArray(o.order_items) && !Array.isArray(o.items)) return false;
-        const items = o.order_items || o.items || [];
-        return items.some(it => it && ownedProductIds.has(it.product_id || it.products?.id));
-      };
-
       // ✅ فلترة الطلبات حسب الصلاحيات أولاً
       let permissionFilteredOrders = safeOrders;
       if (!isAdmin) {
-        if (isDepartmentManager) {
-          // مدير القسم: طلباته + طلبات موظفيه + الطلبات التي تحوي منتجاته المملوكة
-          const supSet = new Set(supervisedEmployeeIds || []);
+        if (isDepartmentManager && supervisedEmployeeIds.length > 0) {
+          // مدير القسم: طلباته + طلبات موظفيه
           permissionFilteredOrders = safeOrders.filter(o => 
-            o.created_by === currentUser?.id || 
-            o.created_by === currentUser?.user_id ||
-            supSet.has(o.created_by) ||
-            orderHasOwnedProduct(o)
+            o.created_by === currentUser?.id || supervisedEmployeeIds.includes(o.created_by)
           );
         } else {
-          // الموظف العادي: طلباته فقط (مع شمول منتجاته المملوكة إن وجدت)
-          permissionFilteredOrders = safeOrders.filter(o => 
-            o.created_by === currentUser?.id || 
-            o.created_by === currentUser?.user_id ||
-            orderHasOwnedProduct(o)
-          );
+          // الموظف العادي: طلباته فقط
+          permissionFilteredOrders = safeOrders.filter(o => o.created_by === currentUser?.id);
         }
       }
       // المدير العام يرى الكل (isAdmin = true)

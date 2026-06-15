@@ -47,14 +47,10 @@ const OrderListItem = ({
   const { hasPermission } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
-  // حساب ربح الموظف وحالة التسوية - المصدر الحقيقي من جدول profits
+  // حساب ربح الموظف وحالة التسوية
   const profitRecord = profits?.find(p => p.order_id === order.id);
-  const employeeProfit = (profitRecord && profitRecord.employee_profit !== null && profitRecord.employee_profit !== undefined)
-    ? Number(profitRecord.employee_profit) || 0
-    : (calculateProfit
-        ? (order.items || []).reduce((sum, item) => sum + (calculateProfit(item, order.created_by) || 0), 0)
-          + ((Number(order.price_increase) || 0) - (Number(order.discount) || 0))
-        : 0);
+  const employeeProfit = calculateProfit ? 
+    (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0) : 0;
   const isSettled = profitRecord?.settled_at ? true : false;
   
   // تحديد الـ badges الخاصة بالربح والفاتورة
@@ -467,8 +463,8 @@ const OrderListItem = ({
             {`${Number(order.final_amount || 0).toLocaleString()} د.ع شامل التوصيل`}
           </div>
           {/* عرض ربح الموظف وحالة التسوية */}
-          {employeeProfit !== 0 && (
-            <div className={`text-xs font-medium ${employeeProfit < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
+          {employeeProfit > 0 && (
+            <div className="text-xs text-emerald-600 font-medium">
               ربح: {employeeProfit.toLocaleString()} د.ع 
               <span className={`mr-1 px-1 rounded ${isSettled ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                 {isSettled ? 'مدفوع' : 'معلق'}
