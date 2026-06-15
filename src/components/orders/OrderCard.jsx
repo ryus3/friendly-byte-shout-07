@@ -286,19 +286,19 @@ const OrderCard = React.memo(({
   }, [needsPartialDeliverySelection]);
 
   const employeeProfit = useMemo(() => {
-    if (!calculateProfit || !order.items) return 0;
-    
-    if (!Array.isArray(profits)) return 0;
-    
-    const profitRecord = profits.find(p => p.order_id === order.id);
-    if (profitRecord && profitRecord.employee_profit) {
-      return profitRecord.employee_profit;
+    // ✅ المصدر الحقيقي: profits.employee_profit (يتضمن الزيادة/الخصم)
+    if (Array.isArray(profits)) {
+      const profitRecord = profits.find(p => p.order_id === order.id);
+      if (profitRecord && profitRecord.employee_profit !== null && profitRecord.employee_profit !== undefined) {
+        return Number(profitRecord.employee_profit) || 0;
+      }
     }
-    
+    // قبل التسليم: عرض القاعدة + (زيادة - خصم) كتقدير حقيقي
+    if (!calculateProfit || !order.items) return 0;
     const validItems = order.items.filter(item => item != null);
-    return validItems.reduce((sum, item) => {
-      return sum + (calculateProfit(item, order.created_by) || 0);
-    }, 0);
+    const baseProfit = validItems.reduce((sum, item) => sum + (calculateProfit(item, order.created_by) || 0), 0);
+    const adjustment = (Number(order.price_increase) || 0) - (Number(order.discount) || 0);
+    return baseProfit + adjustment;
   }, [calculateProfit, order, profits]);
 
   const paymentStatus = useMemo(() => {
