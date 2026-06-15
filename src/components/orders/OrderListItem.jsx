@@ -467,8 +467,8 @@ const OrderListItem = ({
             {`${Number(order.final_amount || 0).toLocaleString()} د.ع شامل التوصيل`}
           </div>
           {/* عرض ربح الموظف وحالة التسوية */}
-          {employeeProfit > 0 && (
-            <div className="text-xs text-emerald-600 font-medium">
+          {employeeProfit !== 0 && (
+            <div className={`text-xs font-medium ${employeeProfit < 0 ? 'text-red-500' : 'text-emerald-600'}`}>
               ربح: {employeeProfit.toLocaleString()} د.ع 
               <span className={`mr-1 px-1 rounded ${isSettled ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                 {isSettled ? 'مدفوع' : 'معلق'}
