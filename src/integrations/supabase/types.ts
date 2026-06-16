@@ -8749,6 +8749,10 @@ export type Database = {
         Args: { p_source_id: string; p_starting_balance?: number }
         Returns: Json
       }
+      recompute_order_employee_profit: {
+        Args: { p_order_id: string }
+        Returns: number
+      }
       reconcile_invoice_receipts: {
         Args: { p_employee_id?: string }
         Returns: Json
