@@ -299,20 +299,19 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EM
       const totalSystemPendingProfits = employeePendingDues + managerPendingProfits + employeeSystemPendingProfits;
 
       // صافي الربح
-      const netProfit = systemProfit - generalExpenses;
+      // مالك المنتجات: مجمل الربح − مستحقات الموظفين المدفوعة − المصاريف العامة
+      const netProfit = isOwnerManager
+        ? (grossProfit - employeeSettledDues - generalExpenses)
+        : (systemProfit - generalExpenses);
 
-      // مبيعات المدير والموظفين
-      const managerSales = managerOrdersInRange.reduce((sum, o) => {
-        const orderTotal = o.final_amount || o.total_amount || 0;
-        const deliveryFee = o.delivery_fee || 0;
-        return sum + (orderTotal - deliveryFee);
-      }, 0);
+      // مبيعات المدير والموظفين (تناسبية لمالك المنتجات)
+      const managerSales = orderBreakdown
+        .filter(b => !b.order.created_by || b.order.created_by === currentUser?.id)
+        .reduce((sum, b) => sum + b.ownedRevenueWithoutDelivery, 0);
 
-      const employeeSales = employeeOrdersInRange.reduce((sum, o) => {
-        const orderTotal = o.final_amount || o.total_amount || 0;
-        const deliveryFee = o.delivery_fee || 0;
-        return sum + (orderTotal - deliveryFee);
-      }, 0);
+      const employeeSales = orderBreakdown
+        .filter(b => b.order.created_by && b.order.created_by !== currentUser?.id)
+        .reduce((sum, b) => sum + b.ownedRevenueWithoutDelivery, 0);
 
       // بيانات الرسم البياني
       const chartData = [
