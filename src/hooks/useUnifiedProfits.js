@@ -68,16 +68,30 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EM
       const safeOrders = Array.isArray(orders) ? orders : [];
       const safeExpenses = Array.isArray(accounting?.expenses) ? accounting.expenses : [];
 
+      // ✅ كشف ما إذا كان المستخدم مدير قسم يملك منتجات
+      const currentUserId = currentUser?.id || currentUser?.user_id;
+      const ownedProductIds = new Set(
+        (Array.isArray(products) ? products : [])
+          .filter(p => p.owner_user_id && p.owner_user_id === currentUserId)
+          .map(p => p.id)
+      );
+      const isOwnerManager = !isAdmin && ownedProductIds.size > 0;
+
       // ✅ فلترة الطلبات حسب الصلاحيات أولاً
       let permissionFilteredOrders = safeOrders;
       if (!isAdmin) {
-        if (isDepartmentManager && supervisedEmployeeIds.length > 0) {
-          // مدير القسم: طلباته + طلبات موظفيه
+        if (isOwnerManager) {
+          // مالك المنتجات: نأخذ كل الطلبات التي تحتوي منتجاته (بغض النظر عن منشئها)
+          permissionFilteredOrders = safeOrders.filter(o =>
+            (o.order_items || o.items || []).some(it =>
+              ownedProductIds.has(it.product_id) || ownedProductIds.has(it.products?.id)
+            )
+          );
+        } else if (isDepartmentManager && supervisedEmployeeIds.length > 0) {
           permissionFilteredOrders = safeOrders.filter(o => 
             o.created_by === currentUser?.id || supervisedEmployeeIds.includes(o.created_by)
           );
         } else {
-          // الموظف العادي: طلباته فقط
           permissionFilteredOrders = safeOrders.filter(o => o.created_by === currentUser?.id);
         }
       }
