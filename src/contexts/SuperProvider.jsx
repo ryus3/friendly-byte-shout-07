@@ -173,10 +173,16 @@ export const SuperProvider = ({ children }) => {
       ? o.order_items.filter(oi => oi != null && typeof oi === 'object').map(oi => ({
           quantity: Number(oi?.quantity) || 1,
           price: oi?.price ?? oi?.unit_price ?? oi?.selling_price ?? oi?.product_variants?.price ?? 0,
-          cost_price: oi?.cost_price ?? oi?.product_variants?.cost_price ?? 0,
+          cost_price: oi?.cost_price ?? oi?.products?.cost_price ?? oi?.product_variants?.cost_price ?? 0,
           productname: oi?.products?.name,
           product_name: oi?.products?.name,
           sku: oi.product_variants?.id || oi.variant_id,
+          variant_id: oi.variant_id,
+          product_id: oi.product_id,
+          owner_user_id: oi.products?.owner_user_id,
+          total_price: oi.total_price,
+          unit_price: oi.unit_price ?? oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
+          products: oi.products,
           product_variants: oi.product_variants
         }))
       : (o.items || []);
@@ -491,17 +497,20 @@ export const SuperProvider = ({ children }) => {
             ? o.order_items.map(oi => ({
                 quantity: oi.quantity || 1,
                 price: oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
-                cost_price: oi.cost_price ?? oi.product_variants?.cost_price ?? 0,
+                cost_price: oi.cost_price ?? oi.products?.cost_price ?? oi.product_variants?.cost_price ?? 0,
                 productname: oi.products?.name,
                 product_name: oi.products?.name,
                 sku: oi.product_variants?.id,
+                owner_user_id: oi.products?.owner_user_id,
+                total_price: oi.total_price,
+                products: oi.products,
                 product_variants: oi.product_variants,
                 // ✅ إضافة الحقول المطلوبة لنظام الحجز الدقيق
                 item_status: oi.item_status,
                 item_direction: oi.item_direction,
                 variant_id: oi.variant_id,
                 product_id: oi.product_id,
-                unit_price: oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0
+                unit_price: oi.unit_price ?? oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0
               }))
             : (o.items || [])
         }))
