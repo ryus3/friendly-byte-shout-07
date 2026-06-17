@@ -275,7 +275,7 @@ return this.fetch('all_data', async () => {
       *,
       order_items (
         *,
-        products (id, name, images),
+        products (id, name, images, owner_user_id, cost_price),
         product_variants (
           id, price, cost_price, images,
           colors (name, hex_code),
@@ -404,7 +404,7 @@ return this.fetch('all_data', async () => {
         *,
         order_items (
           *,
-          products (name),
+          products (id, name, owner_user_id, cost_price),
           product_variants (price, cost_price, colors (name), sizes (name))
         )
       `).order('created_at', { ascending: false });
@@ -421,7 +421,7 @@ return this.fetch('all_data', async () => {
         *,
         order_items (
           *,
-          products (id, name, images),
+          products (id, name, images, owner_user_id, cost_price),
           product_variants (
             id, price, cost_price, images,
             colors (name, hex_code),
