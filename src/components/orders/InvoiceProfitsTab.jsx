@@ -83,6 +83,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
 
   const calc = useMemo(() => computeInvoiceProfits(data), [data]);
   const namesMap = data.namesMap;
+  const isInvoiceProductOwner = Boolean(calc.byOwner?.[userId]?.items > 0);
 
   if (loading) {
     return (
@@ -111,8 +112,8 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
 
   const fmt = (n) => `${Math.round(Number(n) || 0).toLocaleString()} د.ع`;
 
-  // === الموظف ===
-  if (!isAdmin && !isDepartmentManager) {
+  // === الموظف / أي مستخدم لا يملك منتجات في هذه الفاتورة ===
+  if (!isAdmin && !isInvoiceProductOwner) {
     const myProfit = calc.employeeCombinedByEmp[userId] || 0;
     const myBonus = calc.employeeBonusByEmp[userId] || 0;
     const myOrdersCount = (data.profits || []).filter(p => p.employee_id === userId).length;
@@ -142,8 +143,8 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     );
   }
 
-  // === مدير القسم ===
-  if (isDepartmentManager && !isAdmin) {
+  // === مالك منتجات الفاتورة فقط ===
+  if (isInvoiceProductOwner && !isAdmin) {
     const myOwnerStats = calc.byOwner[userId] || { revenue: 0, cost: 0, items: 0, products: [] };
     const myEmployeesProfits = Object.entries(calc.employeeCombinedByEmp)
       .filter(([empId]) => supervisedIds.includes(empId))
