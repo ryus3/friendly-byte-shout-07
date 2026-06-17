@@ -7741,6 +7741,10 @@ export type Database = {
         }
         Returns: number
       }
+      calculate_real_employee_profit_for_order: {
+        Args: { p_order_id: string }
+        Returns: Json
+      }
       calculate_real_main_cash_balance: { Args: never; Returns: number }
       calculate_sold_quantity: {
         Args: { p_product_id: string; p_variant_id: string }
@@ -8749,10 +8753,12 @@ export type Database = {
         Args: { p_source_id: string; p_starting_balance?: number }
         Returns: Json
       }
-      recompute_order_employee_profit: {
-        Args: { p_order_id: string }
-        Returns: number
-      }
+      recompute_order_employee_profit:
+        | { Args: { p_order_id: string }; Returns: number }
+        | {
+            Args: { p_force_settled?: boolean; p_order_id: string }
+            Returns: number
+          }
       reconcile_invoice_receipts: {
         Args: { p_employee_id?: string }
         Returns: Json
@@ -8798,6 +8804,10 @@ export type Database = {
       }
       repair_alwaseet_order_mapping: {
         Args: { p_order_id: string }
+        Returns: Json
+      }
+      repair_delivery_invoice_employee_profits: {
+        Args: { p_external_id: string; p_partner?: string }
         Returns: Json
       }
       reserve_stock_for_order: {
