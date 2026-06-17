@@ -228,9 +228,15 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EM
         return true;
       }).reduce((sum, e) => sum + (e.amount || 0), 0);
 
-      // مستحقات الموظفين المسددة
-      // المالك يرى فقط الفواتير التي صرفها هو لموظفيه (عبر settlement metadata)
-      const employeeSettledDues = expensesInRange.filter(e => {
+      // مستحقات الموظفين المسددة: الأفضل من فواتير التحاسب لأنها تحمل owner_user_id صريحاً
+      const employeeSettledDuesFromInvoices = settlementsInRange.filter(si => {
+        const isCompleted = !si.status || ['completed', 'approved', 'paid'].includes(si.status);
+        if (!isCompleted) return false;
+        if (isOwnerManager) return si.owner_user_id === currentUserId || si.created_by === currentUserId;
+        return true;
+      }).reduce((sum, si) => sum + (Number(si.total_amount) || 0), 0);
+
+      const employeeSettledDuesFromExpenses = expensesInRange.filter(e => {
         const isEmployeeDue = (
           e.category === 'مستحقات الموظفين' ||
           e.related_data?.category === 'مستحقات الموظفين' ||
@@ -244,6 +250,7 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EM
         }
         return true;
       }).reduce((sum, e) => sum + (e.amount || 0), 0);
+      const employeeSettledDues = employeeSettledDuesFromInvoices || employeeSettledDuesFromExpenses;
 
       // مستحقات الموظفين المعلقة من جدول الأرباح - للموظف الحالي فقط
       const employeePendingDues = profitsData.filter(profit => {
@@ -362,7 +369,7 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EM
     if (orders && Array.isArray(orders) && orders.length > 0) {
       fetchUnifiedProfitData();
     }
-  }, [orders, accounting, currentUser?.id, timePeriod, contextProfits, isAdmin, isDepartmentManager, supervisedIdsKey]);
+  }, [orders, accounting, settlementInvoices, currentUser?.id, timePeriod, contextProfits, isAdmin, isDepartmentManager, supervisedIdsKey]);
 
   // دالة لإعادة تحميل البيانات
   const refreshData = () => {
