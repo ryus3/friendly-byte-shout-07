@@ -52,7 +52,7 @@ const OrderListItem = ({
   const employeeProfit = profitRecord
     ? (Number(profitRecord.employee_profit) || 0)
     : (calculateProfit
-        ? (order.items || []).reduce((sum, item) => sum + calculateProfit(item, order.created_by), 0)
+        ? (Number(calculateProfit(order)) || 0)
         : 0);
   const isSettled = profitRecord?.settled_at ? true : false;
   
