@@ -14,7 +14,7 @@ import devLog from '@/lib/devLogger';
 const EMPTY_SUPERVISED_IDS = [];
 export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EMPTY_SUPERVISED_IDS) => {
   const supervisedIdsKey = Array.isArray(supervisedEmployeeIds) ? supervisedEmployeeIds.join(',') : '';
-  const { orders, accounting, products, profits: contextProfits } = useSuper();
+  const { orders, accounting, products, profits: contextProfits, settlementInvoices } = useSuper();
   const { user: currentUser, allUsers } = useAuth();
   const { isAdmin, isDepartmentManager } = usePermissions();
   const [profitData, setProfitData] = useState(null);
@@ -147,19 +147,28 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EM
 
       devLog.log('🔍 Unified Profits - Delivered Orders:', deliveredOrders.length, '(filtered by permissions)');
 
-      const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date)); // فلترة المصاريف حسب الفترة
+      const expensesInRange = safeExpenses.filter(e => filterByDate(e.created_at)); // معيار التقارير المالي: created_at
+      const settlementsInRange = (Array.isArray(settlementInvoices) ? settlementInvoices : [])
+        .filter(si => filterByDate(si.settlement_date || si.created_at));
 
       // ===== حساب الإيرادات والتكاليف =====
       // عند مالك المنتجات: نأخذ فقط حصة منتجاته من كل طلب بشكل تناسبي
-      const isItemOwned = (item) => ownedProductIds.has(item.product_id) || ownedProductIds.has(item.products?.id);
+      const isItemOwned = (item) => (
+        ownedProductIds.has(item.product_id) ||
+        ownedProductIds.has(item.products?.id) ||
+        item.owner_user_id === currentUserId ||
+        item.products?.owner_user_id === currentUserId
+      );
+      const getItemRevenue = (it) => Number(it.total_price ?? ((it.unit_price ?? it.price ?? 0) * (it.quantity || 0))) || 0;
+      const getItemCost = (it) => Number(it.products?.cost_price ?? it.product_variants?.cost_price ?? it.cost_price ?? 0) || 0;
 
       const orderBreakdown = deliveredOrders.map(o => {
         const items = Array.isArray(o.order_items) ? o.order_items : (Array.isArray(o.items) ? o.items : []);
-        const itemsRevenue = items.reduce((s, it) => s + ((it.unit_price || 0) * (it.quantity || 0)), 0);
-        const itemsCost = items.reduce((s, it) => s + (((it.product_variants?.cost_price || it.products?.cost_price || it.cost_price) || 0) * (it.quantity || 0)), 0);
+        const itemsRevenue = items.reduce((s, it) => s + getItemRevenue(it), 0);
+        const itemsCost = items.reduce((s, it) => s + (getItemCost(it) * (it.quantity || 0)), 0);
 
-        const ownedItemsRevenue = items.filter(isItemOwned).reduce((s, it) => s + ((it.unit_price || 0) * (it.quantity || 0)), 0);
-        const ownedItemsCost = items.filter(isItemOwned).reduce((s, it) => s + (((it.product_variants?.cost_price || it.products?.cost_price || it.cost_price) || 0) * (it.quantity || 0)), 0);
+        const ownedItemsRevenue = items.filter(isItemOwned).reduce((s, it) => s + getItemRevenue(it), 0);
+        const ownedItemsCost = items.filter(isItemOwned).reduce((s, it) => s + (getItemCost(it) * (it.quantity || 0)), 0);
 
         const orderTotal = Number(o.final_amount || o.total_amount || 0);
         const orderDelivery = Number(o.delivery_fee || 0);
