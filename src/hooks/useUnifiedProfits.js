@@ -14,7 +14,7 @@ import devLog from '@/lib/devLogger';
 const EMPTY_SUPERVISED_IDS = [];
 export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EMPTY_SUPERVISED_IDS) => {
   const supervisedIdsKey = Array.isArray(supervisedEmployeeIds) ? supervisedEmployeeIds.join(',') : '';
-  const { orders, accounting, products, profits: contextProfits } = useSuper();
+  const { orders, accounting, products, profits: contextProfits, settlementInvoices } = useSuper();
   const { user: currentUser, allUsers } = useAuth();
   const { isAdmin, isDepartmentManager } = usePermissions();
   const [profitData, setProfitData] = useState(null);
@@ -147,19 +147,28 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EM
 
       devLog.log('🔍 Unified Profits - Delivered Orders:', deliveredOrders.length, '(filtered by permissions)');
 
-      const expensesInRange = safeExpenses.filter(e => filterByDate(e.transaction_date)); // فلترة المصاريف حسب الفترة
+      const expensesInRange = safeExpenses.filter(e => filterByDate(e.created_at)); // معيار التقارير المالي: created_at
+      const settlementsInRange = (Array.isArray(settlementInvoices) ? settlementInvoices : [])
+        .filter(si => filterByDate(si.settlement_date || si.created_at));
 
       // ===== حساب الإيرادات والتكاليف =====
       // عند مالك المنتجات: نأخذ فقط حصة منتجاته من كل طلب بشكل تناسبي
-      const isItemOwned = (item) => ownedProductIds.has(item.product_id) || ownedProductIds.has(item.products?.id);
+      const isItemOwned = (item) => (
+        ownedProductIds.has(item.product_id) ||
+        ownedProductIds.has(item.products?.id) ||
+        item.owner_user_id === currentUserId ||
+        item.products?.owner_user_id === currentUserId
+      );
+      const getItemRevenue = (it) => Number(it.total_price ?? ((it.unit_price ?? it.price ?? 0) * (it.quantity || 0))) || 0;
+      const getItemCost = (it) => Number(it.products?.cost_price ?? it.product_variants?.cost_price ?? it.cost_price ?? 0) || 0;
 
       const orderBreakdown = deliveredOrders.map(o => {
         const items = Array.isArray(o.order_items) ? o.order_items : (Array.isArray(o.items) ? o.items : []);
-        const itemsRevenue = items.reduce((s, it) => s + ((it.unit_price || 0) * (it.quantity || 0)), 0);
-        const itemsCost = items.reduce((s, it) => s + (((it.product_variants?.cost_price || it.products?.cost_price || it.cost_price) || 0) * (it.quantity || 0)), 0);
+        const itemsRevenue = items.reduce((s, it) => s + getItemRevenue(it), 0);
+        const itemsCost = items.reduce((s, it) => s + (getItemCost(it) * (it.quantity || 0)), 0);
 
-        const ownedItemsRevenue = items.filter(isItemOwned).reduce((s, it) => s + ((it.unit_price || 0) * (it.quantity || 0)), 0);
-        const ownedItemsCost = items.filter(isItemOwned).reduce((s, it) => s + (((it.product_variants?.cost_price || it.products?.cost_price || it.cost_price) || 0) * (it.quantity || 0)), 0);
+        const ownedItemsRevenue = items.filter(isItemOwned).reduce((s, it) => s + getItemRevenue(it), 0);
+        const ownedItemsCost = items.filter(isItemOwned).reduce((s, it) => s + (getItemCost(it) * (it.quantity || 0)), 0);
 
         const orderTotal = Number(o.final_amount || o.total_amount || 0);
         const orderDelivery = Number(o.delivery_fee || 0);
@@ -219,9 +228,15 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EM
         return true;
       }).reduce((sum, e) => sum + (e.amount || 0), 0);
 
-      // مستحقات الموظفين المسددة
-      // المالك يرى فقط الفواتير التي صرفها هو لموظفيه (عبر settlement metadata)
-      const employeeSettledDues = expensesInRange.filter(e => {
+      // مستحقات الموظفين المسددة: الأفضل من فواتير التحاسب لأنها تحمل owner_user_id صريحاً
+      const employeeSettledDuesFromInvoices = settlementsInRange.filter(si => {
+        const isCompleted = !si.status || ['completed', 'approved', 'paid'].includes(si.status);
+        if (!isCompleted) return false;
+        if (isOwnerManager) return si.owner_user_id === currentUserId || si.created_by === currentUserId;
+        return true;
+      }).reduce((sum, si) => sum + (Number(si.total_amount) || 0), 0);
+
+      const employeeSettledDuesFromExpenses = expensesInRange.filter(e => {
         const isEmployeeDue = (
           e.category === 'مستحقات الموظفين' ||
           e.related_data?.category === 'مستحقات الموظفين' ||
@@ -235,6 +250,7 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EM
         }
         return true;
       }).reduce((sum, e) => sum + (e.amount || 0), 0);
+      const employeeSettledDues = employeeSettledDuesFromInvoices || employeeSettledDuesFromExpenses;
 
       // مستحقات الموظفين المعلقة من جدول الأرباح - للموظف الحالي فقط
       const employeePendingDues = profitsData.filter(profit => {
@@ -353,7 +369,7 @@ export const useUnifiedProfits = (timePeriod = 'all', supervisedEmployeeIds = EM
     if (orders && Array.isArray(orders) && orders.length > 0) {
       fetchUnifiedProfitData();
     }
-  }, [orders, accounting, currentUser?.id, timePeriod, contextProfits, isAdmin, isDepartmentManager, supervisedIdsKey]);
+  }, [orders, accounting, settlementInvoices, currentUser?.id, timePeriod, contextProfits, isAdmin, isDepartmentManager, supervisedIdsKey]);
 
   // دالة لإعادة تحميل البيانات
   const refreshData = () => {

@@ -294,10 +294,9 @@ const OrderCard = React.memo(({
         return Number(profitRecord.employee_profit) || 0;
       }
     }
-    // احتياط فقط إذا لم يُسجَّل أي ربح بعد (طلب لم يُسلَّم)
-    if (!calculateProfit || !order.items) return 0;
-    const validItems = order.items.filter(item => item != null);
-    return validItems.reduce((sum, item) => sum + (calculateProfit(item, order.created_by) || 0), 0);
+    // احتياط فقط إذا لم يُسجَّل أي ربح بعد: مرّر الطلب كاملاً حتى تدخل الزيادة/الخصم
+    if (!calculateProfit) return 0;
+    return Number(calculateProfit(order)) || 0;
   }, [calculateProfit, order, profits]);
 
   const paymentStatus = useMemo(() => {

@@ -173,10 +173,16 @@ export const SuperProvider = ({ children }) => {
       ? o.order_items.filter(oi => oi != null && typeof oi === 'object').map(oi => ({
           quantity: Number(oi?.quantity) || 1,
           price: oi?.price ?? oi?.unit_price ?? oi?.selling_price ?? oi?.product_variants?.price ?? 0,
-          cost_price: oi?.cost_price ?? oi?.product_variants?.cost_price ?? 0,
+          cost_price: oi?.cost_price ?? oi?.products?.cost_price ?? oi?.product_variants?.cost_price ?? 0,
           productname: oi?.products?.name,
           product_name: oi?.products?.name,
           sku: oi.product_variants?.id || oi.variant_id,
+          variant_id: oi.variant_id,
+          product_id: oi.product_id,
+          owner_user_id: oi.products?.owner_user_id,
+          total_price: oi.total_price,
+          unit_price: oi.unit_price ?? oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
+          products: oi.products,
           product_variants: oi.product_variants
         }))
       : (o.items || []);
@@ -491,17 +497,20 @@ export const SuperProvider = ({ children }) => {
             ? o.order_items.map(oi => ({
                 quantity: oi.quantity || 1,
                 price: oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0,
-                cost_price: oi.cost_price ?? oi.product_variants?.cost_price ?? 0,
+                cost_price: oi.cost_price ?? oi.products?.cost_price ?? oi.product_variants?.cost_price ?? 0,
                 productname: oi.products?.name,
                 product_name: oi.products?.name,
                 sku: oi.product_variants?.id,
+                owner_user_id: oi.products?.owner_user_id,
+                total_price: oi.total_price,
+                products: oi.products,
                 product_variants: oi.product_variants,
                 // ✅ إضافة الحقول المطلوبة لنظام الحجز الدقيق
                 item_status: oi.item_status,
                 item_direction: oi.item_direction,
                 variant_id: oi.variant_id,
                 product_id: oi.product_id,
-                unit_price: oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0
+                unit_price: oi.unit_price ?? oi.price ?? oi.selling_price ?? oi.product_variants?.price ?? 0
               }))
             : (o.items || [])
         }))
@@ -3037,56 +3046,43 @@ export const SuperProvider = ({ children }) => {
         return 0;
       }
       
-      // إذا تم تمرير طلب كامل
+      // إذا تم تمرير طلب كامل: القاعدة النهائية = قاعدة الربح + الزيادة - الخصم
       const order = orderOrItem;
-      if (!order || !order.items) return 0;
-      
-      // البحث عن قاعدة الربح للموظف
+      const orderItems = Array.isArray(order?.items) ? order.items : (Array.isArray(order?.order_items) ? order.order_items : []);
+      if (!order || orderItems.length === 0) return 0;
       const employeeProfitRules = allData.employeeProfitRules || [];
       const orderEmployeeId = order.created_by;
-      
       let totalEmployeeProfit = 0;
-      
-      order.items.forEach(item => {
-        // محاولة الحصول على product_id من variant_id إذا لم يكن موجود
-        let productId = item.product_id;
-        if (!productId && item.sku) {
-          const variant = getVariantDetails(item.sku);
-          productId = variant?.product_id;
-        }
-        
+      let ruleItemsRevenue = 0;
+      let allItemsRevenue = 0;
+      orderItems.forEach(item => {
+        const quantity = Number(item.quantity) || 1;
+        const unitPrice = Number(item.unit_price ?? item.price ?? item.selling_price ?? item.product_variants?.price ?? 0);
+        const lineRevenue = Number(item.total_price ?? (unitPrice * quantity)) || 0;
+        allItemsRevenue += lineRevenue;
+        let productId = item.product_id || item.productId;
+        if (!productId && item.sku) productId = getVariantDetails(item.sku)?.product_id;
         if (!productId) return;
-        
-        // البحث عن قاعدة ربح مطابقة مع التحقق من التاريخ
+        const variantId = item.variant_id || item.sku || item.product_variants?.id;
         const rule = employeeProfitRules.find(r => 
           r.employee_id === orderEmployeeId && 
           r.is_active === true &&
-          (
-            (r.rule_type === 'product' && r.target_id === productId) ||
-            (r.rule_type === 'variant' && r.target_id === item.sku)
-          ) &&
-          // القاعدة يجب أن تكون موجودة قبل إنشاء الطلب
+          ((r.rule_type === 'product' && r.target_id === productId) || (r.rule_type === 'variant' && r.target_id === variantId)) &&
           new Date(r.created_at) <= new Date(order.created_at)
         );
-        
-        if (rule) {
-          if (rule.profit_amount) {
-            totalEmployeeProfit += rule.profit_amount * item.quantity;
-          } else if (rule.profit_percentage) {
-            const itemRevenue = item.price * item.quantity;
-            totalEmployeeProfit += (itemRevenue * rule.profit_percentage / 100);
-          }
+        if (!rule) return;
+        ruleItemsRevenue += lineRevenue;
+        if (rule.profit_amount) {
+          totalEmployeeProfit += Number(rule.profit_amount) * quantity;
+        } else if (rule.profit_percentage) {
+          totalEmployeeProfit += (lineRevenue * Number(rule.profit_percentage) / 100);
         }
       });
-      
-      // خصم الخصومات التي تؤثر على ربح الموظف
-      const orderDiscounts = allData.orderDiscounts || [];
-      const relevantDiscounts = orderDiscounts.filter(d => 
-        d.order_id === order.id && d.affects_employee_profit === true
-      );
-      const totalEmployeeDiscounts = relevantDiscounts.reduce((sum, d) => sum + (d.discount_amount || 0), 0);
-      
-      return Math.max(0, totalEmployeeProfit - totalEmployeeDiscounts);
+      if (ruleItemsRevenue <= 0) return 0;
+      const ratio = allItemsRevenue > 0 ? (ruleItemsRevenue / allItemsRevenue) : 1;
+      const discountShare = (Number(order.discount) || 0) * ratio;
+      const increaseShare = (Number(order.price_increase) || 0) * ratio;
+      return totalEmployeeProfit + increaseShare - discountShare;
     },
     
     calculateManagerProfit: (order) => {
