@@ -160,56 +160,91 @@ const EmployeeFinancialCenterPage = () => {
     return () => supabase.removeChannel(channel);
   }, [userId]);
 
-  // الإحصائيات المالية الموحدة
+  // الإحصائيات المالية الموحدة — نفس منطق المدير العام لكن بنطاق منتجات/طلبات المستخدم
   const financialStats = useMemo(() => {
     const balance = employeeCashSource?.current_balance || 0;
+    const uid = currentUser?.id;
+    const uuid = currentUser?.user_id;
 
-    // إيرادات (حركات دخول من طلبات) - استثناء إرجاعات المصاريف لأنها ليست إيرادات حقيقية
-    const revenueMovements = cashMovements.filter(m =>
-      m.movement_type === 'in' && m.reference_type !== 'expense_refund' && filterByDate(m.created_at)
+    // المنتجات المملوكة مالياً للمستخدم
+    const myProductIds = new Set(
+      (products || [])
+        .filter(p => p.owner_user_id === userId || p.owner_user_id === uid || p.owner_user_id === uuid)
+        .map(p => p.id)
     );
-    const totalRevenue = revenueMovements.reduce((s, m) => s + Number(m.amount), 0);
+    const isOwnerManager = myProductIds.size > 0;
 
-    // مصاريف (حركات خروج - مصاريف عامة) مع خصم إرجاعات المصاريف المحذوفة
-    const expenseMovements = cashMovements.filter(m =>
-      m.movement_type === 'out' && m.reference_type === 'expense' && filterByDate(m.created_at)
-    );
-    const expenseRefundMovements = cashMovements.filter(m =>
-      m.movement_type === 'in' && m.reference_type === 'expense_refund' && filterByDate(m.created_at)
-    );
-    const totalExpenses = expenseMovements.reduce((s, m) => s + Number(m.amount), 0) 
-      - expenseRefundMovements.reduce((s, m) => s + Number(m.amount), 0);
+    // الطلبات المُستلمة وضمن الفترة (تخص المستخدم بشكل أو بآخر)
+    const inScopeOrders = (orders || []).filter(o => {
+      const isDelivered = o.status === 'delivered' || o.status === 'completed';
+      if (!isDelivered || !o.receipt_received) return false;
+      if (!filterByDate(o.updated_at || o.created_at)) return false;
+      const createdByMe = o.created_by === userId || o.created_by === uid || o.created_by === uuid;
+      if (createdByMe) return true;
+      if (!isOwnerManager) return false;
+      const items = o.items || o.order_items || [];
+      return items.some(it => myProductIds.has(it.product_id) || myProductIds.has(it.products?.id));
+    });
 
-    // رسوم التوصيل
-    const deliveryFeeMovements = cashMovements.filter(m =>
-      m.movement_type === 'out' && m.reference_type === 'delivery_fee' && filterByDate(m.created_at)
-    );
-    const deliveryFees = deliveryFeeMovements.reduce((s, m) => s + Number(m.amount), 0);
+    // حساب الإيراد/التوصيل/التكلفة تناسبياً لمالك المنتجات
+    let totalRevenue = 0, deliveryFees = 0, cogs = 0;
+    inScopeOrders.forEach(o => {
+      const items = o.items || o.order_items || [];
+      const itemRev = (it) => Number(it.total_price ?? ((it.unit_price ?? it.price ?? 0) * (it.quantity || 0))) || 0;
+      const itemCost = (it) => (Number(it.cost_price ?? it.products?.cost_price ?? it.product_variants?.cost_price ?? 0) || 0) * (it.quantity || 0);
+      const isOwned = (it) => isOwnerManager && (myProductIds.has(it.product_id) || myProductIds.has(it.products?.id));
 
-    // المبيعات بدون التوصيل
-    const salesWithoutDelivery = totalRevenue;
+      const allRev = items.reduce((s, it) => s + itemRev(it), 0);
+      const ownedRev = items.filter(isOwned).reduce((s, it) => s + itemRev(it), 0);
+      const ownedCost = items.filter(isOwned).reduce((s, it) => s + itemCost(it), 0);
 
-    // أرباح الموظف الشخصية (من جدول profits)
-    const filteredProfits = employeeProfits.filter(p => filterByDate(p.created_at));
-    const totalEmployeeProfit = filteredProfits.reduce((s, p) => s + Number(p.employee_profit || 0), 0);
+      const finalAmount = Number(o.final_amount || o.total_amount || 0);
+      const delivery = Number(o.delivery_fee || 0);
 
-    // COGS
-    const cogs = filteredProfits.reduce((s, p) => s + Number(p.product_cost || 0), 0);
+      if (isOwnerManager) {
+        const ratio = allRev > 0 ? (ownedRev / allRev) : 0;
+        totalRevenue += finalAmount * ratio;
+        deliveryFees += delivery * ratio;
+        cogs += ownedCost;
+      } else {
+        totalRevenue += finalAmount;
+        deliveryFees += delivery;
+        cogs += items.reduce((s, it) => s + itemCost(it), 0);
+      }
+    });
+    const salesWithoutDelivery = totalRevenue - deliveryFees;
 
-    // مستحقات الموظفين تحت الإشراف
-    const filteredSupProfits = supervisedEmployeeProfits.filter(p => filterByDate(p.created_at));
-    const employeeSettledDues = filteredSupProfits
-      .filter(p => p.settled)
-      .reduce((s, p) => s + Number(p.employee_profit || 0), 0);
+    // المصاريف العامة الخاصة بالمستخدم
+    const totalExpenses = (accounting?.expenses || []).filter(e => {
+      if (e.created_by !== userId && e.created_by !== uid && e.created_by !== uuid) return false;
+      if (!filterByDate(e.created_at)) return false;
+      if (e.expense_type === 'system') return false;
+      if (e.category === 'مستحقات الموظفين') return false;
+      if (e.related_data?.category === 'شراء بضاعة' || e.metadata?.category === 'شراء بضاعة') return false;
+      return true;
+    }).reduce((s, e) => s + Number(e.amount || 0), 0);
+
+    // مستحقات الموظفين المدفوعة — من فواتير التحاسب المرتبطة بالمالك
+    const employeeSettledDues = (settlementInvoices || []).filter(si => {
+      if (!filterByDate(si.settlement_date || si.created_at)) return false;
+      const isCompleted = !si.status || ['completed', 'approved', 'paid'].includes(si.status);
+      if (!isCompleted) return false;
+      const ownerMatch = si.owner_user_id === userId || si.owner_user_id === uid || si.owner_user_id === uuid;
+      const creatorMatch = si.created_by === userId || si.created_by === uid || si.created_by === uuid;
+      return ownerMatch || creatorMatch;
+    }).reduce((s, si) => s + Number(si.total_amount || 0), 0);
+
+    // مستحقات معلقة (من profits الموظفين تحت الإشراف)
+    const filteredSupProfits = (supervisedEmployeeProfits || []).filter(p => filterByDate(p.created_at));
     const employeePendingDues = filteredSupProfits
-      .filter(p => !p.settled)
+      .filter(p => p.status !== 'settled' && !p.settled_at)
       .reduce((s, p) => s + Number(p.employee_profit || 0), 0);
+    const totalEmployeeProfit = filteredSupProfits.reduce((s, p) => s + Number(p.employee_profit || 0), 0);
 
-    // مشتريات
-    const purchaseMovements = cashMovements.filter(m =>
+    // مشتريات (من حركات النقد)
+    const totalPurchases = (cashMovements || []).filter(m =>
       m.movement_type === 'out' && m.reference_type === 'purchase' && filterByDate(m.created_at)
-    );
-    const totalPurchases = purchaseMovements.reduce((s, m) => s + Number(m.amount), 0);
+    ).reduce((s, m) => s + Number(m.amount), 0);
 
     const grossProfit = salesWithoutDelivery - cogs;
     const generalExpenses = totalExpenses;
@@ -230,7 +265,7 @@ const EmployeeFinancialCenterPage = () => {
       generalExpenses,
       totalPurchases,
     };
-  }, [employeeCashSource, cashMovements, employeeProfits, supervisedEmployeeProfits, calculatedDateRange, selectedTimePeriod]);
+  }, [employeeCashSource, cashMovements, orders, products, accounting?.expenses, settlementInvoices, supervisedEmployeeProfits, userId, currentUser, calculatedDateRange, selectedTimePeriod]);
 
   // قيمة مخزون الموظف (المنتجات الخاصة - بناءً على owner_user_id)
   const inventoryValue = useMemo(() => {

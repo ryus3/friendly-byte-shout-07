@@ -202,19 +202,53 @@ const ManagerProfitsDialog = ({
       })
       .map(profit => {
         try {
-          // البيانات المحاسبية الحقيقية من جدول profits
-          const totalProfit = Number(profit.profit_amount || 0);
           const employeeProfit = Number(profit.employee_profit || 0);
-          const systemProfit = totalProfit - employeeProfit; // ربح النظام
-          const totalRevenue = Number(profit.total_revenue || 0);
-          const totalCost = Number(profit.total_cost || 0);
-          
-          // العثور على الموظف
-          const employee = employees.find(emp => emp.user_id === profit.employee_id);
-          
-          // العثور على الطلب المرتبط
           const relatedOrder = orders?.find(order => order.id === profit.order_id);
-          
+
+          // ✅ المالك الحالي (مالك المنتجات)
+          const ownerId = currentUser?.id || currentUser?.user_id;
+
+          // ✅ إعادة الحساب من order_items عند توفرها (بدلاً من profit_amount الذي قد يكون قديماً)
+          // نحسب حصة المالك التناسبية من إيراد الطلب الفعلي (شامل الخصم/الزيادة) - تكلفة منتجاته
+          let totalRevenue = 0;
+          let totalCost = 0;
+          let systemProfit = 0;
+          let recomputed = false;
+
+          if (relatedOrder) {
+            const items = relatedOrder.items || relatedOrder.order_items || [];
+            const itemRev = (it) => Number(it.total_price ?? ((it.unit_price ?? it.price ?? 0) * (it.quantity || 0))) || 0;
+            const itemCost = (it) => (Number(it.cost_price ?? it.products?.cost_price ?? it.product_variants?.cost_price ?? 0) || 0) * (it.quantity || 0);
+            const isOwned = (it) => ownerId && (it.owner_user_id === ownerId || it.products?.owner_user_id === ownerId);
+
+            if (items.length > 0) {
+              const allRev = items.reduce((s, it) => s + itemRev(it), 0);
+              const ownedItems = items.filter(isOwned);
+              if (ownedItems.length > 0) {
+                const ownedRev = ownedItems.reduce((s, it) => s + itemRev(it), 0);
+                const ownedCost = ownedItems.reduce((s, it) => s + itemCost(it), 0);
+                const finalAmount = Number(relatedOrder.final_amount || relatedOrder.total_amount || 0);
+                const delivery = Number(relatedOrder.delivery_fee || 0);
+                const ratio = allRev > 0 ? (ownedRev / allRev) : 0;
+                // إيراد المالك الفعلي = حصته من (المبلغ النهائي بدون توصيل)
+                totalRevenue = (finalAmount - delivery) * ratio;
+                totalCost = ownedCost;
+                // ربح المالك = إيراده الفعلي - تكلفته - حصة الموظف من هذا الطلب
+                systemProfit = totalRevenue - totalCost - employeeProfit;
+                recomputed = true;
+              }
+            }
+          }
+
+          if (!recomputed) {
+            const totalProfit = Number(profit.profit_amount || 0);
+            totalRevenue = Number(profit.total_revenue || 0);
+            totalCost = Number(profit.total_cost || 0);
+            systemProfit = totalProfit - employeeProfit;
+          }
+
+          const employee = employees.find(emp => emp.user_id === profit.employee_id);
+
           return {
             id: profit.id,
             order_id: profit.order_id,
@@ -222,18 +256,16 @@ const ManagerProfitsDialog = ({
             created_at: profit.created_at,
             employee,
             employee_id: profit.employee_id,
-            // البيانات المحاسبية الحقيقية
             orderTotal: totalRevenue,
             totalCost: totalCost,
-            managerProfit: Math.round(systemProfit), // ربح المدير/النظام
+            managerProfit: Math.round(systemProfit),
             employeeProfit: Math.round(employeeProfit),
-            totalProfit: Math.round(totalProfit),
+            totalProfit: Math.round(systemProfit + employeeProfit),
             systemProfit: Math.round(systemProfit),
-            profitPercentage: totalRevenue > 0 ? ((totalProfit / totalRevenue) * 100).toFixed(1) : '0',
+            profitPercentage: totalRevenue > 0 ? (((systemProfit + employeeProfit) / totalRevenue) * 100).toFixed(1) : '0',
             isPaid: profit.status === 'settled' || profit.settled_at,
             settledAt: profit.settled_at,
             status: profit.status,
-            // إضافة بيانات إضافية للعرض
             customer_name: relatedOrder?.customer_name || 'غير محدد',
             delivery_fee: relatedOrder?.delivery_fee || 0
           };
