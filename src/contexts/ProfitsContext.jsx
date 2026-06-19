@@ -622,10 +622,25 @@ export const ProfitsProvider = ({ children }) => {
       if (notificationsError) throw notificationsError;
 
       const requests = (notificationsData || []).filter(n => n.type === 'settlement_request');
-      const invoices = (notificationsData || []).filter(n => n.type === 'settlement_invoice');
+
+      // ✅ مصدر الحقيقة للمستحقات المدفوعة: جدول settlement_invoices الفعلي
+      let invoicesQuery = supabase
+        .from('settlement_invoices')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!canViewAllData) {
+        invoicesQuery = invoicesQuery.or(
+          `employee_id.eq.${userUUID},owner_user_id.eq.${userUUID},created_by.eq.${userUUID}`
+        );
+      }
+
+      const { data: invoicesData, error: invoicesError } = await invoicesQuery;
+      if (invoicesError) devLog.warn('settlement_invoices load failed:', invoicesError.message);
 
       setSettlementRequests(requests);
-      setSettlementInvoices(invoices);
+      setSettlementInvoices(invoicesData || []);
+
 
     } catch (error) {
       devLog.error('Error fetching profits data:', error);
