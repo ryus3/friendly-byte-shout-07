@@ -18,6 +18,8 @@ const BarcodeScannerDialog = lazy(() => import('@/components/products/BarcodeSca
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import SmartPagination from '@/components/ui/SmartPagination';
 import TransferOwnershipDialog from '@/components/manage-products/TransferOwnershipDialog';
+import EmployeeReservationsDialog from '@/components/manage-employees/EmployeeReservationsDialog';
+import { Lock } from 'lucide-react';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
