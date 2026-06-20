@@ -38,6 +38,12 @@ const ManageProductsPage = () => {
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isReservationsOpen, setIsReservationsOpen] = useState(false);
+  
+
+  // مالك منتجات؟ (لإظهار زر الحجز)
+  const isOwnerOrAdmin = isAdmin || (Array.isArray(products) && products.some(p => p.owner_user_id === user?.id || p.owner_user_id === user?.user_id));
+
   
 
   // استخدام hook الفلترة المحسن
