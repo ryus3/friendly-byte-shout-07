@@ -18,6 +18,8 @@ const BarcodeScannerDialog = lazy(() => import('@/components/products/BarcodeSca
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import SmartPagination from '@/components/ui/SmartPagination';
 import TransferOwnershipDialog from '@/components/manage-products/TransferOwnershipDialog';
+import EmployeeReservationsDialog from '@/components/manage-employees/EmployeeReservationsDialog';
+import { Lock } from 'lucide-react';
 
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -36,6 +38,12 @@ const ManageProductsPage = () => {
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isReservationsOpen, setIsReservationsOpen] = useState(false);
+  
+
+  // مالك منتجات؟ (لإظهار زر الحجز)
+  const isOwnerOrAdmin = isAdmin || (Array.isArray(products) && products.some(p => p.owner_user_id === user?.id || p.owner_user_id === user?.user_id));
+
   
 
   // استخدام hook الفلترة المحسن
@@ -247,16 +255,30 @@ const ManageProductsPage = () => {
           isMobile={isMobile}
         />
 
-        {/* زر نقل الملكية - يظهر فقط للمدير عند تحديد منتجات */}
-        {isAdmin && selectedProductIds.length > 0 && (
-          <Button 
-            variant="outline" 
-            className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
-            onClick={() => setIsTransferOpen(true)}
-          >
-            نقل ملكية {selectedProductIds.length} منتج
-          </Button>
-        )}
+        {/* أزرار الإدارة */}
+        <div className="flex flex-wrap gap-2">
+          {isOwnerOrAdmin && (
+            <Button variant="outline" onClick={() => setIsReservationsOpen(true)}>
+              <Lock className="w-4 h-4 ml-1" />
+              حجز كميات للموظفين
+            </Button>
+          )}
+          {/* زر نقل الملكية - يظهر فقط للمدير عند تحديد منتجات */}
+          {isAdmin && selectedProductIds.length > 0 && (
+            <Button 
+              variant="outline" 
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              onClick={() => setIsTransferOpen(true)}
+            >
+              نقل ملكية {selectedProductIds.length} منتج
+            </Button>
+          )}
+        </div>
+
+        <EmployeeReservationsDialog
+          open={isReservationsOpen}
+          onOpenChange={setIsReservationsOpen}
+        />
 
         <TransferOwnershipDialog
           open={isTransferOpen}

@@ -1119,6 +1119,30 @@ export const SuperProvider = ({ children }) => {
 
       // ✅ 1. طلبات عادية: حجز كل المنتجات
       if (!isReturn && !isExchange && items.length > 0) {
+        // ✅ 1.أ — فرض حجوزات الموظف الخاصة (قبل أي حجز عام)
+        const currentEmpId = resolveCurrentUserUUID();
+        for (const it of items) {
+          if (!it.variant_id || !currentEmpId) continue;
+          try {
+            const { data: remaining } = await supabase.rpc('get_employee_reserved_remaining', {
+              p_employee_id: currentEmpId,
+              p_variant_id: it.variant_id
+            });
+            if (remaining !== null && remaining !== undefined && Number(remaining) < Number(it.quantity)) {
+              return { success: false, error: `الكمية المتاحة لك من حجزك الخاص: ${remaining}` };
+            }
+            if (remaining === null || remaining === undefined) {
+              const { data: blocked } = await supabase.rpc('variant_has_other_reservation', {
+                p_employee_id: currentEmpId,
+                p_variant_id: it.variant_id
+              });
+              if (blocked === true) {
+                return { success: false, error: 'هذا المنتج/القياس محجوز لموظف آخر ولا يمكنك بيعه' };
+              }
+            }
+          } catch (_) { /* لا تكسر الإنشاء */ }
+        }
+
         for (const it of items) {
           const { data: reserveRes, error: reserveErr } = await supabase.rpc('reserve_stock_for_order', {
             p_product_id: it.product_id,

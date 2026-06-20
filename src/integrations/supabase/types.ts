@@ -2539,6 +2539,66 @@ export type Database = {
           },
         ]
       }
+      employee_product_reservations: {
+        Row: {
+          created_at: string
+          created_by: string
+          employee_id: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          owner_user_id: string | null
+          product_id: string
+          reserved_quantity: number
+          sold_quantity: number
+          updated_at: string
+          variant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          employee_id: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          owner_user_id?: string | null
+          product_id: string
+          reserved_quantity?: number
+          sold_quantity?: number
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          employee_id?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          owner_user_id?: string | null
+          product_id?: string
+          reserved_quantity?: number
+          sold_quantity?: number
+          updated_at?: string
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_product_reservations_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_product_reservations_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       employee_profit_rules: {
         Row: {
           created_at: string
@@ -8140,6 +8200,10 @@ export type Database = {
           total_pending_deductions: number
         }[]
       }
+      get_employee_reserved_remaining: {
+        Args: { p_employee_id: string; p_variant_id: string }
+        Returns: number
+      }
       get_filters_data: {
         Args: never
         Returns: {
@@ -9175,6 +9239,10 @@ export type Database = {
       validate_promo_code: { Args: { promo_code_param: string }; Returns: Json }
       validate_telegram_webhook_token: {
         Args: { expected_token: string; secret_token: string }
+        Returns: boolean
+      }
+      variant_has_other_reservation: {
+        Args: { p_employee_id: string; p_variant_id: string }
         Returns: boolean
       }
       verify_invoice_1849184_for_manager: { Args: never; Returns: Json }
