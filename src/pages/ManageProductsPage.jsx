@@ -255,16 +255,30 @@ const ManageProductsPage = () => {
           isMobile={isMobile}
         />
 
-        {/* زر نقل الملكية - يظهر فقط للمدير عند تحديد منتجات */}
-        {isAdmin && selectedProductIds.length > 0 && (
-          <Button 
-            variant="outline" 
-            className="w-full border-amber-300 text-amber-700 hover:bg-amber-50"
-            onClick={() => setIsTransferOpen(true)}
-          >
-            نقل ملكية {selectedProductIds.length} منتج
-          </Button>
-        )}
+        {/* أزرار الإدارة */}
+        <div className="flex flex-wrap gap-2">
+          {isOwnerOrAdmin && (
+            <Button variant="outline" onClick={() => setIsReservationsOpen(true)}>
+              <Lock className="w-4 h-4 ml-1" />
+              حجز كميات للموظفين
+            </Button>
+          )}
+          {/* زر نقل الملكية - يظهر فقط للمدير عند تحديد منتجات */}
+          {isAdmin && selectedProductIds.length > 0 && (
+            <Button 
+              variant="outline" 
+              className="border-amber-300 text-amber-700 hover:bg-amber-50"
+              onClick={() => setIsTransferOpen(true)}
+            >
+              نقل ملكية {selectedProductIds.length} منتج
+            </Button>
+          )}
+        </div>
+
+        <EmployeeReservationsDialog
+          open={isReservationsOpen}
+          onOpenChange={setIsReservationsOpen}
+        />
 
         <TransferOwnershipDialog
           open={isTransferOpen}
