@@ -489,8 +489,12 @@ const ManagerProfitsDialog = ({
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-bold text-sm text-foreground truncate">{order.order_number}</h4>
-              <p className="text-xs text-muted-foreground truncate">{order.customer_name || 'عميل غير محدد'}</p>
+              <h4 className="font-bold text-sm text-foreground truncate font-mono">
+                {order.tracking_number || order.order_number}
+              </h4>
+              <p className="text-xs text-muted-foreground truncate">
+                {order.tracking_number ? `${order.order_number} • ` : ''}{order.customer_name || 'عميل غير محدد'}
+              </p>
             </div>
           </div>
           <div className="text-left">
