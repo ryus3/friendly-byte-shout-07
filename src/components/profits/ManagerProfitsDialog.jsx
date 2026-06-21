@@ -275,7 +275,7 @@ const ManagerProfitsDialog = ({
       console.error('❌ خطأ في حساب الإحصائيات:', error);
       return defaultStats;
     }
-  }, [detailedProfits]);
+  }, [detailedProfits, settlementInvoices, currentUser?.id, currentUser?.user_id, dateRange]);
 
   const formatCurrency = (amount) => {
     return `${(Number(amount) || 0).toLocaleString()} د.ع`;
