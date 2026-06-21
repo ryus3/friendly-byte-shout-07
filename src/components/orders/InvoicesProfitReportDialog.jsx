@@ -258,6 +258,16 @@ const InvoicesProfitReportDialog = ({
   const calc = useMemo(() => computeInvoiceProfits(data), [data]);
   const fmt = (n) => `${Math.round(Number(n) || 0).toLocaleString()} د.ع`;
 
+  // ✅ هل المستخدم الحالي مالك لأي منتجات داخل الفواتير المحددة؟
+  const isInvoiceProductOwner = useMemo(
+    () => Boolean(calc.byOwner?.[userId]?.items > 0),
+    [calc.byOwner, userId]
+  );
+
+  // ✅ صلاحيات العرض: المدير العام أو مالك منتجات في الفاتورة فقط يرى التفاصيل الحساسة
+  const canSeeSensitive = isAdmin || isInvoiceProductOwner;
+  const TABS = canSeeSensitive ? TABS_FULL : TABS_EMPLOYEE;
+
   const toggleAll = () => setSelectedIds(selectedIds.size === invoices.length ? new Set() : new Set(invoices.map(i => i.id)));
   const toggleOne = (id) => {
     const next = new Set(selectedIds);
@@ -286,6 +296,11 @@ const InvoicesProfitReportDialog = ({
     .filter(([, v]) => Number(v) !== 0)
     .map(([empId, amount]) => ({ empId, name: namesMap[empId] || 'موظف', amount, bonus: calc.employeeBonusByEmp[empId] || 0, ordersCount: employeeOrderCounts[empId] || 0 }))
     .sort((a, b) => b.amount - a.amount);
+
+  // ✅ بيانات الموظف الشخصية فقط (للموظف غير مالك المنتج)
+  const myProfit = calc.employeeCombinedByEmp?.[userId] || 0;
+  const myBonus = calc.employeeBonusByEmp?.[userId] || 0;
+  const myOrdersCount = employeeOrderCounts[userId] || 0;
 
   const goTab = (i) => setTabIndex(Math.max(0, Math.min(TABS.length - 1, i)));
   const toggleMultiEmployee = (id) => {
