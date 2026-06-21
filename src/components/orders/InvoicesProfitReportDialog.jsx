@@ -500,7 +500,7 @@ const InvoicesProfitReportDialog = ({
                   {computeError && <ErrorRow message={computeError} />}
                   {loadingInvoices || computing ? (
                     <div className="flex justify-center py-12"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>
-                  ) : invoices.length === 0 ? <EmptyHint /> : (
+                  ) : invoices.length === 0 ? <EmptyHint /> : canSeeSensitive ? (
                     <>
                       <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
                         <Stat icon={FileText} label="عدد الفواتير" sub={`${selectedIds.size}/${invoices.length} محدّد`} value={`${invoices.length}`} color="blue" />
@@ -532,6 +532,19 @@ const InvoicesProfitReportDialog = ({
                         </div>
                       )}
                     </>
+                  ) : (
+                    // ✅ عرض الموظف غير مالك المنتج — ربحه الشخصي فقط
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <Stat icon={FileText} label="عدد الفواتير" value={`${invoices.length}`} color="blue" />
+                        <Stat icon={FileText} label="عدد طلباتي" value={`${myOrdersCount}`} color="purple" />
+                        <Stat icon={Wallet} label="ربحي من هذه الفواتير" value={fmt(myProfit)} color="emerald" highlight />
+                        {myBonus !== 0 && (
+                          <Stat icon={TrendingUp} label={myBonus > 0 ? 'زيادة على طلباتي' : 'خصم على طلباتي'} value={fmt(Math.abs(myBonus))} color={myBonus > 0 ? 'emerald' : 'orange'} />
+                        )}
+                      </div>
+                      <p className="text-xs text-center text-muted-foreground">* المبلغ صافي وبدون أجور التوصيل</p>
+                    </div>
                   )}
                 </div>
               )}
