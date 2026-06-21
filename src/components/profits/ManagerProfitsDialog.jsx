@@ -103,7 +103,7 @@ const ManagerProfitsDialog = ({
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('overview');
-  const { currentUser } = useAuth();
+  const { user: currentUser } = useAuth();
 
 
   // تحقق فوري من البيانات
