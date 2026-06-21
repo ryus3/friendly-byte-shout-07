@@ -764,37 +764,39 @@ const ManagerProfitsDialog = ({
             </TabsContent>
 
             <TabsContent value="employees" className="space-y-4">
-              {/* إضافة معالجة بديلة للموظفين من البيانات المفصلة */}
               {(() => {
-                // حساب بيانات الموظفين من detailedProfits مباشرة
+                // ✅ تجميع كل الموظفين الذين باعوا منتجاتي — بدون أي قص
                 const employeeStats = {};
-                detailedProfits.forEach(order => {
-                  const employeeId = order.created_by;
+                detailedProfits.forEach(row => {
+                  const employeeId = row.employee_id;
+                  if (!employeeId) return;
                   if (!employeeStats[employeeId]) {
+                    const emp = employees.find(e => emp_uid(e) === employeeId) || row.employee || { user_id: employeeId, full_name: 'موظف غير محدد' };
                     employeeStats[employeeId] = {
-                      employee: order.employee || { user_id: employeeId, full_name: order.employeeName || 'موظف غير محدد' },
+                      employee: emp,
                       orders: 0,
                       managerProfit: 0,
                       employeeProfit: 0,
-                      revenue: 0
+                      revenue: 0,
                     };
                   }
                   employeeStats[employeeId].orders += 1;
-                  employeeStats[employeeId].managerProfit += Number(order.managerProfit) || 0;
-                  employeeStats[employeeId].employeeProfit += Number(order.employeeProfit) || 0;
-                  employeeStats[employeeId].revenue += Number(order.orderTotal) || 0;
+                  employeeStats[employeeId].managerProfit += Number(row.managerProfit) || 0;
+                  employeeStats[employeeId].employeeProfit += Number(row.employeeProfit) || 0;
+                  employeeStats[employeeId].revenue += Number(row.orderTotal) || 0;
                 });
 
                 const employeeList = Object.values(employeeStats)
-                  .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0))
-                  .slice(0, 10);
+                  .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0));
 
                 return employeeList.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {employeeList.map((empData, idx) => (
-                      <EmployeeCard key={empData.employee?.user_id || idx} employeeData={empData} />
-                    ))}
-                  </div>
+                  <ScrollArea className="h-[60vh] pr-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {employeeList.map((empData, idx) => (
+                        <EmployeeCard key={empData.employee?.user_id || idx} employeeData={empData} />
+                      ))}
+                    </div>
+                  </ScrollArea>
                 ) : (
                   <div className="text-center py-12">
                     <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
