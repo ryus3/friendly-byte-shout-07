@@ -28,11 +28,16 @@ const PERIODS = [
   { id: 'custom', label: 'مخصص' },
 ];
 
-const TABS = [
+const TABS_FULL = [
   { id: 'summary', label: 'الملخص', icon: TrendingUp },
   { id: 'invoices', label: 'الفواتير', icon: FileText },
   { id: 'products', label: 'المنتجات', icon: Boxes },
   { id: 'distribution', label: 'التوزيع', icon: Users },
+];
+
+const TABS_EMPLOYEE = [
+  { id: 'summary', label: 'ملخصي', icon: TrendingUp },
+  { id: 'invoices', label: 'فواتيري', icon: FileText },
 ];
 
 const computeRange = (period) => {
