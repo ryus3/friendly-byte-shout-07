@@ -220,8 +220,16 @@ const ManagerProfitsDialog = ({
       const totalRevenue = detailedProfits.reduce((sum, profit) => sum + (Number(profit.orderTotal) || 0), 0);
       const pendingProfit = detailedProfits.filter(p => p.status === 'pending').reduce((sum, profit) => sum + (Number(profit.managerProfit) || 0), 0);
       const settledProfit = detailedProfits.filter(p => p.status === 'settled').reduce((sum, profit) => sum + (Number(profit.managerProfit) || 0), 0);
-      // حساب مستحقات الموظفين المدفوعة (الحقيقية)
-      const settledEmployeeDues = detailedProfits.filter(p => p.status === 'settled').reduce((sum, profit) => sum + (Number(profit.employeeProfit) || 0), 0);
+      // ✅ المستحقات المدفوعة الحقيقية = settlement_invoices.total_amount لمالك المنتجات (مفلترة بنفس الفترة)
+      const ownerId = currentUser?.id || currentUser?.user_id;
+      const settledEmployeeDues = (settlementInvoices || [])
+        .filter(inv => inv.owner_user_id === ownerId)
+        .filter(inv => {
+          if (!dateRange) return true;
+          const d = new Date(inv.created_at || inv.settlement_date);
+          return d >= dateRange.start && d <= dateRange.end;
+        })
+        .reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0);
       const totalOrders = detailedProfits.length;
       const averageOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
       const profitMargin = totalRevenue > 0 ? ((totalManagerProfit / totalRevenue) * 100).toFixed(1) : '0.0';
