@@ -28,7 +28,7 @@ import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 const ManageProductsPage = () => {
   const { products, deleteProducts, loading, refreshProducts } = useInventory();
   const { user } = useAuth();
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission, isAdmin, isDepartmentManager } = usePermissions();
   const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [viewMode, setViewMode] = useLocalStorage('manageProductsViewMode', 'list');
