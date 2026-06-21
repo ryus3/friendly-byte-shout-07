@@ -28,7 +28,7 @@ import { useFilteredProducts } from '@/hooks/useFilteredProducts';
 const ManageProductsPage = () => {
   const { products, deleteProducts, loading, refreshProducts } = useInventory();
   const { user } = useAuth();
-  const { hasPermission, isAdmin } = usePermissions();
+  const { hasPermission, isAdmin, isDepartmentManager } = usePermissions();
   const navigate = useNavigate();
   const isMobile = useMediaQuery("(max-width: 768px)");
   const [viewMode, setViewMode] = useLocalStorage('manageProductsViewMode', 'list');
@@ -42,7 +42,7 @@ const ManageProductsPage = () => {
   
 
   // مالك منتجات؟ (لإظهار زر الحجز)
-  const isOwnerOrAdmin = isAdmin || (Array.isArray(products) && products.some(p => p.owner_user_id === user?.id || p.owner_user_id === user?.user_id));
+  const isOwnerOrAdmin = isAdmin || isDepartmentManager || (Array.isArray(products) && products.some(p => p.owner_user_id === user?.id || p.owner_user_id === user?.user_id));
 
   
 

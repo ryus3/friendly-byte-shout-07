@@ -28,11 +28,16 @@ const PERIODS = [
   { id: 'custom', label: 'مخصص' },
 ];
 
-const TABS = [
+const TABS_FULL = [
   { id: 'summary', label: 'الملخص', icon: TrendingUp },
   { id: 'invoices', label: 'الفواتير', icon: FileText },
   { id: 'products', label: 'المنتجات', icon: Boxes },
   { id: 'distribution', label: 'التوزيع', icon: Users },
+];
+
+const TABS_EMPLOYEE = [
+  { id: 'summary', label: 'ملخصي', icon: TrendingUp },
+  { id: 'invoices', label: 'فواتيري', icon: FileText },
 ];
 
 const computeRange = (period) => {
@@ -253,6 +258,16 @@ const InvoicesProfitReportDialog = ({
   const calc = useMemo(() => computeInvoiceProfits(data), [data]);
   const fmt = (n) => `${Math.round(Number(n) || 0).toLocaleString()} د.ع`;
 
+  // ✅ هل المستخدم الحالي مالك لأي منتجات داخل الفواتير المحددة؟
+  const isInvoiceProductOwner = useMemo(
+    () => Boolean(calc.byOwner?.[userId]?.items > 0),
+    [calc.byOwner, userId]
+  );
+
+  // ✅ صلاحيات العرض: المدير العام أو مالك منتجات في الفاتورة فقط يرى التفاصيل الحساسة
+  const canSeeSensitive = isAdmin || isInvoiceProductOwner;
+  const TABS = canSeeSensitive ? TABS_FULL : TABS_EMPLOYEE;
+
   const toggleAll = () => setSelectedIds(selectedIds.size === invoices.length ? new Set() : new Set(invoices.map(i => i.id)));
   const toggleOne = (id) => {
     const next = new Set(selectedIds);
@@ -281,6 +296,11 @@ const InvoicesProfitReportDialog = ({
     .filter(([, v]) => Number(v) !== 0)
     .map(([empId, amount]) => ({ empId, name: namesMap[empId] || 'موظف', amount, bonus: calc.employeeBonusByEmp[empId] || 0, ordersCount: employeeOrderCounts[empId] || 0 }))
     .sort((a, b) => b.amount - a.amount);
+
+  // ✅ بيانات الموظف الشخصية فقط (للموظف غير مالك المنتج)
+  const myProfit = calc.employeeCombinedByEmp?.[userId] || 0;
+  const myBonus = calc.employeeBonusByEmp?.[userId] || 0;
+  const myOrdersCount = employeeOrderCounts[userId] || 0;
 
   const goTab = (i) => setTabIndex(Math.max(0, Math.min(TABS.length - 1, i)));
   const toggleMultiEmployee = (id) => {
@@ -480,7 +500,7 @@ const InvoicesProfitReportDialog = ({
                   {computeError && <ErrorRow message={computeError} />}
                   {loadingInvoices || computing ? (
                     <div className="flex justify-center py-12"><Loader2 className="w-7 h-7 animate-spin text-primary" /></div>
-                  ) : invoices.length === 0 ? <EmptyHint /> : (
+                  ) : invoices.length === 0 ? <EmptyHint /> : canSeeSensitive ? (
                     <>
                       <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
                         <Stat icon={FileText} label="عدد الفواتير" sub={`${selectedIds.size}/${invoices.length} محدّد`} value={`${invoices.length}`} color="blue" />
@@ -512,6 +532,19 @@ const InvoicesProfitReportDialog = ({
                         </div>
                       )}
                     </>
+                  ) : (
+                    // ✅ عرض الموظف غير مالك المنتج — ربحه الشخصي فقط
+                    <div className="space-y-3">
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <Stat icon={FileText} label="عدد الفواتير" value={`${invoices.length}`} color="blue" />
+                        <Stat icon={FileText} label="عدد طلباتي" value={`${myOrdersCount}`} color="purple" />
+                        <Stat icon={Wallet} label="ربحي من هذه الفواتير" value={fmt(myProfit)} color="emerald" highlight />
+                        {myBonus !== 0 && (
+                          <Stat icon={TrendingUp} label={myBonus > 0 ? 'زيادة على طلباتي' : 'خصم على طلباتي'} value={fmt(Math.abs(myBonus))} color={myBonus > 0 ? 'emerald' : 'orange'} />
+                        )}
+                      </div>
+                      <p className="text-xs text-center text-muted-foreground">* المبلغ صافي وبدون أجور التوصيل</p>
+                    </div>
                   )}
                 </div>
               )}

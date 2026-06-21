@@ -34,6 +34,8 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
+import { useManagerProfitsCalc } from '@/hooks/useManagerProfitsCalc';
+import { useProfits } from '@/contexts/ProfitsContext';
 
 const ManagerProfitsDialog = ({ 
   isOpen, 
@@ -101,7 +103,7 @@ const ManagerProfitsDialog = ({
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTab, setSelectedTab] = useState('overview');
-  const { currentUser } = useAuth();
+  const { user: currentUser } = useAuth();
 
 
   // تحقق فوري من البيانات
@@ -145,140 +147,52 @@ const ManagerProfitsDialog = ({
     }
   }, [selectedPeriod]);
 
-  // حساب الأرباح المفصلة - فقط للطلبات التي أنشأها الموظفون
+  // ✅ المصدر الموحد للحسابات — مطابق للكرت الخارجي تماماً
+  const unified = useManagerProfitsCalc({ dateRange });
+  const { settlementInvoices = [] } = useProfits();
+
+  // تحويل صفوف المصدر الموحد إلى الشكل الذي تستهلكه واجهة النافذة
   const detailedProfits = useMemo(() => {
-    if (!profits || !Array.isArray(profits) || profits.length === 0) {
-      return [];
-    }
-
-    // المعالجة من جدول profits مباشرة - فقط طلبات الموظفين
-    const ADMIN_ID = '91484496-b887-44f7-9e5d-be9db5567604'; // معرف المدير الرئيسي الثابت
-    
-    const employeeOrdersOnly = profits.filter(profit => {
-      // العثور على الطلب المرتبط
-      const relatedOrder = orders?.find(order => order.id === profit.order_id);
-      if (!relatedOrder) return false;
-      
-      // تجاهل طلبات المدير الرئيسي - استخدام المعرف الثابت
-      const isManagerOrder = relatedOrder.created_by === ADMIN_ID;
-      if (isManagerOrder) {
-        return false;
-      }
-      
-      // التأكد من أن منشئ الطلب موظف نشط
-      const orderCreator = employees.find(emp => emp.user_id === relatedOrder.created_by);
-      if (!orderCreator || orderCreator.status !== 'active') {
-        return false;
-      }
-      
-      return true;
-    });
-
-    const processed = employeeOrdersOnly
-      .filter(profit => {
-        if (!profit || !profit.id) {
-          return false;
-        }
-        
-        // فلترة التاريخ إذا كانت محددة
-        let withinPeriod = true;
-        if (dateRange && profit.created_at) {
-          const profitDate = new Date(profit.created_at);
-          if (!isNaN(profitDate.getTime())) {
-            withinPeriod = profitDate >= dateRange.start && profitDate <= dateRange.end;
-          }
-        }
-        
-        // فلترة الموظف
-        const matchesEmployee = selectedEmployee === 'all' || profit.employee_id === selectedEmployee;
-        
-        // فلترة البحث (عبر رقم الطلب أو اسم الموظف)
-        const employee = employees.find(emp => emp.user_id === profit.employee_id);
-        const matchesSearch = !searchTerm || 
-          profit.order_id?.toString().includes(searchTerm) ||
-          employee?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
-        
-        return withinPeriod && matchesEmployee && matchesSearch;
+    return (unified.rows || [])
+      .filter(r => {
+        const matchEmp = selectedEmployee === 'all' || r.employeeId === selectedEmployee;
+        const emp = employees.find(e => emp_uid(e) === r.employeeId);
+        const matchSearch = !searchTerm ||
+          (r.order?.tracking_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (r.order?.order_number || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (r.order?.customer_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (emp?.full_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+        return matchEmp && matchSearch;
       })
-      .map(profit => {
-        try {
-          const employeeProfit = Number(profit.employee_profit || 0);
-          const relatedOrder = orders?.find(order => order.id === profit.order_id);
-
-          // ✅ المالك الحالي (مالك المنتجات)
-          const ownerId = currentUser?.id || currentUser?.user_id;
-
-          // ✅ إعادة الحساب من order_items عند توفرها (بدلاً من profit_amount الذي قد يكون قديماً)
-          // نحسب حصة المالك التناسبية من إيراد الطلب الفعلي (شامل الخصم/الزيادة) - تكلفة منتجاته
-          let totalRevenue = 0;
-          let totalCost = 0;
-          let systemProfit = 0;
-          let recomputed = false;
-
-          if (relatedOrder) {
-            const items = relatedOrder.items || relatedOrder.order_items || [];
-            const itemRev = (it) => Number(it.total_price ?? ((it.unit_price ?? it.price ?? 0) * (it.quantity || 0))) || 0;
-            const itemCost = (it) => (Number(it.cost_price ?? it.products?.cost_price ?? it.product_variants?.cost_price ?? 0) || 0) * (it.quantity || 0);
-            const isOwned = (it) => ownerId && (it.owner_user_id === ownerId || it.products?.owner_user_id === ownerId);
-
-            if (items.length > 0) {
-              const allRev = items.reduce((s, it) => s + itemRev(it), 0);
-              const ownedItems = items.filter(isOwned);
-              if (ownedItems.length > 0) {
-                const ownedRev = ownedItems.reduce((s, it) => s + itemRev(it), 0);
-                const ownedCost = ownedItems.reduce((s, it) => s + itemCost(it), 0);
-                const finalAmount = Number(relatedOrder.final_amount || relatedOrder.total_amount || 0);
-                const delivery = Number(relatedOrder.delivery_fee || 0);
-                const ratio = allRev > 0 ? (ownedRev / allRev) : 0;
-                // إيراد المالك الفعلي = حصته من (المبلغ النهائي بدون توصيل)
-                totalRevenue = (finalAmount - delivery) * ratio;
-                totalCost = ownedCost;
-                // ربح المالك = إيراده الفعلي - تكلفته - حصة الموظف من هذا الطلب
-                systemProfit = totalRevenue - totalCost - employeeProfit;
-                recomputed = true;
-              }
-            }
-          }
-
-          if (!recomputed) {
-            const totalProfit = Number(profit.profit_amount || 0);
-            totalRevenue = Number(profit.total_revenue || 0);
-            totalCost = Number(profit.total_cost || 0);
-            systemProfit = totalProfit - employeeProfit;
-          }
-
-          const employee = employees.find(emp => emp.user_id === profit.employee_id);
-
-          return {
-            id: profit.id,
-            order_id: profit.order_id,
-            order_number: relatedOrder?.order_number || `ORD-${profit.order_id?.slice(-6)}`,
-            created_at: profit.created_at,
-            employee,
-            employee_id: profit.employee_id,
-            orderTotal: totalRevenue,
-            totalCost: totalCost,
-            managerProfit: Math.round(systemProfit),
-            employeeProfit: Math.round(employeeProfit),
-            totalProfit: Math.round(systemProfit + employeeProfit),
-            systemProfit: Math.round(systemProfit),
-            profitPercentage: totalRevenue > 0 ? (((systemProfit + employeeProfit) / totalRevenue) * 100).toFixed(1) : '0',
-            isPaid: profit.status === 'settled' || profit.settled_at,
-            settledAt: profit.settled_at,
-            status: profit.status,
-            customer_name: relatedOrder?.customer_name || 'غير محدد',
-            delivery_fee: relatedOrder?.delivery_fee || 0
-          };
-        } catch (error) {
-          console.error('❌ خطأ في معالجة الربح المحاسبي:', profit.id, error);
-          return null;
-        }
+      .map(r => {
+        const employee = employees.find(e => emp_uid(e) === r.employeeId);
+        return {
+          id: r.profitId,
+          order_id: r.orderId,
+          order_number: r.order?.order_number,
+          tracking_number: r.order?.tracking_number || r.order?.qr_id || r.order?.delivery_partner_order_id || null,
+          created_at: r.createdAt,
+          employee,
+          employee_id: r.employeeId,
+          orderTotal: r.ownedRevenue,
+          totalCost: r.ownedCost,
+          managerProfit: Math.round(r.ownerProfit),
+          employeeProfit: Math.round(r.employeeProfit),
+          totalProfit: Math.round(r.ownerProfit + r.employeeProfit),
+          systemProfit: Math.round(r.ownerProfit),
+          profitPercentage: r.ownedRevenue > 0 ? (((r.ownerProfit + r.employeeProfit) / r.ownedRevenue) * 100).toFixed(1) : '0',
+          isPaid: r.status === 'settled' || r.deliveryStatus === '4',
+          status: r.status,
+          customer_name: r.order?.customer_name || 'غير محدد',
+          delivery_fee: r.order?.delivery_fee || 0,
+          final_amount: r.order?.final_amount,
+        };
       })
-      .filter(profit => profit !== null)
       .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  }, [unified.rows, employees, selectedEmployee, searchTerm]);
 
-    return processed;
-  }, [profits, employees, orders, dateRange, selectedEmployee, searchTerm, currentUser?.id]);
+  // helper
+  function emp_uid(e) { return e?.user_id || e?.id; }
 
   const stats = useMemo(() => {
     // إنشاء كائن افتراضي للإحصائيات
@@ -306,8 +220,16 @@ const ManagerProfitsDialog = ({
       const totalRevenue = detailedProfits.reduce((sum, profit) => sum + (Number(profit.orderTotal) || 0), 0);
       const pendingProfit = detailedProfits.filter(p => p.status === 'pending').reduce((sum, profit) => sum + (Number(profit.managerProfit) || 0), 0);
       const settledProfit = detailedProfits.filter(p => p.status === 'settled').reduce((sum, profit) => sum + (Number(profit.managerProfit) || 0), 0);
-      // حساب مستحقات الموظفين المدفوعة (الحقيقية)
-      const settledEmployeeDues = detailedProfits.filter(p => p.status === 'settled').reduce((sum, profit) => sum + (Number(profit.employeeProfit) || 0), 0);
+      // ✅ المستحقات المدفوعة الحقيقية = settlement_invoices.total_amount لمالك المنتجات (مفلترة بنفس الفترة)
+      const ownerId = currentUser?.id || currentUser?.user_id;
+      const settledEmployeeDues = (settlementInvoices || [])
+        .filter(inv => inv.owner_user_id === ownerId)
+        .filter(inv => {
+          if (!dateRange) return true;
+          const d = new Date(inv.created_at || inv.settlement_date);
+          return d >= dateRange.start && d <= dateRange.end;
+        })
+        .reduce((sum, inv) => sum + Number(inv.total_amount || 0), 0);
       const totalOrders = detailedProfits.length;
       const averageOrderValue = totalOrders > 0 ? (totalRevenue / totalOrders) : 0;
       const profitMargin = totalRevenue > 0 ? ((totalManagerProfit / totalRevenue) * 100).toFixed(1) : '0.0';
@@ -353,7 +275,7 @@ const ManagerProfitsDialog = ({
       console.error('❌ خطأ في حساب الإحصائيات:', error);
       return defaultStats;
     }
-  }, [detailedProfits]);
+  }, [detailedProfits, settlementInvoices, currentUser?.id, currentUser?.user_id, dateRange]);
 
   const formatCurrency = (amount) => {
     return `${(Number(amount) || 0).toLocaleString()} د.ع`;
@@ -567,8 +489,12 @@ const ManagerProfitsDialog = ({
               </div>
             </div>
             <div className="flex-1 min-w-0">
-              <h4 className="font-bold text-sm text-foreground truncate">{order.order_number}</h4>
-              <p className="text-xs text-muted-foreground truncate">{order.customer_name || 'عميل غير محدد'}</p>
+              <h4 className="font-bold text-sm text-foreground truncate font-mono">
+                {order.tracking_number || order.order_number}
+              </h4>
+              <p className="text-xs text-muted-foreground truncate">
+                {order.tracking_number ? `${order.order_number} • ` : ''}{order.customer_name || 'عميل غير محدد'}
+              </p>
             </div>
           </div>
           <div className="text-left">
@@ -838,37 +764,39 @@ const ManagerProfitsDialog = ({
             </TabsContent>
 
             <TabsContent value="employees" className="space-y-4">
-              {/* إضافة معالجة بديلة للموظفين من البيانات المفصلة */}
               {(() => {
-                // حساب بيانات الموظفين من detailedProfits مباشرة
+                // ✅ تجميع كل الموظفين الذين باعوا منتجاتي — بدون أي قص
                 const employeeStats = {};
-                detailedProfits.forEach(order => {
-                  const employeeId = order.created_by;
+                detailedProfits.forEach(row => {
+                  const employeeId = row.employee_id;
+                  if (!employeeId) return;
                   if (!employeeStats[employeeId]) {
+                    const emp = employees.find(e => emp_uid(e) === employeeId) || row.employee || { user_id: employeeId, full_name: 'موظف غير محدد' };
                     employeeStats[employeeId] = {
-                      employee: order.employee || { user_id: employeeId, full_name: order.employeeName || 'موظف غير محدد' },
+                      employee: emp,
                       orders: 0,
                       managerProfit: 0,
                       employeeProfit: 0,
-                      revenue: 0
+                      revenue: 0,
                     };
                   }
                   employeeStats[employeeId].orders += 1;
-                  employeeStats[employeeId].managerProfit += Number(order.managerProfit) || 0;
-                  employeeStats[employeeId].employeeProfit += Number(order.employeeProfit) || 0;
-                  employeeStats[employeeId].revenue += Number(order.orderTotal) || 0;
+                  employeeStats[employeeId].managerProfit += Number(row.managerProfit) || 0;
+                  employeeStats[employeeId].employeeProfit += Number(row.employeeProfit) || 0;
+                  employeeStats[employeeId].revenue += Number(row.orderTotal) || 0;
                 });
 
                 const employeeList = Object.values(employeeStats)
-                  .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0))
-                  .slice(0, 10);
+                  .sort((a, b) => (b.managerProfit || 0) - (a.managerProfit || 0));
 
                 return employeeList.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {employeeList.map((empData, idx) => (
-                      <EmployeeCard key={empData.employee?.user_id || idx} employeeData={empData} />
-                    ))}
-                  </div>
+                  <ScrollArea className="h-[60vh] pr-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {employeeList.map((empData, idx) => (
+                        <EmployeeCard key={empData.employee?.user_id || idx} employeeData={empData} />
+                      ))}
+                    </div>
+                  </ScrollArea>
                 ) : (
                   <div className="text-center py-12">
                     <div className="w-24 h-24 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
