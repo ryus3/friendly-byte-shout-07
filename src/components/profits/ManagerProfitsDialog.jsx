@@ -34,6 +34,8 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ar } from 'date-fns/locale';
 
 import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
+import { useManagerProfitsCalc } from '@/hooks/useManagerProfitsCalc';
+import { useProfits } from '@/contexts/ProfitsContext';
 
 const ManagerProfitsDialog = ({ 
   isOpen, 
