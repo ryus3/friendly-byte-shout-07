@@ -609,13 +609,19 @@ const ManagerProfitsDialog = ({
                        <SelectContent>
                          <SelectItem value="all">كل الموظفين</SelectItem>
                          {employees
-                           .filter(emp => emp.user_id !== '91484496-b887-44f7-9e5d-be9db5567604') // استبعاد المدير الرئيسي
+                           .filter(emp => {
+                             const eid = emp.user_id || emp.id;
+                             if (eid === '91484496-b887-44f7-9e5d-be9db5567604') return false; // المدير العام
+                             if (eid === (currentUser?.user_id || currentUser?.id)) return false; // ✅ استبعاد المالك نفسه
+                             return true;
+                           })
                            .map(emp => (
-                             <SelectItem key={emp.user_id} value={emp.user_id}>
+                             <SelectItem key={emp.user_id || emp.id} value={emp.user_id || emp.id}>
                                {emp.full_name || emp.name || 'غير محدد'}
                              </SelectItem>
                            ))}
                        </SelectContent>
+
                     </Select>
                   </div>
 

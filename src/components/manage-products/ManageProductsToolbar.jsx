@@ -1,8 +1,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search, Plus, List, LayoutGrid, Trash2, Printer } from 'lucide-react';
-import { QRButton } from '@/components/ui/qr-button';
+import { Search, Plus, List, LayoutGrid, Trash2, Printer, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const ManageProductsToolbar = ({
@@ -18,7 +17,9 @@ const ManageProductsToolbar = ({
   onPrintSelected,
   onBarcodeSearch,
   onQuickPrintLabels,
-  isMobile
+  isMobile,
+  showReservations = false,
+  onOpenReservations,
 }) => {
   return (
     <div className="p-4 bg-card rounded-lg 
@@ -91,6 +92,17 @@ const ManageProductsToolbar = ({
               إضافة منتج
             </Button>
           </div>
+
+          {showReservations && (
+            <Button
+              size="sm"
+              onClick={onOpenReservations}
+              className="w-full bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-500 hover:from-indigo-600 hover:via-fuchsia-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-fuchsia-500/30 hover:shadow-xl hover:shadow-fuchsia-500/40 transform hover:scale-[1.02] transition-all duration-300 border-0"
+            >
+              <Lock className="w-4 h-4 ml-2" />
+              حجز كميات للموظفين
+            </Button>
+          )}
         </div>
       )}
     </div>

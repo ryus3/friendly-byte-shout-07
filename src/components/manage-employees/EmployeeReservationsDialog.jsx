@@ -13,8 +13,9 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useSupervisedEmployees } from '@/hooks/useSupervisedEmployees';
 import { toast } from '@/hooks/use-toast';
 import {
-  Trash2, Plus, Lock, Loader2, ChevronDown, Check, Users, Package as PackageIcon, Palette, Ruler, Sparkles, X,
+  Trash2, Plus, Minus, Lock, Loader2, ChevronDown, Check, Users, Package as PackageIcon, Palette, Ruler, Sparkles, X,
 } from 'lucide-react';
+
 
 /**
  * نافذة حجز كميات للموظفين — تصميم زجاجي احترافي مع تحديد متعدد
@@ -233,19 +234,23 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                       <ChevronDown className="w-4 h-4 opacity-50 group-hover:opacity-100" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-72 max-h-72 overflow-y-auto p-2" dir="rtl">
-                    {employees.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-3">لا يوجد موظفون</p>
-                    ) : employees.map(e => {
-                      const id = e.user_id || e.id;
-                      const checked = selectedEmployeeIds.includes(id);
-                      return (
-                        <label key={id} className="flex items-center gap-2 p-2 rounded hover:bg-muted/60 cursor-pointer text-sm">
-                          <Checkbox checked={checked} onCheckedChange={() => toggleEmployee(id)} />
-                          <span className="flex-1 truncate">{e.full_name || e.username}</span>
-                        </label>
-                      );
-                    })}
+                  <PopoverContent className="w-72 p-0" dir="rtl">
+                    <ScrollArea className="max-h-[60vh]">
+                      <div className="p-2">
+                        {employees.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-3">لا يوجد موظفون</p>
+                        ) : employees.map(e => {
+                          const id = e.user_id || e.id;
+                          const checked = selectedEmployeeIds.includes(id);
+                          return (
+                            <label key={id} className="flex items-center gap-2 p-2 rounded hover:bg-muted/60 cursor-pointer text-sm">
+                              <Checkbox checked={checked} onCheckedChange={() => toggleEmployee(id)} />
+                              <span className="flex-1 truncate">{e.full_name || e.username}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
                   </PopoverContent>
                 </Popover>
 
@@ -262,26 +267,33 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                       <ChevronDown className="w-4 h-4 opacity-50 group-hover:opacity-100" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 max-h-80 overflow-y-auto p-2" dir="rtl">
-                    <Input
-                      placeholder="بحث..."
-                      value={searchProduct}
-                      onChange={(e) => setSearchProduct(e.target.value)}
-                      className="mb-2 h-8 text-sm"
-                    />
-                    {ownedProducts.length === 0 ? (
-                      <p className="text-xs text-muted-foreground text-center py-3">لا توجد منتجات</p>
-                    ) : ownedProducts.map(p => {
-                      const checked = selectedProductIds.includes(p.id);
-                      return (
-                        <label key={p.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted/60 cursor-pointer text-sm">
-                          <Checkbox checked={checked} onCheckedChange={() => toggleProduct(p.id)} />
-                          <span className="flex-1 truncate">{p.name}</span>
-                        </label>
-                      );
-                    })}
+                  <PopoverContent className="w-80 p-0" dir="rtl">
+                    <div className="p-2 pb-0">
+                      <Input
+                        placeholder="بحث..."
+                        value={searchProduct}
+                        onChange={(e) => setSearchProduct(e.target.value)}
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                    <ScrollArea className="max-h-[60vh]">
+                      <div className="p-2">
+                        {ownedProducts.length === 0 ? (
+                          <p className="text-xs text-muted-foreground text-center py-3">لا توجد منتجات</p>
+                        ) : ownedProducts.map(p => {
+                          const checked = selectedProductIds.includes(p.id);
+                          return (
+                            <label key={p.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted/60 cursor-pointer text-sm">
+                              <Checkbox checked={checked} onCheckedChange={() => toggleProduct(p.id)} />
+                              <span className="flex-1 truncate">{p.name}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </ScrollArea>
                   </PopoverContent>
                 </Popover>
+
               </div>
 
               {/* === جدول المتغيرات للمنتجات المختارة === */}
@@ -295,7 +307,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                     </span>
                     <Badge variant="outline" className="text-[10px] border-white/20">{allVariants.length} متغير</Badge>
                   </div>
-                  <ScrollArea className="max-h-64">
+                  <ScrollArea className="max-h-[50vh]">
                     <div className="divide-y divide-white/5">
                       {selectedProducts.map(prod => {
                         const vs = prod.variants || prod.product_variants || [];
@@ -312,15 +324,37 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                                       <div className="truncate">{variantLabel(v)}</div>
                                       <div className="text-[10px] text-muted-foreground">متاح: {available}</div>
                                     </div>
-                                    <Input
-                                      type="number"
-                                      min={0}
-                                      max={available}
-                                      value={qty || ''}
-                                      onChange={(e) => setVariantQty(v.id, e.target.value)}
-                                      placeholder="0"
-                                      className="w-16 h-7 text-xs text-center"
-                                    />
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="outline"
+                                        className="h-7 w-7 rounded-md"
+                                        onClick={() => setVariantQty(v.id, Math.max(0, qty - 1))}
+                                        disabled={qty <= 0}
+                                      >
+                                        <Minus className="w-3.5 h-3.5" />
+                                      </Button>
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        max={available}
+                                        value={qty || ''}
+                                        onChange={(e) => setVariantQty(v.id, Math.min(available, Number(e.target.value) || 0))}
+                                        placeholder="0"
+                                        className="w-12 h-7 text-xs text-center px-1"
+                                      />
+                                      <Button
+                                        type="button"
+                                        size="icon"
+                                        variant="outline"
+                                        className="h-7 w-7 rounded-md"
+                                        onClick={() => setVariantQty(v.id, Math.min(available, qty + 1))}
+                                        disabled={qty >= available}
+                                      >
+                                        <Plus className="w-3.5 h-3.5" />
+                                      </Button>
+                                    </div>
                                   </div>
                                 );
                               })}
@@ -330,6 +364,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                       })}
                     </div>
                   </ScrollArea>
+
                 </div>
               )}
 
