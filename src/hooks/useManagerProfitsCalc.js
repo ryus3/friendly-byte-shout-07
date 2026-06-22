@@ -65,7 +65,9 @@ export function useManagerProfitsCalc({ timePeriod = 'all', dateRange = null } =
       const order = ordersById.get(p.order_id);
       if (!order) continue;
       if (order.created_by === MAIN_MANAGER_ID) continue; // skip admin's own orders
+      if (order.created_by === ownerId) continue; // ✅ skip owner's own orders — these aren't "from employees"
       if (!inPeriod(p.created_at || order.created_at)) continue;
+
 
       const items = order.items || order.order_items || [];
       if (items.length === 0) continue;
