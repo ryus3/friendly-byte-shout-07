@@ -1,0 +1,234 @@
+
+-- 1) Update calculate_real_employee_profit_for_order to treat returned orders (delivery_status 16/17 or status='returned') as zero-revenue
+--    and clamp employee profit so it never goes below 0 from discount; remaining discount stays with owner naturally via total_cost.
+CREATE OR REPLACE FUNCTION public.calculate_real_employee_profit_for_order(p_order_id uuid)
+ RETURNS jsonb
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_order record;
+  v_item record;
+  v_employee_id uuid;
+  v_delivery_fee numeric := 0;
+  v_final_amount numeric := 0;
+  v_eligible_items_total numeric := 0;
+  v_items_with_rules_total numeric := 0;
+  v_items_without_rules_total numeric := 0;
+  v_real_discount numeric := 0;
+  v_real_increase numeric := 0;
+  v_discount_for_rules numeric := 0;
+  v_increase_for_rules numeric := 0;
+  v_employee_profit numeric := 0;
+  v_employee_base_profit numeric := 0;
+  v_total_cost numeric := 0;
+  v_item_cost numeric := 0;
+  v_item_price numeric := 0;
+  v_eligible_qty integer := 0;
+  v_item_profit numeric := 0;
+  v_item_percentage numeric := 0;
+  v_item_has_rule boolean := false;
+  v_has_rule boolean := false;
+  v_is_partial boolean := false;
+  v_is_returned boolean := false;
+BEGIN
+  SELECT * INTO v_order FROM public.orders WHERE id = p_order_id;
+  IF v_order IS NULL THEN
+    RETURN jsonb_build_object('exists', false);
+  END IF;
+
+  v_employee_id := v_order.created_by;
+  IF v_employee_id IS NULL THEN
+    RETURN jsonb_build_object('exists', true, 'employee_id', NULL,
+      'employee_profit', 0, 'total_revenue', 0, 'total_cost', 0, 'profit_amount', 0);
+  END IF;
+
+  v_is_returned := (v_order.status = 'returned')
+                OR (COALESCE(v_order.delivery_status,'') IN ('16','17'));
+
+  -- Returned orders: zero everything (employee gets nothing, no owner profit)
+  IF v_is_returned THEN
+    RETURN jsonb_build_object(
+      'exists', true,
+      'employee_id', v_employee_id,
+      'employee_profit', 0,
+      'total_revenue', 0,
+      'total_cost', 0,
+      'profit_amount', 0,
+      'is_returned', true
+    );
+  END IF;
+
+  v_final_amount := COALESCE(v_order.final_amount, v_order.total_amount, 0);
+  v_delivery_fee := COALESCE(v_order.delivery_fee, 0);
+  v_is_partial   := (v_order.order_type = 'partial_delivery');
+
+  FOR v_item IN
+    SELECT oi.product_id, oi.variant_id, oi.quantity, oi.unit_price, oi.total_price,
+           oi.item_status, oi.quantity_delivered
+    FROM public.order_items oi
+    WHERE oi.order_id = v_order.id
+  LOOP
+    IF v_is_partial THEN
+      v_eligible_qty := COALESCE(v_item.quantity_delivered, 0);
+      IF v_eligible_qty <= 0 AND v_item.item_status = 'delivered' THEN
+        v_eligible_qty := COALESCE(v_item.quantity, 0);
+      END IF;
+    ELSE
+      v_eligible_qty := COALESCE(v_item.quantity, 0);
+    END IF;
+    IF v_eligible_qty <= 0 THEN CONTINUE; END IF;
+
+    v_item_price := COALESCE(v_item.unit_price, 0) * v_eligible_qty;
+    v_eligible_items_total := v_eligible_items_total + v_item_price;
+
+    SELECT EXISTS(
+      SELECT 1 FROM public.employee_profit_rules er
+      WHERE er.employee_id = v_employee_id
+        AND er.is_active = true
+        AND (
+          (er.rule_type = 'product' AND er.target_id = v_item.product_id::text)
+          OR (er.rule_type = 'variant' AND er.target_id = v_item.variant_id::text)
+        )
+        AND er.created_at <= v_order.created_at
+    ) INTO v_item_has_rule;
+
+    IF v_item_has_rule THEN
+      v_has_rule := true;
+      v_items_with_rules_total := v_items_with_rules_total + v_item_price;
+    ELSE
+      v_items_without_rules_total := v_items_without_rules_total + v_item_price;
+    END IF;
+  END LOOP;
+
+  -- Discount: items_total - final_amount (excluding delivery)
+  -- Real product revenue = final_amount - delivery_fee
+  -- discount = max(0, items_total - (final_amount - delivery_fee))
+  IF v_eligible_items_total > 0 THEN
+    v_real_discount := GREATEST(0, v_eligible_items_total - (v_final_amount - v_delivery_fee));
+    v_real_increase := GREATEST(0, (v_final_amount - v_delivery_fee) - v_eligible_items_total);
+  END IF;
+
+  IF v_has_rule AND (v_items_with_rules_total + v_items_without_rules_total) > 0 THEN
+    v_discount_for_rules := v_real_discount * (v_items_with_rules_total / (v_items_with_rules_total + v_items_without_rules_total));
+    v_increase_for_rules := v_real_increase * (v_items_with_rules_total / (v_items_with_rules_total + v_items_without_rules_total));
+  END IF;
+
+  -- Compute base employee profit from rules (only for items with rules)
+  FOR v_item IN
+    SELECT oi.product_id, oi.variant_id, oi.quantity, oi.unit_price, oi.total_price,
+           oi.item_status, oi.quantity_delivered
+    FROM public.order_items oi
+    WHERE oi.order_id = v_order.id
+  LOOP
+    IF v_is_partial THEN
+      v_eligible_qty := COALESCE(v_item.quantity_delivered, 0);
+      IF v_eligible_qty <= 0 AND v_item.item_status = 'delivered' THEN
+        v_eligible_qty := COALESCE(v_item.quantity, 0);
+      END IF;
+    ELSE
+      v_eligible_qty := COALESCE(v_item.quantity, 0);
+    END IF;
+    IF v_eligible_qty <= 0 THEN CONTINUE; END IF;
+
+    SELECT COALESCE(pv.cost_price, p.cost_price, 0) INTO v_item_cost
+    FROM public.products p
+    LEFT JOIN public.product_variants pv ON pv.id = v_item.variant_id
+    WHERE p.id = v_item.product_id;
+
+    v_total_cost := v_total_cost + (v_item_cost * v_eligible_qty);
+
+    SELECT er.profit_amount, er.profit_percentage INTO v_item_profit, v_item_percentage
+    FROM public.employee_profit_rules er
+    WHERE er.employee_id = v_employee_id
+      AND er.is_active = true
+      AND (
+        (er.rule_type = 'product' AND er.target_id = v_item.product_id::text)
+        OR (er.rule_type = 'variant' AND er.target_id = v_item.variant_id::text)
+      )
+      AND er.created_at <= v_order.created_at
+    ORDER BY er.created_at DESC
+    LIMIT 1;
+
+    IF v_item_profit IS NOT NULL THEN
+      v_employee_base_profit := v_employee_base_profit + (v_item_profit * v_eligible_qty);
+    ELSIF v_item_percentage IS NOT NULL THEN
+      v_employee_base_profit := v_employee_base_profit + (COALESCE(v_item.unit_price,0) * v_eligible_qty * v_item_percentage / 100.0);
+    END IF;
+
+    v_item_profit := NULL; v_item_percentage := NULL;
+  END LOOP;
+
+  -- Final employee profit = base + increase_for_rules - discount_for_rules, clamped >= 0
+  v_employee_profit := GREATEST(0, v_employee_base_profit + v_increase_for_rules - v_discount_for_rules);
+
+  RETURN jsonb_build_object(
+    'exists', true,
+    'employee_id', v_employee_id,
+    'employee_profit', v_employee_profit,
+    'employee_base_profit', v_employee_base_profit,
+    'total_revenue', GREATEST(0, v_final_amount - v_delivery_fee),
+    'total_cost', v_total_cost,
+    'profit_amount', GREATEST(0, (v_final_amount - v_delivery_fee) - v_total_cost),
+    'real_discount', v_real_discount,
+    'real_increase', v_real_increase,
+    'is_returned', false,
+    'is_partial', v_is_partial
+  );
+END;
+$function$;
+
+-- 2) Recompute on relevant order changes after delivery (final_amount, delivery_status, status)
+CREATE OR REPLACE FUNCTION public.recompute_profit_on_order_change()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_res jsonb;
+BEGIN
+  IF (TG_OP = 'UPDATE') AND (
+       NEW.final_amount IS DISTINCT FROM OLD.final_amount
+    OR NEW.delivery_status IS DISTINCT FROM OLD.delivery_status
+    OR NEW.status IS DISTINCT FROM OLD.status
+    OR NEW.delivery_fee IS DISTINCT FROM OLD.delivery_fee
+  ) THEN
+    v_res := public.calculate_real_employee_profit_for_order(NEW.id);
+    UPDATE public.profits
+       SET employee_profit = COALESCE((v_res->>'employee_profit')::numeric, 0),
+           total_revenue   = COALESCE((v_res->>'total_revenue')::numeric, 0),
+           total_cost      = COALESCE((v_res->>'total_cost')::numeric, 0),
+           profit_amount   = COALESCE((v_res->>'profit_amount')::numeric, 0),
+           updated_at      = now()
+     WHERE order_id = NEW.id;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_recompute_profit_on_order_change ON public.orders;
+CREATE TRIGGER trg_recompute_profit_on_order_change
+AFTER UPDATE ON public.orders
+FOR EACH ROW
+EXECUTE FUNCTION public.recompute_profit_on_order_change();
+
+-- 3) Self-heal returned order 148310689 right now
+DO $$
+DECLARE v_oid uuid; v_res jsonb;
+BEGIN
+  SELECT id INTO v_oid FROM public.orders
+    WHERE tracking_number::text='148310689' OR delivery_partner_order_id::text='148310689'
+    LIMIT 1;
+  IF v_oid IS NOT NULL THEN
+    v_res := public.calculate_real_employee_profit_for_order(v_oid);
+    UPDATE public.profits
+       SET employee_profit = COALESCE((v_res->>'employee_profit')::numeric, 0),
+           total_revenue   = COALESCE((v_res->>'total_revenue')::numeric, 0),
+           total_cost      = COALESCE((v_res->>'total_cost')::numeric, 0),
+           profit_amount   = COALESCE((v_res->>'profit_amount')::numeric, 0),
+           updated_at      = now()
+     WHERE order_id = v_oid;
+  END IF;
+END $$;
