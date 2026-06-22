@@ -41,8 +41,11 @@ const ManageProductsPage = () => {
   const [isReservationsOpen, setIsReservationsOpen] = useState(false);
   
 
-  // مالك منتجات؟ (لإظهار زر الحجز)
-  const isOwnerOrAdmin = isAdmin || isDepartmentManager || (Array.isArray(products) && products.some(p => p.owner_user_id === user?.id || p.owner_user_id === user?.user_id));
+  // مالك منتجات؟ (لإظهار زر الحجز) — يدعم user.id و user.user_id
+  const uid = user?.user_id || user?.id;
+  const isOwnerOrAdmin = isAdmin || isDepartmentManager || (Array.isArray(products) && products.some(p => p.owner_user_id === uid));
+
+
 
   
 
@@ -253,32 +256,28 @@ const ManageProductsPage = () => {
           onBarcodeSearch={() => setIsScannerOpen(true)}
           onQuickPrintLabels={handleQuickPrintLabels}
           isMobile={isMobile}
+          showReservations={isOwnerOrAdmin}
+          onOpenReservations={() => setIsReservationsOpen(true)}
         />
 
-        {/* أزرار الإدارة */}
-        <div className="flex flex-wrap gap-2">
-          {isOwnerOrAdmin && (
-            <Button variant="outline" onClick={() => setIsReservationsOpen(true)}>
-              <Lock className="w-4 h-4 ml-1" />
-              حجز كميات للموظفين
-            </Button>
-          )}
-          {/* زر نقل الملكية - يظهر فقط للمدير عند تحديد منتجات */}
-          {isAdmin && selectedProductIds.length > 0 && (
-            <Button 
-              variant="outline" 
+        {/* زر نقل الملكية - يظهر فقط للمدير عند تحديد منتجات */}
+        {isAdmin && selectedProductIds.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
               className="border-amber-300 text-amber-700 hover:bg-amber-50"
               onClick={() => setIsTransferOpen(true)}
             >
               نقل ملكية {selectedProductIds.length} منتج
             </Button>
-          )}
-        </div>
+          </div>
+        )}
 
         <EmployeeReservationsDialog
           open={isReservationsOpen}
           onOpenChange={setIsReservationsOpen}
         />
+
 
         <TransferOwnershipDialog
           open={isTransferOpen}
