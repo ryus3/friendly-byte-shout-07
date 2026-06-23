@@ -33,9 +33,9 @@ const ManagerProfitsCard = ({
     <>
       <StatCard
         title="أرباحي من الموظفين"
-        value={Math.max(0, Math.round(total))}
+        value={Math.round(total)}
         icon={Users}
-        colors={['green-500', 'emerald-500']}
+        colors={total < 0 ? ['red-500', 'orange-500'] : ['green-500', 'emerald-500']}
         format="currency"
         onClick={() => setOpen(true)}
         className={className}
