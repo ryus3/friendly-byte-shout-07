@@ -234,23 +234,21 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                       <ChevronDown className="w-4 h-4 opacity-50 group-hover:opacity-100" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-72 p-0" dir="rtl">
-                    <ScrollArea className="max-h-[60vh]">
-                      <div className="p-2">
-                        {employees.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-3">لا يوجد موظفون</p>
-                        ) : employees.map(e => {
-                          const id = e.user_id || e.id;
-                          const checked = selectedEmployeeIds.includes(id);
-                          return (
-                            <label key={id} className="flex items-center gap-2 p-2 rounded hover:bg-muted/60 cursor-pointer text-sm">
-                              <Checkbox checked={checked} onCheckedChange={() => toggleEmployee(id)} />
-                              <span className="flex-1 truncate">{e.full_name || e.username}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
+                  <PopoverContent className="w-72 p-0" dir="rtl" align="start" side="bottom" sideOffset={6}>
+                    <div className="max-h-[55vh] overflow-y-auto overscroll-contain p-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+                      {employees.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-3">لا يوجد موظفون</p>
+                      ) : employees.map(e => {
+                        const id = e.user_id || e.id;
+                        const checked = selectedEmployeeIds.includes(id);
+                        return (
+                          <label key={id} className="flex items-center gap-2 p-2 rounded hover:bg-muted/60 cursor-pointer text-sm">
+                            <Checkbox checked={checked} onCheckedChange={() => toggleEmployee(id)} />
+                            <span className="flex-1 truncate">{e.full_name || e.username}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </PopoverContent>
                 </Popover>
 
@@ -267,7 +265,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                       <ChevronDown className="w-4 h-4 opacity-50 group-hover:opacity-100" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80 p-0" dir="rtl">
+                  <PopoverContent className="w-80 p-0" dir="rtl" align="start" side="bottom" sideOffset={6}>
                     <div className="p-2 pb-0">
                       <Input
                         placeholder="بحث..."
@@ -276,21 +274,19 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                         className="h-8 text-sm"
                       />
                     </div>
-                    <ScrollArea className="max-h-[60vh]">
-                      <div className="p-2">
-                        {ownedProducts.length === 0 ? (
-                          <p className="text-xs text-muted-foreground text-center py-3">لا توجد منتجات</p>
-                        ) : ownedProducts.map(p => {
-                          const checked = selectedProductIds.includes(p.id);
-                          return (
-                            <label key={p.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted/60 cursor-pointer text-sm">
-                              <Checkbox checked={checked} onCheckedChange={() => toggleProduct(p.id)} />
-                              <span className="flex-1 truncate">{p.name}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </ScrollArea>
+                    <div className="max-h-[55vh] overflow-y-auto overscroll-contain p-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+                      {ownedProducts.length === 0 ? (
+                        <p className="text-xs text-muted-foreground text-center py-3">لا توجد منتجات</p>
+                      ) : ownedProducts.map(p => {
+                        const checked = selectedProductIds.includes(p.id);
+                        return (
+                          <label key={p.id} className="flex items-center gap-2 p-2 rounded hover:bg-muted/60 cursor-pointer text-sm">
+                            <Checkbox checked={checked} onCheckedChange={() => toggleProduct(p.id)} />
+                            <span className="flex-1 truncate">{p.name}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
                   </PopoverContent>
                 </Popover>
 

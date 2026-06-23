@@ -50,24 +50,22 @@ export function useManagerProfitsCalc({ timePeriod = 'all', dateRange = null } =
     }
   };
 
-  const ordersById = useMemo(() => {
+  const profitsByOrder = useMemo(() => {
     const m = new Map();
-    (orders || []).forEach(o => m.set(o.id, o));
+    (profits || []).forEach(p => { if (p?.order_id) m.set(p.order_id, p); });
     return m;
-  }, [orders]);
+  }, [profits]);
 
   const computed = useMemo(() => {
     if (!ownerId) return { rows: [], total: 0, pending: 0, paidDues: 0, margin: 0, totalOwnedRevenue: 0, totalEmployeeProfit: 0 };
 
     const rows = [];
-    for (const p of profits) {
-      if (!p || !p.order_id) continue;
-      const order = ordersById.get(p.order_id);
-      if (!order) continue;
-      if (order.created_by === MAIN_MANAGER_ID) continue; // skip admin's own orders
-      if (order.created_by === ownerId) continue; // ✅ skip owner's own orders — these aren't "from employees"
-      if (!inPeriod(p.created_at || order.created_at)) continue;
-
+    for (const order of (orders || [])) {
+      if (!order || !order.id) continue;
+      // ✅ Owner perspective: skip only orders the owner created himself
+      if (order.created_by === ownerId) continue;
+      if (order.status === 'returned') continue; // returned orders are out of accounting scope
+      if (!inPeriod(order.updated_at || order.created_at)) continue;
 
       const items = order.items || order.order_items || [];
       if (items.length === 0) continue;
@@ -85,20 +83,22 @@ export function useManagerProfitsCalc({ timePeriod = 'all', dateRange = null } =
       const ownedCost = ownedItems.reduce((s, it) => s + itemCost(it), 0);
       const finalAmt = Number(order.final_amount || order.total_amount || 0);
       const delivery = Number(order.delivery_fee || 0);
-      const ratio = allRev > 0 ? ownedRev / allRev : 0;
-      const ownedRevenue = (finalAmt - delivery) * ratio;
+      const realRevenue = finalAmt - delivery; // can be negative on full discount
+      const ratio = allRev > 0 ? (ownedRev / allRev) : (ownedItems.length / Math.max(1, items.length));
+      const ownedRevenue = realRevenue * ratio;
 
-      // Employee profit attributable to owned portion only
-      const empProfit = Number(p.employee_profit || 0) * ratio;
+      const p = profitsByOrder.get(order.id);
+      const empProfit = Number(p?.employee_profit || 0) * ratio;
+      // ✅ Real owner profit — never clamp; losses must be visible
       const ownerProfit = ownedRevenue - ownedCost - empProfit;
 
       rows.push({
-        profitId: p.id,
-        orderId: p.order_id,
+        profitId: p?.id || `synthetic-${order.id}`,
+        orderId: order.id,
         order,
-        employeeId: p.employee_id,
-        createdAt: p.created_at || order.created_at,
-        status: p.status,
+        employeeId: order.created_by,
+        createdAt: p?.created_at || order.updated_at || order.created_at,
+        status: p?.status || (order.status === 'completed' ? 'settled' : 'pending'),
         ownedRevenue,
         ownedCost,
         employeeProfit: empProfit,
@@ -113,16 +113,15 @@ export function useManagerProfitsCalc({ timePeriod = 'all', dateRange = null } =
     const totalOwnedRevenue = rows.reduce((s, r) => s + r.ownedRevenue, 0);
     const totalEmployeeProfit = rows.reduce((s, r) => s + r.employeeProfit, 0);
 
-    // Paid dues: settlement_invoices.total_amount where owner_user_id == me, within period (by created_at)
     const paidDues = (settlementInvoices || [])
       .filter(inv => inv.owner_user_id === ownerId)
       .filter(inv => inPeriod(inv.created_at || inv.settlement_date))
       .reduce((s, inv) => s + Number(inv.total_amount || 0), 0);
 
-    const margin = totalOwnedRevenue > 0 ? (total / totalOwnedRevenue) * 100 : 0;
+    const margin = totalOwnedRevenue !== 0 ? (total / totalOwnedRevenue) * 100 : 0;
 
     return { rows, total, pending, paidDues, margin, totalOwnedRevenue, totalEmployeeProfit };
-  }, [profits, ordersById, productOwnerMap, ownerId, timePeriod, dateRange, settlementInvoices]);
+  }, [orders, profitsByOrder, productOwnerMap, ownerId, timePeriod, dateRange, settlementInvoices]);
 
   return computed;
 }
