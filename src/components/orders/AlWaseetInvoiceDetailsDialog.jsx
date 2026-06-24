@@ -91,6 +91,11 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
   const linkRate = cachedCount > 0 ? Math.min(100, Math.round((linkedCount / cachedCount) * 100)) : 0;
 
   const linkedTrackings = useMemo(() => new Set(linkedOrders.map(o => String(o.tracking_number || ''))), [linkedOrders]);
+  const linkedByTracking = useMemo(() => {
+    const m = new Map();
+    linkedOrders.forEach(o => { if (o.tracking_number) m.set(String(o.tracking_number), o); });
+    return m;
+  }, [linkedOrders]);
 
   if (!invoice) return null;
 
