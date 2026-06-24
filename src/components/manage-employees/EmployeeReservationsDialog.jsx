@@ -179,16 +179,18 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
         dir="rtl"
       >
         {/* ✅ غلاف زجاجي مع تدرج خلفي وحواف ملوّنة */}
-        <div className="relative rounded-2xl overflow-hidden">
-          {/* خلفية متدرجة سائلة */}
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/30 via-fuchsia-500/20 to-cyan-500/30" />
-          <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full bg-fuchsia-500/30 blur-3xl" />
-          <div className="absolute -bottom-24 -left-24 w-72 h-72 rounded-full bg-cyan-500/30 blur-3xl" />
-          {/* الحدّة الزجاجية */}
-          <div className="absolute inset-0 backdrop-blur-2xl bg-background/70 border border-white/20" />
-          {/* حواف ملوّنة رفيعة متدرجة (conic) */}
-          <div className="pointer-events-none absolute inset-0 rounded-2xl p-[1.5px]" style={{
-            background: 'conic-gradient(from 0deg, #6366f1, #ec4899, #06b6d4, #6366f1)',
+        <div className="relative rounded-3xl overflow-hidden">
+          {/* خلفية متدرجة سائلة نابضة بالحياة */}
+          <div className="absolute inset-0 bg-gradient-to-br from-violet-600/50 via-fuchsia-500/40 to-cyan-500/50" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(168,85,247,0.45),transparent_55%),radial-gradient(circle_at_85%_15%,rgba(236,72,153,0.4),transparent_55%),radial-gradient(circle_at_50%_100%,rgba(6,182,212,0.5),transparent_60%)]" />
+          <div className="absolute -top-28 -right-28 w-80 h-80 rounded-full bg-fuchsia-500/50 blur-[90px] animate-pulse" />
+          <div className="absolute -bottom-28 -left-28 w-80 h-80 rounded-full bg-cyan-400/50 blur-[90px] animate-pulse" style={{ animationDelay: '1.5s' }} />
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-indigo-500/30 blur-[80px]" />
+          {/* الطبقة الزجاجية */}
+          <div className="absolute inset-0 backdrop-blur-2xl bg-background/75 border border-white/25" />
+          {/* حواف ملوّنة رفيعة متدرجة (conic) متحركة */}
+          <div className="pointer-events-none absolute inset-0 rounded-3xl p-[2px] animate-[spin_8s_linear_infinite]" style={{
+            background: 'conic-gradient(from 0deg, #a855f7, #ec4899, #06b6d4, #6366f1, #a855f7)',
             WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
             WebkitMaskComposite: 'xor',
             maskComposite: 'exclude',
