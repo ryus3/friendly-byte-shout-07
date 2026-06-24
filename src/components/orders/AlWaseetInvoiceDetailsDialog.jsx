@@ -91,6 +91,11 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
   const linkRate = cachedCount > 0 ? Math.min(100, Math.round((linkedCount / cachedCount) * 100)) : 0;
 
   const linkedTrackings = useMemo(() => new Set(linkedOrders.map(o => String(o.tracking_number || ''))), [linkedOrders]);
+  const linkedByTracking = useMemo(() => {
+    const m = new Map();
+    linkedOrders.forEach(o => { if (o.tracking_number) m.set(String(o.tracking_number), o); });
+    return m;
+  }, [linkedOrders]);
 
   if (!invoice) return null;
 
@@ -218,13 +223,18 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
                 />
               ) : (
                 <div className="grid sm:grid-cols-2 gap-2">
-                  {invoiceOrders.map((order) => (
-                    <WaseetOrderRow
-                      key={order.id}
-                      order={order}
-                      linked={linkedTrackings.has(String(order.qr_id || order.id))}
-                    />
-                  ))}
+                  {invoiceOrders.map((order) => {
+                    const trackingKey = String(order.qr_id || order.id);
+                    const localOrder = linkedByTracking.get(trackingKey);
+                    return (
+                      <WaseetOrderRow
+                        key={order.id}
+                        order={order}
+                        linked={linkedTrackings.has(trackingKey)}
+                        localOrder={localOrder}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -323,9 +333,20 @@ const LocalOrderRow = ({ order }) => (
   </li>
 );
 
-const WaseetOrderRow = ({ order, linked }) => {
-  const amount = parseFloat(order.price) || 0;
-  const deliveryFee = parseFloat(order.delivery_price) || 0;
+const WaseetOrderRow = ({ order, linked, localOrder }) => {
+  const apiAmount = parseFloat(order.price) || 0;
+  const apiDeliveryFee = parseFloat(order.delivery_price) || 0;
+  // ✅ ادمج بيانات الطلب المحلي عند توفرها لعرض الشحن والعنوان الحقيقي
+  const amount = localOrder?.final_amount != null ? Number(localOrder.final_amount) : apiAmount;
+  const deliveryFee = localOrder?.delivery_fee != null ? Number(localOrder.delivery_fee) : apiDeliveryFee;
+  const displayName = localOrder?.customer_name || order.client_name;
+  const displayPhone = localOrder?.customer_phone || order.client_mobile;
+  const cityParts = [
+    localOrder?.customer_city || order.city_name,
+    localOrder?.customer_province,
+  ].filter(Boolean);
+  const locationLabel = cityParts.join(' — ') || localOrder?.customer_address || 'غير محدد';
+
   return (
     <div className={cn(
       'rounded-xl border bg-card p-3 transition-all hover:shadow-sm',
@@ -343,14 +364,12 @@ const WaseetOrderRow = ({ order, linked }) => {
               <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">بانتظار الربط</Badge>
             )}
           </div>
-          <p className="text-sm font-medium truncate">{order.client_name}</p>
-          <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-            {order.client_mobile && (
-              <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{order.client_mobile}</span>
+          <p className="text-sm font-medium truncate">{displayName}</p>
+          <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
+            {displayPhone && (
+              <span className="flex items-center gap-1"><Phone className="h-3 w-3" />{displayPhone}</span>
             )}
-            {order.city_name && (
-              <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{order.city_name}</span>
-            )}
+            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" />{locationLabel}</span>
           </div>
         </div>
         <div className="text-left flex-shrink-0">
