@@ -234,8 +234,20 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                       <ChevronDown className="w-4 h-4 opacity-50 group-hover:opacity-100" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-72 p-0" dir="rtl" align="start" side="bottom" sideOffset={6}>
-                    <div className="max-h-[55vh] overflow-y-auto overscroll-contain p-2" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  <PopoverContent
+                    className="w-72 p-0 z-50"
+                    dir="rtl"
+                    align="start"
+                    side="bottom"
+                    sideOffset={6}
+                    style={{ maxHeight: '60vh' }}
+                  >
+                    <div
+                      className="overflow-y-auto overscroll-contain p-2"
+                      style={{ maxHeight: '60vh', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
+                      onTouchMove={(e) => e.stopPropagation()}
+                      onWheel={(e) => e.stopPropagation()}
+                    >
                       {employees.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-3">لا يوجد موظفون</p>
                       ) : employees.map(e => {
