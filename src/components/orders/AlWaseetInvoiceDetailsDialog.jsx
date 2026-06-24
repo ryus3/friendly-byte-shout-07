@@ -223,13 +223,18 @@ const AlWaseetInvoiceDetailsDialog = ({ isOpen, onClose, invoice, viewerUserId =
                 />
               ) : (
                 <div className="grid sm:grid-cols-2 gap-2">
-                  {invoiceOrders.map((order) => (
-                    <WaseetOrderRow
-                      key={order.id}
-                      order={order}
-                      linked={linkedTrackings.has(String(order.qr_id || order.id))}
-                    />
-                  ))}
+                  {invoiceOrders.map((order) => {
+                    const trackingKey = String(order.qr_id || order.id);
+                    const localOrder = linkedByTracking.get(trackingKey);
+                    return (
+                      <WaseetOrderRow
+                        key={order.id}
+                        order={order}
+                        linked={linkedTrackings.has(trackingKey)}
+                        localOrder={localOrder}
+                      />
+                    );
+                  })}
                 </div>
               )}
             </section>
