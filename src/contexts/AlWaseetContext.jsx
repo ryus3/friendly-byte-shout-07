@@ -4176,8 +4176,19 @@ export const AlWaseetProvider = ({ children }) => {
       }
 
       // ✅ تحديث السعر دائماً إذا تغير من الشريك
+      // 🔒 حماية مطلقة: طلبات الإرجاع/الاستبدال/التسليم الجزئي محمية
+      const isReturnLikeOrderSingle = (
+        localOrder.order_type === 'partial_delivery' ||
+        localOrder.order_type === 'exchange' ||
+        localOrder.order_type === 'replacement' ||
+        localOrder.order_type === 'return' ||
+        localOrder.status === 'returned' ||
+        localOrder.status === 'returned_in_stock' ||
+        (parseFloat(localOrder.final_amount) || 0) < 0 ||
+        (parseFloat(localOrder.refund_amount) || 0) > 0
+      );
       const remotePriceField = remoteOrder.price !== undefined ? remoteOrder.price : remoteOrder.total_price;
-      if (remotePriceField !== undefined) {
+      if (remotePriceField !== undefined && !isReturnLikeOrderSingle) {
         const remoteTotalPrice = parseInt(String(remotePriceField)) || 0;
         const deliveryFee = parseInt(String(deliveryPriceField || localOrder.delivery_fee)) || 0;
         
