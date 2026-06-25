@@ -97,7 +97,7 @@ const ManageProductsToolbar = ({
             <Button
               size="sm"
               onClick={onOpenReservations}
-              className="w-full h-9 bg-gradient-to-r from-primary via-purple-600 to-pink-500 hover:from-primary/90 hover:via-purple-700 hover:to-pink-600 text-white font-semibold shadow-lg shadow-purple-500/25 hover:shadow-xl hover:shadow-purple-500/35 transform hover:scale-[1.02] transition-all duration-300 border-0"
+              className="w-full bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-500 hover:from-indigo-600 hover:via-fuchsia-600 hover:to-cyan-600 text-white font-semibold shadow-lg shadow-fuchsia-500/30 hover:shadow-xl hover:shadow-fuchsia-500/40 transform hover:scale-[1.02] transition-all duration-300 border-0"
             >
               <Lock className="w-4 h-4 ml-2" />
               حجز كميات للموظفين

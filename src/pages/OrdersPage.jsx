@@ -389,7 +389,7 @@ const OrdersPage = () => {
       tempOrders = userOrders.filter(o => {
         const isLocalOrder = !o.tracking_number || o.tracking_number.startsWith('RYUS-') || o.delivery_partner === 'محلي';
         const isExplicitlyArchived = o.isArchived === true || o.is_archived === true || o.isarchived === true;
-        const isCompletedWithReceipt = ['completed', 'delivered'].includes(o.status) && o.receipt_received === true;
+        const isCompletedWithReceipt = o.status === 'completed' && o.receipt_received === true;
         const isReturnedToStock = o.status === 'returned_in_stock';
         
         // شركة التوصيل: أرشفة فقط عند completed + receipt_received
@@ -411,7 +411,7 @@ const OrdersPage = () => {
       tempOrders = userOrders.filter(o => {
         const isLocalOrder = !o.tracking_number || o.tracking_number.startsWith('RYUS-') || o.delivery_partner === 'محلي';
         const isExplicitlyArchived = o.isArchived === true || o.is_archived === true || o.isarchived === true;
-        const isCompletedWithReceipt = ['completed', 'delivered'].includes(o.status) && o.receipt_received === true;
+        const isCompletedWithReceipt = o.status === 'completed' && o.receipt_received === true;
         const isReturnedToStock = o.status === 'returned_in_stock';
         
         // شركة التوصيل: إخفاء الطلبات المكتملة مع فاتورة فقط
