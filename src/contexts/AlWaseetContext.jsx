@@ -1088,9 +1088,15 @@ export const AlWaseetProvider = ({ children }) => {
                 ? getModonStatusConfig(statusId, remoteOrder.status, localOrder.status)
                 : getStatusConfig(newDeliveryStatus);
               
-              // 🔍 الخطوة 1: التحقق من partial_delivery_history وجلب delivered_revenue
-              // 🔒 حماية partial_delivery - لا تغيير لـ status عند المزامنة
-              const isPartialDelivery = localOrder.order_type === 'partial_delivery';
+              // 🔍 الخطوة 1: التصنيف المحاسبي قبل اعتبار الحالة 21 تسليم جزئي
+              // 🔒 أي طلب بسعر/استرجاع سالب هو طلب إرجاع حقيقي وليس تسليم جزئي حتى لو أرسلت شركة التوصيل status=21
+              const isNegativeReturnOrder =
+                (parseFloat(localOrder.final_amount) || 0) < 0 ||
+                (parseFloat(localOrder.total_amount) || 0) < 0 ||
+                (parseFloat(localOrder.refund_amount) || 0) > 0;
+              const isReturnLikeSyncOrder = ['return', 'exchange', 'replacement'].includes(localOrder.order_type) || isNegativeReturnOrder;
+              // 🔒 حماية partial_delivery - لا تغيير لـ status عند المزامنة إلا إذا كان في الأصل إرجاعاً سالباً
+              const isPartialDelivery = localOrder.order_type === 'partial_delivery' && !isReturnLikeSyncOrder;
 
               // ✅ منطق أولوية مطلقة لتحديد الحالة الصحيحة
               let newStatus;
@@ -1105,7 +1111,12 @@ export const AlWaseetProvider = ({ children }) => {
                 newStatus = localOrder.status;
                 devLog.log(`🔒 [FINAL-PROTECTED] ${localOrder.tracking_number} محمي (${localOrder.status})`);
               }
-              // 📦 الأولوية 2: معالجة خاصة لطلبات partial_delivery
+              // ↩️ الأولوية 2: طلبات الإرجاع/الاستبدال محمية من تحويلها إلى تسليم جزئي
+              else if (isReturnLikeSyncOrder) {
+                newStatus = localOrder.status === 'returned_in_stock' ? 'returned_in_stock' : 'returned';
+                devLog.info(`🔒 [RETURN-PROTECTED] ${localOrder.tracking_number} طلب إرجاع محمي من تحويله إلى partial_delivery`);
+              }
+              // 📦 الأولوية 3: معالجة خاصة لطلبات partial_delivery
               else if (isPartialDelivery) {
                 // ✅ partial_delivery: status يبقى كما هو - فقط delivery_status يتغير
                 newStatus = localOrder.status;
@@ -1275,7 +1286,13 @@ export const AlWaseetProvider = ({ children }) => {
                 // ✅ تحويل order_type فوراً عند الحالة 21 — فقط للطلبات العادية
                 // (لا نُغيّر النوع للاستبدال/الإرجاع/الاستبدال التي أُنشئت بنوعها الصحيح)
                 const protectedOrderTypes = ['partial_delivery', 'exchange', 'replacement', 'return'];
-                if (newDeliveryStatus === '21' && !protectedOrderTypes.includes(localOrder.order_type)) {
+                if (isReturnLikeSyncOrder) {
+                  updates.order_type = 'return';
+                  updates.price_change_type = localOrder.price_change_type || 'return';
+                  if (newDeliveryStatus === '21') {
+                    devLog.info(`🔒 [RETURN-21] ${localOrder.tracking_number}: status=21 لكن السعر سالب، ثبتناه كإرجاع وليس تسليم جزئي`);
+                  }
+                } else if (newDeliveryStatus === '21' && !protectedOrderTypes.includes(localOrder.order_type)) {
                   updates.order_type = 'partial_delivery';
                   devLog.log(`🔄 [PARTIAL-DELIVERY] تحويل نوع الطلب ${localOrder.tracking_number} إلى partial_delivery`);
                 }
