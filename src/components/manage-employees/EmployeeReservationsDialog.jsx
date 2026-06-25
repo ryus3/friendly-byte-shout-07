@@ -29,6 +29,15 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
   const { supervisedEmployeeIds = [] } = useSupervisedEmployees();
 
   const uid = user?.user_id || user?.id;
+  const norm = (v) => (v ?? '').toString().trim().toLowerCase();
+  const myIds = useMemo(() => new Set([
+    user?.user_id,
+    user?.id,
+    user?.employee_code,
+    user?.email,
+  ].filter(Boolean).map(norm)), [user?.user_id, user?.id, user?.employee_code, user?.email]);
+  const isMine = (value) => value !== undefined && value !== null && myIds.has(norm(value));
+  const isOwnedProduct = (p) => isAdmin || isMine(p?.owner_user_id) || isMine(p?.owner_id) || isMine(p?.created_by) || isMine(p?.user_id);
 
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -52,15 +61,15 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
   // المنتجات: المدير العام يرى الكل، غيره يرى منتجاته فقط
   const ownedProducts = useMemo(() => {
     if (!Array.isArray(products)) return [];
-    const list = isAdmin ? products : products.filter(p => p.owner_user_id === uid);
+    const list = isAdmin ? products : products.filter(isOwnedProduct);
     if (!searchProduct.trim()) return list;
     const q = searchProduct.trim().toLowerCase();
     return list.filter(p => (p.name || '').toLowerCase().includes(q));
-  }, [products, isAdmin, uid, searchProduct]);
+  }, [products, isAdmin, myIds, searchProduct]);
 
   const selectedProducts = useMemo(
-    () => (isAdmin ? products : products?.filter(p => p.owner_user_id === uid) || []).filter(p => selectedProductIds.includes(p.id)),
-    [products, isAdmin, uid, selectedProductIds]
+    () => (isAdmin ? products : products?.filter(isOwnedProduct) || []).filter(p => selectedProductIds.includes(p.id)),
+    [products, isAdmin, myIds, selectedProductIds]
   );
 
   // كل المتغيرات للمنتجات المختارة
@@ -180,53 +189,39 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
       >
         {/* ✅ غلاف زجاجي مع تدرج خلفي وحواف ملوّنة */}
         <div className="relative rounded-3xl overflow-hidden">
-          {/* خلفية متدرجة سائلة نابضة بالحياة */}
-          <div className="absolute inset-0 bg-gradient-to-br from-violet-600/50 via-fuchsia-500/40 to-cyan-500/50" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_10%,rgba(168,85,247,0.45),transparent_55%),radial-gradient(circle_at_85%_15%,rgba(236,72,153,0.4),transparent_55%),radial-gradient(circle_at_50%_100%,rgba(6,182,212,0.5),transparent_60%)]" />
-          <div className="absolute -top-28 -right-28 w-80 h-80 rounded-full bg-fuchsia-500/50 blur-[90px] animate-pulse" />
-          <div className="absolute -bottom-28 -left-28 w-80 h-80 rounded-full bg-cyan-400/50 blur-[90px] animate-pulse" style={{ animationDelay: '1.5s' }} />
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-indigo-500/30 blur-[80px]" />
-          {/* الطبقة الزجاجية */}
-          <div className="absolute inset-0 backdrop-blur-2xl bg-background/75 border border-white/25" />
-          {/* حواف ملوّنة رفيعة متدرجة (conic) متحركة */}
-          <div className="pointer-events-none absolute inset-0 rounded-3xl p-[2px] animate-[spin_8s_linear_infinite]" style={{
-            background: 'conic-gradient(from 0deg, #a855f7, #ec4899, #06b6d4, #6366f1, #a855f7)',
-            WebkitMask: 'linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)',
-            WebkitMaskComposite: 'xor',
-            maskComposite: 'exclude',
-          }} />
+          <div className="absolute inset-0 bg-card" />
+          <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-br from-primary via-purple-600 to-pink-500 opacity-95" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_15%_5%,rgba(255,255,255,0.22),transparent_32%),radial-gradient(circle_at_90%_8%,rgba(255,255,255,0.16),transparent_28%)]" />
+          <div className="pointer-events-none absolute inset-0 rounded-3xl border border-white/15 shadow-2xl shadow-purple-950/35" />
 
           <div className="relative z-10 flex flex-col max-h-[92vh]">
-            <DialogHeader className="px-6 pt-5 pb-3 border-b border-white/10">
-              <DialogTitle className="flex items-center gap-3 text-xl">
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-indigo-500 to-fuchsia-500 blur-md opacity-60" />
-                  <div className="relative w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 via-fuchsia-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                    <Lock className="w-5 h-5 text-white" />
-                  </div>
+            <DialogHeader className="px-6 pt-5 pb-4 border-b border-white/10">
+              <DialogTitle className="flex items-center gap-3 text-xl text-white">
+                <div className="relative w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-xl shadow-black/20">
+                  <Lock className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex flex-col items-start">
-                  <span className="font-bold bg-gradient-to-r from-indigo-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent">
+                  <span className="font-bold drop-shadow-md">
                     حجز كميات للموظفين
                   </span>
-                  <span className="text-xs font-normal text-muted-foreground flex items-center gap-1">
+                  <span className="text-xs font-normal text-white/85 flex items-center gap-1">
                     <Sparkles className="w-3 h-3" />
                     تحديد متعدد للموظفين والمنتجات والمتغيرات
                   </span>
                 </div>
               </DialogTitle>
-              <DialogDescription className="text-xs text-muted-foreground/90 text-right">
+              <DialogDescription className="text-xs text-white/80 text-right">
                 خصّص كميات محددة من منتجاتك لموظف معين أو عدة موظفين دفعة واحدة. لن يتمكن غيرهم من بيعها.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1">
+            <div className="px-5 py-4 space-y-4 overflow-y-auto flex-1 bg-background/95">
               {/* === صف الاختيار: الموظفون + المنتجات === */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {/* اختيار الموظفين */}
-                <Popover>
+                <Popover modal={false}>
                   <PopoverTrigger asChild>
-                    <button className="group relative flex items-center justify-between gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 backdrop-blur-xl transition-all">
+                    <button className="group relative flex items-center justify-between gap-2 p-3 rounded-xl bg-card hover:bg-muted/60 border border-border shadow-sm transition-all">
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-indigo-400" />
                         <span className="text-sm font-medium">
@@ -237,7 +232,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                     </button>
                   </PopoverTrigger>
                   <PopoverContent
-                    className="w-72 p-0 z-50"
+                    className="w-72 p-0 z-[100000] border-primary/25 shadow-2xl"
                     dir="rtl"
                     align="start"
                     side="bottom"
@@ -267,9 +262,9 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                 </Popover>
 
                 {/* اختيار المنتجات */}
-                <Popover>
+                <Popover modal={false}>
                   <PopoverTrigger asChild>
-                    <button className="group relative flex items-center justify-between gap-2 p-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/15 backdrop-blur-xl transition-all">
+                    <button className="group relative flex items-center justify-between gap-2 p-3 rounded-xl bg-card hover:bg-muted/60 border border-border shadow-sm transition-all">
                       <div className="flex items-center gap-2">
                         <PackageIcon className="w-4 h-4 text-fuchsia-400" />
                         <span className="text-sm font-medium">
@@ -280,7 +275,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                     </button>
                   </PopoverTrigger>
                   <PopoverContent
-                    className="w-80 p-0 z-50"
+                    className="w-80 p-0 z-[100000] border-primary/25 shadow-2xl"
                     dir="rtl"
                     align="start"
                     side="bottom"
@@ -320,8 +315,8 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
 
               {/* === جدول المتغيرات للمنتجات المختارة === */}
               {selectedProducts.length > 0 && (
-                <div className="rounded-xl border border-white/15 bg-white/5 backdrop-blur-xl overflow-hidden">
-                  <div className="px-4 py-2.5 bg-gradient-to-l from-fuchsia-500/10 to-indigo-500/10 border-b border-white/10 flex items-center justify-between">
+                  <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+                  <div className="px-4 py-2.5 bg-gradient-to-l from-primary/15 via-purple-500/10 to-pink-500/10 border-b border-border flex items-center justify-between">
                     <span className="text-xs font-semibold flex items-center gap-1.5">
                       <Palette className="w-3.5 h-3.5 text-fuchsia-400" />
                       <Ruler className="w-3.5 h-3.5 text-cyan-400" />
@@ -341,7 +336,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                                 const available = Math.max(0, (v.quantity || 0) - (v.reserved_quantity || 0));
                                 const qty = variantQuantities[v.id] || 0;
                                 return (
-                                  <div key={v.id} className="flex items-center gap-2 p-2 rounded-lg bg-background/40 border border-white/10">
+                                  <div key={v.id} className="flex items-center gap-2 p-2 rounded-lg bg-background border border-border">
                                     <div className="flex-1 min-w-0 text-xs">
                                       <div className="truncate">{variantLabel(v)}</div>
                                       <div className="text-[10px] text-muted-foreground">متاح: {available}</div>
@@ -400,7 +395,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                 <Button
                   onClick={handleBulkReserve}
                   disabled={saving || totalCombinations === 0}
-                  className="relative bg-gradient-to-r from-indigo-500 via-fuchsia-500 to-cyan-500 hover:opacity-90 text-white border-0 shadow-lg shadow-fuchsia-500/30"
+                  className="relative bg-gradient-to-r from-primary via-purple-600 to-pink-500 hover:opacity-90 text-white border-0 shadow-lg shadow-purple-500/25"
                 >
                   {saving ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -414,8 +409,8 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
               </div>
 
               {/* === قائمة الحجوزات النشطة === */}
-              <div className="rounded-xl border border-white/15 bg-white/5 backdrop-blur-xl">
-                <div className="px-4 py-2.5 border-b border-white/10 flex items-center justify-between">
+              <div className="rounded-xl border border-border bg-card shadow-sm">
+                <div className="px-4 py-2.5 border-b border-border flex items-center justify-between">
                   <span className="text-xs font-semibold">الحجوزات النشطة</span>
                   <Badge variant="outline" className="text-[10px] border-white/20">{reservations.length}</Badge>
                 </div>
