@@ -41,9 +41,12 @@ const ManageProductsPage = () => {
   const [isReservationsOpen, setIsReservationsOpen] = useState(false);
   
 
-  // مالك منتجات؟ (لإظهار زر الحجز) — يدعم user.id و user.user_id
+  // مالك منتجات؟ (لإظهار زر الحجز) — يدعم user.id و user.user_id و owner_id و created_by
   const uid = user?.user_id || user?.id;
-  const isOwnerOrAdmin = isAdmin || isDepartmentManager || (Array.isArray(products) && products.some(p => p.owner_user_id === uid));
+  const isProductOwner = Array.isArray(products) && products.some(p =>
+    p.owner_user_id === uid || p.owner_id === uid || p.created_by === uid || p.user_id === uid
+  );
+  const isOwnerOrAdmin = isAdmin || isDepartmentManager || isProductOwner;
 
 
 
