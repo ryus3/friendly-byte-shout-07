@@ -258,6 +258,10 @@ const OrderCard = React.memo(({
     if (order.order_type === 'exchange' || order.order_type === 'replacement' || order.order_type === 'return') {
       return false;
     }
+    // 🔒 حماية إضافية: أي طلب بمبلغ نهائي سالب أو مبلغ إرجاع موجب يعتبر طلب إرجاع
+    if (Number(order.final_amount || 0) < 0) return false;
+    if (Number(order.refund_amount || 0) > 0) return false;
+    if (order.status === 'returned' || order.status === 'return_received') return false;
 
     // إذا تمت معالجته مسبقاً (يوجد delivered/pending_return/returned_in_stock) لا تفتح
     const hasProcessedItems = order.order_items.some(it =>
