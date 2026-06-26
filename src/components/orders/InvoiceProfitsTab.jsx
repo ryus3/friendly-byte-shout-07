@@ -392,4 +392,90 @@ const StatCard = ({ icon: Icon, label, sub, value, color = 'blue', highlight = f
   );
 };
 
+/**
+ * كارت الزيادة/الخصم البارز — لون ديناميكي
+ *  - أخضر إذا الفرق موجب (زيادة من شركة التوصيل)
+ *  - برتقالي إذا الفرق سالب (خصم من شركة التوصيل)
+ *  - رمادي إذا = 0
+ */
+const DeltaStatCard = ({ delta, fmt }) => {
+  const d = Math.round(Number(delta) || 0);
+  const isPositive = d > 0;
+  const isNegative = d < 0;
+  const Icon = isPositive ? TrendingUp : (isNegative ? TrendingDown : ArrowDownUp);
+  const grad = isPositive
+    ? 'from-emerald-500/15 to-emerald-500/5 border-emerald-500/40 text-emerald-700 dark:text-emerald-300'
+    : isNegative
+      ? 'from-orange-500/15 to-orange-500/5 border-orange-500/40 text-orange-700 dark:text-orange-300'
+      : 'from-muted/40 to-muted/10 border-border text-muted-foreground';
+  const label = isPositive ? 'إجمالي الزيادة' : (isNegative ? 'إجمالي الخصم' : 'لا زيادة/خصم');
+  const sub = isPositive
+    ? 'من شركة التوصيل'
+    : isNegative
+      ? 'من شركة التوصيل'
+      : 'لا فرق على الفاتورة';
+  return (
+    <Card className={`h-full min-h-[104px] bg-gradient-to-br ${grad}`}>
+      <CardContent className="p-3 h-full flex flex-col justify-between">
+        <div className="flex items-center gap-2">
+          <Icon className="w-4 h-4" />
+          <span className="text-xs">{label}</span>
+        </div>
+        <div>
+          <div className="text-lg font-bold leading-tight">
+            {isPositive ? '+' : (isNegative ? '−' : '')}{fmt(Math.abs(d))}
+          </div>
+          <div className="text-[10px] opacity-80 mt-0.5">{sub}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+/**
+ * كارت تحصيلات خارج القناة (Off-Channel):
+ *  طلبات مبلغها من شركة التوصيل = 0 لكنها مُسلَّمة فعلاً
+ *  (دفع إلكتروني/المالك أو الموظف يتحمل التوصيل).
+ *  - المبلغ المتوقّع تحصيله off-channel
+ *  - عدد الطلبات
+ *  - أجور التوصيل المُتحمَّلة
+ */
+const OffChannelStatCard = ({ calc, fmt }) => {
+  const count = Number(calc.offChannelCount) || 0;
+  const expected = Number(calc.offChannelExpectedAmount) || 0;
+  const absorbed = Number(calc.offChannelAbsorbedDelivery) || 0;
+  if (!count) {
+    return (
+      <Card className="h-full min-h-[104px] bg-gradient-to-br from-muted/30 to-muted/10 border-border">
+        <CardContent className="p-3 h-full flex flex-col justify-between text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <Banknote className="w-4 h-4" />
+            <span className="text-xs">تحصيلات خارج القناة</span>
+          </div>
+          <div>
+            <div className="text-lg font-bold leading-tight">—</div>
+            <div className="text-[10px] opacity-80 mt-0.5">لا توجد</div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+  return (
+    <Card className="h-full min-h-[104px] bg-gradient-to-br from-amber-500/15 to-amber-500/5 border-amber-500/40 text-amber-700 dark:text-amber-300">
+      <CardContent className="p-3 h-full flex flex-col justify-between">
+        <div className="flex items-center gap-2">
+          <Banknote className="w-4 h-4" />
+          <span className="text-xs">تحصيلات خارج القناة</span>
+        </div>
+        <div>
+          <div className="text-lg font-bold leading-tight">{fmt(expected)}</div>
+          <div className="text-[10px] opacity-80 mt-0.5">
+            {count} طلب{count > 1 ? '' : ''} • توصيل بحساب المالك {fmt(absorbed)}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export default InvoiceProfitsTab;
