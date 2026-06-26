@@ -123,6 +123,15 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const isPartial = orderType === 'partial_delivery';
     const isOffChannel = hasInvoiceAmount && Number(baseAmount) === 0 && !isFullReturn && !isPartial;
 
+    // ✅ هل تأكَّد المالك استلام مبلغ الـ off-channel؟
+    // إذا لا: لا نُدخل قطعه/إيراده/تكلفته ضمن "توزيع الأرباح على المالكين".
+    const occRecord = isOffChannel ? offChannelByOrder.get(o.id) : null;
+    const isOffChannelConfirmed = !!(occRecord && (
+      occRecord.cash_movement_id ||
+      ['settled', 'confirmed', 'owner_confirmed'].includes(occRecord.status)
+    ));
+    const isOffChannelPending = isOffChannel && !isOffChannelConfirmed;
+
     // الإيراد الحقيقي للقناة (ما دفعته شركة التوصيل فعلاً، يخصم منه التوصيل)
     const realRevenue = baseAmount - deliveryFee;
     // محاسبياً: للـ off-channel نعتمد الإيراد المُخطَّط (Σ price × qty) لأن المالك/الموظف
