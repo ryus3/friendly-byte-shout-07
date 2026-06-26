@@ -50,6 +50,9 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   let channelRevenue = 0;
   // قائمة الطلبات ذات الزيادة/الخصم من شركة التوصيل (للعرض)
   const deltaOrders = []; // { order_id, created_by, delta, real_revenue, planned_revenue }
+  // ✅ قائمة طلبات الإرجاع داخل هذه الفاتورة (لعرضها كقسم مستقل، لا تُعتبر "خصم")
+  const returnsOrders = []; // { order_id, created_by, real_revenue, planned_revenue, delivery_fee }
+  let returnsTotalLoss = 0; // مجموع خسارة الإرجاع (مبلغ الوسيط السالب) — للعرض فقط
 
   const ensureOwner = (ownerId) => {
     if (!byOwner[ownerId]) byOwner[ownerId] = { revenue: 0, cost: 0, items: 0, products: [] };
