@@ -191,6 +191,13 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
           </CardContent>
         </Card>
 
+        <InvoiceSpecialOrdersList
+          calc={calc}
+          orders={linkedOrders}
+          namesMap={namesMap}
+          fmt={fmt}
+        />
+
         <DeltaNote calc={calc} fmt={fmt} />
         <DeliveryNote totalDelivery={calc.totalDelivery} fmt={fmt} />
       </div>
