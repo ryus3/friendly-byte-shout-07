@@ -33,15 +33,16 @@ export function useOffChannelCollections({ scope = 'inbox', orderIds = null } = 
 
   /** تصنيف الموظف للسجل */
   const classify = useCallback(async (id, payload) => {
-    // payload: { collection_type, customer_paid_amount, employee_profit_share, owner_due_amount, note, isOwnerCreator }
+    // payload: { collection_type, customer_paid_amount, employee_profit_share, owner_due_amount, note }
+    const ownerDue = Number(payload.owner_due_amount) || 0;
     const status = payload.collection_type === 'full_discount'
       ? 'waived'
-      : (payload.isOwnerCreator ? 'settled' : 'pending_owner_confirmation');
+      : (ownerDue > 0 ? 'pending_owner_confirmation' : 'settled');
     const update = {
       collection_type: payload.collection_type,
       customer_paid_amount: Number(payload.customer_paid_amount) || 0,
       employee_profit_share: Number(payload.employee_profit_share) || 0,
-      owner_due_amount: Number(payload.owner_due_amount) || 0,
+      owner_due_amount: ownerDue,
       note: payload.note || null,
       status,
       classified_at: new Date().toISOString(),

@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Loader2, CreditCard, Landmark, Banknote, Gift, Truck } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { useOffChannelCollections } from '@/hooks/useOffChannelCollections';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -25,8 +24,6 @@ const TYPES = [
  * - تحسب owner_due_amount تلقائياً حسب النوع وقاعدة ربح الموظف.
  */
 const OffChannelClassifyDialog = ({ open, onOpenChange, order, onClassified }) => {
-  const { user } = useAuth();
-  const userId = user?.user_id || user?.id;
   const { toast } = useToast();
   const { rows, classify, reload } = useOffChannelCollections({ scope: 'order', orderIds: order?.id ? [order.id] : [] });
 
@@ -35,7 +32,6 @@ const OffChannelClassifyDialog = ({ open, onOpenChange, order, onClassified }) =
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [empProfitRule, setEmpProfitRule] = useState(0);
-  const [isOwnerCreator, setIsOwnerCreator] = useState(false);
 
   const record = rows[0];
 
@@ -52,12 +48,6 @@ const OffChannelClassifyDialog = ({ open, onOpenChange, order, onClassified }) =
   useEffect(() => {
     if (!order?.created_by) { setEmpProfitRule(0); return; }
     (async () => {
-      // هل المُنشئ admin/owner؟
-      const { data: roles } = await supabase
-        .from('user_roles').select('role').eq('user_id', order.created_by);
-      const isOwner = (roles || []).some(r => ['admin','deputy','super_admin','owner'].includes(r.role));
-      setIsOwnerCreator(isOwner);
-
       // إجمالي ربح الموظف من جدول profits لهذا الطلب
       const { data: p } = await supabase.from('profits')
         .select('employee_profit').eq('order_id', order.id).maybeSingle();
@@ -74,14 +64,12 @@ const OffChannelClassifyDialog = ({ open, onOpenChange, order, onClassified }) =
       employeeShare = 0; ownerDue = 0;
     } else if (type === 'owner_delivery_only') {
       employeeShare = 0; ownerDue = 0; // المالك يتحمّل التوصيل، لا دَيْن
-    } else if (isOwnerCreator) {
-      employeeShare = 0; ownerDue = 0; // المالك قبض مباشرة
     } else {
       employeeShare = empProfitRule; // ربح الموظف يبقى له
       ownerDue = Math.max(0, customerPaid - employeeShare);
     }
     return { customerPaid, deliveryFee, employeeShare, ownerDue };
-  }, [paid, type, empProfitRule, isOwnerCreator, order?.delivery_fee]);
+  }, [paid, type, empProfitRule, order?.delivery_fee]);
 
   const handleSave = async () => {
     if (!record?.id) {
@@ -95,14 +83,13 @@ const OffChannelClassifyDialog = ({ open, onOpenChange, order, onClassified }) =
       employee_profit_share: calc.employeeShare,
       owner_due_amount: calc.ownerDue,
       note,
-      isOwnerCreator,
     });
     setSaving(false);
     if (error) {
       toast({ variant: 'destructive', title: 'فشل الحفظ', description: error.message });
       return;
     }
-    toast({ title: 'تم التصنيف', description: isOwnerCreator || type === 'full_discount' || type === 'owner_delivery_only'
+    toast({ title: 'تم التصنيف', description: type === 'full_discount' || type === 'owner_delivery_only' || calc.ownerDue <= 0
       ? 'تم إقفال السجل.' : 'بانتظار تأكيد المالك للاستلام.' });
     onOpenChange(false);
     onClassified?.();
@@ -153,9 +140,7 @@ const OffChannelClassifyDialog = ({ open, onOpenChange, order, onClassified }) =
               <span>دَيْن الموظف للمالك:</span>
               <b className="text-rose-600">{calc.ownerDue.toLocaleString()} د.ع</b>
             </div>
-            {isOwnerCreator && (
-              <p className="text-[10px] text-amber-700 dark:text-amber-300">* المالك هو منشئ الطلب — لا دَيْن، يُقفل السجل مباشرة.</p>
-            )}
+            <p className="text-[10px] text-muted-foreground">* أي مبلغ خارج القناة يبقى بانتظار تأكيد المالك حتى لو كان المحصّل مديراً.</p>
           </div>
         </div>
         <DialogFooter className="flex-row-reverse">
