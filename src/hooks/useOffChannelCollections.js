@@ -18,11 +18,18 @@ export function useOffChannelCollections({ scope = 'inbox', orderIds = null } = 
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!userId && scope !== 'order') { setRows([]); setLoading(false); return; }
+    if (!userId && scope !== 'order' && scope !== 'manager_all' && scope !== 'manager_pending') {
+      setRows([]); setLoading(false); return;
+    }
     setLoading(true);
     let q = supabase.from('off_channel_collections').select('*').order('created_at', { ascending: false });
     if (scope === 'mine') q = q.eq('collector_user_id', userId).eq('status', 'pending_classification');
-    else if (scope === 'inbox') q = q.eq('owner_user_id', userId).in('status', ['pending_classification', 'pending_owner_confirmation']);
+    // ✅ inbox للمالك: فقط التحصيلات التي صنّفها البائع وبانتظار تأكيد المالك
+    else if (scope === 'inbox') q = q.eq('owner_user_id', userId).eq('status', 'pending_owner_confirmation');
+    // ✅ المدير: عدّاد التحصيلات المعلقة عالمياً
+    else if (scope === 'manager_pending') q = q.eq('status', 'pending_owner_confirmation');
+    // ✅ المدير: كل السجلات (للصفحة)
+    else if (scope === 'manager_all') { /* no extra filter */ }
     else if (scope === 'order' && Array.isArray(orderIds) && orderIds.length) q = q.in('order_id', orderIds);
     const { data, error } = await q;
     if (!error) setRows(data || []);
