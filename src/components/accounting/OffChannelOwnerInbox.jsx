@@ -20,7 +20,7 @@ const OffChannelOwnerInbox = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
   const userId = user?.user_id || user?.id;
-  const scope = isAdmin ? 'manager_all' : 'inbox';
+  const scope = isAdmin ? 'manager_all' : 'owner_all';
 
   const { rows, loading, confirmReceipt, reload } = useOffChannelCollections({ scope });
 
