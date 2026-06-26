@@ -25,6 +25,7 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
   }, [orders]);
 
   const formatCur = fmt || ((n) => `${Math.round(Number(n) || 0).toLocaleString()} د.ع`);
+  const [classifyOrder, setClassifyOrder] = useState(null);
 
   const deltaOrders = calc?.deltaOrders || [];
   const offChannelOrders = calc?.offChannelOrders || [];
