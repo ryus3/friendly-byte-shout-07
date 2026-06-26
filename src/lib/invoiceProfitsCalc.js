@@ -276,11 +276,20 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     byOwner,
     productsList, productCount: productsList.length,
     itemsAvailable: productsList.length > 0,
+    // ✅ إيراد القناة (شركة التوصيل) بدون أجور توصيل وبدون off-channel
+    channelRevenue,
+    // ✅ صافي إيراد القناة = إيراد القناة − الخصم/الزيادة من الوسيط
+    //    (channelRevenue يساوي الـ planned للقناة فعلاً + delta لأن realRevenue = planned + delta،
+    //     لذلك صافي إيراد القناة بمعنى "ما وصلنا فعلاً من الوسيط بدون توصيل" = channelRevenue نفسه.
+    //     نعرضه باسم netChannelRevenue للوضوح في الواجهة.)
+    netChannelRevenue: channelRevenue,
     // ✅ Off-Channel (تحصيلات خارج قناة شركة التوصيل)
     offChannelCount,
     offChannelAbsorbedDelivery,
     offChannelExpectedAmount,
     offChannelOrders,
+    // ✅ قائمة طلبات الزيادة/الخصم من الوسيط
+    deltaOrders,
   };
 }
 
