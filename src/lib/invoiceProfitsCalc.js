@@ -31,8 +31,9 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
   const productMap = {}; // pid -> { id, name, ownerId, qty, revenue, cost }
   const byOwner = {};    // ownerId -> { revenue, cost, items, products: [] }
-  const employeeBonusByEmp = {}; // delta للعرض فقط
-  const employeeProfitByEmp = {}; // من جدول profits (المصدر الفعلي)
+  const employeeBonusByEmp = {}; // مجموع delta (موجب وسالب) للموظفين أصحاب القواعد — للعرض
+  const employeePositiveDeltaByEmp = {}; // مجموع الزيادات الموجبة فقط (لأن DB لا يطبّق الـ delta السالب)
+  const employeeProfitByEmp = {}; // من جدول profits (المصدر الفعلي المخزّن)
   const offChannelByOrder = new Map();
 
   let totalRevenue = 0;     // = Σ (final_amount - delivery_fee) للطلبات غير الراجعة
@@ -50,6 +51,8 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   const offChannelOrders = [];
   // إيراد القناة الحقيقي (مبلغ شركة التوصيل بدون أجور توصيل، بدون off-channel)
   let channelRevenue = 0;
+  // مجموع الخصومات السالبة من شركة التوصيل (قيمة موجبة — للعرض "قبل الخصم")
+  let negativeDeltaAbs = 0;
   // قائمة الطلبات ذات الزيادة/الخصم من شركة التوصيل (للعرض)
   const deltaOrders = []; // { order_id, created_by, delta, real_revenue, planned_revenue }
   // ✅ قائمة طلبات الإرجاع داخل هذه الفاتورة (لعرضها كقسم مستقل، لا تُعتبر "خصم")
