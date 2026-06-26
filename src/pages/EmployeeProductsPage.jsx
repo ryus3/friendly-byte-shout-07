@@ -19,6 +19,7 @@ import SmartPagination from '@/components/ui/SmartPagination';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Badge } from '@/components/ui/badge';
 import { RefreshCacheButton } from '@/components/products/RefreshCacheButton';
+import EmployeeReservationsDialog from '@/components/manage-employees/EmployeeReservationsDialog';
 
 const EmployeeProductsPage = () => {
   const { products, deleteProducts, loading, refreshProducts } = useInventory();
@@ -40,6 +41,7 @@ const EmployeeProductsPage = () => {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isReservationsOpen, setIsReservationsOpen] = useState(false);
   const [showFilter, setShowFilter] = useState('mine');
   const ITEMS_PER_PAGE = 15;
   const [currentPage, setCurrentPage] = useState(1);
@@ -234,6 +236,13 @@ const EmployeeProductsPage = () => {
           onBarcodeSearch={() => setIsScannerOpen(true)}
           onQuickPrintLabels={handleQuickPrintLabels}
           isMobile={isMobile}
+          showReservations={myProducts.length > 0}
+          onOpenReservations={() => setIsReservationsOpen(true)}
+        />
+
+        <EmployeeReservationsDialog
+          open={isReservationsOpen}
+          onOpenChange={setIsReservationsOpen}
         />
 
         {searchFilteredProducts.length > 0 && viewMode === 'list' && (

@@ -1,21 +1,25 @@
 /**
- * حاسبة أرباح الفاتورة الدقيقة (مصدر الحقيقة: orders.final_amount - delivery_fee)
+ * حاسبة أرباح الفاتورة الدقيقة (مصدر الحقيقة الموحد)
  *
- * المبدأ:
+ * المبادئ:
  * - الإيراد الحقيقي لكل طلب = final_amount - delivery_fee (ما أرسلته شركة التوصيل فعلاً).
- * - إيراد البنود الافتراضي = SUM(qty * unit_price) من order_items.
- * - الفرق (delta) = الإيراد الحقيقي - إيراد البنود = الزيادة (+) أو الخصم (-).
- * - توزيع الـ delta:
- *    • إذا كان منشئ الطلب لديه قاعدة ربح فعّالة → كامل الـ delta يُضاف لمستحقاته.
- *    • وإلا → يُضاف لإيراد/ربح مالكي المنتجات في الطلب بنسبة حصة كل منتج.
- * - التكلفة المفضّلة: products.cost_price (الأحدث) ثم product_variants.cost_price.
+ * - الكميات المباعة فعلياً فقط هي التي تدخل في الإحصاء:
+ *    • للطلب العادي (regular/completed): كل الكميات.
+ *    • للطلب الجزئي (partial_delivery): فقط quantity_delivered.
+ *    • للطلب الراجع (return/returned): صفر.
+ * - الإيراد الافتراضي للبنود = SUM(qty_eligible * unit_price).
+ * - الفرق (delta) = الإيراد الحقيقي − الإيراد الافتراضي:
+ *    • إذا كان منشئ الطلب لديه قاعدة ربح فعّالة → كامل الـ delta يُعرَض كزيادة/خصم للموظف
+ *      (الفعلي يأتي من profits.employee_profit المخزَّن).
+ *    • وإلا → يوزَّع نسبياً على إيراد المنتجات.
+ * - التكلفة المفضّلة: products.cost_price ثم product_variants.cost_price، مضروبة بالكمية الفعلية فقط.
  * - أجور التوصيل مستثناة من جميع الحسابات.
  *
  * @param {Object} args
- * @param {Array} args.orders         صفوف orders {id, created_by, final_amount, total_amount, delivery_fee}
- * @param {Array} args.orderItems     صفوف order_items مع products + product_variants
+ * @param {Array} args.orders         صفوف orders {id, created_by, final_amount, total_amount, delivery_fee, order_type, status, delivery_status}
+ * @param {Array} args.orderItems     صفوف order_items مع products + product_variants + quantity_delivered/quantity_returned/item_status
  * @param {Array} args.profits        صفوف profits {order_id, employee_id, employee_profit}
- * @param {Set<string>} args.employeesWithRules  مجموعة employee_id لهم قاعدة ربح فعّالة
+ * @param {Set<string>} args.employeesWithRules مجموعة employee_id لهم قاعدة ربح فعّالة
  */
 export function computeInvoiceProfits({ orders = [], orderItems = [], profits = [], employeesWithRules = new Set() }) {
   const itemsByOrder = new Map();
@@ -26,10 +30,10 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
   const productMap = {}; // pid -> { id, name, ownerId, qty, revenue, cost }
   const byOwner = {};    // ownerId -> { revenue, cost, items, products: [] }
-  const employeeBonusByEmp = {}; // delta-only bonus محسوب من الزيادة/الخصم
-  const employeeProfitByEmp = {}; // من جدول profits
+  const employeeBonusByEmp = {}; // delta للعرض فقط
+  const employeeProfitByEmp = {}; // من جدول profits (المصدر الفعلي)
 
-  let totalRevenue = 0;     // = Σ (final_amount - delivery_fee)
+  let totalRevenue = 0;     // = Σ (final_amount - delivery_fee) للطلبات غير الراجعة
   let totalCost = 0;
   let totalQty = 0;
   let totalDelivery = 0;
@@ -58,40 +62,102 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     employeeProfitByEmp[k] = (employeeProfitByEmp[k] || 0) + (Number(p.employee_profit) || 0);
   });
 
+  // الكمية الفعلية المباعة لكل بند حسب نوع الطلب
+  const eligibleQtyOf = (order, it) => {
+    const orderType = order?.order_type || 'regular';
+    const orderStatus = order?.status || '';
+    if (orderType === 'return' || orderStatus === 'returned') return 0;
+    if (orderType === 'partial_delivery') {
+      const qd = Number(it.quantity_delivered) || 0;
+      if (qd > 0) return qd;
+      if (it.item_status === 'delivered') return Number(it.quantity) || 0;
+      return 0;
+    }
+    return Number(it.quantity) || 0;
+  };
+
   (orders || []).forEach((o) => {
     const deliveryFee = Number(o.delivery_fee) || 0;
-    const realRevenue = (Number(o.final_amount) || Number(o.total_amount) || 0) - deliveryFee;
     totalDelivery += deliveryFee;
+
+    const isReturn = (o.order_type === 'return') || (o.status === 'returned');
+    if (isReturn) return;
+
+    // ✅ المصدر الموحّد للإيراد الحقيقي:
+    // 1) مبلغ شركة التوصيل لهذا الطلب (invoice_order_amount) إن وُجد
+    // 2) وإلا final_amount المسجَّل بالنظام
+    // ثم نطرح أجور التوصيل للحصول على إيراد المنتجات الصافي
+    const invoiceOrderAmount = Number(o.invoice_order_amount) || 0;
+    const baseAmount = invoiceOrderAmount > 0
+      ? invoiceOrderAmount
+      : (Number(o.final_amount) || Number(o.total_amount) || 0);
+    const realRevenue = baseAmount - deliveryFee;
     totalRevenue += realRevenue;
 
     const items = itemsByOrder.get(o.id) || [];
-    // إيراد البنود لهذا الطلب + per-owner items revenue
+
+    // الخطوة الأولى: حساب الإيراد الافتراضي والكميات المؤهلة لكل بند
+    const baseLines = items
+      .filter((it) => it.item_direction !== 'incoming')
+      .map((it) => {
+        const eligibleQty = eligibleQtyOf(o, it);
+        const unitPrice = Number(it.unit_price) || 0;
+        const costUnit = Number(it.products?.cost_price) || Number(it.product_variants?.cost_price) || 0;
+        return { it, eligibleQty, unitPrice, costUnit };
+      });
+
+    let plannedRevenue = baseLines.reduce((s, l) => s + l.eligibleQty * l.unitPrice, 0);
+
+    // إذا كان الطلب جزئياً ولم نستطع تحديد الكميات المسلَّمة من البنود،
+    // نشتقّ نسبة التسليم من النسبة بين الإيراد الحقيقي وإيراد البنود الأصلية
+    const isPartialMissingData = (o.order_type === 'partial_delivery') && plannedRevenue === 0;
+    let derivedLines = baseLines;
+    if (isPartialMissingData) {
+      const incomingFiltered = items.filter((it) => it.item_direction !== 'incoming');
+      const originalTotalQty = incomingFiltered.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+      const originalRevenue = incomingFiltered.reduce(
+        (s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0
+      );
+      const fraction = originalRevenue > 0 ? Math.min(1, Math.max(0, realRevenue / originalRevenue)) : 0;
+      // العدد الكلي للقطع المسلَّمة فعلياً (مقرّب)
+      let remaining = Math.round(originalTotalQty * fraction);
+      // نوزّع الكميات من البنود الأعلى سعراً أولاً للحفاظ على توازن الإيراد
+      const ordered = [...incomingFiltered].sort((a, b) =>
+        (Number(b.unit_price) || 0) - (Number(a.unit_price) || 0)
+      );
+      const qtyByItem = new Map();
+      ordered.forEach((it) => {
+        const cap = Number(it.quantity) || 0;
+        const take = Math.min(cap, Math.max(0, remaining));
+        qtyByItem.set(it, take);
+        remaining -= take;
+      });
+      derivedLines = incomingFiltered.map((it) => {
+        const unitPrice = Number(it.unit_price) || 0;
+        const costUnit = Number(it.products?.cost_price) || Number(it.product_variants?.cost_price) || 0;
+        return { it, eligibleQty: qtyByItem.get(it) || 0, unitPrice, costUnit };
+      });
+      plannedRevenue = derivedLines.reduce((s, l) => s + l.eligibleQty * l.unitPrice, 0);
+    }
+
     let orderItemsRevenue = 0;
-    const ownerRevenueInOrder = {}; // ownerId -> items revenue for this order
-    const productLinesInOrder = []; // { pid, ownerId, revenue }
+    const productLinesInOrder = [];
 
-    items.forEach((it) => {
-      const qty = Number(it.quantity) || 0;
-      const unitPrice = Number(it.unit_price) || 0;
-      const costUnit = Number(it.products?.cost_price) || Number(it.product_variants?.cost_price) || 0;
-      const lineRevenue = qty * unitPrice;
-      const lineCost = qty * costUnit;
-
+    derivedLines.forEach(({ it, eligibleQty, unitPrice, costUnit }) => {
+      if (eligibleQty <= 0) return;
+      const lineRevenue = eligibleQty * unitPrice;
+      const lineCost = eligibleQty * costUnit;
       const prod = ensureProduct(it);
-      prod.qty += qty;
+      prod.qty += eligibleQty;
       prod.revenue += lineRevenue;
       prod.cost += lineCost;
-      totalQty += qty;
+      totalQty += eligibleQty;
       totalCost += lineCost;
-
       orderItemsRevenue += lineRevenue;
-      const ownerId = prod.ownerId;
-      ownerRevenueInOrder[ownerId] = (ownerRevenueInOrder[ownerId] || 0) + lineRevenue;
-      productLinesInOrder.push({ pid: prod.id, ownerId, revenue: lineRevenue });
+      productLinesInOrder.push({ pid: prod.id, ownerId: prod.ownerId, revenue: lineRevenue });
     });
     revenueFromItemsAll += orderItemsRevenue;
 
-    // التبديل/الاستبدال ليس خصماً ولا زيادة منتج — الفرق فيه = أجور توصيل فقط
     const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange';
     const delta = isExchange ? 0 : (realRevenue - orderItemsRevenue);
     totalDelta += delta;
@@ -101,18 +167,14 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const creatorHasRule = creatorId && employeesWithRules.has(creatorId);
 
     if (creatorHasRule) {
-      // كامل الـ delta لمستحقات الموظف منشئ الطلب
       employeeBonusByEmp[creatorId] = (employeeBonusByEmp[creatorId] || 0) + delta;
     } else if (orderItemsRevenue > 0) {
-      // توزيع نسبي للـ delta على المالكين داخل هذا الطلب + توزيع على المنتجات
       productLinesInOrder.forEach((line) => {
         const share = line.revenue / orderItemsRevenue;
         const add = delta * share;
-        // أضف للمنتج
         if (productMap[line.pid]) productMap[line.pid].revenue += add;
       });
     } else {
-      // طلب بدون items: نسبه كاملة لـ "النظام"
       ensureOwner('__system__').revenue += delta;
     }
   });
@@ -128,16 +190,11 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
   const employeeBonusTotal = Object.values(employeeBonusByEmp).reduce((s, v) => s + v, 0);
   const employeeProfitTotal = Object.values(employeeProfitByEmp).reduce((s, v) => s + v, 0);
-  // المصدر الوحيد للحقيقة: جدول profits.employee_profit (يتضمن الزيادة/الخصم أصلاً)
   const employeeTotalCombined = employeeProfitTotal;
+  const employeeCombinedByEmp = { ...employeeProfitByEmp };
 
   const totalProfit = totalRevenue - totalCost;
   const netForOwners = totalProfit - employeeTotalCombined;
-
-  // ❗ employeeProfitByEmp مأخوذ من جدول profits المخزّن، وهو يتضمن أصلاً الزيادة/الخصم
-  // (الترِجر يحسب: قاعدة + زيادة − خصم). لا نُضيف employeeBonusByEmp فوقه لتجنب الازدواج.
-  // employeeBonusByEmp يبقى للإعلام فقط (سطر "يشمل ... من الزيادة/الخصم").
-  const employeeCombinedByEmp = { ...employeeProfitByEmp };
 
   const productsList = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
 
@@ -164,11 +221,12 @@ export async function fetchInvoiceProfitsData(supabase, orderIds) {
   }
   const [{ data: oData }, { data: itemsData }, { data: pData }] = await Promise.all([
     supabase.from('orders')
-      .select('id, created_by, final_amount, total_amount, delivery_fee, order_type')
+      .select('id, created_by, final_amount, total_amount, delivery_fee, order_type, status, delivery_status')
       .in('id', orderIds),
     supabase.from('order_items')
       .select(`
-        order_id, product_id, variant_id, quantity, unit_price, total_price,
+        order_id, product_id, variant_id, quantity, quantity_delivered, quantity_returned,
+        item_status, item_direction, unit_price, total_price,
         products:product_id(id, name, owner_user_id, cost_price),
         product_variants:variant_id(id, cost_price)
       `)

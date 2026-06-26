@@ -29,6 +29,12 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
   const { supervisedEmployeeIds = [] } = useSupervisedEmployees();
 
   const uid = user?.user_id || user?.id;
+  const uidStr = uid ? String(uid) : null;
+  const isOwnerOfAny = useMemo(
+    () => Array.isArray(products) && !!uidStr && products.some(p => p?.owner_user_id && String(p.owner_user_id) === uidStr),
+    [products, uidStr]
+  );
+  const canManageAll = isAdmin || isDepartmentManager || (hasPermission && hasPermission('manage_products'));
 
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -41,26 +47,28 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
   const [variantQuantities, setVariantQuantities] = useState({});
   const [searchProduct, setSearchProduct] = useState('');
 
-  // قائمة الموظفين المرشّحة: المدير العام يرى الكل، غيره يرى من تحت إشرافه
+  // قائمة الموظفين المرشّحة: المدير/المالك يرى الجميع النشطين، غيره يرى من تحت إشرافه
   const employees = useMemo(() => {
-    const active = (allUsers || []).filter(u => u && u.status === 'active' && (u.user_id || u.id) !== uid);
-    if (isAdmin || isDepartmentManager || hasPermission("manage_employees")) return active;
-    const ids = new Set(supervisedEmployeeIds);
-    return active.filter(e => ids.has(e.user_id || e.id));
-  }, [allUsers, isAdmin, supervisedEmployeeIds, uid]);
+    const active = (allUsers || []).filter(u => u && u.status === 'active' && String(u.user_id || u.id) !== uidStr);
+    if (canManageAll || isOwnerOfAny || (hasPermission && hasPermission('manage_employees'))) return active;
+    const ids = new Set((supervisedEmployeeIds || []).map(String));
+    return active.filter(e => ids.has(String(e.user_id || e.id)));
+  }, [allUsers, canManageAll, isOwnerOfAny, hasPermission, supervisedEmployeeIds, uidStr]);
 
-  // المنتجات: المدير العام يرى الكل، غيره يرى منتجاته فقط
+  // المنتجات: المدير يرى الكل، المالك يرى منتجاته فقط
   const ownedProducts = useMemo(() => {
     if (!Array.isArray(products)) return [];
-    const list = (isAdmin || isDepartmentManager || hasPermission("manage_products")) ? products : products.filter(p => p.owner_user_id === uid);
+    const list = canManageAll
+      ? products
+      : products.filter(p => p?.owner_user_id && String(p.owner_user_id) === uidStr);
     if (!searchProduct.trim()) return list;
     const q = searchProduct.trim().toLowerCase();
     return list.filter(p => (p.name || '').toLowerCase().includes(q));
-  }, [products, isAdmin, uid, searchProduct]);
+  }, [products, canManageAll, uidStr, searchProduct]);
 
   const selectedProducts = useMemo(
-    () => (isAdmin || isDepartmentManager || hasPermission("manage_products") ? products : products?.filter(p => p.owner_user_id === uid) || []).filter(p => selectedProductIds.includes(p.id)),
-    [products, isAdmin, uid, selectedProductIds]
+    () => ownedProducts.filter(p => selectedProductIds.includes(p.id)),
+    [ownedProducts, selectedProductIds]
   );
 
   // كل المتغيرات للمنتجات المختارة
@@ -83,12 +91,8 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
         .order('created_at', { ascending: false });
       const { data, error } = await q;
       if (error) throw error;
-      // عرض حجوزات منتجاتي فقط للمالك
-      const filtered = (data || []).filter(r => {
-        if (isAdmin) return true;
-        return r.owner_user_id === uid || r.products?.owner_user_id === uid;
-      });
-      setReservations(filtered);
+      // RLS يفلتر أصلاً؛ نعرض ما يصلنا كاملاً
+      setReservations(data || []);
     } catch (e) {
       toast({ title: 'فشل تحميل الحجوزات', description: e.message, variant: 'destructive' });
     } finally {
@@ -120,7 +124,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
     }
     setSaving(true);
     try {
-      const rows = [];
+      let createdCount = 0;
       for (const empId of selectedEmployeeIds) {
         for (const [variantId, qty] of variantEntries) {
           const variant = allVariants.find(v => v.id === variantId);
@@ -131,22 +135,21 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
             setSaving(false);
             return;
           }
-          rows.push({
-            employee_id: empId,
-            product_id: variant.product_id || variant._product?.id,
-            variant_id: variantId,
-            reserved_quantity: Number(qty),
-            created_by: uid,
-            owner_user_id: variant._product?.owner_user_id || uid,
-            is_active: true,
+          // RPC آمن: يحفظ sold_quantity الموجود ولا يصفّره عند إعادة الحجز
+          const { error } = await supabase.rpc('upsert_employee_reservation', {
+            p_employee_id: empId,
+            p_product_id: variant.product_id || variant._product?.id,
+            p_variant_id: variantId,
+            p_reserved_quantity: Number(qty),
+            p_created_by: uid,
+            p_owner_user_id: variant._product?.owner_user_id || null,
+            p_notes: null,
           });
+          if (error) throw error;
+          createdCount += 1;
         }
       }
-      const { error } = await supabase
-        .from('employee_product_reservations')
-        .upsert(rows, { onConflict: 'employee_id,variant_id' });
-      if (error) throw error;
-      toast({ title: `تم إنشاء ${rows.length} حجز بنجاح`, variant: 'success' });
+      toast({ title: `تم حفظ ${createdCount} حجز بنجاح`, variant: 'success' });
       setSelectedProductIds([]);
       setVariantQuantities({});
       fetchReservations();
