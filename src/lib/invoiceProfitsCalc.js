@@ -262,6 +262,11 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     byOwner,
     productsList, productCount: productsList.length,
     itemsAvailable: productsList.length > 0,
+    // ✅ Off-Channel (تحصيلات خارج قناة شركة التوصيل)
+    offChannelCount,
+    offChannelAbsorbedDelivery,
+    offChannelExpectedAmount,
+    offChannelOrders,
   };
 }
 
