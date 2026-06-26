@@ -46,6 +46,10 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   let offChannelAbsorbedDelivery = 0;
   let offChannelExpectedAmount = 0; // الإيراد "المُستحَق" off-channel (ما قبضه الموظف/المالك خارج القناة)
   const offChannelOrders = [];
+  // إيراد القناة الحقيقي (مبلغ شركة التوصيل بدون أجور توصيل، بدون off-channel)
+  let channelRevenue = 0;
+  // قائمة الطلبات ذات الزيادة/الخصم من شركة التوصيل (للعرض)
+  const deltaOrders = []; // { order_id, created_by, delta, real_revenue, planned_revenue }
 
   const ensureOwner = (ownerId) => {
     if (!byOwner[ownerId]) byOwner[ownerId] = { revenue: 0, cost: 0, items: 0, products: [] };
