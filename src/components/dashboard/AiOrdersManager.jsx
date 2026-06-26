@@ -636,7 +636,8 @@ useEffect(() => {
       toast({ title: 'خطأ', description: 'حدث خطأ أثناء تنفيذ العملية', variant: 'destructive' });
       try { await refreshAll?.(); } catch (_) {}
     } finally {
-      // ✅ تنظيف نهائي للمحدد (الباقي = الفاشل فقط)
+      // ✅ تنظيف نهائي + تحرير قفل التشغيل المتوازي
+      isProcessingRef.current = false;
       setSelectedOrders(prev => prev);
     }
   };
