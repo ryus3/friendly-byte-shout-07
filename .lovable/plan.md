@@ -1,74 +1,50 @@
-## نتائج الفحص (مصدر الحقيقة)
+## تم تنفيذه فعلياً (قاعدة البيانات)
 
-- **أنواع الطلبات الموجودة فعلياً في الكود**: `regular` (عادي) و `return` (إرجاع) و `replacement`/`exchange` (استبدال) و `partial_delivery` (تسليم جزئي).
-- **في قاعدة البيانات الآن**: لا توجد سجلات `return` ولا `replacement` — كلها انقلبت إلى `regular` أو `partial_delivery`.
-- **سبب الكارثة**: دالة المزامنة الخلفية `supabase/functions/sync-order-updates/index.ts` تحوّل أي طلب عند حالة الوسيط 21 إلى `partial_delivery` بدون التحقق من نوعه الأصلي. الواجهة `AlWaseetContext.jsx` فيها حماية، لكن الخادم لا.
-- **الطلب 149776372** أُنشئ كإرجاع (`refund_amount=20000`، الملاحظات تقول "إرجاع: ماروني"، أصله `total_amount=-25000`) ثم المزامنة قلبته إلى `partial_delivery` بمبلغ موجب 25,000 وخصم وهمي 45,000.
-- **خطأ البناء الحالي**: تكرار سطر `isOwnerOrAdmin` في `ManageProductsPage.jsx:46` — يجب إصلاحه أولاً.
+- ✅ **Trigger حماية order_type**: منع تحويل `return/exchange/replacement` إلى `partial_delivery` أو أي نوع آخر على مستوى DB (طبقة أمان أخيرة مهما حدث في الكود).
+- ✅ **Trigger أرشفة تلقائية**: أي طلب `delivery_status='17'` + `receipt_received=true` يُؤرشَف فوراً (مع تصفير ربح الموظف إذا كان الطلب مرتجعاً كلياً).
+- ✅ **إصلاح الطلبات الأربعة**: 144260128 / 125092578 / 144908817 / 144908511 — كلها الآن `isarchived=true`.
+- ✅ **تثبيت 149776372**: `order_type='return'` و `total_amount=-20000` و `sales_amount=-25000`.
 
-## الخطة الكاملة
+## المتبقّي (تعديلات واجهة فقط)
 
-### 1) إصلاح خطأ البناء فوراً
-- استبدال السطر المكسور 46 في `src/pages/ManageProductsPage.jsx` بسطر واحد نظيف:
-  - يظهر الزر للمدير العام، مدير القسم، ولأي مستخدم يملك ولو منتجاً واحداً (`owner_user_id === uid`).
-  - دعم كل من `user.id` و `user.user_id`.
+### 1) إعادة تلوين `EmployeeReservationsDialog.jsx` بالوردي/البنفسجي
 
-### 2) حماية نوع الطلب في المزامنة الخلفية (المصدر الجذري)
-تعديل `supabase/functions/sync-order-updates/index.ts`:
-- إنشاء قائمة محمية: `['return', 'replacement', 'exchange', 'partial_delivery']`.
-- عند الحالة 21: لا يتم تحويل النوع إلى `partial_delivery` إلا إذا كان النوع الحالي `regular` فقط.
-- عند الحالة 17: لا يتم لمس طلبات الإرجاع/الاستبدال.
-- مزامنة السعر: تسمح بالتحديث للطلبات العادية والتسليم الجزئي. لطلبات **الإرجاع** نحافظ على المبلغ سالباً (`total_amount` و `final_amount`) ونزامن فقط `delivery_fee` و `delivery_status` — لأن سعر الوسيط لطلب الإرجاع هو رسوم التوصيل وليس سعر منتج. لطلبات **الاستبدال** نزامن فرق السعر فقط.
+تغيير ألوان الرأس والأزرار والـ blobs من `primary/accent` العام إلى تدرّج `pink-500 → fuchsia-500 → purple-600` المطابق لنافذة "تقرير أرباح الفواتير":
 
-### 3) إصلاح الطلب 149776372 وأي طلب إرجاع تضرر
-في نفس migration:
-- إعادة الطلبات التي ملاحظاتها تبدأ بـ "إرجاع" والتي تحولت قسرياً إلى `partial_delivery`:
-  - `order_type = 'return'`
-  - `is_partial_delivery = false`
-  - `final_amount = -refund_amount`
-  - `total_amount = -refund_amount`
-  - `sales_amount = 0`
-  - `discount = 0`
-  - `price_increase = 0`
-  - `price_change_type = null`
-- نفس الإصلاح لطلبات الاستبدال إذا تأثرت.
+- **الرأس**: خلفية `from-pink-500/15 via-fuchsia-500/10 to-purple-600/15`، أيقونة القفل بتدرّج وردي/بنفسجي، العنوان بـ `bg-clip-text` متدرّج.
+- **القوائم المنسدلة** (الموظفين/المنتجات): إطار `fuchsia-500/40` و `pink-500/40` عند الـ hover.
+- **جدول المتغيرات**: شريط أعلى `from-pink-500/15 via-fuchsia-500/10 to-purple-600/15`.
+- **زر "حجز الكل"**: `bg-gradient-to-l from-pink-500 via-fuchsia-500 to-purple-600`.
+- إبقاء البنية الزجاجية الداكنة وكل قرارات السكرول السابقة (تفتح القوائم فوق النافذة بشكل صحيح، لا تغيير).
 
-### 4) منع فتح نافذة "تحديد المنتجات المُسلّمة" لطلبات الإرجاع
-في `src/components/orders/OrderCard.jsx`:
-- توسيع شرط الاستثناء بحيث أي طلب نوعه `return` أو `refund_amount > 0` أو `final_amount < 0` لا يُعرض له زر التسليم الجزئي ولا تُفتح النافذة تلقائياً.
+### 2) تحصين ظهور زر "حجز كميات للموظفين" في `ManageProductsPage.jsx`
 
-### 5) إظهار زر "حجز كميات للموظفين" لكل مالك منتج
-- التحقق في `ManageProductsPage` يصبح: مالك المنتج = أي منتج فيه `owner_user_id` يطابق `user.id` أو `user.user_id`.
-- إضافة `!loading` لتجنب الحكم قبل تحميل المنتجات.
+السبب الأرجح لعدم رؤيته لأحمد: مقارنة `owner_user_id === uid` تفشل أحياناً بسبب اختلاف نوع/تمثيل UUID أو `user_id` غير معبأ لحظياً. الإصلاح الجذري:
 
-### 6) إصلاح القوائم المنسدلة (اختر الموظفين / اختر المنتجات)
-في `src/components/manage-employees/EmployeeReservationsDialog.jsx`:
-- `PopoverContent`: إضافة `z-[100]`، ارتفاع محدد، خلفية `bg-popover` صلبة بدون شفافية شديدة، `collisionPadding`.
-- استبدال `ScrollArea` بـ `div` بسيط مع `overflow-y-auto`, `overscroll-contain`, `touch-pan-y`, `max-h-[55vh]` لضمان السكرول على الموبايل.
-- جعل القائمة دائماً فوق النافذة عبر `Portal` من Radix (موجود) + `z-index` صحيح.
+- مطابقة نصية صارمة `String(p.owner_user_id) === String(uid)`.
+- التقاط استثناءات `hasPermission` (إن لم يكن مُهيّأ بعد).
+- بقاء الاعتماد على `products` الخام من `useInventory` (لا تمر عبر `useFilteredProducts`).
 
-### 7) إعادة تصميم نافذة حجز الكميات بألوان واضحة (مثل تقرير أرباح الفواتير)
-- إزالة الحدود النيون المتحركة (`conic-gradient` المتحرك) نهائياً.
-- إزالة الكرات الضبابية المتحركة (`animate-pulse`).
-- استبدال الخلفية بـ:
-  - خلفية `bg-background` صلبة.
-  - رأس بتدرج هادئ احترافي مماثل لـ `AlWaseetInvoiceDetailsDialog` (تدرج primary خفيف + كرات ضبابية ثابتة).
-  - بطاقات داخلية واضحة بحدود `border-border` وخلفية `bg-card`.
-  - أزرار `+` و `-` دائرية بألوان primary واضحة.
-  - زر "حجز الكل" بتدرج primary→accent ثابت.
-- المحافظة على نفس الوظائف بدون تغيير منطقي.
+```jsx
+const uid = user?.user_id || user?.id;
+const uidStr = uid ? String(uid) : null;
+const isOwnerOrAdmin = useMemo(() => {
+  if (isAdmin || isDepartmentManager) return true;
+  try { if (hasPermission && hasPermission("manage_products")) return true; } catch {}
+  if (!Array.isArray(products) || !uidStr) return false;
+  return products.some(p => p?.owner_user_id && String(p.owner_user_id) === uidStr);
+}, [isAdmin, isDepartmentManager, hasPermission, products, uidStr]);
+```
 
-### 8) التحقق بعد التنفيذ
-- التحقق بقاعدة البيانات أن `149776372` رجع `return` بمبلغ سالب صحيح.
-- التحقق أن البناء ينجح.
-- التحقق أن الزر يظهر للمالكين.
-- التحقق أن القوائم تفتح فوق النافذة وتنزلق.
+### 3) ملاحظة سياسية مؤكَّدة
 
-## التقنيات
+- **أرباح الموظف من التسليم الجزئي**: تُحسب فقط على القطع **المباعة فعلاً**، لا على المرتجع (السلوك الحالي صحيح ولن يُمَس).
+- **تغيّر السعر في طلب الإرجاع**: مسموح بمزامنته من شركة التوصيل، لكن `order_type` محمي مطلقاً (DB trigger الآن يفرض ذلك مهما حصل).
 
-- **Edge Function**: `supabase/functions/sync-order-updates/index.ts` — حماية النوع وشروط مزامنة السعر حسب النوع.
-- **Migration**: تصحيح بيانات الطلبات التالفة (UPDATE فقط، بدون تغيير schema).
-- **Frontend**:
-  - `src/pages/ManageProductsPage.jsx` — إصلاح البناء + ظهور الزر.
-  - `src/components/orders/OrderCard.jsx` — حماية ضد فتح نافذة التسليم الجزئي للإرجاع.
-  - `src/components/manage-employees/EmployeeReservationsDialog.jsx` — إعادة تصميم + إصلاح Popover.
+### بعد التطبيق
+
+- بناء وفحص الواجهة، ثم التقاط لقطة لصفحة "إدارة المنتجات" بحساب أحمد للتأكد من ظهور الزر الوردي/البنفسجي.
+
+ملفّان فقط متأثّران:
+- `src/components/manage-employees/EmployeeReservationsDialog.jsx`
+- `src/pages/ManageProductsPage.jsx`
