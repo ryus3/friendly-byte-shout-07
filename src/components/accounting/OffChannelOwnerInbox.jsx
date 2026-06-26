@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import SmartPagination from '@/components/ui/SmartPagination';
 import { CheckCircle2, XCircle, Inbox, Loader2, Search, HandCoins, Crown, ShieldCheck, AlertTriangle, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOffChannelCollections } from '@/hooks/useOffChannelCollections';
