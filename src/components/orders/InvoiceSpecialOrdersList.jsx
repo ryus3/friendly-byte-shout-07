@@ -27,11 +27,12 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
 
   const deltaOrders = calc?.deltaOrders || [];
   const offChannelOrders = calc?.offChannelOrders || [];
+  const returnsOrders = calc?.returnsOrders || [];
 
   const increases = deltaOrders.filter((d) => d.delta > 0).sort((a, b) => b.delta - a.delta);
   const decreases = deltaOrders.filter((d) => d.delta < 0).sort((a, b) => a.delta - b.delta);
 
-  if (increases.length === 0 && decreases.length === 0 && offChannelOrders.length === 0) {
+  if (increases.length === 0 && decreases.length === 0 && offChannelOrders.length === 0 && returnsOrders.length === 0) {
     return null;
   }
 
