@@ -61,6 +61,13 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
         prefix: '',
         amount: item.expected_amount,
       },
+      returned: {
+        wrap: 'border-rose-500/40 bg-rose-500/5',
+        amountColor: 'text-rose-700 dark:text-rose-300',
+        prefix: '',
+        // نعرض المبلغ الحقيقي السالب من الوسيط (مثلاً -25,000 = -20,000 إرجاع + -5,000 توصيل)
+        amount: item.real_revenue,
+      },
     }[kind];
 
     return (
