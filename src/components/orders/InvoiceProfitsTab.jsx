@@ -157,8 +157,10 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           <StatCard icon={TrendingUp} label="إيراد منتجاتك" sub="بدون توصيل" value={fmt(myOwnerStats.revenue)} color="blue" />
           <StatCard icon={Package} label="تكلفة منتجاتك" value={fmt(myOwnerStats.cost)} color="orange" />
-          <StatCard icon={Boxes} label="عدد القطع" value={`${myOwnerStats.items}`} color="purple" />
+          <StatCard icon={Boxes} label="عدد القطع" sub="مُسلَّمة فعلاً" value={`${myOwnerStats.items}`} color="purple" />
           <StatCard icon={Wallet} label="صافي ربحك" value={fmt(myNet)} color="emerald" highlight />
+          <DeltaStatCard delta={calc.totalDelta} fmt={fmt} />
+          <OffChannelStatCard calc={calc} fmt={fmt} />
         </div>
 
         {myOwnerStats.products?.length > 0 && (
