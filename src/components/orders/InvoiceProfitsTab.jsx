@@ -75,11 +75,12 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
           employeesWithRules: new Set(rpc?.employeesWithRules || []),
           namesMap: rpc?.namesMap || {},
           offChannelCollections: await loadOffChannelCollections(dbInvoiceId, rpc?.orders || []),
+          invoiceAmount,
         });
         setSupervisedIds(supIds);
       } catch (e) {
         console.error('InvoiceProfitsTab load error', e);
-        if (!cancelled) setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [] });
+        if (!cancelled) setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [], invoiceAmount: null });
       } finally {
         if (!cancelled) setLoading(false);
       }
