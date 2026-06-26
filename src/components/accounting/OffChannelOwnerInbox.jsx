@@ -187,8 +187,9 @@ const OffChannelOwnerInbox = () => {
           </CardContent>
         </Card>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filteredRows.map(row => {
+          {filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(row => {
             const order = ordersMap[row.order_id];
             const collector = usersMap[row.collector_user_id] || '—';
             const owner = usersMap[row.owner_user_id] || '—';
@@ -257,6 +258,17 @@ const OffChannelOwnerInbox = () => {
             );
           })}
         </div>
+        {filteredRows.length > PAGE_SIZE && (
+          <SmartPagination
+            currentPage={page}
+            totalPages={Math.ceil(filteredRows.length / PAGE_SIZE)}
+            onPageChange={setPage}
+            totalItems={filteredRows.length}
+            itemsPerPage={PAGE_SIZE}
+            className="pt-4"
+          />
+        )}
+        </>
       )}
     </div>
   );
