@@ -55,6 +55,8 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   // ✅ قائمة طلبات الإرجاع داخل هذه الفاتورة (لعرضها كقسم مستقل، لا تُعتبر "خصم")
   const returnsOrders = []; // { order_id, created_by, real_revenue, planned_revenue, delivery_fee }
   let returnsTotalLoss = 0; // مجموع خسارة الإرجاع (مبلغ الوسيط السالب) — للعرض فقط
+  // ✅ خسارة الإرجاع موزّعة على المالكين (تُخصم من إيراد المالك في byOwner)
+  const ownerReturnLoss = {}; // ownerId -> سالب (مثلاً -25000)
 
   const ensureOwner = (ownerId) => {
     if (!byOwner[ownerId]) byOwner[ownerId] = { revenue: 0, cost: 0, items: 0, products: [] };
@@ -121,6 +123,15 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const isPartial = orderType === 'partial_delivery';
     const isOffChannel = hasInvoiceAmount && Number(baseAmount) === 0 && !isFullReturn && !isPartial;
 
+    // ✅ هل تأكَّد المالك استلام مبلغ الـ off-channel؟
+    // إذا لا: لا نُدخل قطعه/إيراده/تكلفته ضمن "توزيع الأرباح على المالكين".
+    const occRecord = isOffChannel ? offChannelByOrder.get(o.id) : null;
+    const isOffChannelConfirmed = !!(occRecord && (
+      occRecord.cash_movement_id ||
+      ['settled', 'confirmed', 'owner_confirmed'].includes(occRecord.status)
+    ));
+    const isOffChannelPending = isOffChannel && !isOffChannelConfirmed;
+
     // الإيراد الحقيقي للقناة (ما دفعته شركة التوصيل فعلاً، يخصم منه التوصيل)
     const realRevenue = baseAmount - deliveryFee;
     // محاسبياً: للـ off-channel نعتمد الإيراد المُخطَّط (Σ price × qty) لأن المالك/الموظف
@@ -186,23 +197,25 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
       if (eligibleQty === 0) return;
       const lineRevenue = eligibleQty * unitPrice;
       const lineCost = eligibleQty * costUnit;
+      orderItemsRevenue += lineRevenue;
+      // ✅ off-channel غير المؤكَّد: لا نُضيفه لإحصاءات المالك/التكلفة/القطع
+      //    حتى يضغط المالك "استلمت" فيتحوّل لـ confirmed.
+      if (isOffChannelPending) return;
       const prod = ensureProduct(it);
       prod.qty += eligibleQty;
       prod.revenue += lineRevenue;
       prod.cost += lineCost;
       totalQty += eligibleQty;
       totalCost += lineCost;
-      orderItemsRevenue += lineRevenue;
       productLinesInOrder.push({ pid: prod.id, ownerId: prod.ownerId, revenue: lineRevenue });
     });
-    revenueFromItemsAll += orderItemsRevenue;
+    if (!isOffChannelPending) revenueFromItemsAll += orderItemsRevenue;
 
     // ============================================================
     // Off-Channel: المبلغ من القناة = 0 لكن الطلب مُسلَّم
-    //   - الإيراد المحاسبي = plannedRevenue (Σ price × qty الفعلية المُسلَّمة)
-    //   - delta = 0 (لا زيادة/خصم — المبلغ غير عابر للقناة)
-    //   - تُسجَّل القيمة المتوقّعة off-channel للعرض/التسوية مع الموظف لاحقاً
-    //   - لا يدخل إيراد القناة (totalRevenue غير متأثر)
+    //   - المؤكَّد: يدخل ضمن إيراد/قطع/ربح المالك كبيع طبيعي.
+    //   - المعلَّق: يُعرض فقط في بطاقة "تحصيلات خارج القناة"، ولا يدخل
+    //     لا في `totalRevenue` ولا في `byOwner` حتى يؤكّد المالك الاستلام.
     // ============================================================
     if (isOffChannel) {
       const record = offChannelByOrder.get(o.id);
@@ -213,21 +226,24 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
       offChannelOrders.push({
         order_id: o.id,
         created_by: o.created_by || null,
-        expected_amount: expectedPaid, // المبلغ المسجّل/المتوقَّع تحصيله off-channel شامل التوصيل
+        expected_amount: expectedPaid,
         product_amount: orderItemsRevenue,
         delivery_fee_absorbed: deliveryFee,
         collection_type: record?.collection_type || null,
         collection_status: record?.status || 'pending_classification',
         owner_due_amount: Number(record?.owner_due_amount) || 0,
         items: orderItemsRevenue,
+        confirmed: isOffChannelConfirmed,
       });
-      // محاسبياً نضيف plannedRevenue للإيراد الكلي حتى يطابق التكلفة والربح يصبح حقيقياً
-      totalRevenue += orderItemsRevenue;
+      if (isOffChannelConfirmed) {
+        // محاسبياً نضيف plannedRevenue للإيراد الكلي حتى يطابق التكلفة والربح يصبح حقيقياً
+        totalRevenue += orderItemsRevenue;
+      }
       return; // لا delta ولا توزيع زيادة/خصم
     }
 
     // ============================================================
-    // طلبات الإرجاع: تُعرض في قسم مستقل، لا تُحسب ضمن "خصم شركة التوصيل"
+    // طلبات الإرجاع: تُعرض في قسم مستقل، وتُخصم من إيراد المالك
     // ============================================================
     if (isFullReturn) {
       returnsOrders.push({
@@ -238,8 +254,30 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
         delivery_fee: deliveryFee,
       });
       returnsTotalLoss += realRevenue; // مجموع الخسارة الحقيقية من القناة
+
+      // ✅ توزيع خسارة الإرجاع (realRevenue السالب، يشمل التوصيل) على المالكين
+      //    بحسب نسبة قيمة منتجاتهم المرجعة. هكذا يظهر "صافي ربح المالك" مطابقاً
+      //    لـ "صافي للمالكين" في الكروت العلوية.
+      const returnOwnerSums = new Map();
+      let returnOwnerTotal = 0;
+      lineItems.forEach((it) => {
+        const ownerId = it.products?.owner_user_id || '__system__';
+        const value = (Number(it.quantity) || 0) * (Number(it.unit_price) || 0);
+        if (value <= 0) return;
+        returnOwnerSums.set(ownerId, (returnOwnerSums.get(ownerId) || 0) + value);
+        returnOwnerTotal += value;
+      });
+      if (returnOwnerTotal > 0) {
+        returnOwnerSums.forEach((value, ownerId) => {
+          const share = value / returnOwnerTotal;
+          ownerReturnLoss[ownerId] = (ownerReturnLoss[ownerId] || 0) + realRevenue * share;
+        });
+      } else {
+        ownerReturnLoss['__system__'] = (ownerReturnLoss['__system__'] || 0) + realRevenue;
+      }
       return; // لا delta للإرجاع
     }
+
 
     const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange';
     const delta = isExchange ? 0 : (realRevenue - orderItemsRevenue);
@@ -278,6 +316,11 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     o.cost += prod.cost;
     o.items += prod.qty;
     o.products.push(prod);
+  });
+
+  // ✅ خصم خسارة الإرجاع من إيراد المالك (لينعكس مباشرة على ربحه الصافي)
+  Object.entries(ownerReturnLoss).forEach(([ownerId, loss]) => {
+    ensureOwner(ownerId).revenue += loss; // loss سالب
   });
 
   const employeeBonusTotal = Object.values(employeeBonusByEmp).reduce((s, v) => s + v, 0);
