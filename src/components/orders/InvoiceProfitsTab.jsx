@@ -229,7 +229,13 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   return (
     <div className="space-y-4 p-1" dir="rtl">
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <StatCard icon={TrendingUp} label="إجمالي الإيراد" sub="حسب شركة التوصيل بدون توصيل" value={fmt(calc.totalRevenue)} color="blue" />
+        <RevenueSplitCard
+          channel={calc.channelRevenue}
+          offChannel={calc.offChannelExpectedAmount}
+          total={calc.totalRevenue}
+          fmt={fmt}
+        />
+        <StatCard icon={Receipt} label="صافي إيراد القناة" sub="مبلغ الوسيط − التوصيل (بعد الخصم/الزيادة)" value={fmt(calc.netChannelRevenue)} color="blue" />
         <StatCard icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
         <StatCard icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج • مُسلَّمة فعلاً`} value={`${calc.totalQty}`} color="purple" />
         <StatCard icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
@@ -238,6 +244,13 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         <DeltaStatCard delta={calc.totalDelta} fmt={fmt} />
         <OffChannelStatCard calc={calc} fmt={fmt} />
       </div>
+
+      <InvoiceSpecialOrdersList
+        calc={calc}
+        orders={linkedOrders}
+        namesMap={namesMap}
+        fmt={fmt}
+      />
 
       {employeeEntriesWithCounts.length > 0 && (
         <Card className="bg-gradient-to-br from-purple-500/10 to-fuchsia-500/5 border-purple-500/30">
