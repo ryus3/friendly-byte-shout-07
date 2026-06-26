@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Banknote, Hash, User as UserIcon, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Banknote, Hash, User as UserIcon, AlertCircle, Undo2 } from 'lucide-react';
 
 /**
  * قائمة "طلبات تحتاج انتباهك" داخل تفاصيل الفاتورة.
