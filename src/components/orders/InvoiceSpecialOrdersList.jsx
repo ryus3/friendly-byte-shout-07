@@ -72,10 +72,13 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
       },
     }[kind];
 
+    const clickable = kind === 'offchannel' && o;
     return (
       <div
         key={`${kind}-${item.order_id}`}
-        className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border ${cfg.wrap}`}
+        role={clickable ? 'button' : undefined}
+        onClick={clickable ? () => setClassifyOrder(o) : undefined}
+        className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border ${cfg.wrap} ${clickable ? 'cursor-pointer hover:ring-2 hover:ring-amber-500/40 transition' : ''}`}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <Hash className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
