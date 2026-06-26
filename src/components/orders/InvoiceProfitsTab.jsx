@@ -245,13 +245,14 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <RevenueSplitCard
           channel={data.invoiceAmount ?? Number(invoice?.amount) ?? 0}
-          expectedChannel={calc.channelRevenue}
+          expectedChannel={calc.preDiscountChannelRevenue}
           offChannel={calc.offChannelExpectedAmount}
           returnsLoss={Math.abs(calc.returnsTotalLoss || 0)}
           offChannelDelivery={calc.offChannelAbsorbedDelivery}
+          negativeDelta={calc.negativeDeltaAbs}
           fmt={fmt}
         />
-        <StatCard icon={Receipt} label="الإيراد المفروض" sub="قبل خصم الإرجاع وتوصيل خارج القناة" value={fmt(calc.netChannelRevenue)} color="blue" />
+        <StatCard icon={Receipt} label="الإيراد المفروض" sub="قبل خصم الإرجاع وخصم الوسيط" value={fmt(calc.preDiscountChannelRevenue)} color="blue" />
         <StatCard icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
         <StatCard icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج • مُسلَّمة فعلاً`} value={`${calc.totalQty}`} color="purple" />
         <StatCard icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
@@ -526,9 +527,10 @@ const loadOffChannelCollections = async (invoiceId, orders = []) => {
   return data || [];
 };
 
-const RevenueSplitCard = ({ channel, expectedChannel, offChannel, returnsLoss, offChannelDelivery, fmt }) => {
+const RevenueSplitCard = ({ channel, expectedChannel, offChannel, returnsLoss, offChannelDelivery, negativeDelta, fmt }) => {
   const incomingTotal = (Number(channel) || 0) + (Number(offChannel) || 0);
-  const courierDeductions = (Number(returnsLoss) || 0) + (Number(offChannelDelivery) || 0);
+  const courierDiscount = Number(negativeDelta) || 0;
+  const returnsAbs = Number(returnsLoss) || 0;
   return (
     <Card className="h-full min-h-[104px] bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/30 text-blue-600">
       <CardContent className="p-3 h-full flex flex-col justify-between">
@@ -546,8 +548,11 @@ const RevenueSplitCard = ({ channel, expectedChannel, offChannel, returnsLoss, o
             {Number(expectedChannel) > 0 && (
               <div>• المفروض قبل الخصم: <span className="font-semibold">{fmt(expectedChannel)}</span></div>
             )}
-            {courierDeductions > 0 && (
-              <div>• خصم الوسيط: <span className="font-semibold text-orange-600">−{fmt(courierDeductions)}</span></div>
+            {courierDiscount > 0 && (
+              <div>• خصم الوسيط: <span className="font-semibold text-orange-600">−{fmt(courierDiscount)}</span></div>
+            )}
+            {returnsAbs > 0 && (
+              <div>• خسارة إرجاع: <span className="font-semibold text-orange-600">−{fmt(returnsAbs)}</span></div>
             )}
           </div>
         </div>

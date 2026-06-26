@@ -1895,9 +1895,34 @@ export const SuperProvider = ({ children }) => {
         if (parsed === 'approver') sendAsMode = 'approver';
       } catch (_) {}
 
-      const createdBy = (sendAsMode === 'creator' && aiOrder.created_by)
+      // ✅ حماية شاملة من UUID غير صالح:
+      //    بعض الطلبات الذكية قد تحمل created_by = employee_code أو username أو telegram_code
+      //    بدلاً من UUID. أي استعلام `.eq('user_id', createdBy)` على هذه القيم يفشل بـ
+      //    "invalid input syntax for type uuid" ويعلّق زر الموافقة. نحوّل دائماً إلى UUID صالح.
+      const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      let createdBy = (sendAsMode === 'creator' && aiOrder.created_by)
         ? aiOrder.created_by
         : approverId;
+      if (!createdBy || !UUID_RE.test(String(createdBy))) {
+        // محاولة المطابقة عبر employee_code / username / telegram_code
+        try {
+          const probe = String(aiOrder.created_by ?? '').trim();
+          if (probe) {
+            const upper = probe.toUpperCase();
+            const { data: prof } = await supabase
+              .from('profiles')
+              .select('user_id, employee_code, username')
+              .or(`employee_code.eq.${upper},username.ilike.${probe}`)
+              .limit(1)
+              .maybeSingle();
+            if (prof?.user_id) createdBy = prof.user_id;
+          }
+        } catch (_) {}
+        if (!createdBy || !UUID_RE.test(String(createdBy))) {
+          // السقوط النهائي على المُوافِق الحالي حتى لا يتعلّق الزر
+          createdBy = approverId;
+        }
+      }
 
       devLog.log('👤 هوية الإرسال:', {
         mode: sendAsMode,
@@ -1905,6 +1930,7 @@ export const SuperProvider = ({ children }) => {
         approver: approverId,
         aiOwner: aiOrder.created_by
       });
+
 
       const itemsInput = Array.isArray(aiOrder.items) ? aiOrder.items : [];
       if (!itemsInput.length) return { success: false, error: 'لا توجد عناصر في الطلب الذكي' };

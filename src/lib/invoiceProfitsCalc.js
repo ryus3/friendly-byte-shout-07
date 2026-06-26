@@ -31,8 +31,9 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
   const productMap = {}; // pid -> { id, name, ownerId, qty, revenue, cost }
   const byOwner = {};    // ownerId -> { revenue, cost, items, products: [] }
-  const employeeBonusByEmp = {}; // delta للعرض فقط
-  const employeeProfitByEmp = {}; // من جدول profits (المصدر الفعلي)
+  const employeeBonusByEmp = {}; // مجموع delta (موجب وسالب) للموظفين أصحاب القواعد — للعرض
+  const employeePositiveDeltaByEmp = {}; // مجموع الزيادات الموجبة فقط (لأن DB لا يطبّق الـ delta السالب)
+  const employeeProfitByEmp = {}; // من جدول profits (المصدر الفعلي المخزّن)
   const offChannelByOrder = new Map();
 
   let totalRevenue = 0;     // = Σ (final_amount - delivery_fee) للطلبات غير الراجعة
@@ -50,6 +51,8 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   const offChannelOrders = [];
   // إيراد القناة الحقيقي (مبلغ شركة التوصيل بدون أجور توصيل، بدون off-channel)
   let channelRevenue = 0;
+  // مجموع الخصومات السالبة من شركة التوصيل (قيمة موجبة — للعرض "قبل الخصم")
+  let negativeDeltaAbs = 0;
   // قائمة الطلبات ذات الزيادة/الخصم من شركة التوصيل (للعرض)
   const deltaOrders = []; // { order_id, created_by, delta, real_revenue, planned_revenue }
   // ✅ قائمة طلبات الإرجاع داخل هذه الفاتورة (لعرضها كقسم مستقل، لا تُعتبر "خصم")
@@ -282,6 +285,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange';
     const delta = isExchange ? 0 : (realRevenue - orderItemsRevenue);
     totalDelta += delta;
+    if (delta < -0.5) negativeDeltaAbs += Math.abs(delta);
     if (Math.abs(delta) >= 0.5) {
       deltaOrders.push({
         order_id: o.id,
@@ -298,6 +302,10 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
     if (creatorHasRule) {
       employeeBonusByEmp[creatorId] = (employeeBonusByEmp[creatorId] || 0) + delta;
+      if (delta > 0) {
+        // الـ DB function تخزّن stored = base + max(0, delta). نتتبّع الموجب فقط لاستخراج الـ base بدقة.
+        employeePositiveDeltaByEmp[creatorId] = (employeePositiveDeltaByEmp[creatorId] || 0) + delta;
+      }
     } else if (Math.abs(orderItemsRevenue) > 0.5) {
       productLinesInOrder.forEach((line) => {
         const share = line.revenue / orderItemsRevenue;
@@ -336,18 +344,40 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
   const employeeBonusTotal = Object.values(employeeBonusByEmp).reduce((s, v) => s + v, 0);
   const employeeProfitTotal = Object.values(employeeProfitByEmp).reduce((s, v) => s + v, 0);
-  const employeeTotalCombined = employeeProfitTotal;
-  const employeeCombinedByEmp = { ...employeeProfitByEmp };
+
+  // ✅ قاعدة الربح فقط (بدون أي زيادة/خصم من شركة التوصيل):
+  //    DB تخزّن stored = base + max(0, delta_order)؛ نطرح الزيادات الموجبة لاستخراج الـ base.
+  const employeeBaseByEmp = {};
+  Object.keys(employeeProfitByEmp).forEach((emp) => {
+    const stored = employeeProfitByEmp[emp] || 0;
+    const positiveDelta = employeePositiveDeltaByEmp[emp] || 0;
+    employeeBaseByEmp[emp] = stored - positiveDelta;
+  });
+  const employeeBaseTotal = Object.values(employeeBaseByEmp).reduce((s, v) => s + v, 0);
+
+  // ✅ المستحق الفعلي للموظف على مستوى الفاتورة = القاعدة + صافي delta لأصحاب القواعد
+  //    (الزيادة تذهب للموظف، الخصم يُخصم منه. قد تتقاصّ عبر الفاتورة فتصبح القاعدة وحدها.)
+  const employeeActualPayTotal = employeeBaseTotal + employeeBonusTotal;
+
+  // كرت "مستحقات الموظفين" يعرض القاعدة فقط (الـ delta يظهر في كروت الزيادة/الخصم المنفصلة)
+  const employeeTotalCombined = employeeBaseTotal;
+  const employeeCombinedByEmp = { ...employeeBaseByEmp };
 
   const totalProfit = totalRevenue - totalCost;
-  const netForOwners = totalProfit - employeeTotalCombined;
+  // ✅ صافي للمالكين = الإيراد الحقيقي - التكلفة - المستحق الفعلي للموظف (مع الـ delta)
+  const netForOwners = totalRevenue - totalCost - employeeActualPayTotal;
 
   const productsList = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
+
+  // ✅ "المفروض قبل الخصم" = إيراد القناة الفعلي + الخصومات السالبة + خسارة الإرجاع
+  //    (لأن invoiceAmount/channelRevenue يكون بعد خصم الوسيط من تلك الطلبات)
+  const preDiscountChannelRevenue = channelRevenue + negativeDeltaAbs + Math.abs(returnsTotalLoss || 0);
 
   return {
     totalRevenue, totalCost, totalProfit, totalQty, totalDelivery, totalDelta,
     revenueFromItems: revenueFromItemsAll,
     employeeProfitByEmp, employeeBonusByEmp, employeeCombinedByEmp,
+    employeeBaseByEmp, employeeBaseTotal, employeeActualPayTotal,
     employeeProfitTotal, employeeBonusTotal, employeeTotalCombined,
     netForOwners,
     byOwner,
@@ -355,11 +385,11 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     itemsAvailable: productsList.length > 0,
     // ✅ إيراد القناة (شركة التوصيل) بدون أجور توصيل وبدون off-channel
     channelRevenue,
-    // ✅ صافي إيراد القناة = إيراد القناة − الخصم/الزيادة من الوسيط
-    //    (channelRevenue يساوي الـ planned للقناة فعلاً + delta لأن realRevenue = planned + delta،
-    //     لذلك صافي إيراد القناة بمعنى "ما وصلنا فعلاً من الوسيط بدون توصيل" = channelRevenue نفسه.
-    //     نعرضه باسم netChannelRevenue للوضوح في الواجهة.)
+    // ✅ صافي إيراد القناة (= ما وصلنا فعلاً من الوسيط)
     netChannelRevenue: channelRevenue,
+    // ✅ "المفروض قبل خصم الوسيط/الإرجاع"
+    preDiscountChannelRevenue,
+    negativeDeltaAbs,
     // ✅ Off-Channel (تحصيلات خارج قناة شركة التوصيل)
     offChannelCount,
     offChannelAbsorbedDelivery,

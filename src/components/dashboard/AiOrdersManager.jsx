@@ -43,23 +43,33 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
   const { cleanupOrphanedAiOrders, deleteAiOrderSafely } = useAiOrdersCleanup();
   const ordersFromContext = Array.isArray(aiOrders) ? aiOrders : [];
   const [orders, setOrders] = useState(ordersFromContext);
-  
-  // LocalStorage للطلبات المعالجة (معتمدة أو محذوفة)
-  const [processedOrders, setProcessedOrders] = useLocalStorage('processedAiOrders', []);
-  
+
+  // LocalStorage للطلبات المعالجة — Set مع حدّ أعلى 500 لمنع تضخّم localStorage
+  const PROCESSED_LIMIT = 500;
+  const [processedOrders, setProcessedOrdersRaw] = useLocalStorage('processedAiOrders', []);
+  const processedSet = useMemo(() => new Set(Array.isArray(processedOrders) ? processedOrders : []), [processedOrders]);
+  const setProcessedOrders = useCallback((updater) => {
+    setProcessedOrdersRaw(prev => {
+      const arr = Array.isArray(prev) ? prev : [];
+      const next = typeof updater === 'function' ? updater(arr) : updater;
+      // إزالة التكرار + الإبقاء على أحدث PROCESSED_LIMIT فقط (الأقدم يُحذف)
+      const deduped = Array.from(new Set(next));
+      return deduped.length > PROCESSED_LIMIT ? deduped.slice(-PROCESSED_LIMIT) : deduped;
+    });
+  }, [setProcessedOrdersRaw]);
+
   // إزالة التكرار وترتيب الأحدث أولاً من السياق مع فلترة الطلبات المعالجة
   const dedupedContextOrders = useMemo(() => {
     const map = new Map();
     for (const o of ordersFromContext) {
       // فلترة الطلبات المعتمدة والمعالجة محلياً لمنع إعادة ظهورها
-      // تضمين كل المصادر: telegram, ai_chat, ai_assistant, store, web
-      if (o && o.id && !map.has(o.id) && o.status !== 'approved' && !processedOrders.includes(o.id)) {
+      if (o && o.id && !map.has(o.id) && o.status !== 'approved' && !processedSet.has(o.id)) {
         map.set(o.id, o);
       }
     }
     return Array.from(map.values()).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  }, [ordersFromContext, processedOrders]);
-  
+  }, [ordersFromContext, processedSet]);
+
   // تزامن مع البيانات من Context عند التحديث
   useEffect(() => {
     setOrders(dedupedContextOrders);
@@ -88,8 +98,8 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
           
           if (!error && data) {
             // فلترة الطلبات المعتمدة والمعالجة محلياً
-            const filtered = data.filter(o => 
-              o.status !== 'approved' && !processedOrders.includes(o.id)
+            const filtered = data.filter(o =>
+              o.status !== 'approved' && !processedSet.has(o.id)
             );
             setOrders(filtered);
           }
@@ -100,7 +110,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
       
       fetchFreshAiOrders();
     }
-  }, [open, processedOrders]);
+  }, [open, processedSet]);
 
   // إعدادات الموافقة التلقائية
   const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
