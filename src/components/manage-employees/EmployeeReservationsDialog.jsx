@@ -179,18 +179,18 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
         dir="rtl"
       >
         <div className="relative flex flex-col max-h-[92vh]">
-          {/* رأس بتدرج هادئ احترافي */}
-          <DialogHeader className="relative px-6 pt-5 pb-4 border-b border-border bg-gradient-to-l from-primary/10 via-primary/5 to-transparent">
-            <div className="absolute -top-16 -left-16 w-48 h-48 rounded-full bg-primary/10 blur-3xl pointer-events-none" />
-            <div className="absolute -bottom-16 -right-16 w-48 h-48 rounded-full bg-accent/10 blur-3xl pointer-events-none" />
+          {/* رأس بتدرج وردي/بنفسجي مطابق لنافذة تقرير أرباح الفواتير */}
+          <DialogHeader className="relative px-6 pt-5 pb-4 border-b border-fuchsia-500/20 bg-gradient-to-l from-pink-500/15 via-fuchsia-500/10 to-purple-600/15">
+            <div className="absolute -top-16 -left-16 w-48 h-48 rounded-full bg-pink-500/20 blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-16 -right-16 w-48 h-48 rounded-full bg-purple-600/20 blur-3xl pointer-events-none" />
             <DialogTitle className="relative flex items-center gap-3 text-xl">
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
-                <Lock className="w-5 h-5 text-primary-foreground" />
+              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-pink-500 via-fuchsia-500 to-purple-600 flex items-center justify-center shadow-lg shadow-fuchsia-500/40">
+                <Lock className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col items-start">
-                <span className="font-bold text-foreground">حجز كميات للموظفين</span>
+                <span className="font-bold bg-gradient-to-l from-pink-400 via-fuchsia-400 to-purple-400 bg-clip-text text-transparent">حجز كميات للموظفين</span>
                 <span className="text-xs font-normal text-muted-foreground flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
+                  <Sparkles className="w-3 h-3 text-fuchsia-400" />
                   تحديد متعدد للموظفين والمنتجات والمتغيرات
                 </span>
               </div>
@@ -206,9 +206,9 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
               {/* اختيار الموظفين */}
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="group relative flex items-center justify-between gap-2 p-3 rounded-xl bg-card hover:bg-accent/30 border border-border transition-all">
+                  <button className="group relative flex items-center justify-between gap-2 p-3 rounded-xl bg-card hover:bg-fuchsia-500/10 border border-border hover:border-fuchsia-500/40 transition-all">
                     <div className="flex items-center gap-2">
-                      <Users className="w-4 h-4 text-primary" />
+                      <Users className="w-4 h-4 text-fuchsia-400" />
                       <span className="text-sm font-medium text-foreground">
                         {selectedEmployeeIds.length === 0 ? 'اختر الموظفين' : `${selectedEmployeeIds.length} موظف محدد`}
                       </span>
@@ -217,7 +217,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="w-72 p-0 bg-popover border border-border shadow-2xl"
+                  className="w-72 p-0 bg-popover border border-fuchsia-500/30 shadow-2xl shadow-fuchsia-500/20"
                   dir="rtl"
                   align="start"
                   side="bottom"
@@ -249,9 +249,9 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
               {/* اختيار المنتجات */}
               <Popover>
                 <PopoverTrigger asChild>
-                  <button className="group relative flex items-center justify-between gap-2 p-3 rounded-xl bg-card hover:bg-accent/30 border border-border transition-all">
+                  <button className="group relative flex items-center justify-between gap-2 p-3 rounded-xl bg-card hover:bg-pink-500/10 border border-border hover:border-pink-500/40 transition-all">
                     <div className="flex items-center gap-2">
-                      <PackageIcon className="w-4 h-4 text-accent-foreground" />
+                      <PackageIcon className="w-4 h-4 text-pink-400" />
                       <span className="text-sm font-medium text-foreground">
                         {selectedProductIds.length === 0 ? 'اختر المنتجات' : `${selectedProductIds.length} منتج محدد`}
                       </span>
@@ -260,7 +260,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                   </button>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="w-80 p-0 bg-popover border border-border shadow-2xl"
+                  className="w-80 p-0 bg-popover border border-pink-500/30 shadow-2xl shadow-pink-500/20"
                   dir="rtl"
                   align="start"
                   side="bottom"
@@ -299,14 +299,14 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
 
             {/* === جدول المتغيرات === */}
             {selectedProducts.length > 0 && (
-              <div className="rounded-xl border border-border bg-card overflow-hidden shadow-sm">
-                <div className="px-4 py-2.5 bg-gradient-to-l from-primary/10 to-transparent border-b border-border flex items-center justify-between">
+              <div className="rounded-xl border border-fuchsia-500/20 bg-card overflow-hidden shadow-sm shadow-fuchsia-500/10">
+                <div className="px-4 py-2.5 bg-gradient-to-l from-pink-500/15 via-fuchsia-500/10 to-purple-600/15 border-b border-fuchsia-500/20 flex items-center justify-between">
                   <span className="text-xs font-semibold flex items-center gap-1.5 text-foreground">
-                    <Palette className="w-3.5 h-3.5 text-primary" />
-                    <Ruler className="w-3.5 h-3.5 text-primary" />
+                    <Palette className="w-3.5 h-3.5 text-pink-400" />
+                    <Ruler className="w-3.5 h-3.5 text-purple-400" />
                     حدّد الكميات لكل لون/قياس
                   </span>
-                  <Badge variant="outline" className="text-[10px]">{allVariants.length} متغير</Badge>
+                  <Badge variant="outline" className="text-[10px] border-fuchsia-500/40 text-fuchsia-300">{allVariants.length} متغير</Badge>
                 </div>
                 <div
                   className="overflow-y-auto overscroll-contain divide-y divide-border"
@@ -370,16 +370,16 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
             )}
 
             {/* === زر التأكيد === */}
-            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-card border border-border">
+            <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-card border border-fuchsia-500/20">
               <div className="text-xs text-muted-foreground">
                 {totalCombinations > 0 ? (
-                  <>سيتم إنشاء <span className="font-bold text-foreground">{totalCombinations}</span> حجز</>
+                  <>سيتم إنشاء <span className="font-bold bg-gradient-to-l from-pink-400 to-purple-400 bg-clip-text text-transparent">{totalCombinations}</span> حجز</>
                 ) : 'اختر الموظفين والمتغيرات والكميات'}
               </div>
               <Button
                 onClick={handleBulkReserve}
                 disabled={saving || totalCombinations === 0}
-                className="bg-gradient-to-l from-primary to-accent hover:opacity-90 text-primary-foreground shadow-lg shadow-primary/30"
+                className="bg-gradient-to-l from-pink-500 via-fuchsia-500 to-purple-600 hover:from-pink-600 hover:via-fuchsia-600 hover:to-purple-700 text-white font-semibold shadow-lg shadow-fuchsia-500/40 border-0"
               >
                 {saving ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

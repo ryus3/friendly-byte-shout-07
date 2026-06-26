@@ -41,13 +41,15 @@ const ManageProductsPage = () => {
   const [isReservationsOpen, setIsReservationsOpen] = useState(false);
   
 
-  // مالك منتجات؟ (لإظهار زر الحجز) — يدعم user.id و user.user_id
+  // مالك منتجات؟ (لإظهار زر الحجز) — تحقق دفاعي يدعم كل أشكال هوية المستخدم
   const uid = user?.user_id || user?.id;
+  const uidStr = uid ? String(uid) : null;
   const isOwnerOrAdmin = useMemo(() => {
-    if (isAdmin || isDepartmentManager || hasPermission("manage_products")) return true;
-    if (!Array.isArray(products) || !uid) return false;
-    return products.some(p => p?.owner_user_id === uid);
-  }, [isAdmin, isDepartmentManager, hasPermission, products, uid]);
+    if (isAdmin || isDepartmentManager) return true;
+    try { if (hasPermission && hasPermission("manage_products")) return true; } catch {}
+    if (!Array.isArray(products) || !uidStr) return false;
+    return products.some(p => p?.owner_user_id && String(p.owner_user_id) === uidStr);
+  }, [isAdmin, isDepartmentManager, hasPermission, products, uidStr]);
 
 
 
