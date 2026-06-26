@@ -98,8 +98,8 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
           
           if (!error && data) {
             // فلترة الطلبات المعتمدة والمعالجة محلياً
-            const filtered = data.filter(o => 
-              o.status !== 'approved' && !processedOrders.includes(o.id)
+            const filtered = data.filter(o =>
+              o.status !== 'approved' && !processedSet.has(o.id)
             );
             setOrders(filtered);
           }
@@ -110,7 +110,7 @@ const AiOrdersManager = ({ open, onClose, highlightId }) => {
       
       fetchFreshAiOrders();
     }
-  }, [open, processedOrders]);
+  }, [open, processedSet]);
 
   // إعدادات الموافقة التلقائية
   const [autoApprovalEnabled, setAutoApprovalEnabled] = useState(false);
