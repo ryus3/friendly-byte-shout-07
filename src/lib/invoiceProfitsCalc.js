@@ -329,7 +329,7 @@ export async function fetchInvoiceProfitsData(supabase, orderIds) {
   if (!orderIds?.length) {
     return { orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} };
   }
-  const [{ data: oData }, { data: itemsData }, { data: pData }] = await Promise.all([
+  const [{ data: oData }, { data: itemsData }, { data: pData }, { data: occData }] = await Promise.all([
     supabase.from('orders')
       .select('id, created_by, final_amount, total_amount, delivery_fee, order_type, status, delivery_status')
       .in('id', orderIds),
@@ -343,6 +343,9 @@ export async function fetchInvoiceProfitsData(supabase, orderIds) {
       .in('order_id', orderIds),
     supabase.from('profits')
       .select('order_id, employee_id, employee_profit, profit_amount, total_revenue, total_cost, status')
+      .in('order_id', orderIds),
+    supabase.from('off_channel_collections')
+      .select('*')
       .in('order_id', orderIds),
   ]);
 
@@ -369,5 +372,5 @@ export async function fetchInvoiceProfitsData(supabase, orderIds) {
     (profs || []).forEach((p) => { namesMap[p.user_id] = p.full_name; });
   }
 
-  return { orders: oData || [], orderItems: itemsData || [], profits: pData || [], employeesWithRules, namesMap };
+  return { orders: oData || [], orderItems: itemsData || [], profits: pData || [], offChannelCollections: occData || [], employeesWithRules, namesMap };
 }

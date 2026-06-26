@@ -47,7 +47,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       }
 
       if (!dbInvoiceId) {
-        if (!cancelled) { setLoading(false); setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} }); }
+        if (!cancelled) { setLoading(false); setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [] }); }
         return;
       }
 
