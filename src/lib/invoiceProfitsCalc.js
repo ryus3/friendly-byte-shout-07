@@ -22,7 +22,7 @@
  * @param {Array} args.offChannelCollections صفوف off_channel_collections المسجلة لهذه الفاتورة
  * @param {Set<string>} args.employeesWithRules مجموعة employee_id لهم قاعدة ربح فعّالة
  */
-export function computeInvoiceProfits({ orders = [], orderItems = [], profits = [], employeesWithRules = new Set(), offChannelCollections = [] }) {
+export function computeInvoiceProfits({ orders = [], orderItems = [], profits = [], employeesWithRules = new Set(), offChannelCollections = [], invoiceAmount = null }) {
   const itemsByOrder = new Map();
   (orderItems || []).forEach((it) => {
     if (!itemsByOrder.has(it.order_id)) itemsByOrder.set(it.order_id, []);
@@ -322,6 +322,17 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   Object.entries(ownerReturnLoss).forEach(([ownerId, loss]) => {
     ensureOwner(ownerId).revenue += loss; // loss سالب
   });
+
+  // ✅ مصدر الحقيقة لإيراد القناة = delivery_invoices.amount (المبلغ الذي دفعته شركة التوصيل فعلاً).
+  //    يشمل أصلاً خصم الإرجاع وخصم أجور توصيل طلبات الـ off-channel.
+  //    نضيف فوقه فقط الـ off-channel المؤكَّد من المالك.
+  if (invoiceAmount !== null && invoiceAmount !== undefined) {
+    const confirmedOffChannel = offChannelOrders
+      .filter((o) => o.confirmed)
+      .reduce((s, o) => s + (Number(o.expected_amount) || 0), 0);
+    totalRevenue = Number(invoiceAmount) + confirmedOffChannel;
+    channelRevenue = Number(invoiceAmount);
+  }
 
   const employeeBonusTotal = Object.values(employeeBonusByEmp).reduce((s, v) => s + v, 0);
   const employeeProfitTotal = Object.values(employeeProfitByEmp).reduce((s, v) => s + v, 0);

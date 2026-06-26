@@ -39,11 +39,21 @@ const OffChannelOwnerInbox = () => {
 
   const handleConfirm = async (row) => {
     setBusyId(row.id);
-    // حركة النقد تُنشأ تلقائياً بواسطة trigger create_off_channel_cash_movement_on_settle
     const { error } = await confirmReceipt(row.id, true);
     setBusyId(null);
     if (error) toast({ variant: 'destructive', title: 'فشل التأكيد', description: error.message });
     else toast({ title: 'تم التأكيد', description: 'تمت إضافة المبلغ للقاصة.' });
+  };
+
+  const handleReject = async (row) => {
+    setBusyId(row.id);
+    const { error } = await supabase
+      .from('off_channel_collections')
+      .update({ status: 'owner_disputed', confirmed_at: null, note: (row.note || '') + ' | لم يصلني (المالك)' })
+      .eq('id', row.id);
+    setBusyId(null);
+    if (error) toast({ variant: 'destructive', title: 'فشل التسجيل', description: error.message });
+    else { toast({ title: 'تم تسجيل عدم الاستلام', description: 'سيُراجع الموظف الحالة.' }); reload(); }
   };
 
   if (loading) {
@@ -65,6 +75,7 @@ const OffChannelOwnerInbox = () => {
         {rows.map(row => {
           const order = ordersMap[row.order_id];
           const empName = usersMap[row.collector_user_id] || 'موظف';
+          const amount = Number(row.owner_due_amount) || Number(row.customer_paid_amount) || 0;
           return (
             <div key={row.id} className="flex items-center justify-between gap-3 p-3 rounded-lg border bg-muted/20">
               <div className="flex-1 min-w-0 text-right">
@@ -72,9 +83,10 @@ const OffChannelOwnerInbox = () => {
                 <div className="text-xs text-muted-foreground truncate">
                   {order?.customer_name || '—'} • الموظف: {empName}
                 </div>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="outline" className="text-[10px]">{row.collection_type}</Badge>
-                  <span className="text-xs font-bold text-rose-600">{Number(row.owner_due_amount || 0).toLocaleString()} د.ع</span>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  {row.collection_type && <Badge variant="outline" className="text-[10px]">{row.collection_type}</Badge>}
+                  <Badge variant="secondary" className="text-[10px]">{row.status}</Badge>
+                  <span className="text-sm font-bold text-emerald-600">{amount.toLocaleString()} د.ع</span>
                 </div>
                 {row.note && <div className="text-[10px] text-muted-foreground mt-1">{row.note}</div>}
               </div>
@@ -83,7 +95,7 @@ const OffChannelOwnerInbox = () => {
                   {busyId === row.id ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3 ms-1" />}
                   استلمت
                 </Button>
-                <Button size="sm" variant="outline" disabled>
+                <Button size="sm" variant="outline" onClick={() => handleReject(row)} disabled={busyId === row.id}>
                   <Clock className="w-3 h-3 ms-1" /> لم يصلني
                 </Button>
               </div>

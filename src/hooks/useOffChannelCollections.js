@@ -22,7 +22,7 @@ export function useOffChannelCollections({ scope = 'inbox', orderIds = null } = 
     setLoading(true);
     let q = supabase.from('off_channel_collections').select('*').order('created_at', { ascending: false });
     if (scope === 'mine') q = q.eq('collector_user_id', userId).eq('status', 'pending_classification');
-    else if (scope === 'inbox') q = q.eq('owner_user_id', userId).eq('status', 'pending_owner_confirmation');
+    else if (scope === 'inbox') q = q.eq('owner_user_id', userId).in('status', ['pending_classification', 'pending_owner_confirmation']);
     else if (scope === 'order' && Array.isArray(orderIds) && orderIds.length) q = q.in('order_id', orderIds);
     const { data, error } = await q;
     if (!error) setRows(data || []);

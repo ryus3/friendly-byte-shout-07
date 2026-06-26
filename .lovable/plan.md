@@ -1,90 +1,59 @@
-## التشخيص الكامل لفاتورة 3623484
 
-### الأرقام الحقيقية حسب البيانات
+## المشكلة (فاتورة 3623484)
 
-| البند | القيمة |
-|---|---|
-| إيراد القناة (شركة التوصيل) | 950,000 |
-| طلب off-channel (مكسيك) معلَّق | +25,000 عند التأكيد |
-| طلب إرجاع 149776372 | −25,000 (منتج −20,000 + توصيل −5,000) |
-| تكلفة المنتجات المباعة فعلاً (50 قطعة) | 600,000 |
+### 1. الإشعار والتأكيد للمالك لا يعملان
+- جدول `off_channel_collections` فيه جميع السجلات بحالة `pending_classification` (وليس `pending_owner_confirmation`).
+- الـ trigger `trg_notify_owner_off_channel` يُرسل الإشعار **فقط** عند الانتقال إلى `pending_owner_confirmation`.
+- نافذة التصنيف `OffChannelClassifyDialog` موجودة داخل تبويب "طلبات الفاتورة الخاصة" لكنها لم تُستخدم على هذه الفاتورة، لذلك لا يصل أي إشعار.
+- صفحة الـ Inbox `/off-channel-inbox` موجودة لكن **لا يوجد أي رابط لها** في القائمة الجانبية أو شريط الإشعارات أو أي مكان مرئي للمالك.
 
-### النتيجة الصحيحة لبطاقة "توزيع الأرباح على المالكين" (احمد)
+### 2. حساب الإيراد المحاسبي خاطئ
+- المعروض حالياً: **955,000** (من شركة التوصيل 930k + خارج القناة 25k).
+- المطلوب قبل تأكيد المالك: **950,000** (= مبلغ الفاتورة الفعلي من شركة التوصيل، يشمل خصم اجور توصيل الـ off-channel).
+- المطلوب بعد تأكيد المالك: **975,000** (= 950k + 25k المُستلَم خارج القناة).
+- السبب: الكود حالياً يجمع `invoice_order_amount - delivery_fee` لكل طلب على حدة، ثم يضيف الـ off-channel، فينتج 955k. الصحيح هو الاعتماد على `delivery_invoices.amount` كمصدر حقيقة لإيراد القناة، ثم إضافة الـ off-channel المؤكَّد فقط.
 
-**قبل تأكيد احمد لاستلام الـ off-channel:**
-- قطع: 49
-- إيراد: 980,000 (1,000,000 مفروض − 20,000 off-channel غير مؤكَّد)
-- ربح خام = 980,000 − 588,000 (تكلفة 49 قطعة) = **392,000**
-- ناقص خسارة الإرجاع المنسوبة لاحمد: −25,000
-- **صافي ربح احمد = 367,000**
+---
 
-**بعد تأكيد احمد لاستلام الـ 25,000:**
-- قطع: 50
-- إيراد: 1,000,000
-- ربح خام = 1,000,000 − 600,000 = 400,000
-- ناقص خسارة الإرجاع: −25,000
-- **صافي ربح احمد = 375,000** ← يطابق "صافي للمالكين 375,000" في الكرت العلوي
+## خطة الإصلاح
 
-### السبب الحالي للخطأ
+### أ) تصحيح حساب "الإيراد المحاسبي" في `src/lib/invoiceProfitsCalc.js`
+- إضافة وسيط `invoiceAmount` (= `delivery_invoices.amount`) إلى `computeInvoiceProfits`.
+- تعديل منطق `totalRevenue`:
+  - **قبل تأكيد الـ off-channel**: `totalRevenue = invoiceAmount` (مثلاً 950,000).
+  - **بعد تأكيد الـ off-channel**: `totalRevenue = invoiceAmount + Σ(off_channel المؤكَّد customer_paid_amount)` (مثلاً 950 + 25 = 975).
+- `channelRevenue` يبقى مشتق من `invoiceAmount` (بدون أجور توصيل القناة فقط، لا الـ off-channel).
+- `revenueFromItems` و`totalCost` و`netForOwners` تتبع نفس القاعدة بحيث "صافي الربح" يتطابق مع المنطق الجديد.
+- تحديث `fetchInvoiceProfitsData` لجلب `delivery_invoices.amount` للفاتورة، وتمريرها للحاسبة.
+- تحديث `src/components/orders/InvoiceProfitsTab.jsx` لتمرير `invoiceAmount` للحاسبة.
 
-`src/lib/invoiceProfitsCalc.js`:
+### ب) تفعيل إشعار المالك تلقائياً + UI واضح للتأكيد
+- **Migration جديد**:
+  1. تحديث الـ trigger `notify_owner_off_channel_pending` ليُرسل الإشعار أيضاً عند الحالة الأولية `pending_classification` إذا كان `owner_user_id` معروف وحُسب `owner_due_amount > 0` لاحقاً (وأيضاً عند التحوّل لـ `pending_owner_confirmation`).
+  2. RPC اختياري `auto_classify_off_channel(order_id)` يصنّف تلقائياً بناءً على `total_amount` و`delivery_fee` (نوع `electronic_payment` افتراضياً) عند الحاجة — لكن لن نُفعّله افتراضياً، نتركه يدوياً.
+  3. **والأهم**: استدعاء الإشعار حتى للسجلات الموجودة حالياً بحالة `pending_classification` (تنبيه المالك بأن هناك طلباً يحتاج تصنيف ثم تأكيد).
 
-1. فرع `isOffChannel` يدخل البنود إلى `productMap` دائماً حتى قبل تأكيد المالك → احمد يظهر 50 قطعة / 1,000,000 من البداية.
-2. طلبات الإرجاع تُجمَع في `returnsOrders` و`returnsTotalLoss` كقسم منفصل، لكن **لا تُخصم من ربح/إيراد المالك** في `byOwner`. لذلك بطاقة احمد لا تطابق "صافي للمالكين" أعلاه.
+- **واجهة جديدة للوصول السريع**:
+  - إضافة بطاقة "📥 تحصيلات بانتظار تأكيدي" في الصفحة الرئيسية (Dashboard) أو في شريط الإشعارات، تعرض العداد وتربط إلى `/off-channel-inbox`.
+  - إضافة عنصر قائمة في `BottomNav` / `Layout` للمالك (إذا `rows.length > 0` في `useOffChannelCollections({ scope:'inbox' })`).
+  - تحسين `OffChannelOwnerInbox.jsx`: عرض المبلغ بشكل أوضح، إضافة معلومات الطلب (المنتج، الزبون)، تفعيل زر "لم يصلني" (يُرجع الحالة ويُنشئ ملاحظة).
 
-## الإصلاح (ملف واحد فقط: `src/lib/invoiceProfitsCalc.js`)
+### ج) التحقق
+- فتح فاتورة 3623484 والتأكد:
+  - "إجمالي الإيراد المحاسبي" = **950,000 د.ع** قبل التأكيد.
+  - الضغط على "استلمت" من inbox المالك → يصبح **975,000 د.ع**.
+  - وصول إشعار للمالك مع رابط مباشر إلى `/off-channel-inbox`.
 
-### تعديل 1 — استبعاد off-channel غير المؤكَّد من المالك
+---
 
-في فرع `isOffChannel`:
-```js
-const occRecord = offChannelByOrder.get(o.id);
-const isConfirmed = !!(occRecord && (
-  occRecord.cash_movement_id ||
-  ['settled','confirmed','owner_confirmed'].includes(occRecord.status)
-));
-if (!isConfirmed) {
-  // سجّل الطلب في offChannelOrders (للبطاقة الصفراء)
-  offChannelOrders.push({...});
-  offChannelExpectedAmount += expectedPaid;
-  offChannelCount += 1;
-  offChannelAbsorbedDelivery += deliveryFee;
-  return; // ← لا تمرّر البنود لـ productMap ولا تضف للـ totalRevenue
-}
-// إذا مؤكَّد → السلوك الحالي (يدخل ضمن إيراد/قطع/ربح المالك)
-```
+## الملفات المتأثرة
 
-### تعديل 2 — توزيع خسارة الإرجاع على المالك
+1. `src/lib/invoiceProfitsCalc.js` — تعديل منطق `totalRevenue` ليعتمد على `invoiceAmount`.
+2. `src/components/orders/InvoiceProfitsTab.jsx` — تمرير `invoiceAmount` للحاسبة.
+3. `src/components/accounting/OffChannelOwnerInbox.jsx` — تحسين العرض وتفعيل "لم يصلني".
+4. `src/components/Layout.jsx` أو `BottomNav.jsx` — إضافة رابط/شارة "تحصيلات بانتظار تأكيدي".
+5. Migration جديد:
+   - توسعة trigger الإشعار ليرسل عند `pending_classification` أيضاً.
+   - إرسال إشعارات تعويضية للسجلات الحالية بحالة `pending_classification` التي لم تصل لمالكها.
 
-في فرع `isFullReturn`، بدل `return` المباشر بعد دفع `returnsOrders`:
-- احسب مالك المنتج المرجَع من `lineItems` (نفس منطق "owner_id ذو أعلى قيمة"):
-  ```js
-  const returnOwnerSums = new Map();
-  lineItems.forEach((it) => {
-    const ownerId = it.products?.owner_user_id || '__system__';
-    const qty = Number(it.quantity) || 0;
-    const price = Number(it.unit_price) || 0;
-    returnOwnerSums.set(ownerId, (returnOwnerSums.get(ownerId) || 0) + qty * price);
-  });
-  ```
-- وزّع `realRevenue` (السالب، يشمل التوصيل) نسبياً على المالكين بناءً على قيمة المنتج المرجَع، واخصمه من `byOwner[ownerId].revenue` (ينعكس مباشرة على الربح الصافي للمالك).
-- إذا الكل لمالك واحد (حالة احمد): يُخصم كامل −25,000 من إيراده.
-
-### تعديل 3 — لا مساس بالكروت العلوية
-
-`totalRevenue`, `totalCost`, `totalProfit`, `revenueFromItems`, `netForOwners`, `returnsOrders`, `returnsTotalLoss`, `channelRevenue`, `offChannelExpectedAmount` — تبقى كما هي. التعديل **يلمس فقط `byOwner` و`productMap`**.
-
-## التحقق المتوقع بعد التطبيق
-
-| الحالة | قطع احمد | إيراد احمد | ربح احمد |
-|---|---|---|---|
-| قبل تأكيد off-channel | 49 | 955,000 (980k مفروض −25k إرجاع) | 367,000 |
-| بعد تأكيد off-channel | 50 | 975,000 (1,000,000 −25,000 إرجاع) | 375,000 ✅ |
-
-النتيجة بعد التأكيد تطابق تماماً "صافي للمالكين 375,000" في الكرت العلوي.
-
-## ملفات متأثرة
-
-- `src/lib/invoiceProfitsCalc.js` فقط.
-
-لا تغييرات في قاعدة البيانات. التريغرات والإشعارات تبقى كما هي (الإشعار يصل لاحمد بعد التصحيح السابق).
+لا يوجد تغيير في `byOwner` أو `productMap` أو منطق توزيع الأرباح/الإرجاع — هذه طبقات سليمة من الإصلاح السابق.
