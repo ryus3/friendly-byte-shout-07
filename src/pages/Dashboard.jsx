@@ -893,9 +893,16 @@ const Dashboard = () => {
                       allStatCards.slice(0, 8).map((stat, index) => {
                         const { key: statKey, ...statProps } = stat;
                         return (
-                          <motion.div key={statKey} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
-                            <StatCard {...statProps} />
-                          </motion.div>
+                          <React.Fragment key={statKey}>
+                            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.05 }}>
+                              <StatCard {...statProps} />
+                            </motion.div>
+                            {statKey === 'employeeFollowUp' && (
+                              <motion.div key="pendingCollections" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (index + 1) * 0.05 }}>
+                                <PendingCollectionsCard />
+                              </motion.div>
+                            )}
+                          </React.Fragment>
                         );
                       })
                     ) : (
@@ -916,18 +923,28 @@ const Dashboard = () => {
                         {allStatCards.slice(2, 8).map((stat, index) => {
                           const { key: statKey, ...statProps } = stat;
                           return (
-                            <motion.div key={statKey} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (index + 2) * 0.05 }}>
-                              <StatCard {...statProps} />
-                            </motion.div>
+                            <React.Fragment key={statKey}>
+                              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (index + 2) * 0.05 }}>
+                                <StatCard {...statProps} />
+                              </motion.div>
+                              {statKey === 'employeeFollowUp' && (
+                                <motion.div key="pendingCollections" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (index + 3) * 0.05 }}>
+                                  <PendingCollectionsCard />
+                                </motion.div>
+                              )}
+                            </React.Fragment>
                           );
                         })}
+                        {/* للموظفين العاديين: عرض الكرت في النهاية إن لم يكن لديهم متابعة الموظفين */}
+                        {!isDepartmentManager && !canViewAllData && (
+                          <motion.div key="pendingCollectionsEmp" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+                            <PendingCollectionsCard />
+                          </motion.div>
+                        )}
                       </>
                     )}
                 </div>
-                {/* كرت "تحصيلات بانتظار التأكيد" — يظهر لكل من له منتجات (مالك/مدير/موظف) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
-                    <PendingCollectionsCard />
-                </div>
+
 
                 {/* الترتيب الجديد: الطلبات الأخيرة → تنبيهات المخزون → المنتجات → المحافظات → الزبائن */}
                 <div className="grid grid-cols-1 gap-4 sm:gap-6">
