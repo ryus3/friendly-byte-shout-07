@@ -499,4 +499,32 @@ const OffChannelStatCard = ({ calc, fmt }) => {
   );
 };
 
+/**
+ * كارت "إجمالي الإيراد المحاسبي" — مقسَّم لسطرين شفّافين:
+ *  - من شركة التوصيل (بدون أجور)
+ *  - خارج القناة (متوقَّع تحصيله من الموظف/إلكترونياً)
+ */
+const RevenueSplitCard = ({ channel, offChannel, total, fmt }) => {
+  return (
+    <Card className="h-full min-h-[104px] bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/30 text-blue-600">
+      <CardContent className="p-3 h-full flex flex-col justify-between">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-4 h-4" />
+          <span className="text-xs text-muted-foreground">إجمالي الإيراد المحاسبي</span>
+        </div>
+        <div>
+          <div className="text-lg font-bold leading-tight">{fmt(total)}</div>
+          <div className="text-[10px] text-muted-foreground mt-1 space-y-0.5">
+            <div>• من شركة التوصيل: <span className="font-semibold">{fmt(channel)}</span></div>
+            {Number(offChannel) > 0 && (
+              <div>• خارج القناة (متوقَّع): <span className="font-semibold text-amber-600">{fmt(offChannel)}</span></div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export default InvoiceProfitsTab;
+
