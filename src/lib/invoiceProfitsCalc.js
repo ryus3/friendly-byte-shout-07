@@ -318,6 +318,11 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     o.products.push(prod);
   });
 
+  // ✅ خصم خسارة الإرجاع من إيراد المالك (لينعكس مباشرة على ربحه الصافي)
+  Object.entries(ownerReturnLoss).forEach(([ownerId, loss]) => {
+    ensureOwner(ownerId).revenue += loss; // loss سالب
+  });
+
   const employeeBonusTotal = Object.values(employeeBonusByEmp).reduce((s, v) => s + v, 0);
   const employeeProfitTotal = Object.values(employeeProfitByEmp).reduce((s, v) => s + v, 0);
   const employeeTotalCombined = employeeProfitTotal;
