@@ -285,6 +285,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange';
     const delta = isExchange ? 0 : (realRevenue - orderItemsRevenue);
     totalDelta += delta;
+    if (delta < -0.5) negativeDeltaAbs += Math.abs(delta);
     if (Math.abs(delta) >= 0.5) {
       deltaOrders.push({
         order_id: o.id,
@@ -301,6 +302,10 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
     if (creatorHasRule) {
       employeeBonusByEmp[creatorId] = (employeeBonusByEmp[creatorId] || 0) + delta;
+      if (delta > 0) {
+        // الـ DB function تخزّن stored = base + max(0, delta). نتتبّع الموجب فقط لاستخراج الـ base بدقة.
+        employeePositiveDeltaByEmp[creatorId] = (employeePositiveDeltaByEmp[creatorId] || 0) + delta;
+      }
     } else if (Math.abs(orderItemsRevenue) > 0.5) {
       productLinesInOrder.forEach((line) => {
         const share = line.revenue / orderItemsRevenue;
