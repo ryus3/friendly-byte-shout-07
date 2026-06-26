@@ -323,6 +323,17 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     ensureOwner(ownerId).revenue += loss; // loss سالب
   });
 
+  // ✅ مصدر الحقيقة لإيراد القناة = delivery_invoices.amount (المبلغ الذي دفعته شركة التوصيل فعلاً).
+  //    يشمل أصلاً خصم الإرجاع وخصم أجور توصيل طلبات الـ off-channel.
+  //    نضيف فوقه فقط الـ off-channel المؤكَّد من المالك.
+  if (invoiceAmount !== null && invoiceAmount !== undefined) {
+    const confirmedOffChannel = offChannelOrders
+      .filter((o) => o.confirmed)
+      .reduce((s, o) => s + (Number(o.expected_amount) || 0), 0);
+    totalRevenue = Number(invoiceAmount) + confirmedOffChannel;
+    channelRevenue = Number(invoiceAmount);
+  }
+
   const employeeBonusTotal = Object.values(employeeBonusByEmp).reduce((s, v) => s + v, 0);
   const employeeProfitTotal = Object.values(employeeProfitByEmp).reduce((s, v) => s + v, 0);
   const employeeTotalCombined = employeeProfitTotal;
