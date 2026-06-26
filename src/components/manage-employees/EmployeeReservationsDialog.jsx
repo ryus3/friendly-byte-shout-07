@@ -34,7 +34,9 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
     () => Array.isArray(products) && !!uidStr && products.some(p => p?.owner_user_id && String(p.owner_user_id) === uidStr),
     [products, uidStr]
   );
-  const canManageAll = isAdmin || isDepartmentManager || (hasPermission && hasPermission('manage_products'));
+  // ✅ فقط المدير العام يرى كل الموظفين/المنتجات/الحجوزات.
+  // مدير القسم أو مالك المنتج يرى فقط نطاقه (منتجاته + موظفيه المباشرين).
+  const canManageAll = isAdmin;
 
   const [reservations, setReservations] = useState([]);
   const [loading, setLoading] = useState(false);
