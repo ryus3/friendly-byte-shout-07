@@ -334,10 +334,13 @@ const LocalOrderRow = ({ order }) => (
 );
 
 const WaseetOrderRow = ({ order, linked, localOrder }) => {
-  const apiAmount = parseFloat(order.price) || 0;
+  // ✅ مصدر الحقيقة للسعر = مبلغ شركة التوصيل (order.invoice_amount/order.price)
+  // وليس final_amount المخزّن قبل الإرسال للشركة. يقبل صفر/سالب.
+  const apiAmount = (order.invoice_amount !== undefined && order.invoice_amount !== null)
+    ? Number(order.invoice_amount)
+    : (parseFloat(order.price) || 0);
   const apiDeliveryFee = parseFloat(order.delivery_price) || 0;
-  // ✅ ادمج بيانات الطلب المحلي عند توفرها لعرض الشحن والعنوان الحقيقي
-  const amount = localOrder?.final_amount != null ? Number(localOrder.final_amount) : apiAmount;
+  const amount = apiAmount;
   const deliveryFee = localOrder?.delivery_fee != null ? Number(localOrder.delivery_fee) : apiDeliveryFee;
   const displayName = localOrder?.customer_name || order.client_name;
   const displayPhone = localOrder?.customer_phone || order.client_mobile;
@@ -346,11 +349,13 @@ const WaseetOrderRow = ({ order, linked, localOrder }) => {
     localOrder?.customer_province,
   ].filter(Boolean);
   const locationLabel = cityParts.join(' — ') || localOrder?.customer_address || 'غير محدد';
+  const isReturned = amount <= 0;
 
   return (
     <div className={cn(
       'rounded-xl border bg-card p-3 transition-all hover:shadow-sm',
-      linked ? 'border-emerald-500/30' : 'border-border/60'
+      linked ? 'border-emerald-500/30' : 'border-border/60',
+      isReturned && 'border-orange-500/40 bg-orange-500/5'
     )}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 space-y-1 flex-1">
@@ -363,6 +368,11 @@ const WaseetOrderRow = ({ order, linked, localOrder }) => {
             ) : (
               <Badge variant="secondary" className="h-5 px-1.5 text-[10px]">بانتظار الربط</Badge>
             )}
+            {isReturned && (
+              <Badge className="h-5 px-1.5 text-[10px] bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30">
+                {amount < 0 ? 'مرتجع' : 'بدون دفع'}
+              </Badge>
+            )}
           </div>
           <p className="text-sm font-medium truncate">{displayName}</p>
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground flex-wrap">
@@ -373,7 +383,7 @@ const WaseetOrderRow = ({ order, linked, localOrder }) => {
           </div>
         </div>
         <div className="text-left flex-shrink-0">
-          <p className="text-sm font-bold">{amount.toLocaleString()}</p>
+          <p className={cn('text-sm font-bold', isReturned ? 'text-orange-600' : '')}>{amount.toLocaleString()}</p>
           <p className="text-[10px] text-muted-foreground">شحن {deliveryFee.toLocaleString()}</p>
         </div>
       </div>

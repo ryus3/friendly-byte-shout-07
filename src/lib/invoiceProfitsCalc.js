@@ -92,11 +92,12 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const items = itemsByOrder.get(o.id) || [];
 
     // تصنيف الطلب:
-    // - راجع كلياً: order_type='return' أو status='returned' مع مبلغ شركة التوصيل ≤ 0
-    // - جزئي: order_type='partial_delivery' أو status='returned' مع مبلغ > 0
+    // - راجع كلياً: order_type='return' أو status='returned' مع مبلغ ≤ 0
+    //   أو طلب عادي/أي نوع آخر مع وجود مبلغ فاتورة محدد = 0 (شركة التوصيل لم تدفع شيئاً = لا بيع فعلي)
     const isReturnType = (o.order_type === 'return');
     const isStatusReturned = (o.status === 'returned');
-    const isFullReturn = isReturnType || (isStatusReturned && baseAmount <= 0);
+    const zeroInvoice = hasInvoiceAmount && Number(baseAmount) === 0;
+    const isFullReturn = isReturnType || (isStatusReturned && baseAmount <= 0) || (zeroInvoice && o.order_type !== 'partial_delivery');
     const isPartial = (o.order_type === 'partial_delivery') || (isStatusReturned && baseAmount > 0);
 
     // البنود المعتبرة: للطلب الراجع كلياً نستخدم بنود incoming (تمثّل ما عاد)؛
