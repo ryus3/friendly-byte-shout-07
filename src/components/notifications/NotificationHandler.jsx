@@ -97,6 +97,11 @@ export const useNotificationHandler = () => {
       }
     }
     
+    // معالجة إشعار تأكيد تحصيل خارج القناة (للمالك)
+    else if (notification.type === 'off_channel_pending_confirmation') {
+      navigate('/off-channel-inbox');
+    }
+
     // معالجة أنواع إشعارات أخرى...
     else {
       navigate('/dashboard');
