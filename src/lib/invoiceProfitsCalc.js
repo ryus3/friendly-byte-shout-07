@@ -221,6 +221,15 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange';
     const delta = isExchange ? 0 : (realRevenue - orderItemsRevenue);
     totalDelta += delta;
+    if (Math.abs(delta) >= 0.5) {
+      deltaOrders.push({
+        order_id: o.id,
+        created_by: o.created_by || null,
+        delta,
+        real_revenue: realRevenue,
+        planned_revenue: orderItemsRevenue,
+      });
+    }
     if (Math.abs(delta) < 0.5) return;
 
     const creatorId = o.created_by || null;
