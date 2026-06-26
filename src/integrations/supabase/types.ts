@@ -9187,6 +9187,37 @@ export type Database = {
         Args: { p_employee_id: string; p_invoices: Json }
         Returns: Json
       }
+      upsert_employee_reservation: {
+        Args: {
+          p_created_by: string
+          p_employee_id: string
+          p_notes?: string
+          p_owner_user_id?: string
+          p_product_id: string
+          p_reserved_quantity: number
+          p_variant_id: string
+        }
+        Returns: {
+          created_at: string
+          created_by: string
+          employee_id: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          owner_user_id: string | null
+          product_id: string
+          reserved_quantity: number
+          sold_quantity: number
+          updated_at: string
+          variant_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "employee_product_reservations"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       upsert_settlement_request_notification: {
         Args: {
           p_employee_id: string
