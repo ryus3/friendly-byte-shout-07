@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, TrendingUp, TrendingDown, Wallet, Users, Package, Crown, ShieldCheck, Info, Truck, Boxes, ArrowDownUp, Banknote } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Wallet, Users, Package, Crown, ShieldCheck, Info, Truck, Boxes, ArrowDownUp, Banknote, Receipt } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { computeInvoiceProfits, fetchInvoiceProfitsData } from '@/lib/invoiceProfitsCalc';
+import InvoiceSpecialOrdersList from '@/components/orders/InvoiceSpecialOrdersList';
 
 /**
  * تبويب أرباح الفاتورة - منطق دقيق:
