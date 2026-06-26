@@ -535,6 +535,8 @@ export const useAlWaseetInvoices = () => {
               raw,
               invoice_id,
               order_id,
+              amount,
+              status,
               orders (
                 id,
                 order_number,
@@ -559,19 +561,28 @@ export const useAlWaseetInvoices = () => {
             // عرض الطلبات المرتبطة والطلبات من raw data
             orders.push(...dbOrders.map(dio => {
               const rawData = dio.raw || {};
+              // ✅ المصدر الموحّد للسعر = مبلغ شركة التوصيل الفعلي (dio.amount)
+              // يقبل صفر/سالب. لا نعود إلى final_amount إلا إذا لم يوجد سجل مبلغ من شركة التوصيل.
+              const invoicePrice = (dio.amount !== null && dio.amount !== undefined)
+                ? Number(dio.amount)
+                : (rawData.price ?? dio.orders?.final_amount ?? 0);
               return {
                 id: dio.external_order_id || rawData.id || `order-${dio.id}`,
                 client_name: rawData.client_name || dio.orders?.customer_name || 'غير محدد',
                 client_mobile: rawData.client_mobile || dio.orders?.customer_phone || '',
                 city_name: rawData.city_name || 'غير محدد',
-                price: rawData.price || dio.orders?.final_amount || 0,
+                price: invoicePrice,
+                invoice_amount: invoicePrice,
+                invoice_order_status: dio.status || null,
                 delivery_price: rawData.delivery_price || 0,
                 local_order: dio.orders,
                 source: dio.orders ? 'linked' : 'raw',
                 tracking_number: dio.orders?.tracking_number,
                 order_number: dio.orders?.order_number,
                 order_status: dio.orders?.status,
-                ...rawData
+                ...rawData,
+                // ✅ override raw.price/amount بعد ...rawData لضمان أن مبلغ الفاتورة الحقيقي هو المعروض
+                price: invoicePrice,
               };
             }));
             
