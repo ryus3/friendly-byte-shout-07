@@ -223,6 +223,21 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
       return; // لا delta ولا توزيع زيادة/خصم
     }
 
+    // ============================================================
+    // طلبات الإرجاع: تُعرض في قسم مستقل، لا تُحسب ضمن "خصم شركة التوصيل"
+    // ============================================================
+    if (isFullReturn) {
+      returnsOrders.push({
+        order_id: o.id,
+        created_by: o.created_by || null,
+        real_revenue: realRevenue,         // عادةً سالب (مثلاً -25,000)
+        planned_revenue: orderItemsRevenue, // عادةً سالب (مثلاً -20,000)
+        delivery_fee: deliveryFee,
+      });
+      returnsTotalLoss += realRevenue; // مجموع الخسارة الحقيقية من القناة
+      return; // لا delta للإرجاع
+    }
+
     const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange';
     const delta = isExchange ? 0 : (realRevenue - orderItemsRevenue);
     totalDelta += delta;
