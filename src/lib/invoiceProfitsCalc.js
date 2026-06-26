@@ -55,6 +55,8 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   // ✅ قائمة طلبات الإرجاع داخل هذه الفاتورة (لعرضها كقسم مستقل، لا تُعتبر "خصم")
   const returnsOrders = []; // { order_id, created_by, real_revenue, planned_revenue, delivery_fee }
   let returnsTotalLoss = 0; // مجموع خسارة الإرجاع (مبلغ الوسيط السالب) — للعرض فقط
+  // ✅ خسارة الإرجاع موزّعة على المالكين (تُخصم من إيراد المالك في byOwner)
+  const ownerReturnLoss = {}; // ownerId -> سالب (مثلاً -25000)
 
   const ensureOwner = (ownerId) => {
     if (!byOwner[ownerId]) byOwner[ownerId] = { revenue: 0, cost: 0, items: 0, products: [] };
