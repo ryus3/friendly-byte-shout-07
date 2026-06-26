@@ -131,6 +131,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     // (سنحسب accountedRevenue بعد بناء plannedRevenue أدناه.)
     if (!isOffChannel) {
       totalRevenue += realRevenue;
+      if (!isFullReturn) channelRevenue += realRevenue;
     }
     if (isOffChannel) {
       offChannelCount += 1;
