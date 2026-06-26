@@ -25,7 +25,7 @@ import {
 const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = null }) => {
   const { products } = useInventory();
   const { user, allUsers } = useAuth();
-  const { isAdmin } = usePermissions();
+  const { isAdmin, isDepartmentManager, hasPermission } = usePermissions();
   const { supervisedEmployeeIds = [] } = useSupervisedEmployees();
 
   const uid = user?.user_id || user?.id;
@@ -44,7 +44,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
   // قائمة الموظفين المرشّحة: المدير العام يرى الكل، غيره يرى من تحت إشرافه
   const employees = useMemo(() => {
     const active = (allUsers || []).filter(u => u && u.status === 'active' && (u.user_id || u.id) !== uid);
-    if (isAdmin) return active;
+    if (isAdmin || isDepartmentManager || hasPermission("manage_employees")) return active;
     const ids = new Set(supervisedEmployeeIds);
     return active.filter(e => ids.has(e.user_id || e.id));
   }, [allUsers, isAdmin, supervisedEmployeeIds, uid]);
@@ -52,14 +52,14 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
   // المنتجات: المدير العام يرى الكل، غيره يرى منتجاته فقط
   const ownedProducts = useMemo(() => {
     if (!Array.isArray(products)) return [];
-    const list = isAdmin ? products : products.filter(p => p.owner_user_id === uid);
+    const list = (isAdmin || isDepartmentManager || hasPermission("manage_products")) ? products : products.filter(p => p.owner_user_id === uid);
     if (!searchProduct.trim()) return list;
     const q = searchProduct.trim().toLowerCase();
     return list.filter(p => (p.name || '').toLowerCase().includes(q));
   }, [products, isAdmin, uid, searchProduct]);
 
   const selectedProducts = useMemo(
-    () => (isAdmin ? products : products?.filter(p => p.owner_user_id === uid) || []).filter(p => selectedProductIds.includes(p.id)),
+    () => (isAdmin || isDepartmentManager || hasPermission("manage_products") ? products : products?.filter(p => p.owner_user_id === uid) || []).filter(p => selectedProductIds.includes(p.id)),
     [products, isAdmin, uid, selectedProductIds]
   );
 
@@ -237,7 +237,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                     </button>
                   </PopoverTrigger>
                   <PopoverContent
-                    className="w-72 p-0 z-50"
+                    className="w-72 p-0"
                     dir="rtl"
                     align="start"
                     side="bottom"
@@ -247,8 +247,8 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                     <div
                       className="overflow-y-auto overscroll-contain p-2"
                       style={{ maxHeight: '60vh', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
-                      onTouchMove={(e) => e.stopPropagation()}
-                      onWheel={(e) => e.stopPropagation()}
+                      
+                      
                     >
                       {employees.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-3">لا يوجد موظفون</p>
@@ -280,7 +280,7 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                     </button>
                   </PopoverTrigger>
                   <PopoverContent
-                    className="w-80 p-0 z-50"
+                    className="w-80 p-0"
                     dir="rtl"
                     align="start"
                     side="bottom"
@@ -298,8 +298,8 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
                     <div
                       className="overflow-y-auto overscroll-contain p-2"
                       style={{ maxHeight: '55vh', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}
-                      onTouchMove={(e) => e.stopPropagation()}
-                      onWheel={(e) => e.stopPropagation()}
+                      
+                      
                     >
                       {ownedProducts.length === 0 ? (
                         <p className="text-xs text-muted-foreground text-center py-3">لا توجد منتجات</p>
