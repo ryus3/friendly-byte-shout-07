@@ -39,6 +39,13 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   let totalDelivery = 0;
   let totalDelta = 0;
   let revenueFromItemsAll = 0;
+  // ✅ Off-Channel: طلبات مبلغها من شركة التوصيل = 0 لكنها مُسلَّمة فعلاً
+  // (دفع إلكتروني/تحويل مباشر للموظف أو المالك يتحمل التوصيل).
+  // ليست راجعة! تُحسب القطع والتكلفة والربح بشكل طبيعي، والتوصيل يُسجَّل كتحمّل.
+  let offChannelCount = 0;
+  let offChannelAbsorbedDelivery = 0;
+  let offChannelExpectedAmount = 0; // الإيراد "المُستحَق" off-channel (ما قبضه الموظف/المالك خارج القناة)
+  const offChannelOrders = [];
 
   const ensureOwner = (ownerId) => {
     if (!byOwner[ownerId]) byOwner[ownerId] = { revenue: 0, cost: 0, items: 0, products: [] };
