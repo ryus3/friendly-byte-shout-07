@@ -47,13 +47,15 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
   const [variantQuantities, setVariantQuantities] = useState({});
   const [searchProduct, setSearchProduct] = useState('');
 
-  // قائمة الموظفين المرشّحة: المدير/المالك يرى الجميع النشطين، غيره يرى من تحت إشرافه
+  // قائمة الموظفين المرشّحة:
+  //  - المدير/مدير القسم/صاحب صلاحية manage_employees → كل النشطين
+  //  - المالك العادي → موظفوه (المُشرَف عليهم) فقط
   const employees = useMemo(() => {
     const active = (allUsers || []).filter(u => u && u.status === 'active' && String(u.user_id || u.id) !== uidStr);
-    if (canManageAll || isOwnerOfAny || (hasPermission && hasPermission('manage_employees'))) return active;
+    if (canManageAll || (hasPermission && hasPermission('manage_employees'))) return active;
     const ids = new Set((supervisedEmployeeIds || []).map(String));
     return active.filter(e => ids.has(String(e.user_id || e.id)));
-  }, [allUsers, canManageAll, isOwnerOfAny, hasPermission, supervisedEmployeeIds, uidStr]);
+  }, [allUsers, canManageAll, hasPermission, supervisedEmployeeIds, uidStr]);
 
   // المنتجات: المدير يرى الكل، المالك يرى منتجاته فقط
   const ownedProducts = useMemo(() => {
@@ -81,6 +83,15 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
     return out;
   }, [selectedProducts]);
 
+  // الحجوزات النشطة: المدير يرى الكل، المالك يرى الحجوزات على منتجاته فقط
+  const ownedProductIds = useMemo(() => {
+    if (canManageAll) return null; // null = no filter
+    if (!Array.isArray(products) || !uidStr) return [];
+    return products
+      .filter(p => p?.owner_user_id && String(p.owner_user_id) === uidStr)
+      .map(p => p.id);
+  }, [products, canManageAll, uidStr]);
+
   const fetchReservations = async () => {
     setLoading(true);
     try {
@@ -89,10 +100,22 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
         .select('*, products(name, owner_user_id), product_variants(colors(name), sizes(name))')
         .eq('is_active', true)
         .order('created_at', { ascending: false });
+      if (ownedProductIds && ownedProductIds.length > 0) {
+        q = q.in('product_id', ownedProductIds);
+      } else if (ownedProductIds && ownedProductIds.length === 0) {
+        setReservations([]);
+        setLoading(false);
+        return;
+      }
       const { data, error } = await q;
       if (error) throw error;
-      // RLS يفلتر أصلاً؛ نعرض ما يصلنا كاملاً
-      setReservations(data || []);
+      // فلترة دفاعية إضافية على جهة العميل (في حال السجلات قديمة بدون product_id)
+      const filtered = (data || []).filter(r => {
+        if (canManageAll) return true;
+        const ownerId = r.products?.owner_user_id;
+        return ownerId && String(ownerId) === uidStr;
+      });
+      setReservations(filtered);
     } catch (e) {
       toast({ title: 'فشل تحميل الحجوزات', description: e.message, variant: 'destructive' });
     } finally {

@@ -63,10 +63,10 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   });
 
   // الكمية الفعلية المباعة لكل بند حسب نوع الطلب
-  const eligibleQtyOf = (order, it) => {
+  // للطلب الراجع كلياً → سالبة (تخصم من الإيراد/التكلفة/العدد)
+  const eligibleQtyOf = (order, it, isFullReturn) => {
+    if (isFullReturn) return -(Number(it.quantity) || 0);
     const orderType = order?.order_type || 'regular';
-    const orderStatus = order?.status || '';
-    if (orderType === 'return' || orderStatus === 'returned') return 0;
     if (orderType === 'partial_delivery') {
       const qd = Number(it.quantity_delivered) || 0;
       if (qd > 0) return qd;
@@ -80,49 +80,49 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const deliveryFee = Number(o.delivery_fee) || 0;
     totalDelivery += deliveryFee;
 
-    const isReturn = (o.order_type === 'return') || (o.status === 'returned');
-    if (isReturn) return;
-
-    // ✅ المصدر الموحّد للإيراد الحقيقي:
-    // 1) مبلغ شركة التوصيل لهذا الطلب (invoice_order_amount) إن وُجد
-    // 2) وإلا final_amount المسجَّل بالنظام
-    // ثم نطرح أجور التوصيل للحصول على إيراد المنتجات الصافي
-    const invoiceOrderAmount = Number(o.invoice_order_amount) || 0;
-    const baseAmount = invoiceOrderAmount > 0
-      ? invoiceOrderAmount
+    // ✅ المصدر الموحّد للإيراد الحقيقي = مبلغ شركة التوصيل لهذا الطلب
+    // invoice_order_amount يأتي من delivery_invoice_orders.amount (يقبل صفر/سالب).
+    const hasInvoiceAmount = (o.invoice_order_amount !== null && o.invoice_order_amount !== undefined);
+    const baseAmount = hasInvoiceAmount
+      ? (Number(o.invoice_order_amount) || 0)
       : (Number(o.final_amount) || Number(o.total_amount) || 0);
     const realRevenue = baseAmount - deliveryFee;
     totalRevenue += realRevenue;
 
     const items = itemsByOrder.get(o.id) || [];
 
-    // الخطوة الأولى: حساب الإيراد الافتراضي والكميات المؤهلة لكل بند
-    const baseLines = items
-      .filter((it) => it.item_direction !== 'incoming')
-      .map((it) => {
-        const eligibleQty = eligibleQtyOf(o, it);
-        const unitPrice = Number(it.unit_price) || 0;
-        const costUnit = Number(it.products?.cost_price) || Number(it.product_variants?.cost_price) || 0;
-        return { it, eligibleQty, unitPrice, costUnit };
-      });
+    // تصنيف الطلب:
+    // - راجع كلياً: order_type='return' أو status='returned' مع مبلغ شركة التوصيل ≤ 0
+    // - جزئي: order_type='partial_delivery' أو status='returned' مع مبلغ > 0
+    const isReturnType = (o.order_type === 'return');
+    const isStatusReturned = (o.status === 'returned');
+    const isFullReturn = isReturnType || (isStatusReturned && baseAmount <= 0);
+    const isPartial = (o.order_type === 'partial_delivery') || (isStatusReturned && baseAmount > 0);
+
+    // البنود المعتبرة: للطلب الراجع كلياً نستخدم بنود incoming (تمثّل ما عاد)؛
+    // لباقي الطلبات نستثني incoming لأنها مدخلات استبدال.
+    const lineItems = isFullReturn ? items : items.filter((it) => it.item_direction !== 'incoming');
+
+    const baseLines = lineItems.map((it) => {
+      const eligibleQty = eligibleQtyOf(o, it, isFullReturn);
+      const unitPrice = Number(it.unit_price) || 0;
+      const costUnit = Number(it.products?.cost_price) || Number(it.product_variants?.cost_price) || 0;
+      return { it, eligibleQty, unitPrice, costUnit };
+    });
 
     let plannedRevenue = baseLines.reduce((s, l) => s + l.eligibleQty * l.unitPrice, 0);
 
-    // إذا كان الطلب جزئياً ولم نستطع تحديد الكميات المسلَّمة من البنود،
-    // نشتقّ نسبة التسليم من النسبة بين الإيراد الحقيقي وإيراد البنود الأصلية
-    const isPartialMissingData = (o.order_type === 'partial_delivery') && plannedRevenue === 0;
+    // طلب جزئي بدون بيانات quantity_delivered → نشتقّ النسبة من الإيراد الحقيقي
+    const isPartialMissingData = isPartial && plannedRevenue === 0 && realRevenue > 0;
     let derivedLines = baseLines;
     if (isPartialMissingData) {
-      const incomingFiltered = items.filter((it) => it.item_direction !== 'incoming');
-      const originalTotalQty = incomingFiltered.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
-      const originalRevenue = incomingFiltered.reduce(
+      const originalTotalQty = lineItems.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+      const originalRevenue = lineItems.reduce(
         (s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0
       );
       const fraction = originalRevenue > 0 ? Math.min(1, Math.max(0, realRevenue / originalRevenue)) : 0;
-      // العدد الكلي للقطع المسلَّمة فعلياً (مقرّب)
       let remaining = Math.round(originalTotalQty * fraction);
-      // نوزّع الكميات من البنود الأعلى سعراً أولاً للحفاظ على توازن الإيراد
-      const ordered = [...incomingFiltered].sort((a, b) =>
+      const ordered = [...lineItems].sort((a, b) =>
         (Number(b.unit_price) || 0) - (Number(a.unit_price) || 0)
       );
       const qtyByItem = new Map();
@@ -132,7 +132,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
         qtyByItem.set(it, take);
         remaining -= take;
       });
-      derivedLines = incomingFiltered.map((it) => {
+      derivedLines = lineItems.map((it) => {
         const unitPrice = Number(it.unit_price) || 0;
         const costUnit = Number(it.products?.cost_price) || Number(it.product_variants?.cost_price) || 0;
         return { it, eligibleQty: qtyByItem.get(it) || 0, unitPrice, costUnit };
@@ -144,7 +144,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const productLinesInOrder = [];
 
     derivedLines.forEach(({ it, eligibleQty, unitPrice, costUnit }) => {
-      if (eligibleQty <= 0) return;
+      if (eligibleQty === 0) return;
       const lineRevenue = eligibleQty * unitPrice;
       const lineCost = eligibleQty * costUnit;
       const prod = ensureProduct(it);
@@ -168,7 +168,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
     if (creatorHasRule) {
       employeeBonusByEmp[creatorId] = (employeeBonusByEmp[creatorId] || 0) + delta;
-    } else if (orderItemsRevenue > 0) {
+    } else if (Math.abs(orderItemsRevenue) > 0.5) {
       productLinesInOrder.forEach((line) => {
         const share = line.revenue / orderItemsRevenue;
         const add = delta * share;
