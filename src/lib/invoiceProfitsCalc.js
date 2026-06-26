@@ -310,6 +310,10 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     offChannelOrders,
     // ✅ قائمة طلبات الزيادة/الخصم من الوسيط
     deltaOrders,
+    // ✅ قائمة الإرجاعات في هذه الفاتورة (قسم مستقل)
+    returnsOrders,
+    returnsCount: returnsOrders.length,
+    returnsTotalLoss,
   };
 }
 
