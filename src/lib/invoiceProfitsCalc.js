@@ -39,6 +39,13 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   let totalDelivery = 0;
   let totalDelta = 0;
   let revenueFromItemsAll = 0;
+  // ✅ Off-Channel: طلبات مبلغها من شركة التوصيل = 0 لكنها مُسلَّمة فعلاً
+  // (دفع إلكتروني/تحويل مباشر للموظف أو المالك يتحمل التوصيل).
+  // ليست راجعة! تُحسب القطع والتكلفة والربح بشكل طبيعي، والتوصيل يُسجَّل كتحمّل.
+  let offChannelCount = 0;
+  let offChannelAbsorbedDelivery = 0;
+  let offChannelExpectedAmount = 0; // الإيراد "المُستحَق" off-channel (ما قبضه الموظف/المالك خارج القناة)
+  const offChannelOrders = [];
 
   const ensureOwner = (ownerId) => {
     if (!byOwner[ownerId]) byOwner[ownerId] = { revenue: 0, cost: 0, items: 0, products: [] };
@@ -86,19 +93,45 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const baseAmount = hasInvoiceAmount
       ? (Number(o.invoice_order_amount) || 0)
       : (Number(o.final_amount) || Number(o.total_amount) || 0);
-    const realRevenue = baseAmount - deliveryFee;
-    totalRevenue += realRevenue;
 
     const items = itemsByOrder.get(o.id) || [];
 
-    // تصنيف الطلب:
-    // - راجع كلياً: order_type='return' أو status='returned' مع مبلغ ≤ 0
-    //   أو طلب عادي/أي نوع آخر مع وجود مبلغ فاتورة محدد = 0 (شركة التوصيل لم تدفع شيئاً = لا بيع فعلي)
+    // ============================================================
+    // تصنيف الطلب (المعيار العالمي — لا نستخدم المبلغ كدليل على الإرجاع أبداً)
+    //   الإرجاع الحقيقي يُعرف من الحالة فقط:
+    //   - order_type === 'return'
+    //   - delivery_status === '17' (راجع للتاجر — الوسيط)
+    //   - status === 'returned'  (مع بنود راجعة فعلاً)
+    //   - كل البنود quantity_returned == quantity
+    // ============================================================
     const isReturnType = (o.order_type === 'return');
     const isStatusReturned = (o.status === 'returned');
-    const zeroInvoice = hasInvoiceAmount && Number(baseAmount) === 0;
-    const isFullReturn = isReturnType || (isStatusReturned && baseAmount <= 0) || (zeroInvoice && o.order_type !== 'partial_delivery');
-    const isPartial = (o.order_type === 'partial_delivery') || (isStatusReturned && baseAmount > 0);
+    const isDeliveryReturned = (String(o.delivery_status || '') === '17');
+    const allItemsReturned = items.length > 0 && items.every((it) => {
+      const q = Number(it.quantity) || 0;
+      const qr = Number(it.quantity_returned) || 0;
+      const qd = Number(it.quantity_delivered) || 0;
+      return q > 0 && qr >= q && qd === 0;
+    });
+    const isFullReturn = isReturnType || isDeliveryReturned || (isStatusReturned && allItemsReturned) || allItemsReturned;
+
+    // Off-Channel: مبلغ شركة التوصيل = 0 لكن الطلب غير راجع وغير جزئي
+    //   (دفع إلكتروني / المالك يتحمل التوصيل) — يُعامل كبيع طبيعي محاسبياً.
+    const isPartial = (o.order_type === 'partial_delivery') || (isStatusReturned && baseAmount > 0 && !allItemsReturned);
+    const isOffChannel = hasInvoiceAmount && Number(baseAmount) === 0 && !isFullReturn && !isPartial;
+
+    // الإيراد الحقيقي للقناة (ما دفعته شركة التوصيل فعلاً، يخصم منه التوصيل)
+    const realRevenue = baseAmount - deliveryFee;
+    // محاسبياً: للـ off-channel نعتمد الإيراد المُخطَّط (Σ price × qty) لأن المالك/الموظف
+    // قبض المبلغ خارج القناة. للحالات الأخرى نستخدم realRevenue.
+    // (سنحسب accountedRevenue بعد بناء plannedRevenue أدناه.)
+    if (!isOffChannel) {
+      totalRevenue += realRevenue;
+    }
+    if (isOffChannel) {
+      offChannelCount += 1;
+      offChannelAbsorbedDelivery += deliveryFee;
+    }
 
     // البنود المعتبرة: للطلب الراجع كلياً نستخدم بنود incoming (تمثّل ما عاد)؛
     // لباقي الطلبات نستثني incoming لأنها مدخلات استبدال.
@@ -159,6 +192,27 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     });
     revenueFromItemsAll += orderItemsRevenue;
 
+    // ============================================================
+    // Off-Channel: المبلغ من القناة = 0 لكن الطلب مُسلَّم
+    //   - الإيراد المحاسبي = plannedRevenue (Σ price × qty الفعلية المُسلَّمة)
+    //   - delta = 0 (لا زيادة/خصم — المبلغ غير عابر للقناة)
+    //   - تُسجَّل القيمة المتوقّعة off-channel للعرض/التسوية مع الموظف لاحقاً
+    //   - لا يدخل إيراد القناة (totalRevenue غير متأثر)
+    // ============================================================
+    if (isOffChannel) {
+      offChannelExpectedAmount += orderItemsRevenue;
+      offChannelOrders.push({
+        order_id: o.id,
+        created_by: o.created_by || null,
+        expected_amount: orderItemsRevenue, // المبلغ المتوقَّع تحصيله off-channel
+        delivery_fee_absorbed: deliveryFee,
+        items: orderItemsRevenue,
+      });
+      // محاسبياً نضيف plannedRevenue للإيراد الكلي حتى يطابق التكلفة والربح يصبح حقيقياً
+      totalRevenue += orderItemsRevenue;
+      return; // لا delta ولا توزيع زيادة/خصم
+    }
+
     const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange';
     const delta = isExchange ? 0 : (realRevenue - orderItemsRevenue);
     totalDelta += delta;
@@ -208,6 +262,11 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     byOwner,
     productsList, productCount: productsList.length,
     itemsAvailable: productsList.length > 0,
+    // ✅ Off-Channel (تحصيلات خارج قناة شركة التوصيل)
+    offChannelCount,
+    offChannelAbsorbedDelivery,
+    offChannelExpectedAmount,
+    offChannelOrders,
   };
 }
 
