@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Banknote, Hash, User as UserIcon, AlertCircle, Undo2 } from 'lucide-react';
+import OffChannelClassifyDialog from '@/components/orders/OffChannelClassifyDialog';
 
 /**
  * قائمة "طلبات تحتاج انتباهك" داخل تفاصيل الفاتورة.
