@@ -192,6 +192,27 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     });
     revenueFromItemsAll += orderItemsRevenue;
 
+    // ============================================================
+    // Off-Channel: المبلغ من القناة = 0 لكن الطلب مُسلَّم
+    //   - الإيراد المحاسبي = plannedRevenue (Σ price × qty الفعلية المُسلَّمة)
+    //   - delta = 0 (لا زيادة/خصم — المبلغ غير عابر للقناة)
+    //   - تُسجَّل القيمة المتوقّعة off-channel للعرض/التسوية مع الموظف لاحقاً
+    //   - لا يدخل إيراد القناة (totalRevenue غير متأثر)
+    // ============================================================
+    if (isOffChannel) {
+      offChannelExpectedAmount += orderItemsRevenue;
+      offChannelOrders.push({
+        order_id: o.id,
+        created_by: o.created_by || null,
+        expected_amount: orderItemsRevenue, // المبلغ المتوقَّع تحصيله off-channel
+        delivery_fee_absorbed: deliveryFee,
+        items: orderItemsRevenue,
+      });
+      // محاسبياً نضيف plannedRevenue للإيراد الكلي حتى يطابق التكلفة والربح يصبح حقيقياً
+      totalRevenue += orderItemsRevenue;
+      return; // لا delta ولا توزيع زيادة/خصم
+    }
+
     const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange';
     const delta = isExchange ? 0 : (realRevenue - orderItemsRevenue);
     totalDelta += delta;
