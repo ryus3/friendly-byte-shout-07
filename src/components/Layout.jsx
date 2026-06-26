@@ -20,6 +20,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery.js';
 import FloatingCartButton from '@/components/orders/FloatingCartButton.jsx';
 import CartDialog from '@/components/orders/CartDialog.jsx';
 import AiOrdersManager from '@/components/dashboard/AiOrdersManager.jsx';
+import OffChannelMandatoryDialog from '@/components/accounting/OffChannelMandatoryDialog.jsx';
 import SyncStatusIndicator from '@/components/SyncStatusIndicator.jsx';
 import { Helmet } from 'react-helmet-async';
 import ryusLogo from '@/assets/ryus-logo-new.png';
@@ -461,6 +462,9 @@ const Layout = ({ children }) => {
             />
           )}
         </AnimatePresence>
+
+        {/* نافذة تأكيد التحصيلات الإجبارية للمالك (تظهر تلقائياً عند وجود تحصيلات معلقة) */}
+        <OffChannelMandatoryDialog />
       </div>
     );
   };

@@ -1,59 +1,67 @@
 
-## المشكلة (فاتورة 3623484)
+## الخطة الكاملة
 
-### 1. الإشعار والتأكيد للمالك لا يعملان
-- جدول `off_channel_collections` فيه جميع السجلات بحالة `pending_classification` (وليس `pending_owner_confirmation`).
-- الـ trigger `trg_notify_owner_off_channel` يُرسل الإشعار **فقط** عند الانتقال إلى `pending_owner_confirmation`.
-- نافذة التصنيف `OffChannelClassifyDialog` موجودة داخل تبويب "طلبات الفاتورة الخاصة" لكنها لم تُستخدم على هذه الفاتورة، لذلك لا يصل أي إشعار.
-- صفحة الـ Inbox `/off-channel-inbox` موجودة لكن **لا يوجد أي رابط لها** في القائمة الجانبية أو شريط الإشعارات أو أي مكان مرئي للمالك.
+### 1) كرت "تحصيلات بانتظار التأكيد" في الداشبورد
+- إنشاء `PendingCollectionsCard.jsx` بنفس تصميم باقي كروت `UnifiedDashboard` (نفس الـ gradient، نفس الأيقونة الأنيقة `Wallet`/`HandCoins`، نفس Glow وShadow وHover).
+- موضعه: مباشرة **أسفل كرت "متابعة الموظفين"**.
+- يظهر للمدير وللمالك (يفلتر النتائج حسب الصلاحيات تلقائياً عبر RLS).
+- يحتوي على **Badge أحمر بعدد التحصيلات المنتظرة** (نفس نمط Badge الإشعارات).
+- العنوان: "تحصيلات بانتظار التأكيد".
+- النقر يفتح صفحة `/off-channel-inbox` الاحترافية.
 
-### 2. حساب الإيراد المحاسبي خاطئ
-- المعروض حالياً: **955,000** (من شركة التوصيل 930k + خارج القناة 25k).
-- المطلوب قبل تأكيد المالك: **950,000** (= مبلغ الفاتورة الفعلي من شركة التوصيل، يشمل خصم اجور توصيل الـ off-channel).
-- المطلوب بعد تأكيد المالك: **975,000** (= 950k + 25k المُستلَم خارج القناة).
-- السبب: الكود حالياً يجمع `invoice_order_amount - delivery_fee` لكل طلب على حدة، ثم يضيف الـ off-channel، فينتج 955k. الصحيح هو الاعتماد على `delivery_invoices.amount` كمصدر حقيقة لإيراد القناة، ثم إضافة الـ off-channel المؤكَّد فقط.
+### 2) نافذة تأكيد إجبارية للمالك (Both: كرت + Modal)
+- بمجرد دخول المالك للتطبيق وجود تحصيلات معلقة → **Modal إجباري** (لا يمكن إغلاقه بـ Escape أو خارج النقر) يعرض كل التحصيلات.
+- نفس فلسفة نافذة التسليم الجزئي: إجبارية لكن مع زر "تأجيل لاحقاً" (snooze ساعة) ليس "إلغاء".
+- كل سطر يعرض: رقم الطلب + اسم الزبون + المبلغ + زرّان كبيران: **"استلمت المبلغ ✅"** و **"لم يصلني ❌"**.
+- نفس النافذة متاحة من الكرت في الداشبورد (غير إجبارية حينها).
+
+### 3) صفحة `OffChannelOwnerInbox.jsx` احترافية
+- إعادة تصميم بطابع عالمي: Cards بـ glass-morphism + تدرّجات + Skeleton loaders + Empty state أنيق + Filters (الكل/معلق/مؤكد/مرفوض).
+- للمدير: يرى كل التحصيلات + قدرة التأكيد نيابة عن المالك بزر "تأكيد كمدير".
+- للمالك: يرى تحصيلاته فقط + زرّي تأكيد/رفض.
+- Real-time updates عند تغيير الحالة.
+
+### 4) إصلاح وصول الإشعار للمالك الفعلي
+- ميغريشن: تعديل `notify_owner_off_channel_pending` ليُرجع `owner_user_id` من `order_items.products.owner_user_id` (وليس منشئ الفاتورة).
+- Backfill: إعادة تعيين `owner_user_id` للسجلات الموجودة (خاصة طلب 149922672) وإرسال الإشعارات للملاك الصحيحين.
+
+### 5) إصلاح الموافقة على الطلبات الذكية (مشكلة المدير العام + "نايك نيلي")
+
+**التشخيص الفعلي من الكود (`SuperProvider.jsx` سطر 2107-2155):**
+- المطابقة الحالية تستخدم `lowercase(p.name) === name` ثم `.includes(name)`. عندما يرسل AI اسماً مركباً مثل `"نايك نيلي"`، لا يطابق منتجاً اسمه `"نايك"` فيعود `notMatched` ويتم الإرجاع `success:false` بصمت داخل حلقة الـ bulk.
+- في حساب المدير العام تحديداً: عند الموافقة، يظهر toast "جاري المعالجة" ثم يختفي بدون toast نهائي لأن الـ loop ينتهي مع `successIds=[]` و`failedResults` لا يصل للمستخدم بسبب timing الـ toasts المتتالية يطغى بعضها على بعض.
+
+**الإصلاحات:**
+- **مطابقة ذكية موحّدة** (function `smartMatchProduct`):
+  - تقسيم الاسم المركب إلى أجزاء (split على المسافات).
+  - استخراج الجزء الأول كاسم منتج محتمل والباقي كلون/مقاس.
+  - مطابقة المنتج بأطول prefix مشترك، ثم البحث في variants عن أي جزء يطابق `color` أو `size`.
+  - مثال: `"نايك نيلي"` → منتج=`"نايك"` + لون=`"نيلي"` ✅.
+- **توحيد عرض الأخطاء**: استبدال toasts المتعاقبة بـ **toast واحد محدّث** (id ثابت) يعرض التقدم، وtoast نهائي مفصّل بأسباب الفشل لكل طلب فاشل.
+- **منع النقر المزدوج**: إضافة `useRef(isProcessingRef)` يمنع `handleBulkAction` من التشغيل المتوازي.
+- **clear state عند الانتهاء**: التأكد من تنظيف `selectedOrders` وإعادة `isProcessingRef=false` في `finally` بدلاً من نهاية try.
+- **تشخيص واضح للمدير**: لو الفشل سببه أن منشئ الطلب الأصلي ليس لديه حساب توصيل نشط، يظهر toast صريح: "الموظف X ليس لديه حساب نشط في الوسيط".
+
+### 6) إصلاح "950 vs 925" في الفاتورة
+- في `InvoiceProfitsTab.jsx`: استخدام `invoiceAmount` كمصدر وحيد لسطر "من شركة التوصيل" (= 950,000). إزالة أي حساب يطرح/يجمع شيئاً منه في هذا السطر.
 
 ---
 
-## خطة الإصلاح
+### الملفات المتأثرة
+```text
+src/components/dashboard/PendingCollectionsCard.jsx          (جديد)
+src/components/dashboard/UnifiedDashboard.jsx                (إضافة الكرت)
+src/components/accounting/OffChannelMandatoryDialog.jsx      (جديد - النافذة الإجبارية)
+src/components/Layout.jsx                                    (Mount الـ Dialog عالمياً)
+src/components/accounting/OffChannelOwnerInbox.jsx           (إعادة تصميم)
+src/components/orders/InvoiceProfitsTab.jsx                  (إصلاح 950)
+src/contexts/SuperProvider.jsx                               (smartMatchProduct)
+src/components/dashboard/AiOrdersManager.jsx                 (toast واحد + isProcessingRef + finally)
+supabase/migrations/<new>.sql                                (owner_user_id من المنتج + backfill)
+```
 
-### أ) تصحيح حساب "الإيراد المحاسبي" في `src/lib/invoiceProfitsCalc.js`
-- إضافة وسيط `invoiceAmount` (= `delivery_invoices.amount`) إلى `computeInvoiceProfits`.
-- تعديل منطق `totalRevenue`:
-  - **قبل تأكيد الـ off-channel**: `totalRevenue = invoiceAmount` (مثلاً 950,000).
-  - **بعد تأكيد الـ off-channel**: `totalRevenue = invoiceAmount + Σ(off_channel المؤكَّد customer_paid_amount)` (مثلاً 950 + 25 = 975).
-- `channelRevenue` يبقى مشتق من `invoiceAmount` (بدون أجور توصيل القناة فقط، لا الـ off-channel).
-- `revenueFromItems` و`totalCost` و`netForOwners` تتبع نفس القاعدة بحيث "صافي الربح" يتطابق مع المنطق الجديد.
-- تحديث `fetchInvoiceProfitsData` لجلب `delivery_invoices.amount` للفاتورة، وتمريرها للحاسبة.
-- تحديث `src/components/orders/InvoiceProfitsTab.jsx` لتمرير `invoiceAmount` للحاسبة.
-
-### ب) تفعيل إشعار المالك تلقائياً + UI واضح للتأكيد
-- **Migration جديد**:
-  1. تحديث الـ trigger `notify_owner_off_channel_pending` ليُرسل الإشعار أيضاً عند الحالة الأولية `pending_classification` إذا كان `owner_user_id` معروف وحُسب `owner_due_amount > 0` لاحقاً (وأيضاً عند التحوّل لـ `pending_owner_confirmation`).
-  2. RPC اختياري `auto_classify_off_channel(order_id)` يصنّف تلقائياً بناءً على `total_amount` و`delivery_fee` (نوع `electronic_payment` افتراضياً) عند الحاجة — لكن لن نُفعّله افتراضياً، نتركه يدوياً.
-  3. **والأهم**: استدعاء الإشعار حتى للسجلات الموجودة حالياً بحالة `pending_classification` (تنبيه المالك بأن هناك طلباً يحتاج تصنيف ثم تأكيد).
-
-- **واجهة جديدة للوصول السريع**:
-  - إضافة بطاقة "📥 تحصيلات بانتظار تأكيدي" في الصفحة الرئيسية (Dashboard) أو في شريط الإشعارات، تعرض العداد وتربط إلى `/off-channel-inbox`.
-  - إضافة عنصر قائمة في `BottomNav` / `Layout` للمالك (إذا `rows.length > 0` في `useOffChannelCollections({ scope:'inbox' })`).
-  - تحسين `OffChannelOwnerInbox.jsx`: عرض المبلغ بشكل أوضح، إضافة معلومات الطلب (المنتج، الزبون)، تفعيل زر "لم يصلني" (يُرجع الحالة ويُنشئ ملاحظة).
-
-### ج) التحقق
-- فتح فاتورة 3623484 والتأكد:
-  - "إجمالي الإيراد المحاسبي" = **950,000 د.ع** قبل التأكيد.
-  - الضغط على "استلمت" من inbox المالك → يصبح **975,000 د.ع**.
-  - وصول إشعار للمالك مع رابط مباشر إلى `/off-channel-inbox`.
-
----
-
-## الملفات المتأثرة
-
-1. `src/lib/invoiceProfitsCalc.js` — تعديل منطق `totalRevenue` ليعتمد على `invoiceAmount`.
-2. `src/components/orders/InvoiceProfitsTab.jsx` — تمرير `invoiceAmount` للحاسبة.
-3. `src/components/accounting/OffChannelOwnerInbox.jsx` — تحسين العرض وتفعيل "لم يصلني".
-4. `src/components/Layout.jsx` أو `BottomNav.jsx` — إضافة رابط/شارة "تحصيلات بانتظار تأكيدي".
-5. Migration جديد:
-   - توسعة trigger الإشعار ليرسل عند `pending_classification` أيضاً.
-   - إرسال إشعارات تعويضية للسجلات الحالية بحالة `pending_classification` التي لم تصل لمالكها.
-
-لا يوجد تغيير في `byOwner` أو `productMap` أو منطق توزيع الأرباح/الإرجاع — هذه طبقات سليمة من الإصلاح السابق.
+### تفاصيل تقنية للمطوّر
+- النافذة الإجبارية تُركّب في `Layout.jsx` بشرط `rows.length > 0 && !snoozedUntil`.
+- `snoozedUntil` يُحفظ في `localStorage` لمدة ساعة فقط ثم تظهر مجدداً.
+- `smartMatchProduct` يُستخرج كـ utility في `src/lib/aiOrderMatcher.js` لإعادة الاستخدام.
+- Badge يستخدم `useOffChannelCollections` الحالي (يعيد `rows.length`).

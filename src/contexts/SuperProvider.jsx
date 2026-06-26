@@ -2099,15 +2099,12 @@ export const SuperProvider = ({ children }) => {
             tokenPartner: accountData?.partner_name
           });
           
-          // مطابقة العناصر مع المنتجات الموجودة
+          // مطابقة العناصر مع المنتجات الموجودة — استخدام المطابق الذكي الموحّد
           const products = Array.isArray(allData.products) ? allData.products : [];
-          const lowercase = (v) => (v || '').toString().trim().toLowerCase();
+          const { smartMatchProduct } = await import('@/lib/aiOrderMatcher.js');
           const notMatched = [];
 
         const matchedItems = itemsInput.map((it) => {
-          const name = lowercase(it.product_name || it.name);
-          const color = lowercase(it.color);
-          const size = lowercase(it.size);
           const qty = Number(it.quantity || 1);
           const price = Number(it.unit_price || it.price || 0);
 
@@ -2121,36 +2118,23 @@ export const SuperProvider = ({ children }) => {
             };
           }
 
-          // ابحث بالاسم
-          let product = products.find(p => lowercase(p.name) === name) 
-            || products.find(p => lowercase(p.name).includes(name));
-
-          if (!product) {
+          // مطابقة ذكية: تدعم أسماء مركبة مثل "نايك نيلي" (منتج=نايك، لون=نيلي)
+          const match = smartMatchProduct(products, it);
+          if (!match || !match.product) {
             notMatched.push(it.product_name || it.name || 'منتج غير معروف');
             return null;
           }
-
-          // مطابقة المتغير (اللون/المقاس)
-          const variants = Array.isArray(product.variants) ? product.variants : (product.product_variants || []);
-          let variant = null;
-          if (variants.length === 1) {
-            variant = variants[0];
-          } else {
-            variant = variants.find(v => lowercase(v.color || v.color_name) === color && lowercase(v.size || v.size_name) === size)
-                   || variants.find(v => lowercase(v.color || v.color_name) === color)
-                   || variants.find(v => lowercase(v.size || v.size_name) === size);
-          }
-
-          if (!variant) {
-            notMatched.push(`${product.name}${it.color || it.size ? ` (${it.color || ''} ${it.size || ''})` : ''}`);
+          if (!match.variant) {
+            const extras = [it.color, it.size].filter(Boolean).join(' ');
+            notMatched.push(`${match.product.name}${extras ? ` (${extras})` : ''}`);
             return null;
           }
 
           return {
-            product_id: product.id,
-            variant_id: variant.id,
+            product_id: match.product.id,
+            variant_id: match.variant.id,
             quantity: qty,
-            unit_price: price || Number(variant.price || 0),
+            unit_price: price || Number(match.variant.price || 0),
           };
         });
 

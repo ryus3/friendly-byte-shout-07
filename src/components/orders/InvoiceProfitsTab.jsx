@@ -244,7 +244,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     <div className="space-y-4 p-1" dir="rtl">
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <RevenueSplitCard
-          channel={Number(invoice?.amount) || (calc.totalRevenue - calc.offChannelExpectedAmount)}
+          channel={data.invoiceAmount ?? Number(invoice?.amount) ?? 0}
           expectedChannel={calc.channelRevenue}
           offChannel={calc.offChannelExpectedAmount}
           returnsLoss={Math.abs(calc.returnsTotalLoss || 0)}

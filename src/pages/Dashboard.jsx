@@ -39,6 +39,7 @@ import { supabase } from '@/integrations/supabase/client';
 import ReceiptReceiptDialog from '@/components/orders/ReceiptReceiptDialog';
 import { toast } from '@/components/ui/use-toast';
 import EmployeeReceivedProfitsCard from '@/components/shared/EmployeeReceivedProfitsCard';
+import PendingCollectionsCard from '@/components/dashboard/PendingCollectionsCard';
 import devLog from '@/lib/devLogger';
 
 const SummaryDialog = ({ open, onClose, title, orders, onDetailsClick, periodLabel }) => {
@@ -923,6 +924,11 @@ const Dashboard = () => {
                       </>
                     )}
                 </div>
+                {/* كرت "تحصيلات بانتظار التأكيد" — يظهر لكل من له منتجات (مالك/مدير/موظف) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+                    <PendingCollectionsCard />
+                </div>
+
                 {/* الترتيب الجديد: الطلبات الأخيرة → تنبيهات المخزون → المنتجات → المحافظات → الزبائن */}
                 <div className="grid grid-cols-1 gap-4 sm:gap-6">
                     <RecentOrdersCard recentOrders={recentOrdersForDashboard} />
