@@ -22,7 +22,7 @@
  * @param {Array} args.offChannelCollections صفوف off_channel_collections المسجلة لهذه الفاتورة
  * @param {Set<string>} args.employeesWithRules مجموعة employee_id لهم قاعدة ربح فعّالة
  */
-export function computeInvoiceProfits({ orders = [], orderItems = [], profits = [], employeesWithRules = new Set(), offChannelCollections = [] }) {
+export function computeInvoiceProfits({ orders = [], orderItems = [], profits = [], employeesWithRules = new Set(), offChannelCollections = [], invoiceAmount = null }) {
   const itemsByOrder = new Map();
   (orderItems || []).forEach((it) => {
     if (!itemsByOrder.has(it.order_id)) itemsByOrder.set(it.order_id, []);
