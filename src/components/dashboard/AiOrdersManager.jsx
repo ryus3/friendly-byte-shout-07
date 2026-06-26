@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -472,17 +472,18 @@ useEffect(() => {
     }
   };
 
+  const isProcessingRef = useRef(false);
+
   const handleBulkAction = async (action) => {
     if (selectedOrders.length === 0) return;
-    
-    // التحقق من صحة الوجهة والحساب قبل الموافقة
-    if (action === 'approve') {
-      // ملاحظة: لم نعد نمنع الموافقة عند غياب الحساب في الدفعة. الخادم يختار
-      // حساب منشئ كل طلب تلقائياً في الشريك المختار (مدير → موظف).
+
+    // 🛡️ منع النقر المزدوج / التشغيل المتوازي
+    if (isProcessingRef.current) {
+      toast({ title: 'يرجى الانتظار', description: 'هناك عملية قيد التنفيذ بالفعل…', variant: 'default' });
+      return;
     }
+    isProcessingRef.current = true;
 
-
-    
     try {
       if (action === 'approve') {
         const approvedIds = [...selectedOrders];
@@ -490,8 +491,8 @@ useEffect(() => {
         const failedResults = [];
         let processed = 0;
         const delayMs = orderDestination.destination === 'local' ? 220 : 1100;
-        
-        // ⏱️ Timeout صارم لكل طلب: يحمي الدفعة من التوقف بسبب طلب واحد بطيء
+
+        // ⏱️ Timeout صارم لكل طلب
         const PER_ORDER_TIMEOUT_MS = orderDestination.destination === 'local' ? 15000 : 45000;
         const withTimeout = (promise, ms) => Promise.race([
           promise,
@@ -501,14 +502,26 @@ useEffect(() => {
           ))
         ]);
 
+        // ✅ Toast واحد بـ id ثابت يُحدَّث (بدلاً من toasts متعاقبة تطغى على بعضها)
+        const PROGRESS_TOAST_ID = 'ai-bulk-approve-progress';
+        toast({
+          id: PROGRESS_TOAST_ID,
+          title: 'جاري المعالجة...',
+          description: `0 / ${approvedIds.length}`,
+          variant: 'default',
+          duration: 1000 * 60 * 5,
+        });
+
         for (const id of approvedIds) {
           processed++;
-          toast({ 
-            title: 'جاري المعالجة...', 
-            description: `تمت معالجة ${processed} من ${approvedIds.length} طلب`, 
-            variant: 'default' 
+          toast({
+            id: PROGRESS_TOAST_ID,
+            title: 'جاري المعالجة...',
+            description: `${processed} / ${approvedIds.length}`,
+            variant: 'default',
+            duration: 1000 * 60 * 5,
           });
-          
+
           let result;
           try {
             result = await withTimeout(
@@ -518,46 +531,54 @@ useEffect(() => {
           } catch (timeoutErr) {
             result = { success: false, error: timeoutErr.message };
           }
-          
+
           if (result?.success) {
             successIds.push(id);
             setOrders(prev => prev.filter(o => o.id !== id));
-            // ✅ تحديث فوري للعداد المحدد
             setSelectedOrders(prev => prev.filter(x => x !== id));
             setProcessedOrders(prev => prev.includes(id) ? prev : [...prev, id]);
           } else {
             failedResults.push({ id, error: result?.error || 'فشل غير معروف' });
           }
-          
-          // تأخير ذكي بين الطلبات: المحلي سريع، شركة التوصيل أبطأ لحماية WAF/Rate limit
+
           if (processed < approvedIds.length) {
             await new Promise(resolve => setTimeout(resolve, delayMs));
           }
         }
-        
-        // تحديث حالة الطلبات المعتمدة لمنع إعادة ظهورها
+
+        // تحديث حالة الطلبات المعتمدة
         if (successIds.length > 0) {
-          await supabase
-            .from('ai_orders')
-            .update({ status: 'approved' })
-            .in('id', successIds);
-        }
-        
-        // إضافة الطلبات المعتمدة للمعالجة
-        if (successIds.length > 0) {
+          await supabase.from('ai_orders').update({ status: 'approved' }).in('id', successIds);
           setProcessedOrders(prev => [...prev, ...successIds]);
           successIds.forEach(id => {
             try { window.dispatchEvent(new CustomEvent('aiOrderApproved', { detail: { id } })); } catch {}
           });
-          toast({ title: 'تمت الموافقة', description: `تمت الموافقة على ${successIds.length} طلب بنجاح`, variant: 'success' });
         }
-        if (failedResults.length > 0) {
-          const firstReason = failedResults[0]?.error || 'غير محدد';
+
+        // ✅ Toast نهائي واضح (يستبدل toast التقدم)
+        if (successIds.length > 0 && failedResults.length === 0) {
           toast({
-            title: 'تنبيه',
-            description: `فشل في الموافقة على ${failedResults.length} طلب. السبب الأول: ${firstReason}`,
+            id: PROGRESS_TOAST_ID,
+            title: '✅ تمت الموافقة',
+            description: `تمت الموافقة على ${successIds.length} طلب بنجاح`,
+            variant: 'success',
+            duration: 5000,
+          });
+        } else if (successIds.length > 0 && failedResults.length > 0) {
+          toast({
+            id: PROGRESS_TOAST_ID,
+            title: 'اكتمل مع تنبيهات',
+            description: `نجح ${successIds.length} • فشل ${failedResults.length}. أول سبب: ${failedResults[0].error}`,
             variant: 'destructive',
-            duration: 9000
+            duration: 12000,
+          });
+        } else {
+          toast({
+            id: PROGRESS_TOAST_ID,
+            title: '❌ فشلت الموافقة',
+            description: failedResults[0]?.error || 'لم تنجح أي عملية موافقة',
+            variant: 'destructive',
+            duration: 12000,
           });
         }
         
