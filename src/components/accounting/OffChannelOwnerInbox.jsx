@@ -39,30 +39,7 @@ const OffChannelOwnerInbox = () => {
 
   const handleConfirm = async (row) => {
     setBusyId(row.id);
-    // أولاً سجل حركة نقد (إيراد off-channel)
-    try {
-      if (row.owner_due_amount > 0) {
-        const { data: cs } = await supabase.from('cash_sources')
-          .select('id').eq('user_id', row.owner_user_id).eq('is_main', true).maybeSingle();
-        if (cs?.id) {
-          const { data: cm } = await supabase.from('cash_movements').insert({
-            cash_source_id: cs.id,
-            amount: row.owner_due_amount,
-            movement_type: 'in',
-            reference_type: 'off_channel_receipt',
-            reference_id: row.order_id,
-            description: `تحصيل خارج القناة من ${usersMap[row.collector_user_id] || 'الموظف'}`,
-            created_by: row.owner_user_id,
-          }).select('id').maybeSingle();
-          if (cm?.id) {
-            await supabase.from('off_channel_collections')
-              .update({ cash_movement_id: cm.id }).eq('id', row.id);
-          }
-        }
-      }
-    } catch (e) {
-      // نتجاهل الخطأ ونكمل الإقفال — يمكن للمالك معالجته يدوياً لاحقاً
-    }
+    // حركة النقد تُنشأ تلقائياً بواسطة trigger create_off_channel_cash_movement_on_settle
     const { error } = await confirmReceipt(row.id, true);
     setBusyId(null);
     if (error) toast({ variant: 'destructive', title: 'فشل التأكيد', description: error.message });
