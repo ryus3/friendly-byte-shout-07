@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { HandCoins } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useOffChannelCollections } from '@/hooks/useOffChannelCollections';
+import { usePermissions } from '@/hooks/usePermissions';
 
 /**
  * كرت "تحصيلات بانتظار التأكيد" — يظهر في الداشبورد بنفس تصميم StatCard.
@@ -12,7 +13,8 @@ import { useOffChannelCollections } from '@/hooks/useOffChannelCollections';
  */
 const PendingCollectionsCard = () => {
   const navigate = useNavigate();
-  const { rows, loading } = useOffChannelCollections({ scope: 'inbox' });
+  const { isAdmin } = usePermissions();
+  const { rows, loading } = useOffChannelCollections({ scope: isAdmin ? 'manager_pending' : 'inbox' });
   const count = rows.length;
 
   return (
