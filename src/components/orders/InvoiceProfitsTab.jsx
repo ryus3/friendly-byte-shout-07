@@ -228,10 +228,12 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <StatCard icon={TrendingUp} label="إجمالي الإيراد" sub="حسب شركة التوصيل بدون توصيل" value={fmt(calc.totalRevenue)} color="blue" />
         <StatCard icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
-        <StatCard icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج`} value={`${calc.totalQty}`} color="purple" />
+        <StatCard icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج • مُسلَّمة فعلاً`} value={`${calc.totalQty}`} color="purple" />
         <StatCard icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
         <StatCard icon={Crown} label="صافي للمالكين" value={fmt(calc.netForOwners)} color="emerald" />
         <StatCard icon={Users} label="مستحقات الموظفين" sub={`${employeeEntriesWithCounts.length} موظف`} value={fmt(calc.employeeTotalCombined)} color="purple" />
+        <DeltaStatCard delta={calc.totalDelta} fmt={fmt} />
+        <OffChannelStatCard calc={calc} fmt={fmt} />
       </div>
 
       {employeeEntriesWithCounts.length > 0 && (
