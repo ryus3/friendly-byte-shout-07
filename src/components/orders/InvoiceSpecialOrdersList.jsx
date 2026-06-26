@@ -6,7 +6,7 @@ import OffChannelClassifyDialog from '@/components/orders/OffChannelClassifyDial
 
 /**
  * قائمة "طلبات تحتاج انتباهك" داخل تفاصيل الفاتورة.
- * ثلاثة أقسام:
+ * أربعة أقسام:
  *  🟢 زيادة من شركة التوصيل
  *  🟠 خصم من شركة التوصيل
  *  🔴 تحصيل خارج القناة (مبلغ الوسيط = 0 لكن الطلب مُسلَّم — دفع إلكتروني/المالك يتحمّل التوصيل)
@@ -90,6 +90,9 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
               {kind === 'offchannel' && item.delivery_fee_absorbed > 0 && (
                 <span className="ms-1">• توصيل {formatCur(item.delivery_fee_absorbed)}</span>
               )}
+              {kind === 'offchannel' && item.product_amount > 0 && (
+                <span className="ms-1">• منتج {formatCur(item.product_amount)}</span>
+              )}
               {kind === 'offchannel' && creatorName !== '—' && (
                 <span className="ms-1">• الموظف: {creatorName}</span>
               )}
@@ -107,6 +110,11 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
         <Badge variant="secondary" className={`font-bold ${cfg.amountColor} bg-background/60 border`}>
           {cfg.prefix}{formatCur(cfg.amount)}
         </Badge>
+        {kind === 'offchannel' && item.collection_status && item.collection_status !== 'pending_classification' && (
+          <Badge variant="outline" className="text-[10px] bg-background/60">
+            {item.collection_status === 'pending_owner_confirmation' ? 'بانتظار تأكيد المالك' : item.collection_status === 'settled' ? 'مؤكد' : item.collection_status}
+          </Badge>
+        )}
       </div>
     );
   };

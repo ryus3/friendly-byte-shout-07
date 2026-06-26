@@ -2,11 +2,11 @@
  * حاسبة أرباح الفاتورة الدقيقة (مصدر الحقيقة الموحد)
  *
  * المبادئ:
- * - الإيراد الحقيقي لكل طلب = final_amount - delivery_fee (ما أرسلته شركة التوصيل فعلاً).
+ * - الإيراد الحقيقي لكل طلب = مبلغ الفاتورة المرتبط بالطلب - delivery_fee (لأغراض ربح المنتجات).
  * - الكميات المباعة فعلياً فقط هي التي تدخل في الإحصاء:
  *    • للطلب العادي (regular/completed): كل الكميات.
  *    • للطلب الجزئي (partial_delivery): فقط quantity_delivered.
- *    • للطلب الراجع (return/returned): صفر.
+ *    • للطلب الراجع (order_type='return'): صفر — لا يُحسب كمنتج مباع.
  * - الإيراد الافتراضي للبنود = SUM(qty_eligible * unit_price).
  * - الفرق (delta) = الإيراد الحقيقي − الإيراد الافتراضي:
  *    • إذا كان منشئ الطلب لديه قاعدة ربح فعّالة → كامل الـ delta يُعرَض كزيادة/خصم للموظف
@@ -19,9 +19,10 @@
  * @param {Array} args.orders         صفوف orders {id, created_by, final_amount, total_amount, delivery_fee, order_type, status, delivery_status}
  * @param {Array} args.orderItems     صفوف order_items مع products + product_variants + quantity_delivered/quantity_returned/item_status
  * @param {Array} args.profits        صفوف profits {order_id, employee_id, employee_profit}
+ * @param {Array} args.offChannelCollections صفوف off_channel_collections المسجلة لهذه الفاتورة
  * @param {Set<string>} args.employeesWithRules مجموعة employee_id لهم قاعدة ربح فعّالة
  */
-export function computeInvoiceProfits({ orders = [], orderItems = [], profits = [], employeesWithRules = new Set() }) {
+export function computeInvoiceProfits({ orders = [], orderItems = [], profits = [], employeesWithRules = new Set(), offChannelCollections = [] }) {
   const itemsByOrder = new Map();
   (orderItems || []).forEach((it) => {
     if (!itemsByOrder.has(it.order_id)) itemsByOrder.set(it.order_id, []);
@@ -32,6 +33,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   const byOwner = {};    // ownerId -> { revenue, cost, items, products: [] }
   const employeeBonusByEmp = {}; // delta للعرض فقط
   const employeeProfitByEmp = {}; // من جدول profits (المصدر الفعلي)
+  const offChannelByOrder = new Map();
 
   let totalRevenue = 0;     // = Σ (final_amount - delivery_fee) للطلبات غير الراجعة
   let totalCost = 0;
@@ -76,10 +78,14 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     employeeProfitByEmp[k] = (employeeProfitByEmp[k] || 0) + (Number(p.employee_profit) || 0);
   });
 
+  (offChannelCollections || []).forEach((row) => {
+    if (row?.order_id) offChannelByOrder.set(row.order_id, row);
+  });
+
   // الكمية الفعلية المباعة لكل بند حسب نوع الطلب
-  // للطلب الراجع كلياً → سالبة (تخصم من الإيراد/التكلفة/العدد)
+  // للطلب الراجع كلياً → صفر، لأنه ليس بيعاً ولا يدخل ضمن عدد المنتجات المباعة
   const eligibleQtyOf = (order, it, isFullReturn) => {
-    if (isFullReturn) return -(Number(it.quantity) || 0);
+    if (isFullReturn) return 0;
     const orderType = order?.order_type || 'regular';
     if (orderType === 'partial_delivery') {
       const qd = Number(it.quantity_delivered) || 0;
@@ -104,29 +110,15 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const items = itemsByOrder.get(o.id) || [];
 
     // ============================================================
-    // تصنيف الطلب (المعيار العالمي — لا نستخدم المبلغ كدليل على الإرجاع أبداً)
-    //   الإرجاع الحقيقي يُعرف من الحالة فقط:
-    //   - order_type === 'return'
-    //   - delivery_status === '17' (راجع للتاجر — الوسيط)
-    //   - status === 'returned'  (مع بنود راجعة فعلاً)
-    //   - كل البنود quantity_returned == quantity
+    // تصنيف الطلب (قاعدة صارمة): الإرجاع يُعرف من نوع الطلب فقط.
+    // لا نعتمد delivery_status/status أبداً حتى لا تتحول حالة وسيط مثل 16 إلى إرجاع بالخطأ.
     // ============================================================
-    const isReturnType = (o.order_type === 'return');
-    const isStatusReturned = (o.status === 'returned');
-    // ✅ status 17 (راجع للتاجر) أو 16 (قيد الإرجاع في عهدة المندوب) كلاهما يعتبر إرجاع
-    const ds = String(o.delivery_status || '');
-    const isDeliveryReturned = (ds === '17' || ds === '16');
-    const allItemsReturned = items.length > 0 && items.every((it) => {
-      const q = Number(it.quantity) || 0;
-      const qr = Number(it.quantity_returned) || 0;
-      const qd = Number(it.quantity_delivered) || 0;
-      return q > 0 && qr >= q && qd === 0;
-    });
-    const isFullReturn = isReturnType || isDeliveryReturned || (isStatusReturned && allItemsReturned) || allItemsReturned;
+    const orderType = o.order_type || 'regular';
+    const isFullReturn = orderType === 'return';
 
     // Off-Channel: مبلغ شركة التوصيل = 0 لكن الطلب غير راجع وغير جزئي
     //   (دفع إلكتروني / المالك يتحمل التوصيل) — يُعامل كبيع طبيعي محاسبياً.
-    const isPartial = (o.order_type === 'partial_delivery') || (isStatusReturned && baseAmount > 0 && !allItemsReturned);
+    const isPartial = orderType === 'partial_delivery';
     const isOffChannel = hasInvoiceAmount && Number(baseAmount) === 0 && !isFullReturn && !isPartial;
 
     // الإيراد الحقيقي للقناة (ما دفعته شركة التوصيل فعلاً، يخصم منه التوصيل)
@@ -146,6 +138,9 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     // البنود المعتبرة: للطلب الراجع كلياً نستخدم بنود incoming (تمثّل ما عاد)؛
     // لباقي الطلبات نستثني incoming لأنها مدخلات استبدال.
     const lineItems = isFullReturn ? items : items.filter((it) => it.item_direction !== 'incoming');
+    const returnProductValue = isFullReturn
+      ? Math.abs(lineItems.reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0))
+      : 0;
 
     const baseLines = lineItems.map((it) => {
       const eligibleQty = eligibleQtyOf(o, it, isFullReturn);
@@ -210,12 +205,20 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     //   - لا يدخل إيراد القناة (totalRevenue غير متأثر)
     // ============================================================
     if (isOffChannel) {
-      offChannelExpectedAmount += orderItemsRevenue;
+      const record = offChannelByOrder.get(o.id);
+      const registeredPaid = Number(record?.customer_paid_amount) || 0;
+      const expectedPaid = registeredPaid > 0 ? registeredPaid : (orderItemsRevenue + deliveryFee);
+
+      offChannelExpectedAmount += expectedPaid;
       offChannelOrders.push({
         order_id: o.id,
         created_by: o.created_by || null,
-        expected_amount: orderItemsRevenue, // المبلغ المتوقَّع تحصيله off-channel
+        expected_amount: expectedPaid, // المبلغ المسجّل/المتوقَّع تحصيله off-channel شامل التوصيل
+        product_amount: orderItemsRevenue,
         delivery_fee_absorbed: deliveryFee,
+        collection_type: record?.collection_type || null,
+        collection_status: record?.status || 'pending_classification',
+        owner_due_amount: Number(record?.owner_due_amount) || 0,
         items: orderItemsRevenue,
       });
       // محاسبياً نضيف plannedRevenue للإيراد الكلي حتى يطابق التكلفة والربح يصبح حقيقياً
@@ -231,7 +234,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
         order_id: o.id,
         created_by: o.created_by || null,
         real_revenue: realRevenue,         // عادةً سالب (مثلاً -25,000)
-        planned_revenue: orderItemsRevenue, // عادةً سالب (مثلاً -20,000)
+        planned_revenue: -returnProductValue, // قيمة المنتج المرجعة للزبون (مثلاً -20,000)
         delivery_fee: deliveryFee,
       });
       returnsTotalLoss += realRevenue; // مجموع الخسارة الحقيقية من القناة
@@ -326,7 +329,7 @@ export async function fetchInvoiceProfitsData(supabase, orderIds) {
   if (!orderIds?.length) {
     return { orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} };
   }
-  const [{ data: oData }, { data: itemsData }, { data: pData }] = await Promise.all([
+  const [{ data: oData }, { data: itemsData }, { data: pData }, { data: occData }] = await Promise.all([
     supabase.from('orders')
       .select('id, created_by, final_amount, total_amount, delivery_fee, order_type, status, delivery_status')
       .in('id', orderIds),
@@ -340,6 +343,9 @@ export async function fetchInvoiceProfitsData(supabase, orderIds) {
       .in('order_id', orderIds),
     supabase.from('profits')
       .select('order_id, employee_id, employee_profit, profit_amount, total_revenue, total_cost, status')
+      .in('order_id', orderIds),
+    supabase.from('off_channel_collections')
+      .select('*')
       .in('order_id', orderIds),
   ]);
 
@@ -366,5 +372,5 @@ export async function fetchInvoiceProfitsData(supabase, orderIds) {
     (profs || []).forEach((p) => { namesMap[p.user_id] = p.full_name; });
   }
 
-  return { orders: oData || [], orderItems: itemsData || [], profits: pData || [], employeesWithRules, namesMap };
+  return { orders: oData || [], orderItems: itemsData || [], profits: pData || [], offChannelCollections: occData || [], employeesWithRules, namesMap };
 }

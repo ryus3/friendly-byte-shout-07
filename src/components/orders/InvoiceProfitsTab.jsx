@@ -5,7 +5,7 @@ import { Loader2, TrendingUp, TrendingDown, Wallet, Users, Package, Crown, Shiel
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { computeInvoiceProfits, fetchInvoiceProfitsData } from '@/lib/invoiceProfitsCalc';
+import { computeInvoiceProfits } from '@/lib/invoiceProfitsCalc';
 import InvoiceSpecialOrdersList from '@/components/orders/InvoiceSpecialOrdersList';
 
 /**
@@ -22,7 +22,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   const { isAdmin, isDepartmentManager } = usePermissions();
 
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
+  const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [] });
   const [supervisedIds, setSupervisedIds] = useState([]);
 
   const userId = user?.user_id || user?.id;
@@ -39,7 +39,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         if (externalId) {
           try {
             const { data: invRow } = await supabase
-              .from('delivery_invoices').select('id')
+              .from('delivery_invoices').select('id, amount')
               .eq('external_id', String(externalId)).maybeSingle();
             dbInvoiceId = invRow?.id || null;
           } catch { dbInvoiceId = null; }
@@ -47,7 +47,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       }
 
       if (!dbInvoiceId) {
-        if (!cancelled) { setLoading(false); setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} }); }
+        if (!cancelled) { setLoading(false); setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [] }); }
         return;
       }
 
@@ -69,11 +69,12 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
           profits: rpc?.profits || [],
           employeesWithRules: new Set(rpc?.employeesWithRules || []),
           namesMap: rpc?.namesMap || {},
+          offChannelCollections: await loadOffChannelCollections(dbInvoiceId, rpc?.orders || []),
         });
         setSupervisedIds(supIds);
       } catch (e) {
         console.error('InvoiceProfitsTab load error', e);
-        if (!cancelled) setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
+        if (!cancelled) setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [] });
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -237,12 +238,14 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
     <div className="space-y-4 p-1" dir="rtl">
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <RevenueSplitCard
-          channel={calc.channelRevenue}
+          channel={Number(invoice?.amount) || (calc.totalRevenue - calc.offChannelExpectedAmount)}
+          expectedChannel={calc.channelRevenue}
           offChannel={calc.offChannelExpectedAmount}
-          total={calc.totalRevenue}
+          returnsLoss={Math.abs(calc.returnsTotalLoss || 0)}
+          offChannelDelivery={calc.offChannelAbsorbedDelivery}
           fmt={fmt}
         />
-        <StatCard icon={Receipt} label="صافي إيراد القناة" sub="مبلغ الوسيط − التوصيل (بعد الخصم/الزيادة)" value={fmt(calc.netChannelRevenue)} color="blue" />
+        <StatCard icon={Receipt} label="الإيراد المفروض" sub="قبل خصم الإرجاع وتوصيل خارج القناة" value={fmt(calc.netChannelRevenue)} color="blue" />
         <StatCard icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
         <StatCard icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج • مُسلَّمة فعلاً`} value={`${calc.totalQty}`} color="purple" />
         <StatCard icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
@@ -504,7 +507,22 @@ const OffChannelStatCard = ({ calc, fmt }) => {
  *  - من شركة التوصيل (بدون أجور)
  *  - خارج القناة (متوقَّع تحصيله من الموظف/إلكترونياً)
  */
-const RevenueSplitCard = ({ channel, offChannel, total, fmt }) => {
+const loadOffChannelCollections = async (invoiceId, orders = []) => {
+  if (!invoiceId) return [];
+  const orderIds = (orders || []).map((o) => o.id).filter(Boolean);
+  if (!orderIds.length) return [];
+  const { data, error } = await supabase
+    .from('off_channel_collections')
+    .select('*')
+    .eq('invoice_id', invoiceId)
+    .in('order_id', orderIds);
+  if (error) return [];
+  return data || [];
+};
+
+const RevenueSplitCard = ({ channel, expectedChannel, offChannel, returnsLoss, offChannelDelivery, fmt }) => {
+  const incomingTotal = (Number(channel) || 0) + (Number(offChannel) || 0);
+  const courierDeductions = (Number(returnsLoss) || 0) + (Number(offChannelDelivery) || 0);
   return (
     <Card className="h-full min-h-[104px] bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/30 text-blue-600">
       <CardContent className="p-3 h-full flex flex-col justify-between">
@@ -513,11 +531,17 @@ const RevenueSplitCard = ({ channel, offChannel, total, fmt }) => {
           <span className="text-xs text-muted-foreground">إجمالي الإيراد المحاسبي</span>
         </div>
         <div>
-          <div className="text-lg font-bold leading-tight">{fmt(total)}</div>
+          <div className="text-lg font-bold leading-tight">{fmt(incomingTotal)}</div>
           <div className="text-[10px] text-muted-foreground mt-1 space-y-0.5">
             <div>• من شركة التوصيل: <span className="font-semibold">{fmt(channel)}</span></div>
             {Number(offChannel) > 0 && (
-              <div>• خارج القناة (متوقَّع): <span className="font-semibold text-amber-600">{fmt(offChannel)}</span></div>
+              <div>• خارج القناة المسجّل: <span className="font-semibold text-amber-600">{fmt(offChannel)}</span></div>
+            )}
+            {Number(expectedChannel) > 0 && (
+              <div>• المفروض قبل الخصم: <span className="font-semibold">{fmt(expectedChannel)}</span></div>
+            )}
+            {courierDeductions > 0 && (
+              <div>• خصم الوسيط: <span className="font-semibold text-orange-600">−{fmt(courierDeductions)}</span></div>
             )}
           </div>
         </div>
