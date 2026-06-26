@@ -504,11 +504,23 @@ const InvoicesProfitReportDialog = ({
                     <>
                       <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5">
                         <Stat icon={FileText} label="عدد الفواتير" sub={`${selectedIds.size}/${invoices.length} محدّد`} value={`${invoices.length}`} color="blue" />
-                        <Stat icon={TrendingUp} label="إجمالي الإيراد" sub="بدون توصيل" value={fmt(calc.totalRevenue)} color="blue" />
+                        <Stat icon={TrendingUp} label="إجمالي الإيراد" sub="حسب شركة التوصيل بدون أجور" value={fmt(calc.totalRevenue)} color="blue" />
                         <Stat icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
                         <Stat icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج`} value={`${calc.totalQty}`} color="purple" />
                         <Stat icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
                         <Stat icon={Crown} label="صافي للمالكين" value={fmt(calc.netForOwners)} color="emerald" />
+                        {Math.abs(calc.totalDelta) > 1 && (
+                          <Stat
+                            icon={TrendingUp}
+                            label={calc.totalDelta > 0 ? 'إجمالي الزيادة' : 'إجمالي الخصم'}
+                            sub={calc.employeeBonusTotal !== 0 ? `${fmt(calc.employeeBonusTotal)} لموظفين بقواعد ربح` : 'وُزِّع على مالكي المنتجات'}
+                            value={`${calc.totalDelta < 0 ? '-' : '+'}${fmt(Math.abs(calc.totalDelta))}`}
+                            color={calc.totalDelta > 0 ? 'emerald' : 'orange'}
+                          />
+                        )}
+                        {calc.totalDelivery > 0 && (
+                          <Stat icon={Truck} label="أجور التوصيل" sub="مستثناة من الحسابات" value={fmt(calc.totalDelivery)} color="purple" />
+                        )}
                       </div>
 
                       <EmployeeDuesCard
@@ -519,18 +531,6 @@ const InvoicesProfitReportDialog = ({
                         onToggle={() => setDuesExpanded(v => !v)}
                       />
 
-                      {Math.abs(calc.totalDelta) > 1 && (
-                        <div className={`flex items-center justify-center gap-2 p-2.5 rounded-lg border border-dashed text-xs ${calc.totalDelta > 0 ? 'text-emerald-600 bg-emerald-500/5 border-emerald-500/30' : 'text-orange-600 bg-orange-500/5 border-orange-500/30'}`}>
-                          <TrendingUp className="w-4 h-4" />
-                          <span>إجمالي {calc.totalDelta > 0 ? 'الزيادة' : 'الخصم'}: {fmt(Math.abs(calc.totalDelta))}</span>
-                        </div>
-                      )}
-                      {calc.totalDelivery > 0 && (
-                        <div className="flex items-center justify-center gap-2 p-2 rounded-lg bg-muted/30 border border-dashed text-xs text-muted-foreground">
-                          <Truck className="w-4 h-4" />
-                          <span>أجور التوصيل {fmt(calc.totalDelivery)} مستثناة</span>
-                        </div>
-                      )}
                     </>
                   ) : (
                     // ✅ عرض الموظف غير مالك المنتج — ربحه الشخصي فقط
