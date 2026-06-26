@@ -167,13 +167,17 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
             </div>
             <div className="space-y-1.5">{offChannelOrders.map((it) => renderOrderRow(it, 'offchannel'))}</div>
             <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
-              * هذه الطلبات مبلغها من شركة التوصيل = 0 لكنها مُسلَّمة فعلاً. المبلغ المعروض هو
-              قيمة المنتجات المتوقّع تحصيلها من الموظف أو إثباتها كدفع إلكتروني (سيتم تفعيل
-              نافذة التصنيف وتأكيد المالك في المرحلة التالية).
+              * هذه الطلبات مبلغها من شركة التوصيل = 0 لكنها مُسلَّمة فعلاً. <b>اضغط على الطلب لتصنيفه</b>
+              (دفع إلكتروني/تحويل/نقد/خصم) — ثم يؤكد المالك استلام المبلغ.
             </p>
           </section>
         )}
       </CardContent>
+      <OffChannelClassifyDialog
+        open={!!classifyOrder}
+        onOpenChange={(v) => !v && setClassifyOrder(null)}
+        order={classifyOrder}
+      />
     </Card>
   );
 };
