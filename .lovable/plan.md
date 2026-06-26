@@ -1,67 +1,49 @@
+## المشكلة الجذرية
 
-## الخطة الكاملة
+بعد الفحص العميق وجدت:
 
-### 1) كرت "تحصيلات بانتظار التأكيد" في الداشبورد
-- إنشاء `PendingCollectionsCard.jsx` بنفس تصميم باقي كروت `UnifiedDashboard` (نفس الـ gradient، نفس الأيقونة الأنيقة `Wallet`/`HandCoins`، نفس Glow وShadow وHover).
-- موضعه: مباشرة **أسفل كرت "متابعة الموظفين"**.
-- يظهر للمدير وللمالك (يفلتر النتائج حسب الصلاحيات تلقائياً عبر RLS).
-- يحتوي على **Badge أحمر بعدد التحصيلات المنتظرة** (نفس نمط Badge الإشعارات).
-- العنوان: "تحصيلات بانتظار التأكيد".
-- النقر يفتح صفحة `/off-channel-inbox` الاحترافية.
+1. **65 سجل وهمي:** التريغر `auto_detect_off_channel` يُنشئ تلقائياً سجلاً في `off_channel_collections` بحالة `pending_classification` لكل طلب مُسلَّم في فواتير التوصيل (سواء صنّفه البائع أم لا). ولهذا تظهر 66 بطاقة بدل واحدة فقط. الطلب الوحيد الذي صنّفه البائع فعلاً (149922672) حالته `pending_owner_confirmation` وقيمته 25,000.
+2. **لم يصل إشعار لأحمد:** الهجرة السابقة حذفت كل إشعارات `off_channel_pending_confirmation` ثم نفّذت `UPDATE ... SET status = status` لإعادة الإطلاق، لكن شرط التريغر `OLD.status IS DISTINCT FROM NEW.status` كان `false` (نفس القيمة) فلم يُرسَل أي إشعار.
+3. **الكرت عند المدير = 0:** يستخدم scope=`inbox` (مرشَّح بـ `owner_user_id = me`)، فلا يظهر له شيء.
+4. **النافذة الإجبارية تعرض كل السجلات بانتظار التصنيف** بدلاً من المُصنَّفة فقط.
 
-### 2) نافذة تأكيد إجبارية للمالك (Both: كرت + Modal)
-- بمجرد دخول المالك للتطبيق وجود تحصيلات معلقة → **Modal إجباري** (لا يمكن إغلاقه بـ Escape أو خارج النقر) يعرض كل التحصيلات.
-- نفس فلسفة نافذة التسليم الجزئي: إجبارية لكن مع زر "تأجيل لاحقاً" (snooze ساعة) ليس "إلغاء".
-- كل سطر يعرض: رقم الطلب + اسم الزبون + المبلغ + زرّان كبيران: **"استلمت المبلغ ✅"** و **"لم يصلني ❌"**.
-- نفس النافذة متاحة من الكرت في الداشبورد (غير إجبارية حينها).
+## التعديلات
 
-### 3) صفحة `OffChannelOwnerInbox.jsx` احترافية
-- إعادة تصميم بطابع عالمي: Cards بـ glass-morphism + تدرّجات + Skeleton loaders + Empty state أنيق + Filters (الكل/معلق/مؤكد/مرفوض).
-- للمدير: يرى كل التحصيلات + قدرة التأكيد نيابة عن المالك بزر "تأكيد كمدير".
-- للمالك: يرى تحصيلاته فقط + زرّي تأكيد/رفض.
-- Real-time updates عند تغيير الحالة.
+### 1) منطق العرض (المصدر الموحَّد للحقيقة)
+في `src/hooks/useOffChannelCollections.js`:
+- `scope='inbox'` يصبح مرشَّحاً على **`status = 'pending_owner_confirmation'` فقط** (إزالة `pending_classification`). هذا يُسقط الـ 65 سجل الوهمي تلقائياً من الكرت والنافذة الإجبارية والصفحة.
+- إضافة scope جديد `'manager_pending'` للمدير: يُرجع كل السجلات بحالة `pending_owner_confirmation` بدون مرشِّح owner.
 
-### 4) إصلاح وصول الإشعار للمالك الفعلي
-- ميغريشن: تعديل `notify_owner_off_channel_pending` ليُرجع `owner_user_id` من `order_items.products.owner_user_id` (وليس منشئ الفاتورة).
-- Backfill: إعادة تعيين `owner_user_id` للسجلات الموجودة (خاصة طلب 149922672) وإرسال الإشعارات للملاك الصحيحين.
+### 2) كرت "تحصيلات بانتظار التأكيد" — `PendingCollectionsCard.jsx`
+- نقله في `src/pages/Dashboard.jsx` إلى **أسفل بطاقة "متابعة الموظفين"** مباشرة.
+- نقل الـBadge الأحمر ليكون **بجانب العنوان** داخل `CardHeader` (بدل أعلى الأيقونة) — يطابق الصورة `IMG_3350` المرغوبة.
+- استخدام `scope='manager_pending'` عند `isAdmin`، و`'inbox'` للمالك العادي. هكذا يرى المدير العدد الإجمالي (1 الآن).
 
-### 5) إصلاح الموافقة على الطلبات الذكية (مشكلة المدير العام + "نايك نيلي")
+### 3) النافذة الإجبارية — `OffChannelMandatoryDialog.jsx`
+- تبقى تستخدم `scope='inbox'` (الآن مُصفَّى تلقائياً على `pending_owner_confirmation` فقط).
+- النتيجة: لن تظهر إلا للمالك الذي صنّف البائع تحصيلاً له (أحمد سيراها لطلب 149922672 فقط).
 
-**التشخيص الفعلي من الكود (`SuperProvider.jsx` سطر 2107-2155):**
-- المطابقة الحالية تستخدم `lowercase(p.name) === name` ثم `.includes(name)`. عندما يرسل AI اسماً مركباً مثل `"نايك نيلي"`، لا يطابق منتجاً اسمه `"نايك"` فيعود `notMatched` ويتم الإرجاع `success:false` بصمت داخل حلقة الـ bulk.
-- في حساب المدير العام تحديداً: عند الموافقة، يظهر toast "جاري المعالجة" ثم يختفي بدون toast نهائي لأن الـ loop ينتهي مع `successIds=[]` و`failedResults` لا يصل للمستخدم بسبب timing الـ toasts المتتالية يطغى بعضها على بعض.
+### 4) صفحة `OffChannelOwnerInbox.jsx`
+- إضافة **Pagination** بنفس تصميم صفحة "متابعة الطلبات":
+  - 10 سجلات/صفحة، شريط أرقام صفحات (Prev/Next + أرقام)، يعتمد مكوّن `Pagination` من shadcn الموجود في المشروع.
+- المدير يستخدم scope جديد `'manager_all'` (كل السجلات بدون مرشِّح owner، مع كل الحالات للفلترة بالـTabs).
+- المالك العادي scope=`inbox` (المُصنَّفة فقط).
+- التبويبات تبقى: الكل / معلق / مؤكد / غير مستلم (بحسب status).
 
-**الإصلاحات:**
-- **مطابقة ذكية موحّدة** (function `smartMatchProduct`):
-  - تقسيم الاسم المركب إلى أجزاء (split على المسافات).
-  - استخراج الجزء الأول كاسم منتج محتمل والباقي كلون/مقاس.
-  - مطابقة المنتج بأطول prefix مشترك، ثم البحث في variants عن أي جزء يطابق `color` أو `size`.
-  - مثال: `"نايك نيلي"` → منتج=`"نايك"` + لون=`"نيلي"` ✅.
-- **توحيد عرض الأخطاء**: استبدال toasts المتعاقبة بـ **toast واحد محدّث** (id ثابت) يعرض التقدم، وtoast نهائي مفصّل بأسباب الفشل لكل طلب فاشل.
-- **منع النقر المزدوج**: إضافة `useRef(isProcessingRef)` يمنع `handleBulkAction` من التشغيل المتوازي.
-- **clear state عند الانتهاء**: التأكد من تنظيف `selectedOrders` وإعادة `isProcessingRef=false` في `finally` بدلاً من نهاية try.
-- **تشخيص واضح للمدير**: لو الفشل سببه أن منشئ الطلب الأصلي ليس لديه حساب توصيل نشط، يظهر toast صريح: "الموظف X ليس لديه حساب نشط في الوسيط".
+### 5) Migration: تنظيف + إعادة إرسال الإشعار الصحيح
+- **حذف السجلات الوهمية**: حذف كل `off_channel_collections` بحالة `pending_classification` (الـ65) — لأن التريغر يعيد إنشاءها عند الحاجة عبر `delivery_invoice_orders`، لكن يجب إيقاف هذا التضخّم.
+- **تعديل التريغر** `auto_detect_off_channel`: لا يُنشئ سجلاً تلقائياً بعد الآن — يبقى السجل يُنشأ فقط من نافذة التصنيف اليدوية في `OffChannelClassifyDialog.jsx` (عبر `useOffChannelCollections.classify` التي ستُعدَّل لتعمل بـ`upsert`).
+  - تعديل `classify()` في الـhook ليستخدم upsert على `(order_id)` إذا لم يوجد سجل مسبقاً.
+- **إعادة إرسال الإشعار**: `INSERT` يدوي في `notifications` لطلب 149922672 (وأي طلب آخر بحالة `pending_owner_confirmation` بدون إشعار).
 
-### 6) إصلاح "950 vs 925" في الفاتورة
-- في `InvoiceProfitsTab.jsx`: استخدام `invoiceAmount` كمصدر وحيد لسطر "من شركة التوصيل" (= 950,000). إزالة أي حساب يطرح/يجمع شيئاً منه في هذا السطر.
+### 6) ملاحظات
+- بدون أي تغيير في الكرت/التصميم العام للداشبورد ولا مس المنطق المالي خارج هذا النطاق.
+- بعد التطبيق: الكرت = **1**، النافذة الإجبارية تظهر لأحمد بطلب 149922672 فقط، الإشعار يصل في الجرس.
 
----
-
-### الملفات المتأثرة
-```text
-src/components/dashboard/PendingCollectionsCard.jsx          (جديد)
-src/components/dashboard/UnifiedDashboard.jsx                (إضافة الكرت)
-src/components/accounting/OffChannelMandatoryDialog.jsx      (جديد - النافذة الإجبارية)
-src/components/Layout.jsx                                    (Mount الـ Dialog عالمياً)
-src/components/accounting/OffChannelOwnerInbox.jsx           (إعادة تصميم)
-src/components/orders/InvoiceProfitsTab.jsx                  (إصلاح 950)
-src/contexts/SuperProvider.jsx                               (smartMatchProduct)
-src/components/dashboard/AiOrdersManager.jsx                 (toast واحد + isProcessingRef + finally)
-supabase/migrations/<new>.sql                                (owner_user_id من المنتج + backfill)
-```
-
-### تفاصيل تقنية للمطوّر
-- النافذة الإجبارية تُركّب في `Layout.jsx` بشرط `rows.length > 0 && !snoozedUntil`.
-- `snoozedUntil` يُحفظ في `localStorage` لمدة ساعة فقط ثم تظهر مجدداً.
-- `smartMatchProduct` يُستخرج كـ utility في `src/lib/aiOrderMatcher.js` لإعادة الاستخدام.
-- Badge يستخدم `useOffChannelCollections` الحالي (يعيد `rows.length`).
+### الملفات المُعدَّلة
+- `src/hooks/useOffChannelCollections.js`
+- `src/components/dashboard/PendingCollectionsCard.jsx`
+- `src/pages/Dashboard.jsx` (ترتيب)
+- `src/components/accounting/OffChannelMandatoryDialog.jsx` (لا تغيير منطقي، يستفيد من الـscope الجديد)
+- `src/components/accounting/OffChannelOwnerInbox.jsx` (pagination + manager scope)
+- Migration جديدة: حذف الوهمي + تعطيل auto-create + إعادة إرسال الإشعار.
