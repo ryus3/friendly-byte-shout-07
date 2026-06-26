@@ -1,73 +1,90 @@
+## التشخيص الكامل لفاتورة 3623484
 
-# خطة معدّلة — استبعاد 149922682 (تسليم جزئي وليس off-channel)
+### الأرقام الحقيقية حسب البيانات
 
-## التصحيح المهم
-- **149922682**: تسليم جزئي — الوسيط دفع المبلغ الحقيقي للجزء المُسلَّم. لا يحتاج تأكيد مالك ولا تصنيف خارج قناة. **يُعامَل كطلب عادي بإيراد موجب مساوٍ لما حوّله الوسيط فعلاً.**
-- **149922672 فقط** هو الـoff-channel الحقيقي (الوسيط = 0، الموظف استلم 20 ألف خارج القناة).
+| البند | القيمة |
+|---|---|
+| إيراد القناة (شركة التوصيل) | 950,000 |
+| طلب off-channel (مكسيك) معلَّق | +25,000 عند التأكيد |
+| طلب إرجاع 149776372 | −25,000 (منتج −20,000 + توصيل −5,000) |
+| تكلفة المنتجات المباعة فعلاً (50 قطعة) | 600,000 |
 
----
+### النتيجة الصحيحة لبطاقة "توزيع الأرباح على المالكين" (احمد)
 
-## قاعدة دخول الإيرادات (نهائية)
+**قبل تأكيد احمد لاستلام الـ off-channel:**
+- قطع: 49
+- إيراد: 980,000 (1,000,000 مفروض − 20,000 off-channel غير مؤكَّد)
+- ربح خام = 980,000 − 588,000 (تكلفة 49 قطعة) = **392,000**
+- ناقص خسارة الإرجاع المنسوبة لاحمد: −25,000
+- **صافي ربح احمد = 367,000**
 
-كل سطر في `delivery_invoice_orders` ⇒ **حركة نقد منفصلة باسم الطلب**:
+**بعد تأكيد احمد لاستلام الـ 25,000:**
+- قطع: 50
+- إيراد: 1,000,000
+- ربح خام = 1,000,000 − 600,000 = 400,000
+- ناقص خسارة الإرجاع: −25,000
+- **صافي ربح احمد = 375,000** ← يطابق "صافي للمالكين 375,000" في الكرت العلوي
 
-| الحالة | amount | حركة النقد |
-|---|---|---|
-| بيع عادي | موجب (يساوي ما حوّله الوسيط) | `+in`, `إيراد طلب <tracking>` |
-| **تسليم جزئي** | موجب (المبلغ الفعلي للجزء المُسلَّم) | `+in`, `إيراد طلب <tracking>` — **عادي تماماً** |
-| إرجاع | **سالب** (خسارة منتج+توصيل) | `−out`, `استرجاع طلب <tracking>` (سالب يَخصم من القاصة) |
-| off-channel (amount = 0 والطلب فعلاً مُسلَّم) | 0 | **لا حركة** حتى يضغط المالك "استلمت" |
-| استبدال | حسب صافي الفرق | بنفس المنطق |
+### السبب الحالي للخطأ
 
-> الطلب الأصلي لا يُمَسّ أبداً. الإرجاع يدخل بحركة سالبة مستقلة باسمه.
+`src/lib/invoiceProfitsCalc.js`:
 
----
+1. فرع `isOffChannel` يدخل البنود إلى `productMap` دائماً حتى قبل تأكيد المالك → احمد يظهر 50 قطعة / 1,000,000 من البداية.
+2. طلبات الإرجاع تُجمَع في `returnsOrders` و`returnsTotalLoss` كقسم منفصل، لكن **لا تُخصم من ربح/إيراد المالك** في `byOwner`. لذلك بطاقة احمد لا تطابق "صافي للمالكين" أعلاه.
 
-## التنفيذ (3 خطوات)
+## الإصلاح (ملف واحد فقط: `src/lib/invoiceProfitsCalc.js`)
 
-### 1) تنظيف فوري (insert)
-- حذف الحركة الوهمية `+20,000` للطلب **149922672 فقط**.
-- **149922682 يبقى كما هو** (حركته الحالية إذا تطابق مع المبلغ الفعلي المحوَّل صحيحة — سأتحقق من قيمة `delivery_invoice_orders.amount` له قبل اللمس وأصلّحها لتساوي الفعلي).
-- إنشاء حركة `−25,000` للطلب **149776372** (`reference_type='order_return'`, `reference_id=order_id`, وصف `استرجاع طلب 149776372`).
-- حذف سجل `off_channel_collections` للطلب 149922682 إن وُجد، وإبقاء سجل 149922672 بحالة `pending_classification`.
-- إعادة احتساب `balance_before/balance_after` تراكمياً لقاصة "احمد" + تحديث `cash_sources.current_balance`.
+### تعديل 1 — استبعاد off-channel غير المؤكَّد من المالك
 
-### 2) Migration للقواعد الدائمة
-أ. **Trigger على `delivery_invoice_orders`** عند استلام الفاتورة:
-   - `amount > 0` ⇒ INSERT حركة `+in` باسم الطلب (تشمل التسليم الجزئي تلقائياً).
-   - `amount < 0` ⇒ INSERT حركة `−out` بـ `reference_type='order_return'`.
-   - `amount = 0` فقط ⇒ تشغيل `auto_detect_off_channel` (يستثني `order_type IN ('return','partial')`).
-
-ب. **`auto_detect_off_channel`** — يُنشئ سجل `pending_classification` فقط عندما `amount = 0` والطلب مُسلَّم فعلياً وليس إرجاعاً/جزئياً.
-
-ج. **Trigger إشعار المالك** عند `status='pending_owner_confirmation'` ⇒ INSERT في `notifications` (نوع `off_channel_pending_confirmation`, link=`/off-channel-inbox?id=…`).
-
-د. **Trigger تأكيد المالك** عند UPDATE إلى `status='settled'` ⇒ INSERT تلقائي حركة `+in` في قاصة المالك بـ `owner_due_amount` (`reference_type='off_channel_receipt'`).
-
-### 3) تعديلات الكود
-- `OffChannelOwnerInbox.jsx` — إزالة الـINSERT اليدوي لـ cash_movement (انتقل للـtrigger في د)، فتح السجل من `?id=`.
-- `NotificationsHandler.jsx` + `NotificationHandler.jsx` — معالجة `off_channel_pending_confirmation` والتوجيه لـ `/off-channel-inbox`.
-- `Layout.jsx` / `BottomNav.jsx` — شارة عدد التحصيلات المعلّقة للمالك (Realtime على `off_channel_collections`).
-- `InvoiceSpecialOrdersList.jsx` — زر "تصنيف الدفع" يظهر **فقط** لطلبات `amount = 0` وغير إرجاع/جزئي.
-- `InvoiceProfitsTab.jsx` + `invoiceProfitsCalc.js` + `useUnifiedFinancialSystem.js` — مصدر وحيد هو `cash_movements`:
-  - **مستلم فعلياً** = SUM(in) − SUM(out) من cash_movements المرتبطة بالفاتورة ⇒ يُحتسب في الربح.
-  - **بانتظار تأكيد المالك** = SUM(owner_due_amount) من off_channel pending ⇒ معروض، **لا يدخل الربح** حتى التأكيد.
-  - **متوقع** = مجموع `delivery_invoice_orders.amount`.
-
----
-
-## النتيجة على فاتورة 3623484
-```text
-cash_movements بعد الإصلاح:
-  + 20,000  149682878 (بيع أصلي)
-  − 25,000  149776372 (إرجاع — جديدة)
-  +  X      149922682 (تسليم جزئي — موجبة عادية)
-  + ...     باقي 38 طلب
-  ─────────
-  = 950,000 ✅ مطابق لما حوّله الوسيط
-
-off_channel pending (للمالك فقط):
-  149922672 → 20,000 بانتظار "استلمت"
+في فرع `isOffChannel`:
+```js
+const occRecord = offChannelByOrder.get(o.id);
+const isConfirmed = !!(occRecord && (
+  occRecord.cash_movement_id ||
+  ['settled','confirmed','owner_confirmed'].includes(occRecord.status)
+));
+if (!isConfirmed) {
+  // سجّل الطلب في offChannelOrders (للبطاقة الصفراء)
+  offChannelOrders.push({...});
+  offChannelExpectedAmount += expectedPaid;
+  offChannelCount += 1;
+  offChannelAbsorbedDelivery += deliveryFee;
+  return; // ← لا تمرّر البنود لـ productMap ولا تضف للـ totalRevenue
+}
+// إذا مؤكَّد → السلوك الحالي (يدخل ضمن إيراد/قطع/ربح المالك)
 ```
 
-أبدأ بترتيب: (أ) تنظيف ⇒ (ب) migration ⇒ (ج) كود؟
+### تعديل 2 — توزيع خسارة الإرجاع على المالك
+
+في فرع `isFullReturn`، بدل `return` المباشر بعد دفع `returnsOrders`:
+- احسب مالك المنتج المرجَع من `lineItems` (نفس منطق "owner_id ذو أعلى قيمة"):
+  ```js
+  const returnOwnerSums = new Map();
+  lineItems.forEach((it) => {
+    const ownerId = it.products?.owner_user_id || '__system__';
+    const qty = Number(it.quantity) || 0;
+    const price = Number(it.unit_price) || 0;
+    returnOwnerSums.set(ownerId, (returnOwnerSums.get(ownerId) || 0) + qty * price);
+  });
+  ```
+- وزّع `realRevenue` (السالب، يشمل التوصيل) نسبياً على المالكين بناءً على قيمة المنتج المرجَع، واخصمه من `byOwner[ownerId].revenue` (ينعكس مباشرة على الربح الصافي للمالك).
+- إذا الكل لمالك واحد (حالة احمد): يُخصم كامل −25,000 من إيراده.
+
+### تعديل 3 — لا مساس بالكروت العلوية
+
+`totalRevenue`, `totalCost`, `totalProfit`, `revenueFromItems`, `netForOwners`, `returnsOrders`, `returnsTotalLoss`, `channelRevenue`, `offChannelExpectedAmount` — تبقى كما هي. التعديل **يلمس فقط `byOwner` و`productMap`**.
+
+## التحقق المتوقع بعد التطبيق
+
+| الحالة | قطع احمد | إيراد احمد | ربح احمد |
+|---|---|---|---|
+| قبل تأكيد off-channel | 49 | 955,000 (980k مفروض −25k إرجاع) | 367,000 |
+| بعد تأكيد off-channel | 50 | 975,000 (1,000,000 −25,000 إرجاع) | 375,000 ✅ |
+
+النتيجة بعد التأكيد تطابق تماماً "صافي للمالكين 375,000" في الكرت العلوي.
+
+## ملفات متأثرة
+
+- `src/lib/invoiceProfitsCalc.js` فقط.
+
+لا تغييرات في قاعدة البيانات. التريغرات والإشعارات تبقى كما هي (الإشعار يصل لاحمد بعد التصحيح السابق).
