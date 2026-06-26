@@ -115,6 +115,23 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {returnsOrders.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-2 text-rose-700 dark:text-rose-300">
+              <Undo2 className="w-4 h-4" />
+              <span className="text-xs font-bold">
+                إرجاعات في هذه الفاتورة ({returnsOrders.length})
+              </span>
+            </div>
+            <div className="space-y-1.5">{returnsOrders.map((it) => renderOrderRow(it, 'returned'))}</div>
+            <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
+              * المبلغ المعروض هو الخسارة الحقيقية على القناة (قيمة المنتج + أجور التوصيل التي
+              يخصمها الوسيط). لا يُحتسب كخصم على باقي الطلبات.
+            </p>
+          </section>
+        )}
+
+
         {increases.length > 0 && (
           <section>
             <div className="flex items-center gap-2 mb-2 text-emerald-700 dark:text-emerald-300">
