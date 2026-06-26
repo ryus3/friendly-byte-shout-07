@@ -88,6 +88,14 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
               {kind === 'offchannel' && creatorName !== '—' && (
                 <span className="ms-1">• الموظف: {creatorName}</span>
               )}
+              {kind === 'returned' && (
+                <>
+                  <span className="ms-1">• قيمة المنتج {formatCur(Math.abs(item.planned_revenue))}</span>
+                  {item.delivery_fee > 0 && (
+                    <span className="ms-1">• توصيل {formatCur(item.delivery_fee)}</span>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>
