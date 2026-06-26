@@ -111,7 +111,7 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-right text-sm">
           <AlertCircle className="w-4 h-4 text-primary" />
-          طلبات تحتاج انتباهك ({increases.length + decreases.length + offChannelOrders.length})
+          طلبات تحتاج انتباهك ({increases.length + decreases.length + offChannelOrders.length + returnsOrders.length})
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
