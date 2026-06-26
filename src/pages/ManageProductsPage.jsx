@@ -43,7 +43,7 @@ const ManageProductsPage = () => {
 
   // مالك منتجات؟ (لإظهار زر الحجز) — يدعم user.id و user.user_id
   const uid = user?.user_id || user?.id;
-  const isOwnerOrAdmin = isAdmin || isDepartmentManager || (Array.isArray(products) && products.some(p => p.owner_user_id === uid));
+  const isOwnerOrAdmin = isAdmin || isDepartmentManager || hasPermission("manage_products") || (Array.isArray(products) const isOwnerOrAdmin = isAdmin || isDepartmentManager || (Array.isArray(products) && products.some(p => p.owner_user_id === uid));const isOwnerOrAdmin = isAdmin || isDepartmentManager || (Array.isArray(products) && products.some(p => p.owner_user_id === uid)); products.some(p => p.owner_user_id === uid));
 
 
 
