@@ -4070,6 +4070,115 @@ export type Database = {
           },
         ]
       }
+      off_channel_collections: {
+        Row: {
+          cash_movement_id: string | null
+          classified_at: string | null
+          collection_type:
+            | Database["public"]["Enums"]["off_channel_collection_type"]
+            | null
+          collector_user_id: string | null
+          confirmed_at: string | null
+          created_at: string
+          customer_paid_amount: number | null
+          delivery_fee_absorbed: number | null
+          employee_profit_share: number | null
+          id: string
+          invoice_id: string | null
+          note: string | null
+          order_id: string
+          owner_due_amount: number | null
+          owner_user_id: string | null
+          status: Database["public"]["Enums"]["off_channel_collection_status"]
+          updated_at: string
+        }
+        Insert: {
+          cash_movement_id?: string | null
+          classified_at?: string | null
+          collection_type?:
+            | Database["public"]["Enums"]["off_channel_collection_type"]
+            | null
+          collector_user_id?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          customer_paid_amount?: number | null
+          delivery_fee_absorbed?: number | null
+          employee_profit_share?: number | null
+          id?: string
+          invoice_id?: string | null
+          note?: string | null
+          order_id: string
+          owner_due_amount?: number | null
+          owner_user_id?: string | null
+          status?: Database["public"]["Enums"]["off_channel_collection_status"]
+          updated_at?: string
+        }
+        Update: {
+          cash_movement_id?: string | null
+          classified_at?: string | null
+          collection_type?:
+            | Database["public"]["Enums"]["off_channel_collection_type"]
+            | null
+          collector_user_id?: string | null
+          confirmed_at?: string | null
+          created_at?: string
+          customer_paid_amount?: number | null
+          delivery_fee_absorbed?: number | null
+          employee_profit_share?: number | null
+          id?: string
+          invoice_id?: string | null
+          note?: string | null
+          order_id?: string
+          owner_due_amount?: number | null
+          owner_user_id?: string | null
+          status?: Database["public"]["Enums"]["off_channel_collection_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "off_channel_collections_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "off_channel_collections_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_invoices_needing_sync"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "off_channel_collections_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "delivery_tracking"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "off_channel_collections_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "off_channel_collections_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders_invoice_receipt_v"
+            referencedColumns: ["order_id"]
+          },
+          {
+            foreignKeyName: "off_channel_collections_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders_secure_view"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_deletion_attempts: {
         Row: {
           api_response_status: string | null
@@ -9279,7 +9388,17 @@ export type Database = {
       verify_invoice_1849184_for_manager: { Args: never; Returns: Json }
     }
     Enums: {
-      [_ in never]: never
+      off_channel_collection_status:
+        | "pending_classification"
+        | "pending_owner_confirmation"
+        | "settled"
+        | "waived"
+      off_channel_collection_type:
+        | "electronic_payment"
+        | "bank_transfer"
+        | "employee_cash"
+        | "full_discount"
+        | "owner_delivery_only"
     }
     CompositeTypes: {
       http_header: {
@@ -9422,6 +9541,20 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      off_channel_collection_status: [
+        "pending_classification",
+        "pending_owner_confirmation",
+        "settled",
+        "waived",
+      ],
+      off_channel_collection_type: [
+        "electronic_payment",
+        "bank_transfer",
+        "employee_cash",
+        "full_discount",
+        "owner_delivery_only",
+      ],
+    },
   },
 } as const

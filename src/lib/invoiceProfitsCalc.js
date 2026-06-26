@@ -50,6 +50,9 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   let channelRevenue = 0;
   // قائمة الطلبات ذات الزيادة/الخصم من شركة التوصيل (للعرض)
   const deltaOrders = []; // { order_id, created_by, delta, real_revenue, planned_revenue }
+  // ✅ قائمة طلبات الإرجاع داخل هذه الفاتورة (لعرضها كقسم مستقل، لا تُعتبر "خصم")
+  const returnsOrders = []; // { order_id, created_by, real_revenue, planned_revenue, delivery_fee }
+  let returnsTotalLoss = 0; // مجموع خسارة الإرجاع (مبلغ الوسيط السالب) — للعرض فقط
 
   const ensureOwner = (ownerId) => {
     if (!byOwner[ownerId]) byOwner[ownerId] = { revenue: 0, cost: 0, items: 0, products: [] };
@@ -110,7 +113,9 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     // ============================================================
     const isReturnType = (o.order_type === 'return');
     const isStatusReturned = (o.status === 'returned');
-    const isDeliveryReturned = (String(o.delivery_status || '') === '17');
+    // ✅ status 17 (راجع للتاجر) أو 16 (قيد الإرجاع في عهدة المندوب) كلاهما يعتبر إرجاع
+    const ds = String(o.delivery_status || '');
+    const isDeliveryReturned = (ds === '17' || ds === '16');
     const allItemsReturned = items.length > 0 && items.every((it) => {
       const q = Number(it.quantity) || 0;
       const qr = Number(it.quantity_returned) || 0;
@@ -218,6 +223,21 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
       return; // لا delta ولا توزيع زيادة/خصم
     }
 
+    // ============================================================
+    // طلبات الإرجاع: تُعرض في قسم مستقل، لا تُحسب ضمن "خصم شركة التوصيل"
+    // ============================================================
+    if (isFullReturn) {
+      returnsOrders.push({
+        order_id: o.id,
+        created_by: o.created_by || null,
+        real_revenue: realRevenue,         // عادةً سالب (مثلاً -25,000)
+        planned_revenue: orderItemsRevenue, // عادةً سالب (مثلاً -20,000)
+        delivery_fee: deliveryFee,
+      });
+      returnsTotalLoss += realRevenue; // مجموع الخسارة الحقيقية من القناة
+      return; // لا delta للإرجاع
+    }
+
     const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange';
     const delta = isExchange ? 0 : (realRevenue - orderItemsRevenue);
     totalDelta += delta;
@@ -290,6 +310,10 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     offChannelOrders,
     // ✅ قائمة طلبات الزيادة/الخصم من الوسيط
     deltaOrders,
+    // ✅ قائمة الإرجاعات في هذه الفاتورة (قسم مستقل)
+    returnsOrders,
+    returnsCount: returnsOrders.length,
+    returnsTotalLoss,
   };
 }
 

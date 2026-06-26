@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TrendingUp, TrendingDown, Banknote, Hash, User as UserIcon, AlertCircle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Banknote, Hash, User as UserIcon, AlertCircle, Undo2 } from 'lucide-react';
+import OffChannelClassifyDialog from '@/components/orders/OffChannelClassifyDialog';
 
 /**
  * قائمة "طلبات تحتاج انتباهك" داخل تفاصيل الفاتورة.
@@ -24,14 +25,16 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
   }, [orders]);
 
   const formatCur = fmt || ((n) => `${Math.round(Number(n) || 0).toLocaleString()} د.ع`);
+  const [classifyOrder, setClassifyOrder] = useState(null);
 
   const deltaOrders = calc?.deltaOrders || [];
   const offChannelOrders = calc?.offChannelOrders || [];
+  const returnsOrders = calc?.returnsOrders || [];
 
   const increases = deltaOrders.filter((d) => d.delta > 0).sort((a, b) => b.delta - a.delta);
   const decreases = deltaOrders.filter((d) => d.delta < 0).sort((a, b) => a.delta - b.delta);
 
-  if (increases.length === 0 && decreases.length === 0 && offChannelOrders.length === 0) {
+  if (increases.length === 0 && decreases.length === 0 && offChannelOrders.length === 0 && returnsOrders.length === 0) {
     return null;
   }
 
@@ -60,12 +63,22 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
         prefix: '',
         amount: item.expected_amount,
       },
+      returned: {
+        wrap: 'border-rose-500/40 bg-rose-500/5',
+        amountColor: 'text-rose-700 dark:text-rose-300',
+        prefix: '',
+        // نعرض المبلغ الحقيقي السالب من الوسيط (مثلاً -25,000 = -20,000 إرجاع + -5,000 توصيل)
+        amount: item.real_revenue,
+      },
     }[kind];
 
+    const clickable = kind === 'offchannel' && o;
     return (
       <div
         key={`${kind}-${item.order_id}`}
-        className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border ${cfg.wrap}`}
+        role={clickable ? 'button' : undefined}
+        onClick={clickable ? () => setClassifyOrder(o) : undefined}
+        className={`flex items-center justify-between gap-2 p-2.5 rounded-lg border ${cfg.wrap} ${clickable ? 'cursor-pointer hover:ring-2 hover:ring-amber-500/40 transition' : ''}`}
       >
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <Hash className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
@@ -79,6 +92,14 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
               )}
               {kind === 'offchannel' && creatorName !== '—' && (
                 <span className="ms-1">• الموظف: {creatorName}</span>
+              )}
+              {kind === 'returned' && (
+                <>
+                  <span className="ms-1">• قيمة المنتج {formatCur(Math.abs(item.planned_revenue))}</span>
+                  {item.delivery_fee > 0 && (
+                    <span className="ms-1">• توصيل {formatCur(item.delivery_fee)}</span>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -95,10 +116,27 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-right text-sm">
           <AlertCircle className="w-4 h-4 text-primary" />
-          طلبات تحتاج انتباهك ({increases.length + decreases.length + offChannelOrders.length})
+          طلبات تحتاج انتباهك ({increases.length + decreases.length + offChannelOrders.length + returnsOrders.length})
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {returnsOrders.length > 0 && (
+          <section>
+            <div className="flex items-center gap-2 mb-2 text-rose-700 dark:text-rose-300">
+              <Undo2 className="w-4 h-4" />
+              <span className="text-xs font-bold">
+                إرجاعات في هذه الفاتورة ({returnsOrders.length})
+              </span>
+            </div>
+            <div className="space-y-1.5">{returnsOrders.map((it) => renderOrderRow(it, 'returned'))}</div>
+            <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
+              * المبلغ المعروض هو الخسارة الحقيقية على القناة (قيمة المنتج + أجور التوصيل التي
+              يخصمها الوسيط). لا يُحتسب كخصم على باقي الطلبات.
+            </p>
+          </section>
+        )}
+
+
         {increases.length > 0 && (
           <section>
             <div className="flex items-center gap-2 mb-2 text-emerald-700 dark:text-emerald-300">
@@ -129,13 +167,17 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
             </div>
             <div className="space-y-1.5">{offChannelOrders.map((it) => renderOrderRow(it, 'offchannel'))}</div>
             <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
-              * هذه الطلبات مبلغها من شركة التوصيل = 0 لكنها مُسلَّمة فعلاً. المبلغ المعروض هو
-              قيمة المنتجات المتوقّع تحصيلها من الموظف أو إثباتها كدفع إلكتروني (سيتم تفعيل
-              نافذة التصنيف وتأكيد المالك في المرحلة التالية).
+              * هذه الطلبات مبلغها من شركة التوصيل = 0 لكنها مُسلَّمة فعلاً. <b>اضغط على الطلب لتصنيفه</b>
+              (دفع إلكتروني/تحويل/نقد/خصم) — ثم يؤكد المالك استلام المبلغ.
             </p>
           </section>
         )}
       </CardContent>
+      <OffChannelClassifyDialog
+        open={!!classifyOrder}
+        onOpenChange={(v) => !v && setClassifyOrder(null)}
+        order={classifyOrder}
+      />
     </Card>
   );
 };
