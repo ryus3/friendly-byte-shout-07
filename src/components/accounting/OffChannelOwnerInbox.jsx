@@ -30,7 +30,12 @@ const OffChannelOwnerInbox = () => {
   const [busyId, setBusyId] = useState(null);
   const [filter, setFilter] = useState('pending'); // pending | settled | disputed | all
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
   const { toast } = useToast();
+
+  // إعادة الصفحة للأولى عند تغيير الفلتر/البحث
+  useEffect(() => { setPage(1); }, [filter, query]);
 
   // Real-time updates
   useEffect(() => {
