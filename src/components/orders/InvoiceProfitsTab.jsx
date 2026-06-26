@@ -22,7 +22,7 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   const { isAdmin, isDepartmentManager } = usePermissions();
 
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [] });
+  const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [], invoiceAmount: null });
   const [supervisedIds, setSupervisedIds] = useState([]);
 
   const userId = user?.user_id || user?.id;
