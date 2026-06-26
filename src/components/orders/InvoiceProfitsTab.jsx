@@ -245,13 +245,14 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <RevenueSplitCard
           channel={data.invoiceAmount ?? Number(invoice?.amount) ?? 0}
-          expectedChannel={calc.channelRevenue}
+          expectedChannel={calc.preDiscountChannelRevenue}
           offChannel={calc.offChannelExpectedAmount}
           returnsLoss={Math.abs(calc.returnsTotalLoss || 0)}
           offChannelDelivery={calc.offChannelAbsorbedDelivery}
+          negativeDelta={calc.negativeDeltaAbs}
           fmt={fmt}
         />
-        <StatCard icon={Receipt} label="الإيراد المفروض" sub="قبل خصم الإرجاع وتوصيل خارج القناة" value={fmt(calc.netChannelRevenue)} color="blue" />
+        <StatCard icon={Receipt} label="الإيراد المفروض" sub="قبل خصم الإرجاع وخصم الوسيط" value={fmt(calc.preDiscountChannelRevenue)} color="blue" />
         <StatCard icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
         <StatCard icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج • مُسلَّمة فعلاً`} value={`${calc.totalQty}`} color="purple" />
         <StatCard icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
