@@ -72,17 +72,17 @@ const OffChannelClassifyDialog = ({ open, onOpenChange, order, onClassified }) =
   }, [paid, type, empProfitRule, order?.delivery_fee]);
 
   const handleSave = async () => {
-    if (!record?.id) {
-      toast({ variant: 'destructive', title: 'لا يوجد سجل لهذا الطلب', description: 'لم يتم اكتشاف الطلب تلقائياً.' });
-      return;
-    }
     setSaving(true);
-    const { error } = await classify(record.id, {
+    const { error } = await classify(record?.id || null, {
       collection_type: type,
       customer_paid_amount: calc.customerPaid,
       employee_profit_share: calc.employeeShare,
       owner_due_amount: calc.ownerDue,
       note,
+    }, record?.id ? null : {
+      order_id: order?.id,
+      collector_user_id: order?.created_by,
+      delivery_fee_absorbed: Number(order?.delivery_fee) || 0,
     });
     setSaving(false);
     if (error) {
