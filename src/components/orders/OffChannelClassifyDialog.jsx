@@ -25,7 +25,7 @@ const TYPES = [
  */
 const OffChannelClassifyDialog = ({ open, onOpenChange, order, onClassified }) => {
   const { toast } = useToast();
-  const { rows, classify, reload } = useOffChannelCollections({ scope: 'order', orderIds: order?.id ? [order.id] : [] });
+  const { rows, classify } = useOffChannelCollections({ scope: 'order', orderIds: order?.id ? [order.id] : [] });
 
   const [type, setType] = useState('electronic_payment');
   const [paid, setPaid] = useState(0);

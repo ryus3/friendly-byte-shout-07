@@ -5,7 +5,7 @@ import { Loader2, TrendingUp, TrendingDown, Wallet, Users, Package, Crown, Shiel
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
-import { computeInvoiceProfits, fetchInvoiceProfitsData } from '@/lib/invoiceProfitsCalc';
+import { computeInvoiceProfits } from '@/lib/invoiceProfitsCalc';
 import InvoiceSpecialOrdersList from '@/components/orders/InvoiceSpecialOrdersList';
 
 /**
@@ -38,8 +38,8 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         const externalId = invoice?.external_id || invoice?.id;
         if (externalId) {
           try {
-          const { data: invRow } = await supabase
-            .from('delivery_invoices').select('id, amount')
+            const { data: invRow } = await supabase
+              .from('delivery_invoices').select('id, amount')
               .eq('external_id', String(externalId)).maybeSingle();
             dbInvoiceId = invRow?.id || null;
           } catch { dbInvoiceId = null; }
