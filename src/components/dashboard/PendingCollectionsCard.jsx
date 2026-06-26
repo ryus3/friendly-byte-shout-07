@@ -32,15 +32,15 @@ const PendingCollectionsCard = () => {
           }}
         />
         <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2 relative z-10">
-          <CardTitle className="text-sm font-medium text-muted-foreground leading-tight flex-1">
-            تحصيلات بانتظار التأكيد
+          <CardTitle className="text-sm font-medium text-muted-foreground leading-tight flex items-center gap-2 flex-1">
+            <span>تحصيلات بانتظار التأكيد</span>
+            {count > 0 && (
+              <span className="relative inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-md">
+                {count}
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 animate-ping rounded-full bg-red-400" />
+              </span>
+            )}
           </CardTitle>
-          {count > 0 && (
-            <span className="relative flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-md">
-              {count}
-              <span className="absolute -top-0.5 -right-0.5 h-2 w-2 animate-ping rounded-full bg-red-400" />
-            </span>
-          )}
         </CardHeader>
         <CardContent className="flex-grow flex flex-col justify-between relative z-10">
           <motion.div className="flex-1 flex items-end justify-between" initial={{ y: 10, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.1 }}>
