@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, TrendingUp, TrendingDown, Wallet, Users, Package, Crown, ShieldCheck, Info, Truck, Boxes, ArrowDownUp, Banknote } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, Wallet, Users, Package, Crown, ShieldCheck, Info, Truck, Boxes, ArrowDownUp, Banknote, Receipt } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { computeInvoiceProfits, fetchInvoiceProfitsData } from '@/lib/invoiceProfitsCalc';
+import InvoiceSpecialOrdersList from '@/components/orders/InvoiceSpecialOrdersList';
 
 /**
  * تبويب أرباح الفاتورة - منطق دقيق:
@@ -190,6 +191,13 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
           </CardContent>
         </Card>
 
+        <InvoiceSpecialOrdersList
+          calc={calc}
+          orders={linkedOrders}
+          namesMap={namesMap}
+          fmt={fmt}
+        />
+
         <DeltaNote calc={calc} fmt={fmt} />
         <DeliveryNote totalDelivery={calc.totalDelivery} fmt={fmt} />
       </div>
@@ -228,7 +236,13 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
   return (
     <div className="space-y-4 p-1" dir="rtl">
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-        <StatCard icon={TrendingUp} label="إجمالي الإيراد" sub="حسب شركة التوصيل بدون توصيل" value={fmt(calc.totalRevenue)} color="blue" />
+        <RevenueSplitCard
+          channel={calc.channelRevenue}
+          offChannel={calc.offChannelExpectedAmount}
+          total={calc.totalRevenue}
+          fmt={fmt}
+        />
+        <StatCard icon={Receipt} label="صافي إيراد القناة" sub="مبلغ الوسيط − التوصيل (بعد الخصم/الزيادة)" value={fmt(calc.netChannelRevenue)} color="blue" />
         <StatCard icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
         <StatCard icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج • مُسلَّمة فعلاً`} value={`${calc.totalQty}`} color="purple" />
         <StatCard icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
@@ -237,6 +251,13 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         <DeltaStatCard delta={calc.totalDelta} fmt={fmt} />
         <OffChannelStatCard calc={calc} fmt={fmt} />
       </div>
+
+      <InvoiceSpecialOrdersList
+        calc={calc}
+        orders={linkedOrders}
+        namesMap={namesMap}
+        fmt={fmt}
+      />
 
       {employeeEntriesWithCounts.length > 0 && (
         <Card className="bg-gradient-to-br from-purple-500/10 to-fuchsia-500/5 border-purple-500/30">
@@ -478,4 +499,32 @@ const OffChannelStatCard = ({ calc, fmt }) => {
   );
 };
 
+/**
+ * كارت "إجمالي الإيراد المحاسبي" — مقسَّم لسطرين شفّافين:
+ *  - من شركة التوصيل (بدون أجور)
+ *  - خارج القناة (متوقَّع تحصيله من الموظف/إلكترونياً)
+ */
+const RevenueSplitCard = ({ channel, offChannel, total, fmt }) => {
+  return (
+    <Card className="h-full min-h-[104px] bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/30 text-blue-600">
+      <CardContent className="p-3 h-full flex flex-col justify-between">
+        <div className="flex items-center gap-2">
+          <TrendingUp className="w-4 h-4" />
+          <span className="text-xs text-muted-foreground">إجمالي الإيراد المحاسبي</span>
+        </div>
+        <div>
+          <div className="text-lg font-bold leading-tight">{fmt(total)}</div>
+          <div className="text-[10px] text-muted-foreground mt-1 space-y-0.5">
+            <div>• من شركة التوصيل: <span className="font-semibold">{fmt(channel)}</span></div>
+            {Number(offChannel) > 0 && (
+              <div>• خارج القناة (متوقَّع): <span className="font-semibold text-amber-600">{fmt(offChannel)}</span></div>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
 export default InvoiceProfitsTab;
+

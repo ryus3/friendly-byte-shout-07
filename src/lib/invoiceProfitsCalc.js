@@ -46,6 +46,10 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   let offChannelAbsorbedDelivery = 0;
   let offChannelExpectedAmount = 0; // الإيراد "المُستحَق" off-channel (ما قبضه الموظف/المالك خارج القناة)
   const offChannelOrders = [];
+  // إيراد القناة الحقيقي (مبلغ شركة التوصيل بدون أجور توصيل، بدون off-channel)
+  let channelRevenue = 0;
+  // قائمة الطلبات ذات الزيادة/الخصم من شركة التوصيل (للعرض)
+  const deltaOrders = []; // { order_id, created_by, delta, real_revenue, planned_revenue }
 
   const ensureOwner = (ownerId) => {
     if (!byOwner[ownerId]) byOwner[ownerId] = { revenue: 0, cost: 0, items: 0, products: [] };
@@ -127,6 +131,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     // (سنحسب accountedRevenue بعد بناء plannedRevenue أدناه.)
     if (!isOffChannel) {
       totalRevenue += realRevenue;
+      if (!isFullReturn) channelRevenue += realRevenue;
     }
     if (isOffChannel) {
       offChannelCount += 1;
@@ -216,6 +221,15 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const isExchange = o.order_type === 'replacement' || o.order_type === 'exchange';
     const delta = isExchange ? 0 : (realRevenue - orderItemsRevenue);
     totalDelta += delta;
+    if (Math.abs(delta) >= 0.5) {
+      deltaOrders.push({
+        order_id: o.id,
+        created_by: o.created_by || null,
+        delta,
+        real_revenue: realRevenue,
+        planned_revenue: orderItemsRevenue,
+      });
+    }
     if (Math.abs(delta) < 0.5) return;
 
     const creatorId = o.created_by || null;
@@ -262,11 +276,20 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     byOwner,
     productsList, productCount: productsList.length,
     itemsAvailable: productsList.length > 0,
+    // ✅ إيراد القناة (شركة التوصيل) بدون أجور توصيل وبدون off-channel
+    channelRevenue,
+    // ✅ صافي إيراد القناة = إيراد القناة − الخصم/الزيادة من الوسيط
+    //    (channelRevenue يساوي الـ planned للقناة فعلاً + delta لأن realRevenue = planned + delta،
+    //     لذلك صافي إيراد القناة بمعنى "ما وصلنا فعلاً من الوسيط بدون توصيل" = channelRevenue نفسه.
+    //     نعرضه باسم netChannelRevenue للوضوح في الواجهة.)
+    netChannelRevenue: channelRevenue,
     // ✅ Off-Channel (تحصيلات خارج قناة شركة التوصيل)
     offChannelCount,
     offChannelAbsorbedDelivery,
     offChannelExpectedAmount,
     offChannelOrders,
+    // ✅ قائمة طلبات الزيادة/الخصم من الوسيط
+    deltaOrders,
   };
 }
 
