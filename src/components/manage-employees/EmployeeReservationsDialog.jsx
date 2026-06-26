@@ -111,11 +111,14 @@ const EmployeeReservationsDialog = ({ open, onOpenChange, defaultEmployeeId = nu
       }
       const { data, error } = await q;
       if (error) throw error;
-      // فلترة دفاعية إضافية على جهة العميل (في حال السجلات قديمة بدون product_id)
+      // فلترة دفاعية: المالك يرى فقط حجوزات منتجاته لموظفيه المباشرين
+      const supSet = new Set((supervisedEmployeeIds || []).map(String));
       const filtered = (data || []).filter(r => {
         if (canManageAll) return true;
         const ownerId = r.products?.owner_user_id;
-        return ownerId && String(ownerId) === uidStr;
+        const ownerOk = ownerId && String(ownerId) === uidStr;
+        const empOk = supSet.has(String(r.employee_id)) || String(r.created_by) === uidStr;
+        return ownerOk && empOk;
       });
       setReservations(filtered);
     } catch (e) {
