@@ -113,7 +113,9 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     // ============================================================
     const isReturnType = (o.order_type === 'return');
     const isStatusReturned = (o.status === 'returned');
-    const isDeliveryReturned = (String(o.delivery_status || '') === '17');
+    // ✅ status 17 (راجع للتاجر) أو 16 (قيد الإرجاع في عهدة المندوب) كلاهما يعتبر إرجاع
+    const ds = String(o.delivery_status || '');
+    const isDeliveryReturned = (ds === '17' || ds === '16');
     const allItemsReturned = items.length > 0 && items.every((it) => {
       const q = Number(it.quantity) || 0;
       const qr = Number(it.quantity_returned) || 0;
