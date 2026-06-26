@@ -28,6 +28,8 @@ export function useOffChannelCollections({ scope = 'inbox', orderIds = null } = 
     else if (scope === 'inbox') q = q.eq('owner_user_id', userId).eq('status', 'pending_owner_confirmation');
     // ✅ المدير: عدّاد التحصيلات المعلقة عالمياً
     else if (scope === 'manager_pending') q = q.eq('status', 'pending_owner_confirmation');
+    // ✅ صفحة المالك: كل سجلاته (لكل الحالات)
+    else if (scope === 'owner_all') q = q.eq('owner_user_id', userId);
     // ✅ المدير: كل السجلات (للصفحة)
     else if (scope === 'manager_all') { /* no extra filter */ }
     else if (scope === 'order' && Array.isArray(orderIds) && orderIds.length) q = q.in('order_id', orderIds);
