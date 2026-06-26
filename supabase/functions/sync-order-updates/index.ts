@@ -377,18 +377,20 @@ Deno.serve(async (req) => {
         // Compare status (مقارنة صارمة بعد التطبيع)
         const statusChangedCheck = currentStatus !== '' && hasValidRemoteStatus && currentStatus !== newStatus;
 
-        // 🔒 حماية partial_delivery من المزامنة التلقائية
+        // 🔒 حماية أنواع الطلبات الخاصة من التحويل القسري في المزامنة
         const isPartialDelivery = localOrder.order_type === 'partial_delivery';
+        const isReturnOrder = localOrder.order_type === 'return' || Number(localOrder.refund_amount || 0) > 0;
+        const isExchangeOrder = localOrder.order_type === 'exchange' || localOrder.order_type === 'replacement';
+        const isProtectedType = isPartialDelivery || isReturnOrder || isExchangeOrder;
 
         if (statusChangedCheck) {
           const statusConfig = getStatusConfig(newStatus);
           let finalStatus = statusConfig.localStatus || statusConfig.internalStatus || 'delivery';
           
-          // 🔒 حماية مطلقة partial_delivery - لا نغير status أبداً عند المزامنة
-          if (isPartialDelivery) {
-            // partial_delivery يبقى كما هو - فقط delivery_status يتغير
+          // 🔒 حماية مطلقة للأنواع الخاصة: نُحدّث فقط delivery_status ولا نلمس status/order_type
+          if (isProtectedType) {
             finalStatus = localOrder.status;
-            console.log(`🔒 [PARTIAL-PROTECTED] ${localOrder.tracking_number} محمي - status يبقى ${localOrder.status}`);
+            console.log(`🔒 [TYPE-PROTECTED:${localOrder.order_type}] ${localOrder.tracking_number} — delivery_status يُحدّث فقط`);
           } else {
             // الطلبات العادية: تطبيق منطق المزامنة الكامل
             if (localOrder.status === 'delivered' || localOrder.status === 'completed') {
@@ -397,20 +399,13 @@ Deno.serve(async (req) => {
             } else if (newStatus === '4') {
               finalStatus = 'delivered';
             } else if (newStatus === '21') {
-              // ✅ الحالة 21 = تسليم جزئي - تحتاج معالجة يدوية من الموظف
+              // ✅ تحويل لتسليم جزئي يصح فقط لطلب عادي (regular)
               finalStatus = 'partial_delivery';
               updates.order_type = 'partial_delivery';
               updates.is_partial_delivery = true;
               console.log(`📦 [PARTIAL-21] ${localOrder.tracking_number} تحويل لتسليم جزئي`);
             } else if (newStatus === '17') {
-              // ✅ حماية: لا يمكن تحويل partial_delivery إلى returned_in_stock (يخالف check constraint)
-              // إن كان order_type جزئي بالفعل، نُبقي الحالة ونعالج لاحقاً عبر معالج المرتجعات
-              if (localOrder.order_type === 'partial_delivery') {
-                finalStatus = localOrder.status;
-                console.log(`🔒 [17-PARTIAL] ${localOrder.tracking_number} يبقى partial_delivery، لا يتحول لمرتجع كامل`);
-              } else {
-                finalStatus = 'returned_in_stock';
-              }
+              finalStatus = 'returned_in_stock';
             } else if (newStatus === '31' || newStatus === '32') {
               finalStatus = 'cancelled';
             }
@@ -445,7 +440,7 @@ Deno.serve(async (req) => {
           changesList.push(`العنوان: ${localOrder.customer_address} → ${waseetOrder.location}`);
         }
 
-        // Compare prices (تجاهل للطلبات الجزئية - السعر ثابت)
+        // Compare prices (تجاهل للأنواع الخاصة: partial_delivery / return / exchange — السعر ثابت محلياً)
         const currentFinalAmount = parseInt(String(localOrder.final_amount || 0));
         const newFinalAmount = parseInt(String(waseetOrder.price || 0));
         const currentDeliveryFee = parseInt(String(localOrder.delivery_fee || 0));
@@ -453,7 +448,7 @@ Deno.serve(async (req) => {
         // ✅ تحديث السعر فقط عند تغيّر فعلي من الشريك (لا تخمين خصم وهمي)
         // ⚠️ هام: الـ triggers تحسب final_amount = total_amount + delivery_fee
         // لذلك يجب تحديث total_amount بدلاً من final_amount مباشرة
-        if (!isPartialDelivery && newFinalAmount > 0 && currentFinalAmount !== newFinalAmount) {
+        if (!isProtectedType && newFinalAmount > 0 && currentFinalAmount !== newFinalAmount) {
           // حساب total_amount الجديد (السعر الكلي - رسوم التوصيل)
           const newTotalAmount = Math.max(0, newFinalAmount - currentDeliveryFee);
 
