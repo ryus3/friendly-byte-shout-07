@@ -4,6 +4,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import SmartPagination from '@/components/ui/SmartPagination';
 import { CheckCircle2, XCircle, Inbox, Loader2, Search, HandCoins, Crown, ShieldCheck, AlertTriangle, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useOffChannelCollections } from '@/hooks/useOffChannelCollections';
@@ -20,7 +21,7 @@ const OffChannelOwnerInbox = () => {
   const { user } = useAuth();
   const { isAdmin } = usePermissions();
   const userId = user?.user_id || user?.id;
-  const scope = isAdmin ? 'all' : 'inbox';
+  const scope = isAdmin ? 'manager_all' : 'owner_all';
 
   const { rows, loading, confirmReceipt, reload } = useOffChannelCollections({ scope });
 
@@ -29,7 +30,12 @@ const OffChannelOwnerInbox = () => {
   const [busyId, setBusyId] = useState(null);
   const [filter, setFilter] = useState('pending'); // pending | settled | disputed | all
   const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 10;
   const { toast } = useToast();
+
+  // إعادة الصفحة للأولى عند تغيير الفلتر/البحث
+  useEffect(() => { setPage(1); }, [filter, query]);
 
   // Real-time updates
   useEffect(() => {
@@ -181,8 +187,9 @@ const OffChannelOwnerInbox = () => {
           </CardContent>
         </Card>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filteredRows.map(row => {
+          {filteredRows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE).map(row => {
             const order = ordersMap[row.order_id];
             const collector = usersMap[row.collector_user_id] || '—';
             const owner = usersMap[row.owner_user_id] || '—';
@@ -251,6 +258,17 @@ const OffChannelOwnerInbox = () => {
             );
           })}
         </div>
+        {filteredRows.length > PAGE_SIZE && (
+          <SmartPagination
+            currentPage={page}
+            totalPages={Math.ceil(filteredRows.length / PAGE_SIZE)}
+            onPageChange={setPage}
+            totalItems={filteredRows.length}
+            itemsPerPage={PAGE_SIZE}
+            className="pt-4"
+          />
+        )}
+        </>
       )}
     </div>
   );
