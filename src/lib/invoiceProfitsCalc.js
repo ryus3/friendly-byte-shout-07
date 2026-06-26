@@ -344,18 +344,40 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
   const employeeBonusTotal = Object.values(employeeBonusByEmp).reduce((s, v) => s + v, 0);
   const employeeProfitTotal = Object.values(employeeProfitByEmp).reduce((s, v) => s + v, 0);
-  const employeeTotalCombined = employeeProfitTotal;
-  const employeeCombinedByEmp = { ...employeeProfitByEmp };
+
+  // ✅ قاعدة الربح فقط (بدون أي زيادة/خصم من شركة التوصيل):
+  //    DB تخزّن stored = base + max(0, delta_order)؛ نطرح الزيادات الموجبة لاستخراج الـ base.
+  const employeeBaseByEmp = {};
+  Object.keys(employeeProfitByEmp).forEach((emp) => {
+    const stored = employeeProfitByEmp[emp] || 0;
+    const positiveDelta = employeePositiveDeltaByEmp[emp] || 0;
+    employeeBaseByEmp[emp] = stored - positiveDelta;
+  });
+  const employeeBaseTotal = Object.values(employeeBaseByEmp).reduce((s, v) => s + v, 0);
+
+  // ✅ المستحق الفعلي للموظف على مستوى الفاتورة = القاعدة + صافي delta لأصحاب القواعد
+  //    (الزيادة تذهب للموظف، الخصم يُخصم منه. قد تتقاصّ عبر الفاتورة فتصبح القاعدة وحدها.)
+  const employeeActualPayTotal = employeeBaseTotal + employeeBonusTotal;
+
+  // كرت "مستحقات الموظفين" يعرض القاعدة فقط (الـ delta يظهر في كروت الزيادة/الخصم المنفصلة)
+  const employeeTotalCombined = employeeBaseTotal;
+  const employeeCombinedByEmp = { ...employeeBaseByEmp };
 
   const totalProfit = totalRevenue - totalCost;
-  const netForOwners = totalProfit - employeeTotalCombined;
+  // ✅ صافي للمالكين = الإيراد الحقيقي - التكلفة - المستحق الفعلي للموظف (مع الـ delta)
+  const netForOwners = totalRevenue - totalCost - employeeActualPayTotal;
 
   const productsList = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
+
+  // ✅ "المفروض قبل الخصم" = إيراد القناة الفعلي + الخصومات السالبة + خسارة الإرجاع
+  //    (لأن invoiceAmount/channelRevenue يكون بعد خصم الوسيط من تلك الطلبات)
+  const preDiscountChannelRevenue = channelRevenue + negativeDeltaAbs + Math.abs(returnsTotalLoss || 0);
 
   return {
     totalRevenue, totalCost, totalProfit, totalQty, totalDelivery, totalDelta,
     revenueFromItems: revenueFromItemsAll,
     employeeProfitByEmp, employeeBonusByEmp, employeeCombinedByEmp,
+    employeeBaseByEmp, employeeBaseTotal, employeeActualPayTotal,
     employeeProfitTotal, employeeBonusTotal, employeeTotalCombined,
     netForOwners,
     byOwner,
@@ -363,11 +385,11 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     itemsAvailable: productsList.length > 0,
     // ✅ إيراد القناة (شركة التوصيل) بدون أجور توصيل وبدون off-channel
     channelRevenue,
-    // ✅ صافي إيراد القناة = إيراد القناة − الخصم/الزيادة من الوسيط
-    //    (channelRevenue يساوي الـ planned للقناة فعلاً + delta لأن realRevenue = planned + delta،
-    //     لذلك صافي إيراد القناة بمعنى "ما وصلنا فعلاً من الوسيط بدون توصيل" = channelRevenue نفسه.
-    //     نعرضه باسم netChannelRevenue للوضوح في الواجهة.)
+    // ✅ صافي إيراد القناة (= ما وصلنا فعلاً من الوسيط)
     netChannelRevenue: channelRevenue,
+    // ✅ "المفروض قبل خصم الوسيط/الإرجاع"
+    preDiscountChannelRevenue,
+    negativeDeltaAbs,
     // ✅ Off-Channel (تحصيلات خارج قناة شركة التوصيل)
     offChannelCount,
     offChannelAbsorbedDelivery,
