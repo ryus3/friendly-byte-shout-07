@@ -113,19 +113,30 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     const isPartialMissingData = (o.order_type === 'partial_delivery') && plannedRevenue === 0;
     let derivedLines = baseLines;
     if (isPartialMissingData) {
-      const originalRevenue = items
-        .filter((it) => it.item_direction !== 'incoming')
-        .reduce((s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0);
+      const incomingFiltered = items.filter((it) => it.item_direction !== 'incoming');
+      const originalTotalQty = incomingFiltered.reduce((s, it) => s + (Number(it.quantity) || 0), 0);
+      const originalRevenue = incomingFiltered.reduce(
+        (s, it) => s + (Number(it.quantity) || 0) * (Number(it.unit_price) || 0), 0
+      );
       const fraction = originalRevenue > 0 ? Math.min(1, Math.max(0, realRevenue / originalRevenue)) : 0;
-      derivedLines = items
-        .filter((it) => it.item_direction !== 'incoming')
-        .map((it) => {
-          const unitPrice = Number(it.unit_price) || 0;
-          const costUnit = Number(it.products?.cost_price) || Number(it.product_variants?.cost_price) || 0;
-          const originalQty = Number(it.quantity) || 0;
-          const eligibleQty = Math.round(originalQty * fraction);
-          return { it, eligibleQty, unitPrice, costUnit };
-        });
+      // العدد الكلي للقطع المسلَّمة فعلياً (مقرّب)
+      let remaining = Math.round(originalTotalQty * fraction);
+      // نوزّع الكميات من البنود الأعلى سعراً أولاً للحفاظ على توازن الإيراد
+      const ordered = [...incomingFiltered].sort((a, b) =>
+        (Number(b.unit_price) || 0) - (Number(a.unit_price) || 0)
+      );
+      const qtyByItem = new Map();
+      ordered.forEach((it) => {
+        const cap = Number(it.quantity) || 0;
+        const take = Math.min(cap, Math.max(0, remaining));
+        qtyByItem.set(it, take);
+        remaining -= take;
+      });
+      derivedLines = incomingFiltered.map((it) => {
+        const unitPrice = Number(it.unit_price) || 0;
+        const costUnit = Number(it.products?.cost_price) || Number(it.product_variants?.cost_price) || 0;
+        return { it, eligibleQty: qtyByItem.get(it) || 0, unitPrice, costUnit };
+      });
       plannedRevenue = derivedLines.reduce((s, l) => s + l.eligibleQty * l.unitPrice, 0);
     }
 
