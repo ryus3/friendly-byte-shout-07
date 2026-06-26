@@ -527,9 +527,10 @@ const loadOffChannelCollections = async (invoiceId, orders = []) => {
   return data || [];
 };
 
-const RevenueSplitCard = ({ channel, expectedChannel, offChannel, returnsLoss, offChannelDelivery, fmt }) => {
+const RevenueSplitCard = ({ channel, expectedChannel, offChannel, returnsLoss, offChannelDelivery, negativeDelta, fmt }) => {
   const incomingTotal = (Number(channel) || 0) + (Number(offChannel) || 0);
-  const courierDeductions = (Number(returnsLoss) || 0) + (Number(offChannelDelivery) || 0);
+  const courierDiscount = Number(negativeDelta) || 0;
+  const returnsAbs = Number(returnsLoss) || 0;
   return (
     <Card className="h-full min-h-[104px] bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/30 text-blue-600">
       <CardContent className="p-3 h-full flex flex-col justify-between">
@@ -547,8 +548,11 @@ const RevenueSplitCard = ({ channel, expectedChannel, offChannel, returnsLoss, o
             {Number(expectedChannel) > 0 && (
               <div>• المفروض قبل الخصم: <span className="font-semibold">{fmt(expectedChannel)}</span></div>
             )}
-            {courierDeductions > 0 && (
-              <div>• خصم الوسيط: <span className="font-semibold text-orange-600">−{fmt(courierDeductions)}</span></div>
+            {courierDiscount > 0 && (
+              <div>• خصم الوسيط: <span className="font-semibold text-orange-600">−{fmt(courierDiscount)}</span></div>
+            )}
+            {returnsAbs > 0 && (
+              <div>• خسارة إرجاع: <span className="font-semibold text-orange-600">−{fmt(returnsAbs)}</span></div>
             )}
           </div>
         </div>
