@@ -91,7 +91,7 @@ const InvoicesProfitReportDialog = ({
   const [invoicesError, setInvoicesError] = useState(null);
   const [activeAccounts, setActiveAccounts] = useState([]); // [{partner, account_username}]
 
-  const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
+  const [data, setData] = useState({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [] });
   const [computing, setComputing] = useState(false);
   const [computeError, setComputeError] = useState(null);
   const [tabIndex, setTabIndex] = useState(0);
@@ -225,7 +225,7 @@ const InvoicesProfitReportDialog = ({
     let cancelled = false;
     (async () => {
       if (selectedIds.size === 0) {
-        setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {} });
+        setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [] });
         setComputeError(null);
         return;
       }
@@ -237,12 +237,22 @@ const InvoicesProfitReportDialog = ({
         });
         if (error) throw error;
         if (cancelled) return;
+        const orderIds = (rpc?.orders || []).map((o) => o.id).filter(Boolean);
+        let offChannelCollections = [];
+        if (orderIds.length > 0) {
+          const { data: occRows } = await supabase
+            .from('off_channel_collections')
+            .select('*')
+            .in('order_id', orderIds);
+          offChannelCollections = occRows || [];
+        }
         setData({
           orders: rpc?.orders || [],
           orderItems: rpc?.orderItems || [],
           profits: rpc?.profits || [],
           employeesWithRules: new Set(rpc?.employeesWithRules || []),
           namesMap: rpc?.namesMap || {},
+          offChannelCollections,
         });
       } catch (e) {
         console.error('report rpc error', e);
