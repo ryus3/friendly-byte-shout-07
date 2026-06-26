@@ -34,20 +34,25 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
       const invoiceDbId = invoice?.id && typeof invoice.id === 'string' && invoice.id.includes('-') ? invoice.id : null;
       // نحاول أولاً جلب معرف الفاتورة من DB إذا لم يكن متاحاً
       let dbInvoiceId = invoiceDbId;
-      if (!dbInvoiceId) {
+      let invoiceAmount = (invoice?.amount !== undefined && invoice?.amount !== null)
+        ? Number(invoice.amount) : null;
+      if (!dbInvoiceId || invoiceAmount === null) {
         const externalId = invoice?.external_id || invoice?.id;
         if (externalId) {
           try {
             const { data: invRow } = await supabase
               .from('delivery_invoices').select('id, amount')
               .eq('external_id', String(externalId)).maybeSingle();
-            dbInvoiceId = invRow?.id || null;
-          } catch { dbInvoiceId = null; }
+            dbInvoiceId = dbInvoiceId || invRow?.id || null;
+            if (invoiceAmount === null && invRow?.amount !== null && invRow?.amount !== undefined) {
+              invoiceAmount = Number(invRow.amount);
+            }
+          } catch { /* ignore */ }
         }
       }
 
       if (!dbInvoiceId) {
-        if (!cancelled) { setLoading(false); setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [] }); }
+        if (!cancelled) { setLoading(false); setData({ orders: [], orderItems: [], profits: [], employeesWithRules: new Set(), namesMap: {}, offChannelCollections: [], invoiceAmount: null }); }
         return;
       }
 
