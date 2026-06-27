@@ -189,11 +189,6 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
       totalRevenue += realRevenue;
       if (!isFullReturn) channelRevenue += realRevenue;
     }
-    if (isOffChannel) {
-      offChannelCount += 1;
-      offChannelAbsorbedDelivery += deliveryFee;
-    }
-
     // البنود المعتبرة: للطلب الراجع كلياً نستخدم بنود incoming (تمثّل ما عاد)؛
     // لباقي الطلبات نستثني incoming لأنها مدخلات استبدال.
     const lineItems = isFullReturn ? items : items.filter((it) => it.item_direction !== 'incoming');
