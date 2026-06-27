@@ -170,13 +170,12 @@ const InvoiceSpecialOrdersList = ({ calc, orders = [], namesMap = {}, fmt }) => 
             <div className="flex items-center gap-2 mb-2 text-amber-700 dark:text-amber-300">
               <Banknote className="w-4 h-4" />
               <span className="text-xs font-bold">
-                تحصيلات خارج القناة ({offChannelOrders.length}) — دفع إلكتروني / المالك يتحمّل التوصيل
+                تحصيلات خارج القناة ({offChannelOrders.length}) — دفع إلكتروني / نقد / تحويل
               </span>
             </div>
             <div className="space-y-1.5">{offChannelOrders.map((it) => renderOrderRow(it, 'offchannel'))}</div>
             <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
-              * هذه الطلبات مبلغها من شركة التوصيل = 0 لكنها مُسلَّمة فعلاً. <b>اضغط على الطلب لتصنيفه</b>
-              (دفع إلكتروني/تحويل/نقد/خصم) — ثم يؤكد المالك استلام المبلغ.
+              * تبقى هذه الطلبات ظاهرة حتى بعد التأكيد حتى تكون مطابقة الإيراد واضحة داخل الفاتورة.
             </p>
           </section>
         )}

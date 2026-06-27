@@ -246,13 +246,13 @@ const InvoiceProfitsTab = ({ invoice, linkedOrders = [] }) => {
         <RevenueSplitCard
           channel={data.invoiceAmount ?? Number(invoice?.amount) ?? 0}
           expectedChannel={calc.preDiscountChannelRevenue}
-          offChannel={calc.offChannelExpectedAmount}
+          offChannel={calc.confirmedOffChannelExpectedAmount}
           returnsLoss={Math.abs(calc.returnsTotalLoss || 0)}
-          offChannelDelivery={calc.offChannelAbsorbedDelivery}
+          offChannelDelivery={calc.confirmedOffChannelAbsorbedDelivery}
           negativeDelta={calc.negativeDeltaAbs}
           fmt={fmt}
         />
-        <StatCard icon={Receipt} label="الإيراد المفروض" sub="قبل خصم الإرجاع وخصم الوسيط" value={fmt(calc.preDiscountChannelRevenue)} color="blue" />
+        <StatCard icon={Receipt} label="قبل الزيادة والخصم" sub="شركة التوصيل قبل الإرجاع وتوصيل الدفع الخارجي" value={fmt(calc.preDiscountChannelRevenue)} color="blue" />
         <StatCard icon={Package} label="إجمالي التكلفة" value={fmt(calc.totalCost)} color="orange" />
         <StatCard icon={Boxes} label="عدد القطع" sub={`${calc.productCount} منتج • مُسلَّمة فعلاً`} value={`${calc.totalQty}`} color="purple" />
         <StatCard icon={Wallet} label="صافي الربح" value={fmt(calc.totalProfit)} color="emerald" highlight />
@@ -515,20 +515,19 @@ const OffChannelStatCard = ({ calc, fmt }) => {
  *  - خارج القناة (متوقَّع تحصيله من الموظف/إلكترونياً)
  */
 const loadOffChannelCollections = async (invoiceId, orders = []) => {
-  if (!invoiceId) return [];
   const orderIds = (orders || []).map((o) => o.id).filter(Boolean);
   if (!orderIds.length) return [];
   const { data, error } = await supabase
     .from('off_channel_collections')
     .select('*')
-    .eq('invoice_id', invoiceId)
     .in('order_id', orderIds);
   if (error) return [];
   return data || [];
 };
 
 const RevenueSplitCard = ({ channel, expectedChannel, offChannel, returnsLoss, offChannelDelivery, negativeDelta, fmt }) => {
-  const incomingTotal = (Number(channel) || 0) + (Number(offChannel) || 0);
+  const incomingTotal = Number(channel) || 0;
+  const accountableTotal = incomingTotal + (Number(offChannel) || 0);
   const courierDiscount = Number(negativeDelta) || 0;
   const returnsAbs = Number(returnsLoss) || 0;
   return (
@@ -543,16 +542,22 @@ const RevenueSplitCard = ({ channel, expectedChannel, offChannel, returnsLoss, o
           <div className="text-[10px] text-muted-foreground mt-1 space-y-0.5">
             <div>• من شركة التوصيل: <span className="font-semibold">{fmt(channel)}</span></div>
             {Number(offChannel) > 0 && (
-              <div>• خارج القناة المسجّل: <span className="font-semibold text-amber-600">{fmt(offChannel)}</span></div>
+              <div>• خارج القناة المؤكد: <span className="font-semibold text-amber-600">{fmt(offChannel)}</span></div>
+            )}
+            {Number(offChannel) > 0 && (
+              <div>• الإيراد المستحق بعد التأكيد: <span className="font-semibold text-emerald-600">{fmt(accountableTotal)}</span></div>
             )}
             {Number(expectedChannel) > 0 && (
-              <div>• المفروض قبل الخصم: <span className="font-semibold">{fmt(expectedChannel)}</span></div>
+              <div>• قبل الزيادة والخصم: <span className="font-semibold">{fmt(expectedChannel)}</span></div>
             )}
             {courierDiscount > 0 && (
-              <div>• خصم الوسيط: <span className="font-semibold text-orange-600">−{fmt(courierDiscount)}</span></div>
+              <div>• فروقات طلبات أخرى: <span className="font-semibold text-orange-600">−{fmt(courierDiscount)}</span></div>
             )}
             {returnsAbs > 0 && (
               <div>• خسارة إرجاع: <span className="font-semibold text-orange-600">−{fmt(returnsAbs)}</span></div>
+            )}
+            {Number(offChannelDelivery) > 0 && (
+              <div>• توصيل دفع خارجي: <span className="font-semibold text-orange-600">−{fmt(offChannelDelivery)}</span></div>
             )}
           </div>
         </div>
