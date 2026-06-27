@@ -2332,7 +2332,48 @@ export const SuperProvider = ({ children }) => {
         let alwaseetResult;
         let activeToken = accountData.token;
 
+        const rememberDeliveryTokenHint = (tokenToRemember) => {
+          try {
+            window.localStorage.setItem('delivery_partner_default_token', JSON.stringify({
+              token: tokenToRemember,
+              partner_name: destination,
+              username: actualAccount,
+              user_id: accountData.user_id || createdBy,
+            }));
+          } catch (_) {}
+        };
+
+        const refreshTokenForSelectedAccount = async (reason = 'manual') => {
+          if (destination !== 'alwaseet') return null;
+          try {
+            const { data: refreshRes, error: refreshErr } = await supabase.functions.invoke('refresh-delivery-partner-tokens', {
+              body: accountData?.id
+                ? { token_id: accountData.id }
+                : { partner_name: 'alwaseet', account_username: actualAccount }
+            });
+            if (refreshErr) {
+              devLog.warn('⚠️ فشل تجديد توكن الوسيط قبل الموافقة:', refreshErr.message || refreshErr);
+              return null;
+            }
+            const renewed = (refreshRes?.results || []).find((r) => r.success && r.token);
+            if (renewed?.token) {
+              activeToken = renewed.token;
+              rememberDeliveryTokenHint(activeToken);
+              devLog.log('✅ تم تجديد توكن الوسيط للموافقة الذكية:', { account: actualAccount, reason });
+              return activeToken;
+            }
+          } catch (refreshException) {
+            devLog.warn('⚠️ تعذر تجديد توكن الوسيط:', refreshException?.message || refreshException);
+          }
+          return null;
+        };
+
+        rememberDeliveryTokenHint(activeToken);
+        // للمدير العام خصوصاً: لا نعتمد على expires_at وحده؛ الوسيط قد يرفض create-order رغم أن الصف نشط.
+        await refreshTokenForSelectedAccount('pre_create');
+
         const tryCreateOrder = async (tokenToUse) => {
+          rememberDeliveryTokenHint(tokenToUse);
           if (destination === 'modon') {
             const ModonAPI = await import('../lib/modon-api.js');
             return await ModonAPI.createModonOrder(updatedPayload, tokenToUse);
@@ -2351,25 +2392,43 @@ export const SuperProvider = ({ children }) => {
           if (createErr?.isTokenExpired && destination === 'alwaseet') {
             let recovered = false;
             try {
-              // 1) جرّب توكنات أخرى نشطة لنفس الحساب (نفس account_username)
-              const { data: altTokens } = await supabase
-                .from('delivery_partner_tokens')
-                .select('id, token, expires_at, account_username, partner_data, user_id')
-                .eq('partner_name', 'alwaseet')
-                .ilike('account_username', actualAccount)
-                .eq('is_active', true)
-                .gt('expires_at', new Date().toISOString())
-                .order('user_id', { ascending: createdBy ? false : true });
-
-              for (const row of (altTokens || [])) {
-                if (!row?.token || row.token === activeToken) continue;
+              const refreshedToken = await refreshTokenForSelectedAccount('token_expired');
+              if (refreshedToken) {
                 try {
-                  alwaseetResult = await tryCreateOrder(row.token);
-                  activeToken = row.token;
+                  alwaseetResult = await tryCreateOrder(refreshedToken);
+                  activeToken = refreshedToken;
                   recovered = true;
-                  devLog.log('✅ نجح إنشاء الطلب باستخدام توكن بديل نشط لنفس الحساب');
-                  break;
-                } catch (_e) { /* جرّب التالي */ }
+                  devLog.log('✅ نجح إنشاء الطلب بعد تجديد التوكن المستهدف');
+                } catch (_retryAfterRefresh) { /* جرّب المراحل التالية */ }
+              }
+
+              // 1) جرّب توكنات أخرى نشطة لنفس الحساب (نفس account_username)
+              if (!recovered) {
+                const { data: altTokens } = await supabase
+                  .from('delivery_partner_tokens')
+                  .select('id, token, expires_at, account_username, partner_data, user_id')
+                  .eq('partner_name', 'alwaseet')
+                  .ilike('account_username', actualAccount)
+                  .eq('is_active', true)
+                  .gt('expires_at', new Date().toISOString());
+
+                const orderedAltTokens = [...(altTokens || [])].sort((a, b) => {
+                  const aScore = a.user_id === createdBy ? 0 : (a.user_id === approverId ? 1 : 2);
+                  const bScore = b.user_id === createdBy ? 0 : (b.user_id === approverId ? 1 : 2);
+                  return aScore - bScore;
+                });
+
+                for (const row of orderedAltTokens) {
+                  if (!row?.token || row.token === activeToken) continue;
+                  try {
+                    accountData.user_id = row.user_id || accountData.user_id;
+                    alwaseetResult = await tryCreateOrder(row.token);
+                    activeToken = row.token;
+                    recovered = true;
+                    devLog.log('✅ نجح إنشاء الطلب باستخدام توكن بديل نشط لنفس الحساب');
+                    break;
+                  } catch (_e) { /* جرّب التالي */ }
+                }
               }
 
               // 2) إن لم ينجح: تجديد تلقائي عبر كلمة المرور المحفوظة لأي صف لنفس الحساب

@@ -35,6 +35,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   const employeePositiveDeltaByEmp = {}; // مجموع الزيادات الموجبة فقط (لأن DB لا يطبّق الـ delta السالب)
   const employeeProfitByEmp = {}; // من جدول profits (المصدر الفعلي المخزّن)
   const offChannelByOrder = new Map();
+  const offChannelTrackedOrderIds = new Set();
 
   let totalRevenue = 0;     // = Σ (final_amount - delivery_fee) للطلبات غير الراجعة
   let totalCost = 0;
@@ -48,6 +49,8 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   let offChannelCount = 0;
   let offChannelAbsorbedDelivery = 0;
   let offChannelExpectedAmount = 0; // الإيراد "المُستحَق" off-channel (ما قبضه الموظف/المالك خارج القناة)
+  let confirmedOffChannelExpectedAmount = 0;
+  let confirmedOffChannelAbsorbedDelivery = 0;
   const offChannelOrders = [];
   // إيراد القناة الحقيقي (مبلغ شركة التوصيل بدون أجور توصيل، بدون off-channel)
   let channelRevenue = 0;
@@ -76,6 +79,47 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
       };
     }
     return productMap[pid];
+  };
+
+  const isCollectionConfirmed = (row) => !!(row && (
+    row.cash_movement_id || ['settled', 'confirmed', 'owner_confirmed', 'paid', 'completed'].includes(String(row.status || ''))
+  ));
+
+  const registerOffChannelCollection = ({ order, record, productAmount, deliveryFee, fallbackAmount, forcePending = false }) => {
+    if (!order?.id || offChannelTrackedOrderIds.has(order.id)) return null;
+    const registeredPaid = Number(record?.customer_paid_amount) || 0;
+    const ownerDue = Number(record?.owner_due_amount) || 0;
+    const expectedPaid = registeredPaid > 0
+      ? registeredPaid
+      : (ownerDue > 0 ? ownerDue : (Number(fallbackAmount) || 0));
+    if (expectedPaid <= 0 && !record && !forcePending) return null;
+
+    const absorbedDelivery = Number(record?.delivery_fee_absorbed) || Number(deliveryFee) || 0;
+    const confirmed = isCollectionConfirmed(record);
+    const status = record?.status || (forcePending ? 'pending_classification' : 'pending_owner_confirmation');
+
+    offChannelTrackedOrderIds.add(order.id);
+    offChannelCount += 1;
+    offChannelAbsorbedDelivery += absorbedDelivery;
+    offChannelExpectedAmount += expectedPaid;
+    if (confirmed) {
+      confirmedOffChannelExpectedAmount += expectedPaid;
+      confirmedOffChannelAbsorbedDelivery += absorbedDelivery;
+    }
+    const row = {
+      order_id: order.id,
+      created_by: order.created_by || null,
+      expected_amount: expectedPaid,
+      product_amount: Number(productAmount) || 0,
+      delivery_fee_absorbed: absorbedDelivery,
+      collection_type: record?.collection_type || null,
+      collection_status: status,
+      owner_due_amount: ownerDue,
+      items: Number(productAmount) || 0,
+      confirmed,
+    };
+    offChannelOrders.push(row);
+    return row;
   };
 
   (profits || []).forEach((p) => {
@@ -128,11 +172,9 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
     // ✅ هل تأكَّد المالك استلام مبلغ الـ off-channel؟
     // إذا لا: لا نُدخل قطعه/إيراده/تكلفته ضمن "توزيع الأرباح على المالكين".
-    const occRecord = isOffChannel ? offChannelByOrder.get(o.id) : null;
-    const isOffChannelConfirmed = !!(occRecord && (
-      occRecord.cash_movement_id ||
-      ['settled', 'confirmed', 'owner_confirmed'].includes(occRecord.status)
-    ));
+    const collectionRecord = offChannelByOrder.get(o.id) || null;
+    const occRecord = isOffChannel ? collectionRecord : null;
+    const isOffChannelConfirmed = isCollectionConfirmed(occRecord);
     const isOffChannelPending = isOffChannel && !isOffChannelConfirmed;
 
     // الإيراد الحقيقي للقناة (ما دفعته شركة التوصيل فعلاً، يخصم منه التوصيل)
@@ -144,11 +186,6 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
       totalRevenue += realRevenue;
       if (!isFullReturn) channelRevenue += realRevenue;
     }
-    if (isOffChannel) {
-      offChannelCount += 1;
-      offChannelAbsorbedDelivery += deliveryFee;
-    }
-
     // البنود المعتبرة: للطلب الراجع كلياً نستخدم بنود incoming (تمثّل ما عاد)؛
     // لباقي الطلبات نستثني incoming لأنها مدخلات استبدال.
     const lineItems = isFullReturn ? items : items.filter((it) => it.item_direction !== 'incoming');
@@ -220,24 +257,18 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     //   - المعلَّق: يُعرض فقط في بطاقة "تحصيلات خارج القناة"، ولا يدخل
     //     لا في `totalRevenue` ولا في `byOwner` حتى يؤكّد المالك الاستلام.
     // ============================================================
-    if (isOffChannel) {
-      const record = offChannelByOrder.get(o.id);
-      const registeredPaid = Number(record?.customer_paid_amount) || 0;
-      const expectedPaid = registeredPaid > 0 ? registeredPaid : (orderItemsRevenue + deliveryFee);
-
-      offChannelExpectedAmount += expectedPaid;
-      offChannelOrders.push({
-        order_id: o.id,
-        created_by: o.created_by || null,
-        expected_amount: expectedPaid,
-        product_amount: orderItemsRevenue,
-        delivery_fee_absorbed: deliveryFee,
-        collection_type: record?.collection_type || null,
-        collection_status: record?.status || 'pending_classification',
-        owner_due_amount: Number(record?.owner_due_amount) || 0,
-        items: orderItemsRevenue,
-        confirmed: isOffChannelConfirmed,
+    if (collectionRecord || isOffChannel) {
+      registerOffChannelCollection({
+        order: o,
+        record: collectionRecord,
+        productAmount: orderItemsRevenue,
+        deliveryFee,
+        fallbackAmount: orderItemsRevenue + deliveryFee,
+        forcePending: isOffChannel,
       });
+    }
+
+    if (isOffChannel) {
       if (isOffChannelConfirmed) {
         // محاسبياً نضيف plannedRevenue للإيراد الكلي حتى يطابق التكلفة والربح يصبح حقيقياً
         totalRevenue += orderItemsRevenue;
@@ -335,10 +366,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
   //    يشمل أصلاً خصم الإرجاع وخصم أجور توصيل طلبات الـ off-channel.
   //    نضيف فوقه فقط الـ off-channel المؤكَّد من المالك.
   if (invoiceAmount !== null && invoiceAmount !== undefined) {
-    const confirmedOffChannel = offChannelOrders
-      .filter((o) => o.confirmed)
-      .reduce((s, o) => s + (Number(o.expected_amount) || 0), 0);
-    totalRevenue = Number(invoiceAmount) + confirmedOffChannel;
+    totalRevenue = Number(invoiceAmount) + confirmedOffChannelExpectedAmount;
     channelRevenue = Number(invoiceAmount);
   }
 
@@ -369,9 +397,9 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
 
   const productsList = Object.values(productMap).sort((a, b) => b.revenue - a.revenue);
 
-  // ✅ "المفروض قبل الخصم" = إيراد القناة الفعلي + الخصومات السالبة + خسارة الإرجاع
-  //    (لأن invoiceAmount/channelRevenue يكون بعد خصم الوسيط من تلك الطلبات)
-  const preDiscountChannelRevenue = channelRevenue + negativeDeltaAbs + Math.abs(returnsTotalLoss || 0);
+  // ✅ "المفروض قبل الخصم" = إيراد القناة الفعلي + خسارة الإرجاع + توصيل الطلبات المؤكدة خارج القناة.
+  // لا نضيف خصومات التسليم الجزئي هنا؛ تُعرض كفروقات طلبات مستقلة ولا تعني نقصاً في فاتورة الوسيط.
+  const preDiscountChannelRevenue = channelRevenue + Math.abs(returnsTotalLoss || 0) + confirmedOffChannelAbsorbedDelivery;
 
   return {
     totalRevenue, totalCost, totalProfit, totalQty, totalDelivery, totalDelta,
@@ -394,6 +422,8 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     offChannelCount,
     offChannelAbsorbedDelivery,
     offChannelExpectedAmount,
+    confirmedOffChannelExpectedAmount,
+    confirmedOffChannelAbsorbedDelivery,
     offChannelOrders,
     // ✅ قائمة طلبات الزيادة/الخصم من الوسيط
     deltaOrders,

@@ -33,6 +33,7 @@ import devLog from '@/lib/devLogger';
 const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
   const { deleteAiOrderSafely } = useAiOrdersCleanup();
   const { settings } = useSuper(); // إضافة settings للحصول على رسوم التوصيل
+  const [isApproving, setIsApproving] = useState(false);
   
   const formatDateEnglish = (date) => {
     return new Date(date).toLocaleDateString('en-US');
@@ -592,9 +593,9 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
             {/* Approve */}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 bg-white text-slate-900 hover:bg-slate-100 border border-white/60 shadow-sm" disabled={needsReviewAny || availability !== 'available'}>
+                <Button variant="ghost" size="sm" className="h-8 text-xs gap-1 bg-white text-slate-900 hover:bg-slate-100 border border-white/60 shadow-sm" disabled={isApproving || needsReviewAny || availability !== 'available'}>
                   <CheckCircle2 className="w-3 h-3" />
-                  موافقة
+                  {isApproving ? 'جاري...' : 'موافقة'}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -607,6 +608,8 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                   <AlertDialogAction
                     onClick={async () => {
                       // ⏳ لا نُخفي الطلب قبل التأكد من نجاح الإنشاء الفعلي في شركة التوصيل
+                      if (isApproving) return;
+                      setIsApproving(true);
                       toast({ title: 'جاري الموافقة...', description: 'تتم معالجة الطلب الذكي', variant: 'default' });
 
                       try {
@@ -621,13 +624,18 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
 
                         // ملاحظة: لا نمنع الموافقة عند غياب الحساب — الخادم يختار حساب
                         // منشئ الطلب تلقائياً (المدير يضغط موافقة لكن الإرسال بحساب الموظف).
-
-
-                        const res = await approveAiOrder?.(
-                          order.id,
-                          orderDestination.destination,
-                          orderDestination.account
-                        );
+                        const timeoutMs = orderDestination.destination === 'local' ? 15000 : 55000;
+                        const res = await Promise.race([
+                          approveAiOrder?.(
+                            order.id,
+                            orderDestination.destination,
+                            orderDestination.account
+                          ),
+                          new Promise((_, reject) => setTimeout(
+                            () => reject(new Error(`انتهت مهلة الموافقة (${Math.round(timeoutMs / 1000)} ثانية). الطلب لم يُخفَ ويمكن إعادة المحاولة.`)),
+                            timeoutMs
+                          ))
+                        ]);
                         devLog.log('🔍 نتيجة الموافقة:', res);
                         if (res?.success) {
                           devLog.log('✅ سيتم حذف الطلب من النافذة:', order.id);
@@ -640,6 +648,8 @@ const AiOrderCard = ({ order, isSelected, onSelect, orderDestination }) => {
                         }
                       } catch (error) {
                         toast({ title: 'خطأ في الشبكة', description: error?.message || 'تعذر الاتصال بالخادم', variant: 'destructive' });
+                      } finally {
+                        setIsApproving(false);
                       }
                     }}
                   >

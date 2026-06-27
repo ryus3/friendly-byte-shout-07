@@ -66,7 +66,7 @@ const OffChannelClassifyDialog = ({ open, onOpenChange, order, onClassified }) =
       employeeShare = 0; ownerDue = 0; // المالك يتحمّل التوصيل، لا دَيْن
     } else {
       employeeShare = empProfitRule; // ربح الموظف يبقى له
-      ownerDue = Math.max(0, customerPaid - employeeShare);
+      ownerDue = Math.max(0, customerPaid); // النقد/الدفع الخارجي يدخل كاملاً للقاصة، والربح يُحاسب منفصلاً
     }
     return { customerPaid, deliveryFee, employeeShare, ownerDue };
   }, [paid, type, empProfitRule, order?.delivery_fee]);
@@ -144,7 +144,7 @@ const OffChannelClassifyDialog = ({ open, onOpenChange, order, onClassified }) =
           </div>
         </div>
         <DialogFooter className="flex-row-reverse">
-          <Button onClick={handleSave} disabled={saving || !record?.id}>
+          <Button onClick={handleSave} disabled={saving || (!record?.id && !order?.id)}>
             {saving && <Loader2 className="w-4 h-4 animate-spin ms-2" />}
             حفظ التصنيف
           </Button>
