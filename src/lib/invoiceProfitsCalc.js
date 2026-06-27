@@ -174,10 +174,7 @@ export function computeInvoiceProfits({ orders = [], orderItems = [], profits = 
     // إذا لا: لا نُدخل قطعه/إيراده/تكلفته ضمن "توزيع الأرباح على المالكين".
     const collectionRecord = offChannelByOrder.get(o.id) || null;
     const occRecord = isOffChannel ? collectionRecord : null;
-    const isOffChannelConfirmed = !!(occRecord && (
-      occRecord.cash_movement_id ||
-      ['settled', 'confirmed', 'owner_confirmed'].includes(occRecord.status)
-    ));
+    const isOffChannelConfirmed = isCollectionConfirmed(occRecord);
     const isOffChannelPending = isOffChannel && !isOffChannelConfirmed;
 
     // الإيراد الحقيقي للقناة (ما دفعته شركة التوصيل فعلاً، يخصم منه التوصيل)
