@@ -26,6 +26,7 @@ import { Helmet } from 'react-helmet-async';
 import ryusLogo from '@/assets/ryus-logo-new.png';
 import usePullToRefresh from '@/hooks/usePullToRefresh';
 import PullToRefreshIndicator from '@/components/ui/PullToRefreshIndicator';
+import useSidebarBadges from '@/hooks/useSidebarBadges';
 
 const SidebarContent = ({ onClose, isMobile }) => {
   const { user, logout } = useAuth();
@@ -33,6 +34,7 @@ const SidebarContent = ({ onClose, isMobile }) => {
   const { theme, setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+  const { notifications: notifCount, offChannel: offChannelCount } = useSidebarBadges();
 
   const menuItems = [
     { path: '/', icon: Home, label: 'لوحة التحكم', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-blue-500' },
@@ -57,9 +59,9 @@ const SidebarContent = ({ onClose, isMobile }) => {
     { path: '/purchases', icon: ShoppingBag, label: 'المشتريات', roles: ['super_admin', 'admin'], color: 'text-blue-500' },
     { path: '/employee-purchases', icon: ShoppingBag, label: 'مشترياتي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee'], requiresFinancialCenter: true, color: 'text-blue-400' },
     { path: '/accounting', icon: DollarSign, label: 'المركز المالي', roles: ['super_admin', 'admin'], color: 'text-indigo-500' },
-    { path: '/off-channel-inbox', icon: Inbox, label: 'تحصيلات بانتظار تأكيدي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee'], color: 'text-amber-500' },
     { path: '/employee-financial-center', icon: Wallet, label: 'مركزي المالي', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee'], requiresFinancialCenter: true, color: 'text-indigo-400' },
-    { path: '/notifications', icon: Bell, label: 'الإشعارات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-red-500' },
+    { path: '/off-channel-inbox', icon: Inbox, label: 'تحصيلات بانتظار التأكيد', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee'], color: 'text-amber-500', badgeCount: offChannelCount },
+    { path: '/notifications', icon: Bell, label: 'الإشعارات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-red-500', badgeCount: notifCount },
     { path: '/department-settings', icon: Users, label: 'إعدادات القسم', roles: ['department_manager'], color: 'text-violet-500' },
     { path: '/settings', icon: Settings, label: 'الاعدادات', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-gray-500' }
   ];
@@ -216,7 +218,12 @@ const SidebarContent = ({ onClose, isMobile }) => {
                   }}
                 >
                   <Icon className={`w-5 h-5 ${isActive ? '' : item.color}`} />
-                  <span className="font-medium">{item.label}</span>
+                  <span className="font-medium flex-1">{item.label}</span>
+                  {item.badgeCount > 0 && (
+                    <span className="ms-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                      {item.badgeCount > 99 ? '99+' : item.badgeCount}
+                    </span>
+                  )}
                 </div>
               </React.Fragment>
             );

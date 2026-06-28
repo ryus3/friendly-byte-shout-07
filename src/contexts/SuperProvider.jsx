@@ -1537,9 +1537,13 @@ export const SuperProvider = ({ children }) => {
             .select('id, order_number, tracking_number, qr_id, delivery_partner, delivery_partner_order_id, delivery_account_used, created_by, status, receipt_received, delivery_partner_invoice_id')
             .in('id', orderIds);
 
-          const externalOrders = (ordersToCheck || []).filter(o =>
-            o.delivery_partner && o.delivery_partner !== 'local' && (o.tracking_number || o.qr_id || o.delivery_partner_order_id)
-          );
+          // ✅ الطلب المحلي يأخذ delivery_partner = 'محلي' أو 'local' — استبعدهم من فحص الوسيط
+          const externalOrders = (ordersToCheck || []).filter(o => {
+            const partner = (o.delivery_partner || '').toString().toLowerCase().trim();
+            const isLocal = !partner || partner === 'local' || partner === 'محلي';
+            if (isLocal) return false;
+            return !!(o.tracking_number || o.qr_id || o.delivery_partner_order_id);
+          });
 
           const blockedIds = new Set();
           const blockReasons = new Map();

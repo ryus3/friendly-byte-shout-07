@@ -25,7 +25,8 @@ import {
   AlertTriangle,
   TrendingUp,
   TrendingDown,
-  RefreshCcw
+  RefreshCcw,
+  Printer
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -34,6 +35,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { getStatusForComponent } from '@/lib/order-status-translator';
 import { canDeleteOrder, getDeleteConfirmationMessage } from '@/lib/order-deletion-utils';
 import ScrollingText from '@/components/ui/scrolling-text';
+import LocalOrderPrintDialog from '@/components/orders/LocalOrderPrintDialog';
 
 const OrderCard = React.memo(({ 
   order, 
@@ -51,6 +53,7 @@ const OrderCard = React.memo(({
 }) => {
   const { hasPermission } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [showPartialDelivery, setShowPartialDelivery] = useState(false);
   
   const isBeforePickup = (order) => {
@@ -505,6 +508,19 @@ const OrderCard = React.memo(({
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
+
+                  {/* ✅ زر طباعة فاتورة الطلب المحلي (يظهر فقط للطلبات المحلية) */}
+                  {isLocalOrder && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); setShowPrintDialog(true); }}
+                      className="h-8 w-8 p-0 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 hover:scale-110 transition-all duration-300 shadow-md"
+                      title="طباعة فاتورة محلية"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
 
                    {canEdit && (
                     <Button
@@ -980,6 +996,11 @@ const OrderCard = React.memo(({
           setShowPartialDelivery(false);
           window.dispatchEvent(new CustomEvent('orderUpdated', { detail: order.id }));
         }}
+      />
+      <LocalOrderPrintDialog
+        open={showPrintDialog}
+        onOpenChange={setShowPrintDialog}
+        orders={[order]}
       />
     </motion.div>
   );
