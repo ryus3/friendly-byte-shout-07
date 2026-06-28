@@ -35,6 +35,7 @@ import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { getStatusForComponent } from '@/lib/order-status-translator';
 import { canDeleteOrder, getDeleteConfirmationMessage } from '@/lib/order-deletion-utils';
 import ScrollingText from '@/components/ui/scrolling-text';
+import LocalOrderPrintDialog from '@/components/orders/LocalOrderPrintDialog';
 
 const OrderCard = React.memo(({ 
   order, 
