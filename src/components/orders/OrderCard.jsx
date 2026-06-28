@@ -53,6 +53,7 @@ const OrderCard = React.memo(({
 }) => {
   const { hasPermission } = useAuth();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [showPartialDelivery, setShowPartialDelivery] = useState(false);
   
   const isBeforePickup = (order) => {
