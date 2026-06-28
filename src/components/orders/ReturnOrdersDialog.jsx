@@ -34,25 +34,16 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
     setError(null);
 
     try {
-      // جلب طلبات الإرجاع مع معلومات الطلب الأصلي
+      // ✅ جلب جميع طلبات الإرجاع (order_type = 'return') بغض النظر عن وجود ربط مع ai_orders
       const { data, error: fetchError } = await supabase
         .from('orders')
         .select(`
           *,
-          order_items(*),
-          ai_orders!inner(original_order_id),
-          original_order:ai_orders(
-            original_order_id,
-            order:orders!ai_orders_original_order_id_fkey(
-              order_number,
-              total_amount,
-              created_at
-            )
-          )
+          order_items(*)
         `)
         .eq('order_type', 'return')
         .order('created_at', { ascending: false })
-        .limit(50);
+        .limit(100);
 
       if (fetchError) throw fetchError;
 
