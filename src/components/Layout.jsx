@@ -34,6 +34,7 @@ const SidebarContent = ({ onClose, isMobile }) => {
   const { theme, setTheme } = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+  const { notifications: notifCount, offChannel: offChannelCount } = useSidebarBadges();
 
   const menuItems = [
     { path: '/', icon: Home, label: 'لوحة التحكم', roles: ['super_admin', 'admin', 'department_manager', 'sales_employee', 'warehouse_employee', 'cashier'], color: 'text-blue-500' },
