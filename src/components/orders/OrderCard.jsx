@@ -997,6 +997,11 @@ const OrderCard = React.memo(({
           window.dispatchEvent(new CustomEvent('orderUpdated', { detail: order.id }));
         }}
       />
+      <LocalOrderPrintDialog
+        open={showPrintDialog}
+        onOpenChange={setShowPrintDialog}
+        orders={[order]}
+      />
     </motion.div>
   );
 });
