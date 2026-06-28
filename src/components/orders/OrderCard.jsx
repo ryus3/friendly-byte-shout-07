@@ -27,6 +27,7 @@ import {
   TrendingDown,
   RefreshCcw,
   Printer
+} from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Checkbox } from '@/components/ui/checkbox';
 import DeleteConfirmationDialog from '@/components/ui/delete-confirmation-dialog';
