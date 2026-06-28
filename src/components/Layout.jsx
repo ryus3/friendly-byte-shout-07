@@ -218,7 +218,12 @@ const SidebarContent = ({ onClose, isMobile }) => {
                   }}
                 >
                   <Icon className={`w-5 h-5 ${isActive ? '' : item.color}`} />
-                  <span className="font-medium">{item.label}</span>
+                  <span className="font-medium flex-1">{item.label}</span>
+                  {item.badgeCount > 0 && (
+                    <span className="ms-auto inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold leading-none">
+                      {item.badgeCount > 99 ? '99+' : item.badgeCount}
+                    </span>
+                  )}
                 </div>
               </React.Fragment>
             );
