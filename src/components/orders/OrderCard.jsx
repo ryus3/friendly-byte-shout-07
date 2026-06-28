@@ -509,6 +509,19 @@ const OrderCard = React.memo(({
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Button>
 
+                  {/* ✅ زر طباعة فاتورة الطلب المحلي (يظهر فقط للطلبات المحلية) */}
+                  {isLocalOrder && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => { e.stopPropagation(); setShowPrintDialog(true); }}
+                      className="h-8 w-8 p-0 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-600 hover:scale-110 transition-all duration-300 shadow-md"
+                      title="طباعة فاتورة محلية"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
+
                    {canEdit && (
                     <Button
                       variant="ghost"
