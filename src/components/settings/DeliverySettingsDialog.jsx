@@ -87,6 +87,18 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
       } catch (e) {
         console.error('فشل حفظ إعداد توجيه الموافقة:', e);
       }
+
+      // ✅ حفظ هيدر فاتورة الطلب المحلي
+      try {
+        await supabase
+          .from('settings')
+          .upsert(
+            { key: 'local_invoice_header', value: JSON.stringify(invoiceHeader) },
+            { onConflict: 'key' }
+          );
+      } catch (e) {
+        console.error('فشل حفظ هيدر الفاتورة المحلية:', e);
+      }
       
       toast({
         title: "تم الحفظ!",
