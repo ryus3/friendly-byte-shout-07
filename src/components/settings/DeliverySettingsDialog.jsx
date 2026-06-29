@@ -8,8 +8,9 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import { 
   Truck, DollarSign, Settings, MapPin, 
-  Clock, Package, Users, UserCheck
+  Clock, Package, Users, UserCheck, Printer, ImageIcon
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { useInventory } from '@/contexts/InventoryContext';
 import { supabase } from '@/integrations/supabase/client';
 
