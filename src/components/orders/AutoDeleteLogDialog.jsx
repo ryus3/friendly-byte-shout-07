@@ -280,13 +280,19 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
     if (!confirmed) return;
 
     try {
-      const { data, error } = await supabase
-        .from('auto_delete_log')
-        .delete()
-        .in('id', selectedLogs)
-        .select();
+      const autoIds = selectedLogs.filter((id) => !String(id).startsWith('backup-'));
+      const backupIds = selectedLogs
+        .filter((id) => String(id).startsWith('backup-'))
+        .map((id) => String(id).replace(/^backup-/, ''));
 
-      if (error) throw error;
+      if (autoIds.length > 0) {
+        const { error } = await supabase.from('auto_delete_log').delete().in('id', autoIds);
+        if (error) throw error;
+      }
+      if (backupIds.length > 0) {
+        const { error } = await supabase.from('orders_backup').delete().in('id', backupIds);
+        if (error) throw error;
+      }
 
       toast({
         title: "تم الحذف",
