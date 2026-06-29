@@ -8,8 +8,9 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/use-toast';
 import { 
   Truck, DollarSign, Settings, MapPin, 
-  Clock, Package, Users, UserCheck
+  Clock, Package, Users, UserCheck, Printer, ImageIcon
 } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { useInventory } from '@/contexts/InventoryContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -30,6 +31,15 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
   //                  'approver' = إرسال بحساب من ضغط الموافقة
   const [sendAsCreator, setSendAsCreator] = useState(true);
 
+  // ✅ هيدر فاتورة الطلب المحلي (شعار/اسم محل/هاتف/عنوان/تذييل)
+  const [invoiceHeader, setInvoiceHeader] = useState({
+    shop_name: 'RYUS',
+    logo_url: '',
+    phone: '',
+    address: '',
+    footer_note: '',
+  });
+
   useEffect(() => {
     if (!open) return;
     (async () => {
@@ -42,6 +52,18 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
         const raw = data?.value;
         const parsed = typeof raw === 'string' ? raw.replace(/"/g, '') : raw;
         setSendAsCreator(parsed !== 'approver');
+      } catch (_) {}
+
+      try {
+        const { data: hdr } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'local_invoice_header')
+          .maybeSingle();
+        if (hdr?.value) {
+          const h = typeof hdr.value === 'string' ? JSON.parse(hdr.value) : hdr.value;
+          setInvoiceHeader((prev) => ({ ...prev, ...h }));
+        }
       } catch (_) {}
     })();
   }, [open]);
@@ -64,6 +86,18 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
           );
       } catch (e) {
         console.error('فشل حفظ إعداد توجيه الموافقة:', e);
+      }
+
+      // ✅ حفظ هيدر فاتورة الطلب المحلي
+      try {
+        await supabase
+          .from('settings')
+          .upsert(
+            { key: 'local_invoice_header', value: JSON.stringify(invoiceHeader) },
+            { onConflict: 'key' }
+          );
+      } catch (e) {
+        console.error('فشل حفظ هيدر الفاتورة المحلية:', e);
       }
       
       toast({
@@ -209,6 +243,84 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
               </div>
             </CardContent>
           </Card>
+
+          {/* ✅ هيدر فاتورة الطلب المحلي */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-purple-600" />
+                هيدر فاتورة الطلب المحلي
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                يظهر هذا في أعلى كل فاتورة طلب محلي (شعار، اسم محل، هاتف، عنوان، تذييل).
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="shop_name">اسم المحل / البائع</Label>
+                  <Input
+                    id="shop_name"
+                    value={invoiceHeader.shop_name || ''}
+                    onChange={(e) => setInvoiceHeader((p) => ({ ...p, shop_name: e.target.value }))}
+                    placeholder="مثلاً: أزياء أحمد الشمري"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="shop_phone">رقم الهاتف</Label>
+                  <Input
+                    id="shop_phone"
+                    value={invoiceHeader.phone || ''}
+                    onChange={(e) => setInvoiceHeader((p) => ({ ...p, phone: e.target.value }))}
+                    placeholder="07XXXXXXXXX"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="shop_logo">رابط الشعار (Logo URL)</Label>
+                <Input
+                  id="shop_logo"
+                  value={invoiceHeader.logo_url || ''}
+                  onChange={(e) => setInvoiceHeader((p) => ({ ...p, logo_url: e.target.value }))}
+                  placeholder="https://..."
+                />
+                {invoiceHeader.logo_url && (
+                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+                    <ImageIcon className="w-3 h-3" />
+                    <img
+                      src={invoiceHeader.logo_url}
+                      alt="logo preview"
+                      style={{ maxHeight: 40 }}
+                      onError={(e) => (e.currentTarget.style.display = 'none')}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="shop_address">العنوان</Label>
+                <Input
+                  id="shop_address"
+                  value={invoiceHeader.address || ''}
+                  onChange={(e) => setInvoiceHeader((p) => ({ ...p, address: e.target.value }))}
+                  placeholder="المدينة - الشارع - مقابل..."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="footer_note">ملاحظة التذييل (اختياري)</Label>
+                <Textarea
+                  id="footer_note"
+                  rows={2}
+                  value={invoiceHeader.footer_note || ''}
+                  onChange={(e) => setInvoiceHeader((p) => ({ ...p, footer_note: e.target.value }))}
+                  placeholder="مثلاً: شكراً لطلبك — لمتابعتنا على إنستغرام @..."
+                />
+              </div>
+            </CardContent>
+          </Card>
+
 
 
 

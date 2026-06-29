@@ -1,16 +1,106 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, X } from 'lucide-react';
+import { Printer, X, Loader2 } from 'lucide-react';
 import LocalOrderPrintInvoice from './LocalOrderPrintInvoice';
+import { supabase } from '@/integrations/supabase/client';
 
 /**
- * نافذة طباعة فواتير الطلبات المحلية.
- * - تدعم طلباً واحداً أو عدة طلبات دفعة واحدة (طلبات[]).
- * - تستخدم window.print بدون مكتبات ثقيلة (PDF lazy).
+ * نافذة طباعة الفاتورة المحلية:
+ *  - تجلب تفاصيل الطلب الكاملة (order_items + المنتج + اللون + القياس)
+ *  - تجلب هيدر الفاتورة المخصّص من settings.local_invoice_header
+ *  - تدعم طلباً واحداً أو مجموعة طلبات
  */
 const LocalOrderPrintDialog = ({ open, onOpenChange, orders = [] }) => {
   const printRef = useRef(null);
+  const [loading, setLoading] = useState(false);
+  const [fullOrders, setFullOrders] = useState([]);
+  const [header, setHeader] = useState({});
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+
+    (async () => {
+      setLoading(true);
+      try {
+        // 1) هيدر الفاتورة المخصّص
+        const { data: hdr } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'local_invoice_header')
+          .maybeSingle();
+        if (!cancelled) {
+          let h = {};
+          try {
+            h = typeof hdr?.value === 'string' ? JSON.parse(hdr.value) : (hdr?.value || {});
+          } catch {
+            h = {};
+          }
+          setHeader(h);
+        }
+
+        // 2) تفاصيل كاملة لكل طلب
+        const ids = orders.map((o) => o.id).filter(Boolean);
+        if (ids.length === 0) {
+          if (!cancelled) setFullOrders([]);
+          return;
+        }
+
+        const { data: rows } = await supabase
+          .from('orders')
+          .select(
+            `id, order_number, customer_name, customer_phone, customer_city,
+             customer_province, customer_address, total_amount, delivery_fee,
+             discount, notes, created_at, created_by,
+             order_items (
+               id, quantity, unit_price, total_price,
+               products ( name ),
+               product_variants (
+                 colors ( name ),
+                 sizes ( name )
+               )
+             )`
+          )
+          .in('id', ids);
+
+        // جلب أسماء المنشئين دفعة واحدة
+        const creatorIds = [...new Set((rows || []).map((r) => r.created_by).filter(Boolean))];
+        let creators = {};
+        if (creatorIds.length > 0) {
+          const { data: profs } = await supabase
+            .from('profiles')
+            .select('user_id, full_name')
+            .in('user_id', creatorIds);
+          (profs || []).forEach((p) => {
+            creators[p.user_id] = p.full_name;
+          });
+        }
+
+        if (!cancelled) {
+          const enriched = (rows || []).map((r) => ({
+            ...r,
+            created_by_name: creators[r.created_by] || '—',
+            order_items: (r.order_items || []).map((it) => ({
+              ...it,
+              product_name: it.products?.name,
+              color_name: it.product_variants?.colors?.name,
+              size_name: it.product_variants?.sizes?.name,
+            })),
+          }));
+          // الاحتفاظ بترتيب الطلبات الممرّرة
+          const map = new Map(enriched.map((o) => [o.id, o]));
+          setFullOrders(ids.map((id) => map.get(id)).filter(Boolean));
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, orders]);
 
   const handlePrint = () => {
     const node = printRef.current;
@@ -29,6 +119,7 @@ const LocalOrderPrintDialog = ({ open, onOpenChange, orders = [] }) => {
       .text-left { text-align: left; }
       .font-bold { font-weight: 700; }
       .font-extrabold { font-weight: 800; }
+      .italic { font-style: italic; }
       .opacity-70 { opacity: 0.7; }
       .opacity-80 { opacity: 0.8; }
       .border-b { border-bottom: 1px solid rgba(0,0,0,0.4); }
@@ -59,7 +150,7 @@ const LocalOrderPrintDialog = ({ open, onOpenChange, orders = [] }) => {
       .bg-white { background: #fff; }
       .text-black { color: #000; }
       .border-collapse { border-collapse: collapse; }
-      .pagebreak { page-break-after: always; }
+      img { max-width: 100%; }
     `;
 
     win.document.open();
@@ -79,7 +170,7 @@ const LocalOrderPrintDialog = ({ open, onOpenChange, orders = [] }) => {
     setTimeout(() => {
       win.print();
       win.close();
-    }, 300);
+    }, 400);
   };
 
   return (
@@ -87,24 +178,32 @@ const LocalOrderPrintDialog = ({ open, onOpenChange, orders = [] }) => {
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between gap-2">
-            <span>طباعة فاتورة محلية ({orders.length})</span>
+            <span>طباعة فاتورة محلية ({fullOrders.length || orders.length})</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div ref={printRef} className="space-y-4 my-2">
-          {orders.map((o) => (
-            <LocalOrderPrintInvoice key={o.id} order={o} />
-          ))}
-          {orders.length === 0 && (
-            <div className="text-center text-sm text-muted-foreground py-8">لا توجد طلبات محلية لطباعتها.</div>
-          )}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-10">
+            <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          </div>
+        ) : (
+          <div ref={printRef} className="space-y-4 my-2">
+            {fullOrders.map((o) => (
+              <LocalOrderPrintInvoice key={o.id} order={o} header={header} />
+            ))}
+            {fullOrders.length === 0 && (
+              <div className="text-center text-sm text-muted-foreground py-8">
+                لا توجد طلبات محلية لطباعتها.
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-end gap-2 pt-2 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             <X className="w-4 h-4 me-1" /> إغلاق
           </Button>
-          <Button onClick={handlePrint} disabled={orders.length === 0}>
+          <Button onClick={handlePrint} disabled={loading || fullOrders.length === 0}>
             <Printer className="w-4 h-4 me-1" /> طباعة
           </Button>
         </div>

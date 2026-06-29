@@ -27,21 +27,50 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
   const fetchDeletedOrders = async () => {
     setLoading(true);
     try {
+      // 1) سجل الحذف التلقائي
       let query = supabase
         .from('auto_delete_log')
         .select('*')
         .order('deleted_at', { ascending: false })
-        .limit(100);
+        .limit(200);
 
       if (sourceFilter !== 'all') {
         query = query.eq('delete_source', sourceFilter);
       }
 
-      const { data, error } = await query;
-
+      const { data: autoLog, error } = await query;
       if (error) throw error;
 
-      setDeletedOrders(data || []);
+      // 2) النسخ الاحتياطية للطلبات (orders_backup) — يحتوي طلبات حُذفت يدوياً سابقاً
+      let backups = [];
+      try {
+        const { data: bkRows } = await supabase
+          .from('orders_backup')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .limit(200);
+        backups = (bkRows || []).map((b) => ({
+          id: `backup-${b.id}`,
+          order_number: b.order_number,
+          tracking_number: b.tracking_number,
+          delivery_partner_order_id: b.delivery_partner_order_id,
+          qr_id: null,
+          deleted_at: b.created_at,
+          delete_source: 'manual',
+          order_status: b.status,
+          delivery_status: b.delivery_status,
+          order_age_minutes: 0,
+          order_data: b,
+          reason: { message: 'محذوف يدوياً — مأخوذ من النسخة الاحتياطية' },
+          __from_backup: true,
+        }));
+      } catch (_) {}
+
+      const merged = [...(autoLog || []), ...backups].sort(
+        (a, b) => new Date(b.deleted_at) - new Date(a.deleted_at)
+      );
+
+      setDeletedOrders(merged);
     } catch (error) {
       toast({
         title: "خطأ",
@@ -205,11 +234,13 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
         }
       }
 
-      // 4️⃣ حذف السجل من auto_delete_log
-      await supabase
-        .from('auto_delete_log')
-        .delete()
-        .eq('id', log.id);
+      // 4️⃣ حذف السجل من auto_delete_log (أو من orders_backup إن كان مصدره النسخة الاحتياطية)
+      if (log.__from_backup) {
+        const backupId = String(log.id).replace(/^backup-/, '');
+        await supabase.from('orders_backup').delete().eq('id', backupId);
+      } else {
+        await supabase.from('auto_delete_log').delete().eq('id', log.id);
+      }
 
       toast({
         title: "✅ تمت الاستعادة الكاملة",
@@ -249,13 +280,19 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
     if (!confirmed) return;
 
     try {
-      const { data, error } = await supabase
-        .from('auto_delete_log')
-        .delete()
-        .in('id', selectedLogs)
-        .select();
+      const autoIds = selectedLogs.filter((id) => !String(id).startsWith('backup-'));
+      const backupIds = selectedLogs
+        .filter((id) => String(id).startsWith('backup-'))
+        .map((id) => String(id).replace(/^backup-/, ''));
 
-      if (error) throw error;
+      if (autoIds.length > 0) {
+        const { error } = await supabase.from('auto_delete_log').delete().in('id', autoIds);
+        if (error) throw error;
+      }
+      if (backupIds.length > 0) {
+        const { error } = await supabase.from('orders_backup').delete().in('id', backupIds);
+        if (error) throw error;
+      }
 
       toast({
         title: "تم الحذف",
