@@ -31,6 +31,15 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
   //                  'approver' = إرسال بحساب من ضغط الموافقة
   const [sendAsCreator, setSendAsCreator] = useState(true);
 
+  // ✅ هيدر فاتورة الطلب المحلي (شعار/اسم محل/هاتف/عنوان/تذييل)
+  const [invoiceHeader, setInvoiceHeader] = useState({
+    shop_name: 'RYUS',
+    logo_url: '',
+    phone: '',
+    address: '',
+    footer_note: '',
+  });
+
   useEffect(() => {
     if (!open) return;
     (async () => {
@@ -43,6 +52,18 @@ const DeliverySettingsDialog = ({ open, onOpenChange }) => {
         const raw = data?.value;
         const parsed = typeof raw === 'string' ? raw.replace(/"/g, '') : raw;
         setSendAsCreator(parsed !== 'approver');
+      } catch (_) {}
+
+      try {
+        const { data: hdr } = await supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'local_invoice_header')
+          .maybeSingle();
+        if (hdr?.value) {
+          const h = typeof hdr.value === 'string' ? JSON.parse(hdr.value) : hdr.value;
+          setInvoiceHeader((prev) => ({ ...prev, ...h }));
+        }
       } catch (_) {}
     })();
   }, [open]);
