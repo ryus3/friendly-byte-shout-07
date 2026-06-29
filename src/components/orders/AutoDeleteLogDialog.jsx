@@ -234,11 +234,13 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
         }
       }
 
-      // 4️⃣ حذف السجل من auto_delete_log
-      await supabase
-        .from('auto_delete_log')
-        .delete()
-        .eq('id', log.id);
+      // 4️⃣ حذف السجل من auto_delete_log (أو من orders_backup إن كان مصدره النسخة الاحتياطية)
+      if (log.__from_backup) {
+        const backupId = String(log.id).replace(/^backup-/, '');
+        await supabase.from('orders_backup').delete().eq('id', backupId);
+      } else {
+        await supabase.from('auto_delete_log').delete().eq('id', log.id);
+      }
 
       toast({
         title: "✅ تمت الاستعادة الكاملة",
