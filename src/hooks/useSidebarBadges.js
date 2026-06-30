@@ -1,14 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
+import { useNotifications } from '@/contexts/NotificationsContext';
 
 /**
- * عداد القائمة الجانبية:
- *  - notifications: إشعارات المستخدم غير المقروءة فعلياً
- *      (is_read=false AND notification_id غير موجود في notification_reads للمستخدم)
+ * عداد القائمة الجانبية — موحَّد مع عداد الهيدر:
+ *  - notifications: مأخوذ مباشرةً من NotificationsContext.unreadCount
+ *    (نفس المصدر الذي يستخدمه جرس الهيدر تماماً → الأرقام متطابقة)
  *  - offChannel:    تحصيلات بانتظار التأكيد
- *      • المدير/المالك: عالمياً (status = pending_owner_confirmation)
- *      • الموظف:       تحصيلاته التي بانتظار تصنيفه
  */
 export function useSidebarBadges() {
   const { user } = useAuth();
@@ -17,40 +16,16 @@ export function useSidebarBadges() {
     ['super_admin', 'admin', 'department_manager'].includes(r)
   );
 
-  const [notifications, setNotifications] = useState(0);
+  // ✅ المصدر الموحَّد للإشعارات (نفس مصدر الهيدر)
+  const { unreadCount = 0 } = useNotifications() || {};
+
   const [offChannel, setOffChannel] = useState(0);
 
-  const refresh = useCallback(async () => {
+  const refreshOffChannel = useCallback(async () => {
     if (!userId) {
-      setNotifications(0);
       setOffChannel(0);
       return;
     }
-
-    // ✅ إشعارات غير مقروءة: استبعد ما يوجد له سجل في notification_reads
-    try {
-      const [unreadRes, readsRes] = await Promise.all([
-        supabase
-          .from('notifications')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('is_read', false)
-          .limit(2000),
-        supabase
-          .from('notification_reads')
-          .select('notification_id')
-          .eq('user_id', userId)
-          .limit(5000),
-      ]);
-
-      const readSet = new Set((readsRes.data || []).map((r) => r.notification_id));
-      const realUnread = (unreadRes.data || []).filter((n) => !readSet.has(n.id));
-      setNotifications(realUnread.length);
-    } catch {
-      setNotifications(0);
-    }
-
-    // ✅ تحصيلات
     try {
       let query = supabase
         .from('off_channel_collections')
@@ -68,36 +43,26 @@ export function useSidebarBadges() {
   }, [userId, isManager]);
 
   useEffect(() => {
-    refresh();
-  }, [refresh]);
+    refreshOffChannel();
+  }, [refreshOffChannel]);
 
-  // ⚡ real-time: تحديث فور تغيّر الإشعارات أو التحصيلات
   useEffect(() => {
     if (!userId) return;
     const ch = supabase
-      .channel(`sidebar-badges-${userId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` },
-        refresh
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'notification_reads', filter: `user_id=eq.${userId}` },
-        refresh
-      )
+      .channel(`sidebar-offchannel-${userId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'off_channel_collections' },
-        refresh
+        refreshOffChannel
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [userId, refresh]);
+  }, [userId, refreshOffChannel]);
 
-  return { notifications, offChannel, refresh };
+  return { notifications: unreadCount, offChannel, refresh: refreshOffChannel };
 }
 
 export default useSidebarBadges;
+
