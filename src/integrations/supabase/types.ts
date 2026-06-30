@@ -4715,6 +4715,10 @@ export type Database = {
           customer_phone: string | null
           customer_phone2: string | null
           customer_province: string | null
+          delete_source: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          deletion_reason: string | null
           delivery_account_code: string | null
           delivery_account_used: string | null
           delivery_fee: number | null
@@ -4760,6 +4764,10 @@ export type Database = {
           customer_phone?: string | null
           customer_phone2?: string | null
           customer_province?: string | null
+          delete_source?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
           delivery_account_code?: string | null
           delivery_account_used?: string | null
           delivery_fee?: number | null
@@ -4805,6 +4813,10 @@ export type Database = {
           customer_phone?: string | null
           customer_phone2?: string | null
           customer_province?: string | null
+          delete_source?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          deletion_reason?: string | null
           delivery_account_code?: string | null
           delivery_account_used?: string | null
           delivery_fee?: number | null
