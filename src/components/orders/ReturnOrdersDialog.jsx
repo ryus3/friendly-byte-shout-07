@@ -28,22 +28,18 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
   }, [open, currentUser]);
 
   const fetchReturnOrders = async () => {
-    if (!currentUser?.id) return;
-
     setLoading(true);
     setError(null);
 
     try {
-      // ✅ جلب جميع طلبات الإرجاع (order_type = 'return') بغض النظر عن وجود ربط مع ai_orders
+      // ✅ جلب جميع طلبات الإرجاع — لا قيود على status ولا joins إجبارية
+      // RLS يتولى تصفية الرؤية حسب صلاحية المستخدم
       const { data, error: fetchError } = await supabase
         .from('orders')
-        .select(`
-          *,
-          order_items(*)
-        `)
-        .eq('order_type', 'return')
+        .select(`*, order_items(*)`)
+        .or('order_type.eq.return,status.eq.returned,status.eq.return_received')
         .order('created_at', { ascending: false })
-        .limit(100);
+        .limit(200);
 
       if (fetchError) throw fetchError;
 
