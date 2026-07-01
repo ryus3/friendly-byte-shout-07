@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
 import { Loader2, RotateCcw, AlertCircle, Package, TrendingDown, ArrowUp, ArrowDown } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+// ScrollArea removed — using native overflow with floating up/down buttons
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
