@@ -97,7 +97,17 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <div ref={scrollRef} className="flex-1 -mx-6 px-6 overflow-y-auto relative">
+          {returnOrders.length > 3 && (
+            <div className="fixed bottom-20 left-6 z-50 flex flex-col gap-2">
+              <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={() => scrollTo('top')}>
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={() => scrollTo('bottom')}>
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
