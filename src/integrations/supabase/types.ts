@@ -4730,7 +4730,7 @@ export type Database = {
           discount: number | null
           discount_reason: string | null
           final_amount: number | null
-          id: string | null
+          id: string
           invoice_received_at: string | null
           invoice_received_by: string | null
           isarchived: boolean | null
@@ -4779,7 +4779,7 @@ export type Database = {
           discount?: number | null
           discount_reason?: string | null
           final_amount?: number | null
-          id?: string | null
+          id: string
           invoice_received_at?: string | null
           invoice_received_by?: string | null
           isarchived?: boolean | null
@@ -4828,7 +4828,7 @@ export type Database = {
           discount?: number | null
           discount_reason?: string | null
           final_amount?: number | null
-          id?: string | null
+          id?: string
           invoice_received_at?: string | null
           invoice_received_by?: string | null
           isarchived?: boolean | null
@@ -7812,6 +7812,10 @@ export type Database = {
           p_refund_amount: number
           p_return_order_id: string
         }
+        Returns: Json
+      }
+      admin_hard_delete_order: {
+        Args: { p_auto_log_id?: string; p_backup_id?: string }
         Returns: Json
       }
       admin_manage_invoice_cron: {
