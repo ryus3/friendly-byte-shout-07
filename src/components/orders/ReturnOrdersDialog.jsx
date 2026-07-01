@@ -229,7 +229,7 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
