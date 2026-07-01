@@ -281,23 +281,21 @@ export const AutoDeleteLogDialog = ({ open, onOpenChange }) => {
     if (!confirmed) return;
 
     try {
-      const autoIds = selectedLogs.filter((id) => !String(id).startsWith('backup-'));
-      const backupIds = selectedLogs
-        .filter((id) => String(id).startsWith('backup-'))
-        .map((id) => String(id).replace(/^backup-/, ''));
-
-      if (autoIds.length > 0) {
-        const { error } = await supabase.from('auto_delete_log').delete().in('id', autoIds);
-        if (error) throw error;
-      }
-      if (backupIds.length > 0) {
-        const { error } = await supabase.from('orders_backup').delete().in('id', backupIds);
+      // نستخدم RPC آمن يحذف نهائياً من النسخ الاحتياطية + سجل الحذف + الإشعارات المرتبطة
+      for (const rawId of selectedLogs) {
+        const idStr = String(rawId);
+        const isBackup = idStr.startsWith('backup-');
+        const uuid = isBackup ? idStr.replace(/^backup-/, '') : idStr;
+        const { error } = await supabase.rpc('admin_hard_delete_order', {
+          p_backup_id: isBackup ? uuid : null,
+          p_auto_log_id: isBackup ? null : uuid,
+        });
         if (error) throw error;
       }
 
       toast({
-        title: "تم الحذف",
-        description: `تم حذف ${selectedLogs.length} سجل نهائياً`,
+        title: "تم الحذف النهائي",
+        description: `تم حذف ${selectedLogs.length} سجل من قاعدة البيانات ومن الإشعارات المرتبطة`,
         variant: "default"
       });
 
