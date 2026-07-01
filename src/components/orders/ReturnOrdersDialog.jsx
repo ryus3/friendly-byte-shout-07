@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -6,10 +6,11 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { Loader2, RotateCcw, AlertCircle, Package, TrendingDown } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, RotateCcw, AlertCircle, Package, TrendingDown, ArrowUp, ArrowDown } from 'lucide-react';
+// ScrollArea removed — using native overflow with floating up/down buttons
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format, parseISO } from 'date-fns';
@@ -20,6 +21,7 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
   const [loading, setLoading] = useState(false);
   const [returnOrders, setReturnOrders] = useState([]);
   const [error, setError] = useState(null);
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     if (open) {
@@ -32,14 +34,13 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
     setError(null);
 
     try {
-      // ✅ جلب جميع طلبات الإرجاع — لا قيود على status ولا joins إجبارية
-      // RLS يتولى تصفية الرؤية حسب صلاحية المستخدم
+      // ✅ فقط الطلبات التي نوعها إرجاع (order_type='return') — لا نعتمد على status
       const { data, error: fetchError } = await supabase
         .from('orders')
         .select(`*, order_items(*)`)
-        .or('order_type.eq.return,status.eq.returned,status.eq.return_received')
+        .eq('order_type', 'return')
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(500);
 
       if (fetchError) throw fetchError;
 
@@ -50,6 +51,12 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const scrollTo = (dir) => {
+    const el = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') || scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: dir === 'top' ? 0 : el.scrollHeight, behavior: 'smooth' });
   };
 
   const getStatusBadge = (status, deliveryStatus) => {
@@ -90,7 +97,17 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
           </div>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 -mx-6 px-6">
+        <div ref={scrollRef} className="flex-1 -mx-6 px-6 overflow-y-auto relative">
+          {returnOrders.length > 3 && (
+            <div className="fixed bottom-20 left-6 z-50 flex flex-col gap-2">
+              <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={() => scrollTo('top')}>
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button size="icon" variant="secondary" className="rounded-full shadow-lg" onClick={() => scrollTo('bottom')}>
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -212,7 +229,7 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
               })}
             </div>
           )}
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );

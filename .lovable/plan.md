@@ -1,77 +1,82 @@
-# الخطة الشاملة النهائية — نظام التوصيل المحلي العالمي + إصلاحات عاجلة
+# الخطة النهائية الشاملة — إصلاحات فورية + نظام التوصيل المحلي العالمي كامل
 
-## القسم أ — إصلاحات عاجلة (تُنفَّذ أولاً)
+## القسم أ — إصلاحات عاجلة (فورية)
 
-### أ.1 نافذة طلبات الإرجاع فارغة
-- في `ReturnOrdersDialog.jsx`: حذف أي join مع `ai_orders` وأي فلتر على `status`. الاستعلام يصبح: `select * from orders where order_type = 'return' order by created_at desc`.
-- التحقق المباشر من DB أن الطلب 149776372 له `order_type='return'`. لو القيمة مختلفة (مثل `returned` أو NULL مع `status='returned'`)، توسيع الفلتر: `order_type='return' OR status IN ('returned','return_received')`.
-- إزالة أي فلتر `created_by` خاطئ — الاعتماد على RLS فقط.
+### أ.1 نافذة طلبات الإرجاع
+- الاستعلام يعتمد **حصراً** على `order_type='return'` (وليس `status`).
+- إزالة أي فلترة على `status IN ('returned',...)` من `ReturnOrdersDialog.jsx`.
+- إضافة زرَي **صعود/نزول** floating (نفس نمط صفحة الطلبات).
+- pagination 15/صفحة عند تجاوز 30 طلب، أو scroll مستمر مع sticky header.
 
-### أ.2 الطلبات المحذوفة تعرض قديم/أوقات خاطئة
-- `AutoDeleteLogDialog.jsx`: الاستعلام يدمج حالياً `auto_delete_log` + `orders_backup` وقد يفقد الترتيب. إعادة بناء الاستعلام:
-  - `union all` بين المصدرين مع normalize للحقول.
-  - الترتيب الموحّد: `order by deleted_at desc nulls last` (وليس `created_at`).
-  - عرض **الأحدث 200** + بحث + فلتر بالتاريخ.
-- التأكد من حفظ `deleted_at = now()` و `deleted_by`/`deletion_reason` في كل مسارات الحذف (manual + auto + trigger). إضافة trigger `before delete on orders` يكتب الصف في `orders_backup` مع `deleted_at=now()` و `deleted_by=auth.uid()` إذا لم يكن مضبوطاً.
-- ربط إشعار حذف الطلب (موجود) مع سجل الحذف عبر `order_number` ليظهر مع كل صف.
+### أ.2 الطلبات المحذوفة تُظهر قديم + الطلب 150022546 مفقود + الحذف لا يبقى
+- **المشكلة الجذرية**: `orders_backup` يحوي سجلات قديمة، والـ trigger الجديد الذي أضفناه لا ينشط لأن الحذف يمر عبر `AutoDeleteLogDialog.handleDelete` وليس `DELETE` مباشر — أو أن `handleDelete` يحذف من `auto_delete_log` فقط دون حذف من `orders_backup`.
+- **الحل**:
+  1. RPC جديد `admin_hard_delete_order(order_id_or_number)`: يحذف من `orders`, `order_items`, `orders_backup`, `auto_delete_log`, `notifications` (المتعلقة)، بـ `SECURITY DEFINER` ويتحقق من صلاحية `manage_all_data`.
+  2. زر الحذف في نافذة "سجل الحذف التلقائي" يستدعي RPC → الطلب يختفي نهائياً ولا يعود.
+  3. فحص فوري لسبب عدم ظهور `150022546`: قراءة DB `SELECT * FROM orders_backup WHERE order_number LIKE '%150022546%' OR tracking_number='150022546'`، ولو مفقود، نستعلم من `notifications` ونعيد بناء backup entry.
+  4. إعادة كتابة الاستعلام في `AutoDeleteLogDialog`: `union all` من `orders_backup` + `auto_delete_log` مع `coalesce(deleted_at, created_at)` للترتيب. عرض تاريخ الحذف الصحيح (وليس تاريخ الإنشاء).
+  5. Backfill: تحديث `orders_backup.deleted_at` للسجلات الحالية بقيمة `coalesce(deleted_at, created_at + interval '0')` — أو تركها NULL لتُظهر أدنى في الترتيب.
 
-### أ.3 توحيد عداد الإشعارات (هيدر = قائمة جانبية)
-- المصدر الواحد: hook `useUnreadNotificationsCheck` (المستخدم بالهيدر).
-- تعديل `useSidebarBadges.js` ليستخدم نفس الـ hook بدل استعلام منفصل، أو استدعاء نفس الـ RPC.
-- إخفاء الشارة عند 0، عرض الرقم الحقيقي حتى 99، ثم `99+`.
+### أ.3 تبويب فواتير شركة التوصيل → Pagination كامل
+- `OrdersFollowUpPage` + `EmployeeFollowUpPage`: تبويب "الفواتير" يستخدم نفس مكوّن `Pagination` وأزرار up/down floating الموجودة في تبويب الطلبات.
+- 15 فاتورة/صفحة، عرض "X - Y من Z"، نفس الأنماط.
 
-### أ.4 تبويب فواتير شركة التوصيل — Pagination + Scroll
-- في `OrdersFollowUpPage` و `EmployeeFollowUpPage`: قسم الفواتير يصبح بنفس تصميم قائمة الطلبات:
-  - مكوّن `Pagination` مطابق (1،2،3،«،») بنفس التصميم.
-  - `عرض X - Y من Z`.
-  - أزرار "للأعلى/للأسفل" floating بنفس الشكل.
-  - 15 فاتورة/صفحة افتراضياً.
+### أ.4 عرض القائمة (List View) — تصميم عالمي احترافي
+- إعادة تصميم `OrderCard` في وضع "قائمة":
+  - صف مضغوط ~64px: رقم الطلب • badge حالة • اسم العميل • مبلغ • أيقونة شركة توصيل • chevron.
+  - عند expand: تفاصيل inline بأنيميشن slide-down (منتجات، عنوان، أزرار سريعة).
+  - hover states أنيقة، أيقونات صغيرة للإجراءات.
+- **وضع الشبكة (Grid) يبقى بدون أي تغيير**.
 
-### أ.5 تصميم عرض القائمة (List View) للطلبات
-- إعادة بناء بطاقة الطلب في وضع "قائمة" لتصبح صف أنيق مضغوط:
-  - صف واحد مرتفع ~56px فقط: رقم الطلب • اسم العميل • شارة الحالة • المبلغ • شركة التوصيل • زر expand.
-  - عند الـ expand يظهر باقي التفاصيل أسفله inline (animation).
-  - أيقونات صغيرة للإجراءات (تعديل/طباعة/حذف) عند hover/long-press.
-- وضع الشبكة (Grid) يبقى كما هو دون تغيير.
+### أ.5 توحيد إشعارات القائمة الجانبية مع الهيدر (تحقق نهائي)
+- تأكيد أن `useSidebarBadges` يستخدم نفس مصدر `useNotifications().unreadCount` — إن لم يكن، توحيد فوري.
 
 ---
 
-## القسم ب — نظام التوصيل المحلي العالمي (Phase 1 كاملة)
+## القسم ب — نظام التوصيل المحلي العالمي (كامل — الدفعة الأولى)
 
-### ب.1 هيدر الفاتورة المحلي — رفع صورة لا رابط
-- إضافة bucket `local-invoice-headers` (public read).
-- `LocalInvoiceHeaderSettings.jsx`: حقل رفع شعار حقيقي (drag & drop) → يُحفظ في bucket باسم `{user_id}/logo-{timestamp}.png` → الرابط الناتج يُحفظ في `settings.local_invoice_header.logo_url`.
-- حفظ metadata: `uploaded_by`, `uploaded_at`, `original_filename`.
+### ب.1 هيدر الفاتورة المحلي — رفع صورة حقيقي
+- Storage bucket: `local-invoice-headers` (public read، authenticated write).
+- `LocalInvoiceHeaderSettings.jsx`: drag & drop لرفع الشعار → يُحفظ `{user_id}/logo-{timestamp}.png`.
+- Metadata: `uploaded_by`, `uploaded_at`, `original_filename`, name, phone, address, footer.
 
-### ب.2 صلاحية تخصيص الفاتورة لكل موظف/مدير
-- مصفوفة الصلاحيات الثلاث:
-  - **المدير العام**: يفعّل/يطفي "فاتورة موحّدة للجميع"، ويعدّل القالب العام، ويعدّل لأي موظف/قسم.
-  - **مدير القسم**: يعدّل قالباً موحّداً لكل موظفيه (cascade)، لا يقدر يطلع عن القسم، الموظف لا يعدّل.
-  - **الموظف صاحب صلاحية "طلبات محلية"**: يعدّل قالبه الخاص فقط إن لم يكن مدير القسم/العام مفعّلاً "قفل القالب".
-- جدول جديد `local_invoice_templates(id, owner_user_id, scope enum(global,department,user), department_id, locked boolean, header jsonb, created_by, updated_at)`.
-- منطق الاختيار عند الطباعة: `user → department → global` (أول قالب موجود غير مقفول).
+### ب.2 قوالب الفاتورة متعددة المستويات
+- جدول `local_invoice_templates(id, owner_user_id, scope enum('global','department','user'), department_id, locked boolean, header jsonb, created_by, updated_at)`.
+- منطق الاختيار عند الطباعة: `user → department → global` (يتخطى المقفول لصالح الأعلى).
+- المدير العام: تفعيل "قالب موحّد للجميع" + قفل.
+- مدير القسم: قالب موحّد لموظفيه + قفل.
+- الموظف صاحب صلاحية `manage_local_orders`: قالبه الخاص (إن لم يُقفل من الأعلى).
 
-### ب.3 طباعة الفاتورة في صفحة متابعة الطلبات
-- **فلترة**: فلتر "نوع التوصيل" (الكل/محلي/شركة توصيل) فوق القائمة.
-- **تحديد متعدد**: checkboxes ظاهرة في وضع القائمة + وضع الشبكة.
-- **شريط إجراءات** عند التحديد:
-  - "طباعة فواتير منفصلة (80mm)" — تيكيت لكل طلب.
-  - "طباعة فاتورة مندوب مجمّعة (A4)" — manifest واحد.
-  - "تعيين/تغيير مندوب".
-- فاتورة شركة التوصيل (AlWaseet/MODON): زر طباعة جديد بالبطاقة + جماعي → تيكيت 80mm احترافي (شعار المتجر + شعار الشركة + QR لرقم التتبع) + مؤشر "مطبوعة/غير مطبوعة" (`orders.label_printed_at`) + فلتر بالتبويب.
+### ب.3 صفحة متابعة الطلبات — فلترة + طباعة جماعية
+- فلتر جديد **نوع التوصيل** (الكل / محلي / شركة توصيل) فوق قائمة الطلبات.
+- checkboxes ظاهرة في القائمة والشبكة.
+- عند التحديد، شريط إجراءات:
+  - **طباعة فواتير منفصلة (80mm)** — تيكيت/طلب.
+  - **طباعة فاتورة مندوب مجمّعة (A4)** — manifest واحد بكل الطلبات المحددة + QR لكل طلب + توقيع.
+  - **تعيين/تغيير مندوب** لمجموعة.
+- **العالمي**: التيكيت 80mm للطلب الفردي (يوضع مع الطلب)، والـ A4 manifest للمندوب (يوقّع ويستلم دفعة).
 
-### ب.4 نظام مندوبي التوصيل المحليين — Migration الكبيرة
+### ب.4 طباعة فاتورة شركة التوصيل (AlWaseet/MODON)
+- زر طباعة جديد على بطاقة الطلب + جماعي.
+- تيكيت 80mm احترافي: شعار المتجر + شعار الشركة + رقم التتبع + QR للتتبع + عنوان + منتجات.
+- عمود `orders.label_printed_at` + `label_printed_by`.
+- فلتر "مطبوعة / غير مطبوعة" في التبويب.
 
-#### الجداول (مع GRANT + RLS):
+### ب.5 Migration الكبيرة — نظام المندوبين الكامل
+
+جداول (كلها بـ GRANT + RLS):
 ```
 local_delivery_offices(id, name, governorate, manager_user_id, phone, address)
-local_delivery_agents(id, user_id, name, phone, governorate,
-                      office_id, base_fee_per_order, commission_pct,
+local_delivery_agents(id, user_id, name, phone, office_id,
+                      base_fee_per_order, commission_pct,
                       assigned_cities text[], assigned_regions text[],
                       id_front_url, id_back_url, photo_url, contract_url,
-                      address, notes, rating numeric, is_active)
-local_order_assignments(id, order_id, agent_id, assigned_by, assigned_at,
-                        delivery_fee_for_agent, status, received_at, notes)
+                      address, notes, rating, is_active)
+local_fees_by_governorate(governorate, fee)
+local_fees_by_region(city, region, fee)
+local_order_assignments(id, order_id, agent_id, assigned_by,
+                        assigned_at, delivery_fee_for_agent,
+                        status, received_at, notes)
 local_order_status_history(id, order_id, agent_id, old_status,
                            new_status, note, changed_by, changed_at,
                            geo_lat, geo_lng)
@@ -79,131 +84,107 @@ local_delivery_manifests(id, manifest_number, agent_id, created_by,
                          orders_count, expected_collection,
                          agent_fees_total, status, scanned_at)
 local_manifest_orders(manifest_id, order_id)
-local_settlement_invoices(id, invoice_number, agent_id, period_from,
-                          period_to, total_orders, total_collected,
-                          total_agent_fees, net_owed_to_owner,
-                          status, received_at, settled_at)
+local_settlement_invoices(id, invoice_number, agent_id,
+                          period_from, period_to, total_orders,
+                          total_collected, total_agent_fees,
+                          net_owed_to_owner, status,
+                          received_at, settled_at)
 local_settlement_invoice_orders(invoice_id, order_id,
                                 amount_collected, agent_fee, net)
 local_delivery_statuses(code, name_ar, color, needs_action, is_final)
 local_order_processing_box(id, order_id, message, from_role,
                            to_role, status, created_at, resolved_at)
 local_order_ratings(id, order_id, customer_phone, agent_rating,
-                    store_rating, agent_comment, store_comment,
-                    created_at)
-local_invoice_templates(id, owner_user_id, scope, department_id,
-                        locked, header jsonb, created_by, updated_at)
+                    store_rating, agent_comment, store_comment)
+local_invoice_templates(...)
 ```
 
-#### Triggers:
-- `handle_local_order_status_change` — يحدّث orders + يسجّل history + يطلق notification فوري للمنشئ/المدير/مدير القسم.
-- `handle_local_manifest_scan` — يحوّل كل الطلبات في manifest إلى "مع المندوب" دفعة واحدة + يُشعر المنشئين.
-- `handle_local_delivery_success` — عند "تم التسليم": cash_movement عبر `owner_user_id` (نفس الوسيط 100%) + يسجّل أجر المندوب كدَين على المالك.
-- `handle_local_settlement_received` — عند "استلام التحاسب": cash_movement (إيراد) + يقفل الفاتورة + تظهر بالمركز المالي.
-- `auto_assign_agent_by_region` — عند إنشاء طلب محلي، يبحث في `local_delivery_agents.assigned_cities/regions` ويعيّن أول مندوب مطابق (default، يمكن تغييره).
+Triggers:
+- `handle_local_order_status_change` — history + realtime notification لمنشئ الطلب/مدير القسم/العام.
+- `handle_local_manifest_scan` — نقل جماعي لكل الطلبات إلى "مع المندوب".
+- `handle_local_delivery_success` — cash_movement عبر `owner_user_id` + تسجيل أجر المندوب كدين.
+- `handle_local_settlement_received` — cash_movement (استلام) + قفل الفاتورة + ظهور بالمركز المالي.
+- `auto_assign_agent_by_region` — تعيين افتراضي حسب `assigned_cities/regions`.
 
-#### الأدوار والصلاحيات:
-- `local_delivery_agent` — مندوب.
-- `local_office_manager` — مدير مكتب.
-- صلاحيات: `manage_local_delivery` (مدير عام)، `manage_local_delivery_agents` (مدير قسم/مكتب)، `view_local_delivery_assignments` (موظف يرى مندوب طلبه)، `choose_local_delivery_agent` (يختار/يغيّر المندوب).
+أدوار وصلاحيات:
+- Roles: `local_delivery_agent`, `local_office_manager`.
+- Permissions: `manage_local_delivery`, `manage_local_delivery_agents`, `view_local_delivery_assignments`, `choose_local_delivery_agent`, `override_local_fee_per_order`.
 
-### ب.5 الصفحات الجديدة
-- `/local-delivery/offices` — إدارة المكاتب (إنشاء مكتب، نقل مندوبين، تعيين مدير مكتب).
-- `/local-delivery/agents` — إدارة المندوبين (CRUD + تعيين مدن/مناطق + رفع مستمسكات).
-- `/local-delivery/agents/:id` — بروفايل مندوب: صورة + هوية + عنوان + عقد + إحصائيات + تقييمات + طلبات حالية + سجل تحاسب.
-- `/local-delivery/manifests` — الفواتير المجمّعة (إنشاء، طباعة، تتبع).
-- `/local-delivery/settlements` — فواتير التحاسب (إنشاء، استلام، أرشيف).
-- `/local-delivery/statistics` — لوحة إحصائيات: أكثر مندوب توصيلاً، أعلى تقييم، متوسط زمن التسليم، نسبة الإرجاع، توزيع جغرافي على خريطة العراق.
-- `/local-delivery/processing-box` — صندوق المعالجة (مثل موقع الوسيط) لطلبات محلية فيها مشكلة.
-- `/agent/dashboard` — لوحة المندوب (موبايل أولاً): إحصائياتي، رصيدي، طلباتي.
-- `/agent/orders` — طلباتي مع فلاتر حالة + زر اتصال + زر واتساب + زر تغيير حالة.
-- `/agent/scan` — ماسح QR (lazy `html5-qrcode`).
-- `/agent/manifests/:id` — عرض الفاتورة المجمّعة وتغيير حالات الطلبات منها مباشرة.
-- `/agent/settlements` — فواتير تحاسبي + استلام مالي + تأكيد إلكتروني.
-- `/track/local/:id` — صفحة عامة بدون auth (QR للزبون): تفاصيل بسيطة + تقييم المندوب والمتجر بنجوم.
-- `/processing/local/:orderId` — صندوق معالجة لطلب محلي (محادثة مدير ↔ مندوب).
+### ب.6 الصفحات الإدارية (الدفعة الأولى)
+- `/local-delivery/offices` — CRUD مكاتب + تعيين مدراء + نقل مندوبين.
+- `/local-delivery/agents` — CRUD مندوبين + مدن/مناطق + رفع مستمسكات.
+- `/local-delivery/agents/:id` — بروفايل: صور هوية، عقد، إحصائيات، تقييمات، طلبات، تحاسب.
+- `/local-delivery/manifests` — الفواتير المجمّعة (إنشاء، طباعة A4، QR ديناميكي، تتبع).
+- `/local-delivery/settlements` — فواتير التحاسب (إنشاء، استلام، OTP تأكيد، أرشيف).
+- `/local-delivery/statistics` — لوحة إحصائيات: الأكثر توصيلاً، الأعلى تقييماً، متوسط زمن التسليم، نسبة الإرجاع، خريطة العراق interactive.
+- `/local-delivery/processing-box` — صندوق معالجة لطلبات محلية.
 
-### ب.6 الطلبات الذكية → طلب محلي
-- في `AiOrdersManager`: إضافة زر "تحويل إلى محلي" بجانب "إرسال للوسيط".
-- المنطق: عند الضغط، ينشأ `order` بـ `delivery_partner='محلي'` + `delivery_fee=settings.default_local_fee` + ينطلق `auto_assign_agent_by_region`.
+### ب.7 QuickOrder — إصلاح التحويل لمحلي
+- عند اختيار "محلي":
+  - تعطيل city/region الوسيط.
+  - تفعيل city/region محلية.
+  - `delivery_partner='محلي'` + `delivery_fee` من `settings.default_local_fee` (بديهياً 5000).
+  - dropdown "اختيار المندوب" مع auto-suggest حسب المنطقة.
+- إصلاح bug الـ payload الذي يجعل الطلب يذهب للوسيط بدل المحلي.
 
-### ب.7 طلب سريع + تحويل لمحلي
-- في `QuickOrderContent.jsx`:
-  - عند اختيار "محلي": تعطيل city/region فيلدز الوسيط، تفعيل city/region محلية، `delivery_fee = settings.default_local_fee`، `delivery_partner = 'محلي'`، إظهار **dropdown اختيار المندوب** (default = الموظف المطابق للمنطقة، قابل للتغيير).
-  - إصلاح الـ bug الحالي: state isolation كامل بين الوضعين (currently delivery_partner لا يُكتب بشكل صحيح في submit payload).
-  - إضافة منطق "auto-suggest agent" عند تغيير المدينة/المنطقة.
-
-### ب.8 أجور التوصيل المحلي — تحكم مرن
+### ب.8 أجور التوصيل المحلي المرنة
 - في `DeliverySettingsDialog.jsx`:
-  - **الأجر الافتراضي** (رقم واحد).
-  - **حسب المحافظة** (جدول `local_fees_by_governorate`).
-  - **حسب المنطقة** (جدول `local_fees_by_region`).
-  - **حسب المندوب** (override في `local_delivery_agents.base_fee_per_order`).
-- الأولوية عند إنشاء الطلب: `agent > region > governorate > default`.
-- المدير ومدير القسم يعدّلون كل المستويات. الموظف يرى فقط ولا يعدّل (إلا إذا فعّل المدير صلاحية `override_local_fee_per_order`).
+  - أجر افتراضي.
+  - جدول أجور حسب المحافظة.
+  - جدول أجور حسب المنطقة.
+  - override في `local_delivery_agents.base_fee_per_order`.
+- الأولوية عند الإنشاء: `agent > region > governorate > default`.
+- المدير/مدير القسم يعدلون كل شيء. الموظف يرى فقط.
 
-### ب.9 صندوق المعالجة (Processing Box) — مثل الوسيط
-- لطلبات محلية وطلبات شركات التوصيل:
-  - زر "فتح صندوق معالجة" بكل طلب يحتاج معالجة (حالة معلّقة/مؤجّلة/لا يرد).
-  - نافذة محادثة threaded بين المنشئ/المدير/المندوب.
-  - حالة "تمت المعالجة" تقفل الصندوق وتسجّل في history.
+### ب.9 صندوق المعالجة (Processing Box)
+- لطلبات محلية + طلبات شركات التوصيل.
+- زر "فتح صندوق معالجة" لكل طلب يحتاج تدخل.
+- محادثة threaded بين المنشئ/المدير/المندوب.
+- "تمت المعالجة" يقفل ويسجّل في history.
 
-### ب.10 الإشعارات الفورية (Realtime)
-- عند كل تغيير حالة محلي → push notification + in-app notification إلى:
-  - منشئ الطلب.
-  - مدير القسم.
-  - المدير العام (إن فعّل الاستلام).
-- عند إسناد المندوب → إشعار فوري للمندوب.
-- عند تحديث الموظف للطلب (مثلاً ملاحظة) → إشعار للمندوب.
-- استخدام Supabase Realtime على `local_order_status_history` + `order_assignments`.
+### ب.10 إشعارات فورية (Realtime)
+- Supabase Realtime على `local_order_status_history` + `local_order_assignments`.
+- push + in-app لكل تغيير حالة → منشئ الطلب + مدير القسم + المدير العام + المندوب.
 
-### ب.11 تقييم الزبون
-- صفحة `/track/local/:id` تعرض زر "تقييم" يفتح modal: نجوم للمندوب + نجوم للمتجر + تعليق اختياري.
-- التقييم محسوب في معدّل المندوب (`local_delivery_agents.rating`) ومعدّل المتجر العام (في `settings.store_rating`).
-
-### ب.12 تواصل المندوب
-- في صفحة `/agent/orders` و `/agent/manifests/:id`:
-  - زر اتصال مباشر (`tel:`).
-  - زر واتساب (`https://wa.me/`).
-  - زر "عرض على الخريطة" (Google Maps deep link).
+### ب.11 الطلبات الذكية → محلي
+- زر "تحويل إلى محلي" في `AiOrdersManager`.
+- ينشأ طلب `delivery_partner='محلي'` + `auto_assign_agent_by_region`.
 
 ---
 
-## القسم ج — توصياتي العالمية الإبداعية
+## القسم ج — الدفعة الثانية (تُنفَّذ بعد قبول الدفعة الأولى)
 
-### ج.1 أين يعيش نظام التوصيل المحلي؟
-**التوصية**: نظام مزدوج العرض (المعيار العالمي):
-- **الطلبات المحلية تظهر في صفحة متابعة الطلبات** بجانب طلبات الوسيط (موحّد، مع فلتر "نوع التوصيل").
-- **صفحة منفصلة `/local-delivery`** لإدارة المندوبين/المكاتب/الفواتير/الإحصائيات (مثل صفحة "إدارة المنتجات" المنفصلة عن "المنتجات").
-- المنطق: العمليات اليومية في مكان واحد، الإدارة الاستراتيجية في صفحة متخصصة.
-
-### ج.2 أفكار إبداعية مضافة
-- **خريطة حية**: في `/local-delivery/statistics` خريطة العراق تعرض المندوبين كنقاط متحركة (محاكاة) + heatmap لكثافة الطلبات.
-- **لوحة قيادة لكل مندوب** (gamification): نجمة الأسبوع، شارات (100 طلب، 0% إرجاع، أسرع توصيل).
-- **توقع الذكي للمندوب**: عند إنشاء الطلب، اقتراح أفضل 3 مندوبين حسب: المنطقة + الحمولة الحالية + معدّل النجاح.
-- **QR ديناميكي للفاتورة المجمّعة**: مسحه يفتح صفحة "استلام دفعة" يكتب فيها المندوب توقيعه الإلكتروني، يحوّل كل الطلبات لـ "مع المندوب" دفعة واحدة + يطلق إشعار جماعي.
-- **تأكيد إلكتروني للتحاسب**: الفاتورة فيها زر "تأكيد الاستلام" يطلب OTP من المندوب (SMS/إشعار) قبل التأكيد.
-- **خط زمني تفاعلي** لكل طلب يعرض كل التغييرات مع GPS coordinates ووقت كل خطوة.
-- **شات داخلي** بين المنشئ والمندوب لكل طلب (`local_order_processing_box` نستخدمه كـ chat).
+- `/agent/dashboard` + `/agent/orders` (اتصال/واتساب/خريطة) + `/agent/scan` (QR scanner lazy) + `/agent/manifests/:id` + `/agent/settlements` (تأكيد OTP).
+- `/track/local/:id` — صفحة عامة بدون auth + تقييم زبون بنجوم للمندوب والمتجر.
+- خرائط حية للإحصائيات.
+- Gamification (شارات، نجمة الأسبوع).
+- توقع ذكي لأفضل 3 مندوبين لكل طلب.
+- Timeline تفاعلي بـ GPS.
+- شات داخلي (`local_order_processing_box`).
 
 ---
 
-## التنفيذ على دفعتين
+## توصيتي (ج.1 — العالمي)
+**عرض مزدوج**:
+- الطلبات المحلية تظهر في **صفحة متابعة الطلبات** بجانب طلبات الوسيط (فلتر "نوع التوصيل") — نفس مبدأ الفواتير.
+- صفحة `/local-delivery/*` منفصلة **للإدارة الاستراتيجية** (مندوبين، مكاتب، تحاسب، إحصائيات).
+- هذا هو المعيار العالمي: العمليات اليومية موحّدة، الإدارة متخصصة.
 
-**الدفعة 1 (هذه المرة)**:
-- كل القسم أ (الإصلاحات العاجلة) + ب.1 + ب.2 + ب.3 (الجزء الخاص بفلتر + تحديد + طباعة منفصلة) + Migration الكاملة (ب.4) + ب.5 الصفحات الإدارية الأساسية (`offices`, `agents`, `agents/:id`, `manifests`, `settlements`) + ب.7 (إصلاح طلب سريع) + ب.8 (أجور مرنة) + ب.10 (Realtime notifications).
+---
 
-**الدفعة 2 (بعد موافقتك على نتيجة الدفعة 1)**:
-- صفحات المندوب `/agent/*` كاملة + صفحة `/track/local/:id` العامة + التقييم + صندوق المعالجة + الإحصائيات المتقدمة + الطلبات الذكية → محلي + خرائط + gamification.
-
-السبب: الدفعة 1 ضخمة جداً (migration + 8 صفحات + 6 dialogs + إصلاحات)، تقسيمها يضمن الجودة وتجنب أخطاء التراجع.
+## ملفات هذه الدفعة (ملخص)
+- **Migration واحد كبير**: كل الجداول + GRANT + RLS + Triggers + Roles + Permissions + bucket.
+- **إصلاحات**: `ReturnOrdersDialog.jsx`, `AutoDeleteLogDialog.jsx`, RPC `admin_hard_delete_order`, `OrderCard.jsx` (list view), Pagination في تبويب الفواتير في `OrdersFollowUpPage` و `EmployeeFollowUpPage`.
+- **جديد**: `LocalInvoiceHeaderSettings.jsx` (رفع صورة), `AlWaseetLabelPrint.jsx` (تيكيت 80mm), `LocalDeliveryManifestA4.jsx`, `LocalOfficesPage`, `LocalAgentsPage`, `LocalAgentProfilePage`, `LocalManifestsPage`, `LocalSettlementsPage`, `LocalStatisticsPage`, `LocalProcessingBoxPage`, `LocalDeliveryFeesManager`, `ProcessingBoxDialog`, `useLocalDeliveryRealtime.js`.
+- **تعديلات**: `QuickOrderContent.jsx`, `AiOrdersManager.jsx`, `OrdersFollowUpPage.jsx`, `EmployeeFollowUpPage.jsx`, `Layout.jsx` (روابط `/local-delivery/*`), `SuperProvider.jsx`.
 
 ---
 
 ## ملاحظات إلزامية
-- التزام كامل بـ Inventory Golden Rule و Completion Gate.
-- كل cash_movements عبر triggers DB فقط.
-- Revenue Routing عبر `owner_user_id` 100%.
-- كل جدول جديد في `public` يحصل على `GRANT` صريح في نفس migration.
-- `/track/local/:id` تستخدم RPC `SECURITY DEFINER` ترجع حقول limited فقط (لا أسعار شراء، لا أرباح).
-- استخدام `devLog` بدل `console.log`، lazy-load لـ `html5-qrcode` و `jspdf` و `recharts`.
+- Inventory Golden Rule + Completion Gate + Revenue Routing عبر `owner_user_id`.
+- كل `cash_movements` عبر Triggers فقط.
+- كل جدول جديد في `public` يحصل على GRANT في نفس migration.
+- `devLog` بدل `console.log`، lazy لـ `html5-qrcode` و `jspdf` و `recharts`.
+- `/track/local/:id` عبر RPC `SECURITY DEFINER` بدون بيانات حساسة.
+
+بعد قبولك سأنفّذ هذه الدفعة كاملة دفعة واحدة (الإصلاحات + كل القسم ب باستثناء صفحات المندوب `/agent/*` و `/track/local/:id`، اللتين تأتيان في الدفعة الثانية).
