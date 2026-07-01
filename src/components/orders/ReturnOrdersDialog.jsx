@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -6,9 +6,10 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/UnifiedAuthContext';
-import { Loader2, RotateCcw, AlertCircle, Package, TrendingDown } from 'lucide-react';
+import { Loader2, RotateCcw, AlertCircle, Package, TrendingDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
