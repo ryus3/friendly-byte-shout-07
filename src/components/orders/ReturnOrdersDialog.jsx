@@ -21,6 +21,7 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
   const [loading, setLoading] = useState(false);
   const [returnOrders, setReturnOrders] = useState([]);
   const [error, setError] = useState(null);
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     if (open) {
@@ -33,14 +34,13 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
     setError(null);
 
     try {
-      // ✅ جلب جميع طلبات الإرجاع — لا قيود على status ولا joins إجبارية
-      // RLS يتولى تصفية الرؤية حسب صلاحية المستخدم
+      // ✅ فقط الطلبات التي نوعها إرجاع (order_type='return') — لا نعتمد على status
       const { data, error: fetchError } = await supabase
         .from('orders')
         .select(`*, order_items(*)`)
-        .or('order_type.eq.return,status.eq.returned,status.eq.return_received')
+        .eq('order_type', 'return')
         .order('created_at', { ascending: false })
-        .limit(200);
+        .limit(500);
 
       if (fetchError) throw fetchError;
 
@@ -51,6 +51,12 @@ export const ReturnOrdersDialog = ({ open, onOpenChange }) => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const scrollTo = (dir) => {
+    const el = scrollRef.current?.querySelector('[data-radix-scroll-area-viewport]') || scrollRef.current;
+    if (!el) return;
+    el.scrollTo({ top: dir === 'top' ? 0 : el.scrollHeight, behavior: 'smooth' });
   };
 
   const getStatusBadge = (status, deliveryStatus) => {
