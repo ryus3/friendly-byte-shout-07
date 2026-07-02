@@ -26,6 +26,9 @@ import { supabase } from '@/lib/customSupabaseClient';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 import AllEmployeesInvoicesView from './AllEmployeesInvoicesView';
+import SmartPagination from '@/components/ui/SmartPagination';
+
+const INVOICES_PER_PAGE = 15;
 
 const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   const { 
