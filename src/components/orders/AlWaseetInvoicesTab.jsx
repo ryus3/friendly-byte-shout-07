@@ -28,8 +28,11 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import InvoicesProfitReportDialog from './InvoicesProfitReportDialog';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
+import SmartPagination from '@/components/ui/SmartPagination';
 import devLog from '@/lib/devLogger';
 import { supabase } from '@/lib/customSupabaseClient';
+
+const INVOICES_PER_PAGE = 15;
 import { toast } from '@/hooks/use-toast';
 
 const AlWaseetInvoicesTab = () => {
