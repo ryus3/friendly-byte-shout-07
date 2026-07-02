@@ -26,6 +26,9 @@ import { supabase } from '@/lib/customSupabaseClient';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
 import AllEmployeesInvoicesView from './AllEmployeesInvoicesView';
+import SmartPagination from '@/components/ui/SmartPagination';
+
+const INVOICES_PER_PAGE = 15;
 
 const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   const { 
@@ -40,6 +43,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Time filter state with localStorage - نفس الفلاتر الزمنية للتوحيد
   const [timeFilter, setTimeFilter] = useLocalStorage('employee-invoices-time-filter', 'month');
@@ -89,6 +93,9 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
       return matchesSearch && matchesStatus;
     });
   }, [invoices, searchTerm, statusFilter, timeFilter, customDateRange]);
+
+  // Reset pagination when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, timeFilter, customDateRange, employeeId]);
 
   // إحصائيات مفلترة تعتمد على الفترة الزمنية
   const filteredStats = useMemo(() => {
@@ -460,13 +467,31 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
                 </p>
               </CardContent>
             </Card>
-          ) : (
-            <AlWaseetInvoicesList
-              invoices={filteredInvoices}
-              loading={false}
-              onViewInvoice={handleViewInvoice}
-            />
-          )}
+          ) : (() => {
+            const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / INVOICES_PER_PAGE));
+            const safePage = Math.min(currentPage, totalPages);
+            const start = (safePage - 1) * INVOICES_PER_PAGE;
+            const paginated = filteredInvoices.slice(start, start + INVOICES_PER_PAGE);
+            return (
+              <>
+                <AlWaseetInvoicesList
+                  invoices={paginated}
+                  loading={false}
+                  onViewInvoice={handleViewInvoice}
+                />
+                {totalPages > 1 && (
+                  <SmartPagination
+                    currentPage={safePage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    totalItems={filteredInvoices.length}
+                    itemsPerPage={INVOICES_PER_PAGE}
+                    className="mt-6"
+                  />
+                )}
+              </>
+            );
+          })()}
         </CardContent>
       </Card>
 

@@ -28,8 +28,11 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import AlWaseetInvoicesList from './AlWaseetInvoicesList';
 import InvoicesProfitReportDialog from './InvoicesProfitReportDialog';
 import AlWaseetInvoiceDetailsDialog from './AlWaseetInvoiceDetailsDialog';
+import SmartPagination from '@/components/ui/SmartPagination';
 import devLog from '@/lib/devLogger';
 import { supabase } from '@/lib/customSupabaseClient';
+
+const INVOICES_PER_PAGE = 15;
 import { toast } from '@/hooks/use-toast';
 
 const AlWaseetInvoicesTab = () => {
@@ -54,6 +57,7 @@ const AlWaseetInvoicesTab = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [partnerFilter, setPartnerFilter] = useState('all');
   const [profitReportOpen, setProfitReportOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Time filter state with localStorage - default to 'week' for better UX
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
@@ -104,6 +108,10 @@ const AlWaseetInvoicesTab = () => {
       return matchesSearch && matchesStatus && matchesAccount;
     });
   }, [invoices, searchTerm, statusFilter, accountFilter, partnerFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
+
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, accountFilter, partnerFilter, timeFilter, customDateRange]);
+
 
   // ✅ إرجاع السلوك القديم: عند فتح تبويب الفواتير نُشغّل مزامنة خلفية صامتة فوراً
   // ثم نُعيد قراءة البيانات من القاعدة. لا حاجة لضغط "تحديث" يدوياً.
@@ -546,12 +554,32 @@ const AlWaseetInvoicesTab = () => {
             </div>
           </div>
 
-          {/* Invoices List */}
-          <AlWaseetInvoicesList
-            invoices={filteredInvoices}
-            onViewInvoice={handleViewInvoice}
-            loading={loading}
-          />
+          {/* ✅ Pagination — تقسيم الفواتير على صفحات */}
+          {(() => {
+            const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / INVOICES_PER_PAGE));
+            const safePage = Math.min(currentPage, totalPages);
+            const start = (safePage - 1) * INVOICES_PER_PAGE;
+            const paginated = filteredInvoices.slice(start, start + INVOICES_PER_PAGE);
+            return (
+              <>
+                <AlWaseetInvoicesList
+                  invoices={paginated}
+                  onViewInvoice={handleViewInvoice}
+                  loading={loading}
+                />
+                {totalPages > 1 && (
+                  <SmartPagination
+                    currentPage={safePage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    totalItems={filteredInvoices.length}
+                    itemsPerPage={INVOICES_PER_PAGE}
+                    className="mt-6"
+                  />
+                )}
+              </>
+            );
+          })()}
         </CardContent>
       </Card>
 
