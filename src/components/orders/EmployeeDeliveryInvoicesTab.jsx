@@ -43,6 +43,7 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Time filter state with localStorage - نفس الفلاتر الزمنية للتوحيد
   const [timeFilter, setTimeFilter] = useLocalStorage('employee-invoices-time-filter', 'month');
