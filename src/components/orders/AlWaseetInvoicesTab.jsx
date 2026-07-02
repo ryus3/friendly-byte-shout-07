@@ -57,6 +57,7 @@ const AlWaseetInvoicesTab = () => {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [partnerFilter, setPartnerFilter] = useState('all');
   const [profitReportOpen, setProfitReportOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   
   // Time filter state with localStorage - default to 'week' for better UX
   const [timeFilter, setTimeFilter] = useLocalStorage('alwaseet-invoices-time-filter', 'week');
