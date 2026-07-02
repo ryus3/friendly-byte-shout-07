@@ -550,12 +550,32 @@ const AlWaseetInvoicesTab = () => {
             </div>
           </div>
 
-          {/* Invoices List */}
-          <AlWaseetInvoicesList
-            invoices={filteredInvoices}
-            onViewInvoice={handleViewInvoice}
-            loading={loading}
-          />
+          {/* ✅ Pagination — تقسيم الفواتير على صفحات */}
+          {(() => {
+            const totalPages = Math.max(1, Math.ceil(filteredInvoices.length / INVOICES_PER_PAGE));
+            const safePage = Math.min(currentPage, totalPages);
+            const start = (safePage - 1) * INVOICES_PER_PAGE;
+            const paginated = filteredInvoices.slice(start, start + INVOICES_PER_PAGE);
+            return (
+              <>
+                <AlWaseetInvoicesList
+                  invoices={paginated}
+                  onViewInvoice={handleViewInvoice}
+                  loading={loading}
+                />
+                {totalPages > 1 && (
+                  <SmartPagination
+                    currentPage={safePage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    totalItems={filteredInvoices.length}
+                    itemsPerPage={INVOICES_PER_PAGE}
+                    className="mt-6"
+                  />
+                )}
+              </>
+            );
+          })()}
         </CardContent>
       </Card>
 
