@@ -109,6 +109,10 @@ const AlWaseetInvoicesTab = () => {
     });
   }, [invoices, searchTerm, statusFilter, accountFilter, partnerFilter, timeFilter, customDateRange, applyCustomDateRangeFilter]);
 
+  // Reset page when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, accountFilter, partnerFilter, timeFilter, customDateRange]);
+
+
   // ✅ إرجاع السلوك القديم: عند فتح تبويب الفواتير نُشغّل مزامنة خلفية صامتة فوراً
   // ثم نُعيد قراءة البيانات من القاعدة. لا حاجة لضغط "تحديث" يدوياً.
   useEffect(() => {
