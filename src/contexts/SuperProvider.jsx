@@ -2373,8 +2373,16 @@ export const SuperProvider = ({ children }) => {
         };
 
         rememberDeliveryTokenHint(activeToken);
-        // للمدير العام خصوصاً: لا نعتمد على expires_at وحده؛ الوسيط قد يرفض create-order رغم أن الصف نشط.
-        await refreshTokenForSelectedAccount('pre_create');
+        // ✅ تحسين الأداء: لا نجدد التوكن استباقياً إلا إذا كان قريب الانتهاء (< 30 دقيقة).
+        //    التجديد الاستباقي كان يسبب تعليقاً للمدير العام (حسابات متعددة) لعدة ثوانٍ لكل طلب.
+        //    نعتمد على منطق الاسترجاع عند TOKEN_EXPIRED الموجود أدناه بدلاً من ذلك.
+        try {
+          const expiresAtMs = accountData?.expires_at ? new Date(accountData.expires_at).getTime() : 0;
+          const shouldPreRefresh = !expiresAtMs || (expiresAtMs - Date.now()) < 30 * 60 * 1000;
+          if (shouldPreRefresh && destination === 'alwaseet') {
+            await refreshTokenForSelectedAccount('pre_create_near_expiry');
+          }
+        } catch (_) { /* تجاهل — سنعتمد على منطق TOKEN_EXPIRED */ }
 
         const tryCreateOrder = async (tokenToUse) => {
           rememberDeliveryTokenHint(tokenToUse);
