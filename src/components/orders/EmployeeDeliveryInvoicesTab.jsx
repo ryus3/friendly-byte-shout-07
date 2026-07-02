@@ -94,6 +94,9 @@ const EmployeeDeliveryInvoicesTab = ({ employeeId }) => {
     });
   }, [invoices, searchTerm, statusFilter, timeFilter, customDateRange]);
 
+  // Reset pagination when filters change
+  useEffect(() => { setCurrentPage(1); }, [searchTerm, statusFilter, timeFilter, customDateRange, employeeId]);
+
   // إحصائيات مفلترة تعتمد على الفترة الزمنية
   const filteredStats = useMemo(() => {
     return getFilteredStats ? getFilteredStats(filteredInvoices) : stats;
